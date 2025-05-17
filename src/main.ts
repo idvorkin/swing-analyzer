@@ -52,6 +52,12 @@ let latestKeypoints: any[] = [];
 let availableCameras: MediaDeviceInfo[] = [];
 let currentCameraIndex = 0;
 
+// Make sure switch camera button is properly initialized
+const switchCameraBtn = document.getElementById('switch-camera-btn') as HTMLButtonElement;
+if (switchCameraBtn) {
+  switchCameraBtn.style.display = 'none'; // Hide initially
+}
+
 // Function to apply the current display mode
 function applyDisplayMode(mode: 'both' | 'video' | 'overlay') {
   console.log(`Applying display mode: ${mode}`);
@@ -332,7 +338,7 @@ function updateSwitchCameraButton() {
           // Filter only video input devices (cameras)
           availableCameras = devices.filter(device => device.kind === 'videoinput');
           // Only show switch button if there are multiple cameras
-          switchCameraBtn.style.display = availableCameras.length > 1 ? 'block' : 'none';
+          switchCameraBtn.style.display = availableCameras.length > 1 ? 'inline-block' : 'none';
           
           // Log available cameras for debugging
           if (availableCameras.length > 0) {
@@ -350,7 +356,7 @@ function updateSwitchCameraButton() {
       // If device enumeration is not supported, show button on mobile devices
       // This is a fallback for browsers that don't support enumeration
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      switchCameraBtn.style.display = isMobile ? 'block' : 'none';
+      switchCameraBtn.style.display = isMobile ? 'inline-block' : 'none';
     }
   } else {
     switchCameraBtn.style.display = 'none';

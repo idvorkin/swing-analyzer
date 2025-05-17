@@ -31,6 +31,14 @@
       box-sizing: border-box;
     }
     
+    .top-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
     .video-container {
       position: relative;
       margin-bottom: 20px;
@@ -72,6 +80,18 @@
       height: auto;
     }
     
+    .video-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 0 10px;
+      box-sizing: border-box;
+      z-index: 10;
+    }
+    
     .controls {
       display: flex;
       gap: 10px;
@@ -79,7 +99,7 @@
       flex-wrap: wrap;
     }
     
-    button {
+    button, .file-label {
       background-color: #0071e3;
       color: white;
       border: none;
@@ -89,9 +109,11 @@
       font-weight: 600;
       font-size: 16px;
       transition: background-color 0.3s;
+      display: inline-block;
+      text-align: center;
     }
     
-    button:hover {
+    button:hover, .file-label:hover {
       background-color: #0077ED;
     }
     
@@ -102,7 +124,6 @@
     
     .hardcoded-btn {
       background-color: #34c759;
-      margin-left: 10px;
     }
     
     .hardcoded-btn:hover {
@@ -136,15 +157,38 @@
     }
     
     .file-input {
-      margin-bottom: 20px;
+      position: relative;
+    }
+    
+    #video-upload {
+      position: absolute;
+      width: 0.1px;
+      height: 0.1px;
+      opacity: 0;
+      overflow: hidden;
+      position: absolute;
+      z-index: -1;
+    }
+    
+    .selected-file {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+      display: none;
     }
     
     @media (max-width: 600px) {
-      .controls {
+      .top-controls {
         flex-direction: column;
+        align-items: stretch;
       }
       
-      button {
+      .file-input {
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      button, .file-label {
         width: 100%;
       }
     }
@@ -308,22 +352,23 @@
   </header>
   
   <main>
-    <div class="file-input">
-      <input type="file" id="video-upload" accept="video/*">
+    <div class="top-controls">
+      <div class="file-input">
+        <input type="file" id="video-upload" accept="video/*">
+        <label for="video-upload" class="file-label">Choose File</label>
+      </div>
       <button id="load-hardcoded-btn" class="hardcoded-btn">Load Hardcoded</button>
-      <p>Or use your camera</p>
+      <button id="camera-btn">Start Camera</button>
+      <button id="switch-camera-btn">Swap Camera</button>
     </div>
     
     <div class="video-container">
       <video id="video" playsinline></video>
       <canvas id="output-canvas"></canvas>
-    </div>
-    
-    <div class="controls" id="controls-container">
-      <button id="camera-btn">Start Camera</button>
-      <button id="switch-camera-btn" style="display: none;">Switch Camera</button>
-      <button id="play-pause-btn" class="toggle-button" disabled>Play</button>
-      <button id="stop-btn" disabled>Stop</button>
+      <div class="video-controls">
+        <button id="play-pause-btn" class="toggle-button" disabled>Play</button>
+        <button id="stop-btn" disabled>Stop</button>
+      </div>
     </div>
     
     <div class="metrics">
