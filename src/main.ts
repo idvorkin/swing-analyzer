@@ -21,6 +21,7 @@ const keypointContainer = document.getElementById('keypoint-container') as HTMLD
 const appState: AppState = {
   usingCamera: false,
   cameraMode: 'environment', // Default to back camera
+  displayMode: 'both', // Default display mode
   isModelLoaded: false,
   isProcessing: false,
   repCounter: {
@@ -42,6 +43,43 @@ let latestKeypoints: any[] = [];
 // Add camera devices tracking
 let availableCameras: MediaDeviceInfo[] = [];
 let currentCameraIndex = 0;
+
+// Function to apply the current display mode
+function applyDisplayMode(mode: 'both' | 'video' | 'overlay') {
+  console.log(`Applying display mode: ${mode}`);
+  
+  // Update radio button state
+  const radioToCheck = document.querySelector(`input[name="display-mode"][value="${mode}"]`) as HTMLInputElement;
+  if (radioToCheck) {
+    radioToCheck.checked = true;
+  }
+  
+  // Apply display mode
+  switch (mode) {
+    case 'both':
+      video.style.opacity = '1';
+      canvas.style.display = 'block';
+      break;
+    case 'video':
+      video.style.opacity = '1';
+      canvas.style.display = 'none';
+      break;
+    case 'overlay':
+      // Make video transparent but still there for pose detection
+      video.style.opacity = '0.1';
+      canvas.style.display = 'block';
+      // Set canvas background to black
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      break;
+  }
+  
+  // Update app state
+  appState.displayMode = mode;
+}
 
 // Initialize the application
 async function initApp() {
@@ -178,31 +216,10 @@ function setupDebugControls() {
   displayModeRadios.forEach(radio => {
     radio.addEventListener('change', (e) => {
       const target = e.target as HTMLInputElement;
-      const mode = target.value;
+      const mode = target.value as 'both' | 'video' | 'overlay';
       
       console.log(`Display mode changed to: ${mode}`);
-      
-      switch (mode) {
-        case 'both':
-          video.style.opacity = '1';
-          canvas.style.display = 'block';
-          break;
-        case 'video':
-          video.style.opacity = '1';
-          canvas.style.display = 'none';
-          break;
-        case 'overlay':
-          // Make video transparent but still there for pose detection
-          video.style.opacity = '0.1';
-          canvas.style.display = 'block';
-          // Set canvas background to black
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-          }
-          break;
-      }
+      applyDisplayMode(mode);
     });
   });
   
@@ -324,12 +341,18 @@ function switchCamera() {
     // Move to next camera in the list
     currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
     
+    // Remember current display mode
+    const currentDisplayMode = appState.displayMode;
+    
     // If the camera is currently active, restart it with the new camera
     if (appState.usingCamera) {
       // Stop current camera
       stopCamera();
       // Start new camera
-      startCamera();
+      startCamera().then(() => {
+        // Make sure display mode is reapplied after camera starts
+        applyDisplayMode(currentDisplayMode);
+      });
     }
 
     // Update status with camera info
@@ -339,12 +362,18 @@ function switchCamera() {
     // Fallback to simple toggle between front/back if device enumeration didn't work
     appState.cameraMode = appState.cameraMode === 'environment' ? 'user' : 'environment';
     
+    // Remember current display mode
+    const currentDisplayMode = appState.displayMode;
+    
     // If the camera is currently active, restart it with the new mode
     if (appState.usingCamera) {
       // Stop current camera
       stopCamera();
       // Start camera with new mode
-      startCamera();
+      startCamera().then(() => {
+        // Make sure display mode is reapplied after camera starts
+        applyDisplayMode(currentDisplayMode);
+      });
     }
 
     // Update status to reflect camera change
@@ -352,7 +381,7 @@ function switchCamera() {
   }
 }
 
-async function startCamera() {
+async function startCamera(): Promise<void> {
   try {
     updateStatus('Accessing camera...');
     
@@ -405,6 +434,9 @@ async function startCamera() {
     
     // Update UI
     updateButtonStates(false, true, true);
+    
+    // Restore current display mode
+    applyDisplayMode(appState.displayMode);
     
     // Update status message with camera info
     let cameraInfo = '';
