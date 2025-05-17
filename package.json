@@ -1,0 +1,44 @@
+{
+  "name": "swing-analyzer",
+  "version": "1.0.0",
+  "description": "Web-based swing analyzer using MediaPipe",
+  "scripts": {
+    "start": "parcel public/index.html",
+    "build": "parcel build public/index.html --dist-dir dist",
+    "vercel-build": "parcel build public/index.html --dist-dir dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "browserslist": [
+    "last 3 chrome versions",
+    "last 3 firefox versions",
+    "last 3 safari versions"
+  ],
+  "alias": {
+    "process": {
+      "global": "process"
+    }
+  },
+  "keywords": [
+    "pose",
+    "detection",
+    "swing",
+    "analysis",
+    "mediapipe"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@mediapipe/pose": "^0.5.1675469404",
+    "@parcel/transformer-typescript-tsc": "^2.14.4",
+    "@tensorflow-models/pose-detection": "^2.1.0",
+    "@tensorflow/tfjs-backend-webgl": "^4.4.0",
+    "@tensorflow/tfjs-converter": "^4.4.0",
+    "@tensorflow/tfjs-core": "^4.4.0"
+  },
+  "devDependencies": {
+    "buffer": "^6.0.3",
+    "parcel": "^2.9.3",
+    "process": "^0.11.10",
+    "typescript": "^5.0.4"
+  }
+}
