@@ -9,6 +9,7 @@ const cameraBtn = document.getElementById('camera-btn') as HTMLButtonElement;
 const playPauseBtn = document.getElementById('play-pause-btn') as HTMLButtonElement;
 const stopBtn = document.getElementById('stop-btn') as HTMLButtonElement;
 const videoUpload = document.getElementById('video-upload') as HTMLInputElement;
+const loadHardcodedBtn = document.getElementById('load-hardcoded-btn') as HTMLButtonElement;
 const repCounter = document.getElementById('rep-counter') as HTMLSpanElement;
 const status = document.getElementById('status') as HTMLDivElement;
 const spineAngle = document.getElementById('spine-angle') as HTMLSpanElement;
@@ -178,6 +179,9 @@ function setupEventListeners() {
   // Video upload
   videoUpload.addEventListener('change', handleVideoUpload);
   
+  // Load hardcoded video button
+  loadHardcodedBtn.addEventListener('click', loadHardcodedVideo);
+  
   // Camera switch button
   const switchCameraBtn = document.getElementById('switch-camera-btn');
   if (switchCameraBtn) {
@@ -254,6 +258,11 @@ function setupDebugControls() {
 
 async function initializeAnalyzer() {
   if (!swingAnalyzer) {
+    // Make sure crossOrigin is set correctly if using external video sources
+    if (video.src && !video.src.startsWith('blob:') && !video.src.startsWith('data:')) {
+      video.crossOrigin = 'anonymous';
+    }
+    
     // Reset dimensions - make sure canvas matches video at initialization time
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
@@ -689,6 +698,97 @@ function updateLatestKeypoints(keypoints: any[]) {
     
     // Always update the navigation controls
     updateCheckpointNavigation();
+  }
+}
+
+/**
+ * Load the hardcoded sample video from GitHub
+ */
+async function loadHardcodedVideo() {
+  updateStatus('Loading hardcoded sample video...');
+  
+  // Stop camera if it's active
+  if (appState.usingCamera) {
+    stopCamera();
+  }
+  
+  // Make sure video is visible
+  video.style.display = 'block';
+  
+  try {
+    // Since we're having issues with loading the video from the public folder,
+    // let's use the GitHub URL directly but use the fetch API to get the data as a blob
+    const videoURL = 'https://raw.githubusercontent.com/idvorkin/video-edit/main/samples/swing-2023-06-30.mp4';
+    
+    updateStatus('Fetching video data...');
+    
+    // Fetch the video and convert to a blob URL
+    const response = await fetch(videoURL);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch video: ${response.status} ${response.statusText}`);
+    }
+    
+    const videoBlob = await response.blob();
+    const videoBlobUrl = URL.createObjectURL(videoBlob);
+    
+    // Set video source to the blob URL (which doesn't have CORS issues)
+    video.src = videoBlobUrl;
+    
+    // Log for debugging
+    console.log('Video loaded as blob URL:', videoBlobUrl);
+    
+    // Update app state
+    appState.usingCamera = false;
+    
+    // Force video to reload
+    video.load();
+    
+    // Update UI
+    updateButtonStates(true, true, false);
+    
+  } catch (error) {
+    console.error('Error fetching video:', error);
+    updateStatus('Error loading video. Please try uploading a video file instead.');
+    return;
+  }
+  
+  // Wait for video metadata to load
+  try {
+    await new Promise<void>((resolve, reject) => {
+      // Set a timeout in case the video never loads
+      const timeout = setTimeout(() => {
+        reject(new Error('Video loading timed out'));
+      }, 15000); // 15 second timeout
+      
+      // Handle successful metadata load
+      video.onloadedmetadata = () => {
+        clearTimeout(timeout);
+        console.log(`Hardcoded video loaded: ${video.videoWidth}x${video.videoHeight}`);
+        resolve();
+      };
+      
+      // Handle loading errors
+      video.onerror = (e) => {
+        clearTimeout(timeout);
+        console.error('Error loading hardcoded video:', e);
+        reject(new Error('Video failed to load'));
+      };
+    });
+    
+    // Initialize analyzer if needed
+    await initializeAnalyzer();
+    
+    // Update UI
+    updateButtonStates(true, true, false);
+    updateStatus('Loaded sample video. Press Play to analyze.');
+    
+    // Reset rep counter
+    if (swingAnalyzer) {
+      swingAnalyzer.reset();
+    }
+  } catch (error) {
+    console.error('Error loading video:', error);
+    updateStatus('Error loading video. Please try uploading a video file instead.');
   }
 }
 
