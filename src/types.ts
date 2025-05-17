@@ -26,6 +26,25 @@ export interface RepCounter {
   hingeThreshold: number;
 }
 
+export enum FormPosition {
+  Top = 'top',
+  Hinge = 'hinge',
+  Bottom = 'bottom',
+  Release = 'release'
+}
+
+export interface FormCheckpoint {
+  position: FormPosition;
+  timestamp: number;
+  image: ImageData;
+  spineAngle: number;
+}
+
+export interface RepData {
+  repNumber: number;
+  checkpoints: Map<FormPosition, FormCheckpoint>;
+}
+
 export interface AppState {
   isModelLoaded: boolean;
   isProcessing: boolean;
@@ -35,6 +54,7 @@ export interface AppState {
   repCounter: RepCounter;
   showBodyParts: boolean;
   bodyPartDisplayTime: number; // in seconds
+  currentRepIndex: number; // Index of the current rep being viewed
 }
 
 // COCO keypoint mapping used by MoveNet and PoseNet models

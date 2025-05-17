@@ -1,6 +1,6 @@
 // Import application components
 import { SwingAnalyzer } from './SwingAnalyzer';
-import { AppState, CocoBodyParts } from './types';
+import { AppState, CocoBodyParts, FormPosition } from './types';
 
 // Get DOM elements
 const video = document.getElementById('video') as HTMLVideoElement;
@@ -17,6 +17,12 @@ const showKeypointsBtn = document.getElementById('show-keypoints-btn') as HTMLBu
 const keypointData = document.getElementById('keypoint-data') as HTMLDivElement;
 const keypointContainer = document.getElementById('keypoint-container') as HTMLDivElement;
 
+// Add Form Checkpoints elements
+const prevRepBtn = document.getElementById('prev-rep-btn') as HTMLButtonElement;
+const nextRepBtn = document.getElementById('next-rep-btn') as HTMLButtonElement;
+const currentRepEl = document.getElementById('current-rep') as HTMLSpanElement;
+const checkpointGridContainer = document.getElementById('checkpoint-grid-container') as HTMLDivElement;
+
 // Initialize app state
 const appState: AppState = {
   usingCamera: false,
@@ -31,7 +37,8 @@ const appState: AppState = {
     hingeThreshold: 45
   },
   showBodyParts: true,
-  bodyPartDisplayTime: 0.5 // Show body part labels for 0.5 seconds
+  bodyPartDisplayTime: 0.5, // Show body part labels for 0.5 seconds
+  currentRepIndex: 0 // Current rep to view in Form Checkpoints
 };
 
 // Create swing analyzer
@@ -210,6 +217,10 @@ function setupEventListeners() {
   
   // Add debug controls
   setupDebugControls();
+  
+  // Setup Form Checkpoints controls
+  prevRepBtn.addEventListener('click', navigateToPreviousRep);
+  nextRepBtn.addEventListener('click', navigateToNextRep);
 }
 
 function setupDebugControls() {
@@ -259,7 +270,9 @@ async function initializeAnalyzer() {
       canvas, 
       appState.showBodyParts,
       appState.bodyPartDisplayTime,
-      updateLatestKeypoints
+      updateLatestKeypoints,
+      false,  // debug mode off by default
+      checkpointGridContainer  // Pass the checkpoint grid container
     );
     
     try {
@@ -533,6 +546,9 @@ function stopVideo() {
   if (swingAnalyzer) {
     swingAnalyzer.reset();
   }
+  
+  // Reset checkpoints state
+  resetCheckpoints();
 }
 
 function stopCamera() {
@@ -601,10 +617,54 @@ function updateKeypointDisplay() {
   });
 }
 
-// Add to the SwingAnalyzer class a method to update UI keypoints
-// We need to update the SwingAnalyzer class to store and display keypoints
+// Form Checkpoints functions
+function resetCheckpoints() {
+  if (!swingAnalyzer) return;
+  
+  // Reset current rep index
+  appState.currentRepIndex = 0;
+  currentRepEl.textContent = 'Rep 0/0';
+  
+  // Disable navigation buttons
+  prevRepBtn.disabled = true;
+  nextRepBtn.disabled = true;
+}
 
-// In main.ts, create a function to pass to SwingAnalyzer
+function updateCheckpointNavigation() {
+  if (!swingAnalyzer) return;
+  
+  const totalReps = swingAnalyzer.getRecordedRepCount();
+  
+  // Update rep counter text
+  currentRepEl.textContent = `Rep ${appState.currentRepIndex + 1}/${totalReps}`;
+  
+  // Enable/disable navigation buttons
+  prevRepBtn.disabled = appState.currentRepIndex <= 0;
+  nextRepBtn.disabled = appState.currentRepIndex >= totalReps - 1;
+}
+
+function navigateToPreviousRep() {
+  if (!swingAnalyzer) return;
+  
+  if (appState.currentRepIndex > 0) {
+    appState.currentRepIndex--;
+    swingAnalyzer.navigateToRep(appState.currentRepIndex);
+    updateCheckpointNavigation();
+  }
+}
+
+function navigateToNextRep() {
+  if (!swingAnalyzer) return;
+  
+  const totalReps = swingAnalyzer.getRecordedRepCount();
+  if (appState.currentRepIndex < totalReps - 1) {
+    appState.currentRepIndex++;
+    swingAnalyzer.navigateToRep(appState.currentRepIndex);
+    updateCheckpointNavigation();
+  }
+}
+
+// Update the checkpoint nav controls when rep count changes
 function updateLatestKeypoints(keypoints: any[]) {
   latestKeypoints = keypoints.map(kp => ({
     name: kp.name || 'unknown',
@@ -613,8 +673,23 @@ function updateLatestKeypoints(keypoints: any[]) {
     confidence: kp.score?.toFixed(2) || 'N/A'
   }));
   
-  // Update display if visible
+  // Update keypoint display if visible
   updateKeypointDisplay();
+  
+  // Update checkpoint navigation if rep count has changed
+  if (swingAnalyzer) {
+    const currentReps = swingAnalyzer.getRecordedRepCount();
+    const currentRepCount = swingAnalyzer.getRepCount();
+    
+    // If we have a new rep, update to show the latest rep
+    if (currentReps > 0 && appState.currentRepIndex < currentReps - 1) {
+      appState.currentRepIndex = currentReps - 1;
+      swingAnalyzer.navigateToRep(appState.currentRepIndex);
+    }
+    
+    // Always update the navigation controls
+    updateCheckpointNavigation();
+  }
 }
 
 // Start the application

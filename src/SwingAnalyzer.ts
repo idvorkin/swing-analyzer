@@ -2,6 +2,7 @@ import * as poseDetection from '@tensorflow-models/pose-detection';
 import '@tensorflow/tfjs-backend-webgl';
 import * as tf from '@tensorflow/tfjs-core';
 import { CocoBodyParts, PoseKeypoint, PoseResult, RepCounter } from './types';
+import { FormCheckpoints } from './FormCheckpoints';
 
 // Model cache constants
 const MODEL_URL_KEY = 'movenet_model_url';
@@ -24,6 +25,7 @@ export class SwingAnalyzer {
   private spineAngle = 0;
   private keypointUpdateCallback: ((keypoints: any[]) => void) | null = null;
   private debugMode: boolean = false; // Debug mode flag
+  private formCheckpoints: FormCheckpoints | null = null;
   
   constructor(
     video: HTMLVideoElement, 
@@ -31,7 +33,8 @@ export class SwingAnalyzer {
     showBodyParts = true,
     bodyPartDisplaySeconds = 0.5,
     keypointUpdateCallback: ((keypoints: any[]) => void) | null = null,
-    debugMode = false
+    debugMode = false,
+    checkpointGridElement: HTMLElement | null = null
   ) {
     this.video = video;
     this.canvas = canvas;
@@ -48,6 +51,18 @@ export class SwingAnalyzer {
     this.bodyPartDisplaySeconds = bodyPartDisplaySeconds;
     this.keypointUpdateCallback = keypointUpdateCallback;
     this.debugMode = debugMode;
+    
+    // Initialize form checkpoints if element is provided
+    if (checkpointGridElement) {
+      this.formCheckpoints = new FormCheckpoints(video, canvas, checkpointGridElement);
+    }
+  }
+  
+  /**
+   * Initialize form checkpoints feature
+   */
+  initFormCheckpoints(checkpointGridElement: HTMLElement): void {
+    this.formCheckpoints = new FormCheckpoints(this.video, this.canvas, checkpointGridElement);
   }
 
   async initialize(): Promise<void> {
@@ -359,6 +374,13 @@ export class SwingAnalyzer {
     
     this.repCounter.lastHingeState = isHinge;
     this.repCounter.isHinge = isHinge;
+  }
+  
+  /**
+   * Get the current rep count
+   */
+  getRepCount(): number {
+    return this.repCounter.count;
   }
   
   updateRepCounterDisplay(): void {
@@ -673,7 +695,17 @@ export class SwingAnalyzer {
       try {
         const pose = await this.detectPose();
         if (pose && pose.keypoints) {
+          // Draw the pose first, so the skeleton is visible in the canvas
           this.drawPose(pose, timestamp);
+          
+          // Then immediately capture the frame with the skeleton overlay for checkpoints
+          if (this.formCheckpoints) {
+            this.formCheckpoints.processFrame(
+              pose.keypoints, 
+              this.spineAngle, 
+              this.getRepCount()
+            );
+          }
         } else {
           // If no pose detected, just update the status text
           // This avoids freezing the UI when no pose is detected
@@ -715,6 +747,30 @@ export class SwingAnalyzer {
     this.repCounter.lastHingeState = false;
     this.frameTimestamp = 0;
     this.updateRepCounterDisplay();
+    
+    if (this.formCheckpoints) {
+      this.formCheckpoints.reset();
+    }
+  }
+  
+  /**
+   * Navigate to a specific rep in the form checkpoints
+   */
+  navigateToRep(repIndex: number): boolean {
+    if (this.formCheckpoints) {
+      return this.formCheckpoints.navigateToRep(repIndex);
+    }
+    return false;
+  }
+  
+  /**
+   * Get the number of recorded reps in form checkpoints
+   */
+  getRecordedRepCount(): number {
+    if (this.formCheckpoints) {
+      return this.formCheckpoints.getRepCount();
+    }
+    return 0;
   }
   
   setBodyPartDisplay(show: boolean, seconds: number): void {
