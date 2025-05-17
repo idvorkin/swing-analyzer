@@ -14,8 +14,8 @@ A web-based swing motion analyzer that runs completely in the browser. This appl
 
 ## Live Demo
 
-- **Production Site**: [https://swing-analyzer-bh0csa0tu-idvorkins-projects.vercel.app](https://swing-analyzer-bh0csa0tu-idvorkins-projects.vercel.app)
-- **Debug Site**: [https://swing-analyzer.vercel.app](https://swing-analyzer.vercel.app)
+- **Production Site**: [https://swing-analyzer.vercel.app](https://swing-analyzer.vercel.app)
+- **Debug Site**: [https://swing-analyzer-bh0csa0tu-idvorkins-projects.vercel.app](https://swing-analyzer-bh0csa0tu-idvorkins-projects.vercel.app)
 
 ## Getting Started
 
