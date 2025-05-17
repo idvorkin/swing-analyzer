@@ -16,21 +16,13 @@ const displayModeRadios = document.querySelectorAll('input[name="display-mode"]'
 const showKeypointsBtn = document.getElementById('show-keypoints-btn') as HTMLButtonElement;
 const keypointData = document.getElementById('keypoint-data') as HTMLDivElement;
 const keypointContainer = document.getElementById('keypoint-container') as HTMLDivElement;
-const loadingSpinner = document.getElementById('loading-spinner') as HTMLDivElement;
-const loadingProgress = document.getElementById('loading-progress') as HTMLDivElement;
-const loadingText = document.getElementById('loading-text') as HTMLDivElement;
 
-// Loading state variables
-let loadingTimer: number | null = null;
-let progressValue = 0;
-const ESTIMATED_LOADING_TIME = 15000; // 15 seconds estimated loading time
-const PROGRESS_UPDATE_INTERVAL = 100; // Update progress every 100ms
-
-// Application state
+// Initialize app state
 const appState: AppState = {
+  usingCamera: false,
+  cameraMode: 'environment', // Default to back camera
   isModelLoaded: false,
   isProcessing: false,
-  usingCamera: false,
   repCounter: {
     count: 0,
     isHinge: false,
@@ -47,12 +39,13 @@ let swingAnalyzer: SwingAnalyzer | null = null;
 // Create a global variable to store keypoint data
 let latestKeypoints: any[] = [];
 
+// Add camera devices tracking
+let availableCameras: MediaDeviceInfo[] = [];
+let currentCameraIndex = 0;
+
 // Initialize the application
 async function initApp() {
   updateStatus('Loading model...');
-  
-  // Show loading spinner with progress
-  showLoadingSpinner(true);
   
   // Setup video and canvas dimensions initially
   setupVideoCanvas();
@@ -61,91 +54,6 @@ async function initApp() {
   setupEventListeners();
   
   updateStatus('Ready. Upload a video or start camera.');
-}
-
-// Show or hide the loading spinner
-function showLoadingSpinner(show: boolean) {
-  if (loadingSpinner) {
-    loadingSpinner.classList.toggle('active', show);
-    
-    if (show) {
-      // Reset and start progress simulation
-      resetProgress();
-      startProgressSimulation();
-    } else {
-      // Stop progress simulation
-      stopProgressSimulation();
-    }
-  }
-}
-
-// Start simulating progress
-function startProgressSimulation() {
-  // Stop any existing timer
-  stopProgressSimulation();
-  
-  // Reset progress
-  progressValue = 0;
-  updateProgressBar(0);
-  
-  // Start the timer
-  loadingTimer = window.setInterval(() => {
-    // Calculate next progress value using a curve that starts fast and slows down
-    // This simulates real loading behavior better than linear progress
-    progressValue += (100 - progressValue) / 100;
-    
-    if (progressValue >= 99) {
-      progressValue = 99; // Cap at 99% until actually loaded
-    }
-    
-    updateProgressBar(progressValue);
-    
-    // Calculate estimated time remaining
-    const elapsedTime = (progressValue / 100) * ESTIMATED_LOADING_TIME;
-    const estimatedTimeRemaining = Math.max(0, ESTIMATED_LOADING_TIME - elapsedTime);
-    const secondsRemaining = Math.ceil(estimatedTimeRemaining / 1000);
-    
-    // Update loading text
-    if (loadingText) {
-      loadingText.textContent = `Loading model... ${Math.round(progressValue)}% (about ${secondsRemaining}s remaining)`;
-    }
-  }, PROGRESS_UPDATE_INTERVAL);
-}
-
-// Stop progress simulation
-function stopProgressSimulation() {
-  if (loadingTimer !== null) {
-    clearInterval(loadingTimer);
-    loadingTimer = null;
-  }
-  
-  // Set to 100% when done
-  if (loadingProgress) {
-    loadingProgress.style.width = '100%';
-  }
-  
-  // Update text
-  if (loadingText) {
-    loadingText.textContent = 'Loading complete!';
-  }
-}
-
-// Reset progress bar to 0
-function resetProgress() {
-  progressValue = 0;
-  if (loadingProgress) {
-    loadingProgress.style.width = '0%';
-  }
-  if (loadingText) {
-    loadingText.textContent = 'Loading model...';
-  }
-}
-
-// Update progress bar
-function updateProgressBar(percentage: number) {
-  if (loadingProgress) {
-    loadingProgress.style.width = `${percentage}%`;
-  }
 }
 
 function setupVideoCanvas() {
@@ -224,6 +132,12 @@ function setupEventListeners() {
   
   // Video upload
   videoUpload.addEventListener('change', handleVideoUpload);
+  
+  // Camera switch button
+  const switchCameraBtn = document.getElementById('switch-camera-btn');
+  if (switchCameraBtn) {
+    switchCameraBtn.addEventListener('click', switchCamera);
+  }
   
   // Video events
   video.addEventListener('play', () => {
@@ -312,9 +226,6 @@ function setupDebugControls() {
 
 async function initializeAnalyzer() {
   if (!swingAnalyzer) {
-    // Show loading spinner
-    showLoadingSpinner(true);
-    
     // Reset dimensions - make sure canvas matches video at initialization time
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
@@ -335,30 +246,14 @@ async function initializeAnalyzer() {
     );
     
     try {
-      // Record start time to measure actual loading time
-      const startTime = performance.now();
-      
+      updateStatus('Loading model... Please wait.');
       await swingAnalyzer.initialize();
-      
-      // Calculate actual loading time
-      const loadingTime = performance.now() - startTime;
-      console.log(`Model loaded in ${Math.round(loadingTime)}ms`);
-      
-      // Update our estimate for next time if significantly different
-      if (Math.abs(loadingTime - ESTIMATED_LOADING_TIME) > 5000) {
-        // Store in localStorage for future reference
-        localStorage.setItem('modelLoadingTime', loadingTime.toString());
-      }
       
       appState.isModelLoaded = true;
       updateStatus('Model loaded. Ready to analyze.');
-      // Hide loading spinner
-      showLoadingSpinner(false);
     } catch (error) {
       console.error('Error initializing analyzer:', error);
       updateStatus('Error loading model. Please refresh and try again.');
-      // Hide loading spinner
-      showLoadingSpinner(false);
     }
   }
 }
@@ -384,19 +279,108 @@ function updateButtonStates(
   }
 }
 
+// Function to update visibility of switch camera button
+function updateSwitchCameraButton() {
+  const switchCameraBtn = document.getElementById('switch-camera-btn');
+  if (!switchCameraBtn) return;
+
+  // Only show switch camera button when camera is active
+  if (appState.usingCamera) {
+    // Check if we can enumerate devices (browser support)
+    if ('mediaDevices' in navigator && 'enumerateDevices' in navigator.mediaDevices) {
+      navigator.mediaDevices.enumerateDevices()
+        .then(devices => {
+          // Filter only video input devices (cameras)
+          availableCameras = devices.filter(device => device.kind === 'videoinput');
+          // Only show switch button if there are multiple cameras
+          switchCameraBtn.style.display = availableCameras.length > 1 ? 'block' : 'none';
+          
+          // Log available cameras for debugging
+          if (availableCameras.length > 0) {
+            console.log(`Found ${availableCameras.length} cameras:`);
+            availableCameras.forEach((camera, index) => {
+              console.log(`Camera ${index}: ${camera.label || 'unnamed'} (ID: ${camera.deviceId})`);
+            });
+          }
+        })
+        .catch(err => {
+          console.error('Error checking cameras:', err);
+          switchCameraBtn.style.display = 'none';
+        });
+    } else {
+      // If device enumeration is not supported, show button on mobile devices
+      // This is a fallback for browsers that don't support enumeration
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      switchCameraBtn.style.display = isMobile ? 'block' : 'none';
+    }
+  } else {
+    switchCameraBtn.style.display = 'none';
+  }
+}
+
+// Function to switch between cameras
+function switchCamera() {
+  if (availableCameras.length > 1) {
+    // Move to next camera in the list
+    currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+    
+    // If the camera is currently active, restart it with the new camera
+    if (appState.usingCamera) {
+      // Stop current camera
+      stopCamera();
+      // Start new camera
+      startCamera();
+    }
+
+    // Update status with camera info
+    const cameraName = availableCameras[currentCameraIndex].label || `Camera ${currentCameraIndex + 1}`;
+    updateStatus(`Switched to ${cameraName}`);
+  } else {
+    // Fallback to simple toggle between front/back if device enumeration didn't work
+    appState.cameraMode = appState.cameraMode === 'environment' ? 'user' : 'environment';
+    
+    // If the camera is currently active, restart it with the new mode
+    if (appState.usingCamera) {
+      // Stop current camera
+      stopCamera();
+      // Start camera with new mode
+      startCamera();
+    }
+
+    // Update status to reflect camera change
+    updateStatus(`Switched to ${appState.cameraMode === 'environment' ? 'back' : 'front'} camera`);
+  }
+}
+
 async function startCamera() {
   try {
-    // Show loading spinner while setting up camera
-    showLoadingSpinner(true);
+    updateStatus('Accessing camera...');
     
     // Request camera permissions
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment', // Prefer rear camera on mobile
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
-    });
+    let constraints: MediaStreamConstraints;
+    
+    // If we have enumerated specific cameras, use the deviceId
+    if (availableCameras.length > 0) {
+      constraints = {
+        video: {
+          deviceId: { exact: availableCameras[currentCameraIndex].deviceId },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+    } else {
+      // Fallback to facingMode if no specific cameras are enumerated
+      constraints = {
+        video: {
+          facingMode: appState.cameraMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+    }
+    
+    // Get camera stream with selected constraints
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     
     // Make sure video is visible
     video.style.display = 'block';
@@ -421,12 +405,22 @@ async function startCamera() {
     
     // Update UI
     updateButtonStates(false, true, true);
-    updateStatus('Camera active. Analyzing motion...');
+    
+    // Update status message with camera info
+    let cameraInfo = '';
+    if (availableCameras.length > 0) {
+      const currentCamera = availableCameras[currentCameraIndex];
+      cameraInfo = currentCamera.label || `Camera ${currentCameraIndex + 1}`;
+    } else {
+      cameraInfo = appState.cameraMode === 'environment' ? 'back' : 'front';
+    }
+    updateStatus(`Camera active (${cameraInfo}). Analyzing motion...`);
+    
+    // Update switch camera button visibility
+    updateSwitchCameraButton();
   } catch (error) {
     console.error('Error accessing camera:', error);
     updateStatus('Camera access denied or not available.');
-    // Hide loading spinner
-    showLoadingSpinner(false);
   }
 }
 
@@ -435,8 +429,7 @@ async function handleVideoUpload(event: Event) {
   if (input.files && input.files.length > 0) {
     const file = input.files[0];
     
-    // Show loading spinner while processing video
-    showLoadingSpinner(true);
+    updateStatus(`Loading video: ${file.name}...`);
     
     // Stop camera if it's active
     if (appState.usingCamera) {
@@ -523,8 +516,11 @@ function stopCamera() {
   appState.usingCamera = false;
   updateButtonStates(true, false, false);
   
-  // Hide the loading spinner if it's still showing
-  showLoadingSpinner(false);
+  // Hide the camera switch button
+  const switchCameraBtn = document.getElementById('switch-camera-btn');
+  if (switchCameraBtn) {
+    switchCameraBtn.style.display = 'none';
+  }
 }
 
 // Toggle keypoint data visibility
