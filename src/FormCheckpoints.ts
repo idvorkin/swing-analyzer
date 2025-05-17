@@ -248,9 +248,9 @@ export class FormCheckpoints {
     if (ctx) {
       ctx.putImageData(checkpoint.image, 0, 0);
       
-      // Add position and angle text
+      // Add position and angle text with darker background for better visibility
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(10, 10, 300, 40);
+      ctx.fillRect(10, 10, 380, 40);
       
       ctx.font = 'bold 20px Arial';
       ctx.fillStyle = 'white';
@@ -258,6 +258,18 @@ export class FormCheckpoints {
         `Rep #${repNumber} - ${this.formatPositionName(checkpoint.position)} - ${checkpoint.spineAngle.toFixed(1)}°`, 
         20, 
         38
+      );
+      
+      // Add navigation hints at the bottom
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(10, this.fullscreenCanvas.height - 50, 500, 40);
+      
+      ctx.font = '16px Arial';
+      ctx.fillStyle = 'white';
+      ctx.fillText(
+        '← Previous Position | → Next Position | ESC to Close', 
+        20, 
+        this.fullscreenCanvas.height - 25
       );
     }
   }
@@ -291,6 +303,28 @@ export class FormCheckpoints {
     const checkpoint = this.currentRep.checkpoints.get(position);
     if (checkpoint) {
       this.showFullscreen(checkpoint);
+    } else {
+      // Provide visual feedback when the position isn't available
+      const positionName = this.formatPositionName(position);
+      const tempOverlay = document.createElement('div');
+      tempOverlay.style.position = 'fixed';
+      tempOverlay.style.top = '50%';
+      tempOverlay.style.left = '50%';
+      tempOverlay.style.transform = 'translate(-50%, -50%)';
+      tempOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+      tempOverlay.style.color = 'white';
+      tempOverlay.style.padding = '20px';
+      tempOverlay.style.borderRadius = '10px';
+      tempOverlay.style.zIndex = '1000';
+      tempOverlay.style.textAlign = 'center';
+      tempOverlay.textContent = `${positionName} position not captured for this rep`;
+      
+      document.body.appendChild(tempOverlay);
+      
+      // Remove after 2 seconds
+      setTimeout(() => {
+        document.body.removeChild(tempOverlay);
+      }, 2000);
     }
   }
   

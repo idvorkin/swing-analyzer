@@ -30,12 +30,24 @@ For each repetition, the system will capture frames at these four positions:
 - Provide option to compare key positions across different reps
 - Include angle measurements and skeleton overlay on each frame
 
+### Fullscreen Navigation
+- Users can click on any checkpoint in the grid to enter fullscreen mode
+- In fullscreen mode, navigation controls allow cycling through positions and reps:
+  - Pressing right/next will:
+    - Move to the next position within the current rep (Top → Hinge → Bottom → Release)
+    - When at the last position (Release), move to the first position (Top) of the next rep
+  - Pressing left/previous will:
+    - Move to the previous position within the current rep (Release → Bottom → Hinge → Top)
+    - When at the first position (Top), move to the last position (Release) of the previous rep
+  - This allows users to either examine all positions within a single rep or compare the same position across different reps by continuously navigating in one direction
+
 ## User Experience
 1. User performs their exercise while being recorded
 2. System counts reps and captures key frames automatically
 3. After each rep, the four checkpoint frames are displayed with skeleton overlays
 4. User can review their form at each critical position
 5. User can navigate between different reps to compare form over time
+6. User can click any checkpoint to view it in fullscreen and navigate through the sequence
 
 ## Success Metrics
 - Accurate identification of all four positions in >90% of reps

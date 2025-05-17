@@ -213,6 +213,13 @@
       gap: 10px;
     }
     
+    .checkpoint-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
     .rep-navigation {
       display: flex;
       align-items: center;
@@ -322,9 +329,8 @@
       </div>
       
       <div class="form-checkpoints">
-        <h3>Form Checkpoints</h3>
-        <div class="checkpoint-controls">
-          <button id="toggle-checkpoints-btn" class="recording-btn">🔴 Start Recording Checkpoints</button>
+        <div class="checkpoint-header">
+          <h3>Checkpoints</h3>
           <div class="rep-navigation">
             <button id="prev-rep-btn" class="nav-btn" disabled>◀ Previous</button>
             <span id="current-rep">Rep 0/0</span>
