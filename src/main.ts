@@ -643,9 +643,10 @@ function updateCheckpointNavigation() {
   if (!swingAnalyzer) return;
   
   const totalReps = swingAnalyzer.getRecordedRepCount();
+  const currentRepCount = swingAnalyzer.getRepCount();
   
-  // Update rep counter text
-  currentRepEl.textContent = `Rep ${appState.currentRepIndex + 1}/${totalReps}`;
+  // Update rep counter text - show the active rep counter instead of total recorded reps
+  currentRepEl.textContent = `Rep ${appState.currentRepIndex + 1}/${currentRepCount}`;
   
   // Enable/disable navigation buttons
   prevRepBtn.disabled = appState.currentRepIndex <= 0;
