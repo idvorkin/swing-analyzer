@@ -1,5 +1,5 @@
-import { NEVER, type Observable, Subject, fromEvent, interval } from 'rxjs';
-import { map, switchMap, takeUntil } from 'rxjs/operators';
+import { NEVER, type Observable, Subject, fromEvent, interval, merge } from 'rxjs';
+import { map, switchMap, takeUntil, startWith } from 'rxjs/operators';
 import type { FrameAcquisition, FrameEvent } from './PipelineInterfaces';
 
 /**
@@ -30,7 +30,8 @@ export class VideoFrameAcquisition implements FrameAcquisition {
     this.stop$ = new Subject<void>();
 
     // Check if video is ready
-    if (this.videoElement.readyState < 2) {
+    const HAVE_CURRENT_DATA = 2;
+    if (this.videoElement.readyState < HAVE_CURRENT_DATA) {
       console.log('Video not ready, waiting for loadeddata event');
 
       // Wait for video to be loaded before starting
@@ -210,21 +211,25 @@ export class VideoFrameAcquisition implements FrameAcquisition {
    * Create frame stream from video element
    */
   private createFrameStream(): Observable<FrameEvent> {
-    // Calculate interval based on frame rate
     const frameInterval = 1000 / this.frameRate;
-
-    // If video is paused, don't emit frames
-    if (this.videoElement.paused) {
-      return NEVER;
-    }
-
-    // Create observable that emits on each frame interval
-    return interval(frameInterval).pipe(
-      takeUntil(this.stop$),
-      map(() => ({
-        frame: this.videoElement,
-        timestamp: performance.now(),
-      }))
+    // Listen to play and pause events
+    const play$ = fromEvent(this.videoElement, 'play');
+    const pause$ = fromEvent(this.videoElement, 'pause');
+    // Merge play/pause events, start with current state
+    return merge(play$, pause$).pipe(
+      startWith(this.videoElement.paused ? 'pause' : 'play'),
+      switchMap(() =>
+        this.videoElement.paused
+          ? NEVER
+          : interval(frameInterval).pipe(
+              takeUntil(this.stop$),
+              map(() => ({
+                frame: this.videoElement,
+                timestamp: performance.now(),
+              }))
+            )
+      ),
+      takeUntil(this.stop$)
     );
   }
 
