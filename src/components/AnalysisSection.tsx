@@ -254,6 +254,9 @@ const AnalysisSection: React.FC = () => {
             <div className="fullscreen-arm-angle">
               Arm-to-Spine Angle: {Math.round(checkpoint.armToSpineAngle)}°
             </div>
+            <div className="fullscreen-timestamp">
+              Time: {new Date(checkpoint.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3})}
+            </div>
           </div>
         </div>
         
