@@ -215,11 +215,11 @@ const MainApplication: React.FC = () => {
       // Load the hardcoded video from public directory
       // Make sure the path is correct - it needs to be relative to the public directory
       const videoURL = '/videos/swing-sample.mp4';
-      
+
       if (!videoURL) {
         throw new Error('Video URL is empty');
       }
-      
+
       console.log(
         `[DEBUG] loadHardcodedVideo: Attempting to load video from ${videoURL}`
       );
@@ -502,10 +502,7 @@ const MainApplication: React.FC = () => {
   return (
     <>
       <header>
-        <h1>Swing Analyzer</h1>
-        <nav>
-          <Link to="/debug">Debug Model Loader</Link>
-        </nav>
+        <h2>Swing Coach 3</h2>
       </header>
 
       <main>
@@ -542,15 +539,18 @@ const MainApplication: React.FC = () => {
 // Main App component that sets up routing
 export const App: React.FC = () => {
   console.log('App: Component rendering started, setting up routes.');
+  console.log('App: Hello');
   return (
     <>
-      <nav>
-        <Link to="/">Home</Link> | <Link to="/debug">Debug Model Loader</Link>
-      </nav>
       <Routes>
         <Route path="/" element={<MainApplication />} />
         <Route path="/debug" element={<DebugModelLoaderPage />} />
       </Routes>
+      <footer>
+        <nav>
+          <Link to="/">Home</Link> | <Link to="/debug">Debug Model Loader</Link>
+        </nav>
+      </footer>
     </>
   );
 };
