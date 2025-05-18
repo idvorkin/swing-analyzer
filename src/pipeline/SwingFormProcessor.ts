@@ -1,4 +1,4 @@
-import { type Observable, of, EMPTY } from 'rxjs';
+import { type Observable, of, EMPTY, from } from 'rxjs';
 import type { Skeleton } from '../models/Skeleton';
 import { type FormCheckpoint, SwingPosition } from '../types';
 import type {
@@ -142,10 +142,10 @@ export class SwingFormProcessor implements FormProcessor {
       this.bestPositionCandidates.clear();
       this.maxSpineAngleInCycle = 0;
       
-      // If we have events, return the first one and queue the rest (or create a multicasting observable)
+      // Emit all form events for the cycle
       if (formEvents.length > 0) {
-        console.log(`Emitting form event for position: ${formEvents[0].position}`);
-        return of(formEvents[0]); // For simplicity, just return the first event
+        console.log(`Emitting ${formEvents.length} form events for positions: ${formEvents.map(e => e.position).join(', ')}`);
+        return from(formEvents); // Emit all events sequentially
       } else {
         console.warn('No form events to emit after cycle completion');
       }
