@@ -14,6 +14,8 @@ const VideoSection: React.FC = () => {
     loadHardcodedVideo,
     togglePlayPause,
     stopVideo,
+    nextFrame,
+    previousFrame,
     getVideoContainerClass
   } = useSwingAnalyzerContext();
 
@@ -74,6 +76,18 @@ const VideoSection: React.FC = () => {
         <canvas id="output-canvas" ref={canvasRef} />
         <div className="video-controls">
           <button
+            id="prev-frame-btn"
+            disabled={!appState.isModelLoaded}
+            onClick={previousFrame}
+            title="Previous Frame (Shortcut: ,)"
+            type="button"
+          >
+            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 6c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1s-1-.45-1-1V7c0-.55.45-1 1-1zm3.66 6.82l5.77 4.07c.66.47 1.58-.01 1.58-.82V7.93c0-.81-.91-1.28-1.58-.82l-5.77 4.07c-.57.4-.57 1.24 0 1.64z"/>
+            </svg>
+          </button>
+          
+          <button
             id="play-pause-btn"
             className="toggle-button"
             disabled={!appState.isModelLoaded}
@@ -89,6 +103,19 @@ const VideoSection: React.FC = () => {
             </svg>
             {isPlaying ? 'Pause' : 'Play'}
           </button>
+          
+          <button
+            id="next-frame-btn"
+            disabled={!appState.isModelLoaded}
+            onClick={nextFrame}
+            title="Next Frame (Shortcut: .)"
+            type="button"
+          >
+            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7.58 16.89l5.77-4.07c.56-.4.56-1.24 0-1.63L7.58 7.11C6.91 6.65 6 7.12 6 7.93v8.14c0 .81.91 1.28 1.58.82zM16 7v10c0 .55.45 1 1 1s1-.45 1-1V7c0-.55-.45-1-1-1s-1 .45-1 1z"/>
+            </svg>
+          </button>
+          
           <button
             id="stop-btn"
             disabled={!appState.isModelLoaded}

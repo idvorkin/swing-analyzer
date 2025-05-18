@@ -106,8 +106,12 @@ export class Skeleton {
         const angleRad = Math.acos(cosAngle);
         const angleDeg = angleRad * (180 / Math.PI);
         
-        this._armToSpineAngle = angleDeg;
-        return angleDeg;
+        // Use exterior angle instead of interior angle for more intuitive visual representation
+        // When vectors are almost aligned, this will give a small angle
+        const exteriorAngleDeg = 180 - angleDeg;
+        
+        this._armToSpineAngle = exteriorAngleDeg;
+        return exteriorAngleDeg;
       } else {
         this._armToSpineAngle = 0; // Default if keypoints not available
         return 0;

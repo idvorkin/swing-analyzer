@@ -50,9 +50,19 @@ export class SkeletonRenderer {
     // Draw keypoints
     this.drawKeypoints(ctx, normalizedKeypoints, timestamp);
 
+    // Always draw the arm-to-spine angle visualization
+    this.visualizeArmToSpineAngle(ctx, skeleton);
+
     // Draw debug info if enabled
     if (this.debugMode) {
       this.drawDebugInfo(ctx, skeleton);
+    } else {
+      // Even if debug mode is off, still show the arm-spine angle
+      const armToSpineAngle = skeleton.getArmToSpineAngle().toFixed(1);
+      ctx.font = '14px monospace';
+      ctx.fillStyle = '#ffff00';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Arm-Spine Angle: ${armToSpineAngle}°`, 10, 40);
     }
   }
 
@@ -250,7 +260,7 @@ export class SkeletonRenderer {
     const armToSpineAngle = skeleton.getArmToSpineAngle().toFixed(1);
     ctx.fillText(`Arm-Spine Angle: ${armToSpineAngle}°`, 10, 40);
 
-    // Visualize arm-to-spine angle calculation
+    // Always visualize the arm-to-spine angle, regardless of debug mode
     this.visualizeArmToSpineAngle(ctx, skeleton);
 
     // Draw grid if needed
@@ -293,9 +303,10 @@ export class SkeletonRenderer {
     ctx.lineTo(shoulder.x, shoulder.y);
     ctx.stroke();
     
-    // Draw arm vector
+    // Draw arm vector in bright yellow - this is what we want to highlight
     ctx.beginPath();
-    ctx.strokeStyle = '#ff00ff'; // Magenta
+    ctx.strokeStyle = '#ffff00'; // Bright yellow
+    ctx.lineWidth = 5; // Make it thicker for emphasis
     ctx.moveTo(shoulder.x, shoulder.y);
     ctx.lineTo(elbow.x, elbow.y);
     ctx.stroke();
@@ -313,7 +324,7 @@ export class SkeletonRenderer {
     ctx.fill();
     ctx.fillText('Shoulder', shoulder.x + 10, shoulder.y);
     
-    ctx.fillStyle = '#ff00ff';
+    ctx.fillStyle = '#ffff00'; // Match the arm color
     ctx.beginPath();
     ctx.arc(elbow.x, elbow.y, 6, 0, 2 * Math.PI);
     ctx.fill();
