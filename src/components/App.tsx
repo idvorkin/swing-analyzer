@@ -115,7 +115,7 @@ const MainApplication: React.FC = () => {
         pipelineRef.current.stop();
       }
     };
-  }, [appState]);
+  }, []);
 
   // Start camera
   const startCamera = async () => {
