@@ -3,9 +3,9 @@ import { Observable, fromEvent, interval, Subject, NEVER } from 'rxjs';
 import { map, takeUntil, switchMap, tap } from 'rxjs/operators';
 
 /**
- * Handles frame acquisition from video element or camera
+ * Frame acquisition stage - handles frame acquisition from video element or camera
  */
-export class VideoFrameAcquisition implements FrameAcquisition {
+export class FrameStage implements FrameAcquisition {
   private stop$ = new Subject<void>();
   private frameRate = 30; // Default frame rate in fps
   

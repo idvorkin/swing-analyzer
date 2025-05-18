@@ -28,9 +28,9 @@ export const SKELETON_CONNECTIONS = [
 ];
 
 /**
- * Builds a skeleton from pose keypoints detected by ML model
+ * Skeleton construction stage - builds a skeleton from pose keypoints detected by ML model
  */
-export class SkeletonBuilder implements SkeletonConstruction {
+export class SkeletonStage implements SkeletonConstruction {
   /**
    * Build a skeleton from a pose event
    * Returns an Observable that emits the skeleton event

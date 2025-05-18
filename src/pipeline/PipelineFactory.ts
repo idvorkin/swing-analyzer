@@ -1,9 +1,9 @@
 import { Pipeline } from './Pipeline';
-import { PoseDetector } from './PoseDetector';
-import { SkeletonBuilder } from './SkeletonBuilder';
-import { FormAnalyzer } from './FormAnalyzer';
-import { RepDetector } from './RepDetector';
-import { VideoFrameAcquisition } from './FrameAcquisition';
+import { PoseStage } from './PoseStage';
+import { SkeletonStage } from './SkeletonStage';
+import { FormStage } from './FormStage';
+import { RepStage } from './RepStage';
+import { FrameStage } from './FrameStage';
 import { FrameAcquisition, PoseDetection, SkeletonConstruction, FormCheckpointDetection, SwingRepAnalysis } from './PipelineInterfaces';
 
 /**
@@ -19,10 +19,10 @@ export class PipelineFactory {
   ): Pipeline {
     // Create each pipeline stage
     const frameAcquisition = PipelineFactory.createFrameAcquisition(videoElement, canvasElement);
-    const poseDetector = PipelineFactory.createPoseDetector();
-    const skeletonBuilder = PipelineFactory.createSkeletonBuilder();
-    const formAnalyzer = PipelineFactory.createFormAnalyzer(videoElement, canvasElement);
-    const repDetector = PipelineFactory.createRepDetector();
+    const poseDetector = PipelineFactory.createPoseDetection();
+    const skeletonBuilder = PipelineFactory.createSkeletonConstruction();
+    const formAnalyzer = PipelineFactory.createFormCheckpointDetection(videoElement, canvasElement);
+    const repDetector = PipelineFactory.createSwingRepAnalysis();
     
     // Create the pipeline with all stages
     return new Pipeline(
@@ -41,37 +41,37 @@ export class PipelineFactory {
     videoElement: HTMLVideoElement,
     canvasElement: HTMLCanvasElement
   ): FrameAcquisition {
-    return new VideoFrameAcquisition(videoElement, canvasElement);
+    return new FrameStage(videoElement, canvasElement);
   }
   
   /**
-   * Create a pose detector
+   * Create a pose detection component
    */
-  static createPoseDetector(): PoseDetection {
-    return new PoseDetector();
+  static createPoseDetection(): PoseDetection {
+    return new PoseStage();
   }
   
   /**
-   * Create a skeleton builder
+   * Create a skeleton construction component
    */
-  static createSkeletonBuilder(): SkeletonConstruction {
-    return new SkeletonBuilder();
+  static createSkeletonConstruction(): SkeletonConstruction {
+    return new SkeletonStage();
   }
   
   /**
-   * Create a form analyzer
+   * Create a form checkpoint detection component
    */
-  static createFormAnalyzer(
+  static createFormCheckpointDetection(
     videoElement: HTMLVideoElement,
     canvasElement: HTMLCanvasElement
   ): FormCheckpointDetection {
-    return new FormAnalyzer(videoElement, canvasElement);
+    return new FormStage(videoElement, canvasElement);
   }
   
   /**
-   * Create a rep detector
+   * Create a swing rep analysis component
    */
-  static createRepDetector(): SwingRepAnalysis {
-    return new RepDetector();
+  static createSwingRepAnalysis(): SwingRepAnalysis {
+    return new RepStage();
   }
 } 

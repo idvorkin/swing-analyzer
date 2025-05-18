@@ -7,9 +7,9 @@ import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 /**
- * Handles pose detection using TensorFlow.js models and RxJS
+ * Pose detection stage - detects poses from frames using TensorFlow.js models
  */
-export class PoseDetector implements PoseDetection {
+export class PoseStage implements PoseDetection {
   private detector: poseDetection.PoseDetector | null = null;
 
   /**

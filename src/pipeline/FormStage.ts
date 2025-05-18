@@ -4,9 +4,9 @@ import { FormCheckpointDetection, SkeletonEvent, CheckpointEvent } from './Pipel
 import { Observable, of } from 'rxjs';
 
 /**
- * Analyzes skeletons to detect form checkpoints (key positions in swing)
+ * Form checkpoint detection stage - analyzes skeletons to detect form checkpoints (key positions in swing)
  */
-export class FormAnalyzer implements FormCheckpointDetection {
+export class FormStage implements FormCheckpointDetection {
   // Last detected position
   private lastPosition = FormPosition.Top;
   

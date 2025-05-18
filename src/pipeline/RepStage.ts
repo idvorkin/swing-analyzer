@@ -4,9 +4,9 @@ import { SwingRepAnalysis, CheckpointEvent, RepEvent } from './PipelineInterface
 import { Observable, of } from 'rxjs';
 
 /**
- * Analyzes skeletons and checkpoints to detect and count swing repetitions
+ * Swing rep analysis stage - analyzes skeletons and checkpoints to detect and count swing repetitions
  */
-export class RepDetector implements SwingRepAnalysis {
+export class RepStage implements SwingRepAnalysis {
   // Track rep state
   private repCounter: RepCounter = {
     count: 0,

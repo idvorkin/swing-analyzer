@@ -1,6 +1,6 @@
 import { PipelineFactory } from './pipeline/PipelineFactory';
 import { SwingAnalyzerViewModel } from './viewmodels/SwingAnalyzerViewModel';
-import { VideoFrameAcquisition } from './pipeline/FrameAcquisition';
+import { FrameStage } from './pipeline/FrameStage';
 import { AppState } from './types';
 
 // Main application class
@@ -28,7 +28,7 @@ class SwingAnalyzerApp {
   private debugModeToggle: HTMLInputElement;
   
   // Component references
-  private frameAcquisition!: VideoFrameAcquisition;
+  private frameAcquisition!: FrameStage;
   private viewModel!: SwingAnalyzerViewModel;
   
   // Application state
@@ -102,7 +102,7 @@ class SwingAnalyzerApp {
     this.frameAcquisition = PipelineFactory.createFrameAcquisition(
       this.video, 
       this.canvas
-    ) as VideoFrameAcquisition;
+    ) as FrameStage;
   }
   
   /**
