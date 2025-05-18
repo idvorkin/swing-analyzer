@@ -1,5 +1,5 @@
-import React from 'react';
-import { AppState } from '../types';
+import type React from 'react';
+import type { AppState } from '../types';
 
 interface VideoSectionProps {
   videoRef: React.MutableRefObject<HTMLVideoElement | null>;
@@ -28,35 +28,34 @@ const VideoSection: React.FC<VideoSectionProps> = ({
   loadHardcodedVideo,
   togglePlayPause,
   stopVideo,
-  getVideoContainerClass
+  getVideoContainerClass,
 }) => {
   return (
     <>
       <div className="top-controls">
         <div className="file-input">
-          <input 
-            type="file" 
-            id="video-upload" 
+          <input
+            type="file"
+            id="video-upload"
             accept="video/*"
             ref={fileInputRef}
             onChange={handleVideoUpload}
           />
-          <label htmlFor="video-upload" className="file-label">Choose File</label>
+          <label htmlFor="video-upload" className="file-label">
+            Choose File
+          </label>
         </div>
-        <button 
-          id="load-hardcoded-btn" 
+        <button
+          id="load-hardcoded-btn"
           className="hardcoded-btn"
           onClick={loadHardcodedVideo}
         >
           Load Hardcoded
         </button>
-        <button 
-          id="camera-btn"
-          onClick={startCamera}
-        >
+        <button id="camera-btn" onClick={startCamera}>
           Start Camera
         </button>
-        <button 
+        <button
           id="switch-camera-btn"
           onClick={switchCamera}
           disabled={!appState.usingCamera}
@@ -64,27 +63,20 @@ const VideoSection: React.FC<VideoSectionProps> = ({
           Swap Camera
         </button>
       </div>
-      
+
       <div className={`video-container ${getVideoContainerClass()}`}>
-        <video 
-          id="video" 
-          ref={videoRef} 
-          playsInline
-        ></video>
-        <canvas 
-          id="output-canvas" 
-          ref={canvasRef}
-        ></canvas>
+        <video id="video" ref={videoRef} playsInline />
+        <canvas id="output-canvas" ref={canvasRef} />
         <div className="video-controls">
-          <button 
-            id="play-pause-btn" 
+          <button
+            id="play-pause-btn"
             className="toggle-button"
             disabled={!appState.isModelLoaded}
             onClick={togglePlayPause}
           >
             {isPlaying ? 'Pause' : 'Play'}
           </button>
-          <button 
+          <button
             id="stop-btn"
             disabled={!appState.isModelLoaded}
             onClick={stopVideo}
@@ -97,4 +89,4 @@ const VideoSection: React.FC<VideoSectionProps> = ({
   );
 };
 
-export default VideoSection; 
+export default VideoSection;

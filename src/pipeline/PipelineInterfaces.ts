@@ -1,6 +1,12 @@
-import { PoseKeypoint, PoseResult, FormCheckpoint, FormPosition, RepData } from '../types';
-import { Skeleton } from '../models/Skeleton';
-import { Observable } from 'rxjs';
+import type { Observable } from 'rxjs';
+import type { Skeleton } from '../models/Skeleton';
+import {
+  type FormCheckpoint,
+  type FormPosition,
+  PoseKeypoint,
+  type PoseResult,
+  type RepData,
+} from '../types';
 
 /**
  * Frame acquisition stage - processes raw video/camera frames
@@ -10,12 +16,12 @@ export interface FrameAcquisition {
    * Get the current frame
    */
   getCurrentFrame(): HTMLCanvasElement | HTMLVideoElement;
-  
+
   /**
    * Start frame acquisition and return an Observable of frame events
    */
   start(): Observable<FrameEvent>;
-  
+
   /**
    * Stop frame acquisition
    */
@@ -39,7 +45,7 @@ export interface SkeletonTransformer {
    * Initialize the skeleton transformer
    */
   initialize(): Promise<void>;
-  
+
   /**
    * Transform a frame event into a skeleton
    * Returns an Observable that emits the skeleton event
@@ -72,8 +78,11 @@ export interface FormProcessor {
    * Process a skeleton to identify checkpoints
    * Returns an Observable that emits checkpoint events
    */
-  processFrame(skeletonEvent: SkeletonEvent, repCount: number): Observable<CheckpointEvent>;
-  
+  processFrame(
+    skeletonEvent: SkeletonEvent,
+    repCount: number
+  ): Observable<CheckpointEvent>;
+
   /**
    * Reset the form processor state
    */
@@ -99,17 +108,17 @@ export interface RepProcessor {
    * Returns an Observable that emits rep count updates
    */
   updateRepCount(checkpointEvent: CheckpointEvent): Observable<RepEvent>;
-  
+
   /**
    * Get the current rep count
    */
   getRepCount(): number;
-  
+
   /**
    * Reset rep counter
    */
   reset(): void;
-  
+
   /**
    * Get all completed reps
    */
@@ -123,4 +132,4 @@ export interface RepEvent {
   repCount: number;
   checkpointEvent: CheckpointEvent;
   repIncremented?: boolean;
-} 
+}

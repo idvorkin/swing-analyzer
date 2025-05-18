@@ -1,5 +1,5 @@
-import { FormPosition, PoseKeypoint } from './types';
 import { FormCheckpointUX } from './FormCheckpointUX';
+import { FormPosition, type PoseKeypoint } from './types';
 
 // This class is kept for backward compatibility but now delegates to the new classes
 export class FormCheckpoints {
@@ -11,12 +11,20 @@ export class FormCheckpoints {
     checkpointGridElement: HTMLElement
   ) {
     // Initialize the UX component which also initializes the logic component
-    this.ux = new FormCheckpointUX(videoElement, canvasElement, checkpointGridElement);
+    this.ux = new FormCheckpointUX(
+      videoElement,
+      canvasElement,
+      checkpointGridElement
+    );
   }
 
   // Forward all methods to the UX component
-  
-  processFrame(keypoints: PoseKeypoint[], spineAngle: number, repCount: number): void {
+
+  processFrame(
+    keypoints: PoseKeypoint[],
+    spineAngle: number,
+    repCount: number
+  ): void {
     this.ux.processFrame(keypoints, spineAngle, repCount);
   }
 
@@ -31,4 +39,4 @@ export class FormCheckpoints {
   getRepCount(): number {
     return this.ux.getRepCount();
   }
-} 
+}

@@ -1,9 +1,14 @@
 import { Pipeline } from './Pipeline';
-import { VideoFrameAcquisition } from './VideoFrameAcquisition';
+import type {
+  FormProcessor,
+  FrameAcquisition,
+  RepProcessor,
+  SkeletonTransformer,
+} from './PipelineInterfaces';
 import { PoseSkeletonTransformer } from './PoseSkeletonTransformer';
 import { SwingFormProcessor } from './SwingFormProcessor';
 import { SwingRepProcessor } from './SwingRepProcessor';
-import { FrameAcquisition, SkeletonTransformer, FormProcessor, RepProcessor } from './PipelineInterfaces';
+import { VideoFrameAcquisition } from './VideoFrameAcquisition';
 
 /**
  * Factory to create and configure the processing pipeline
@@ -17,11 +22,17 @@ export class PipelineFactory {
     canvasElement: HTMLCanvasElement
   ): Pipeline {
     // Create each pipeline stage
-    const frameAcquisition = PipelineFactory.createFrameAcquisition(videoElement, canvasElement);
+    const frameAcquisition = PipelineFactory.createFrameAcquisition(
+      videoElement,
+      canvasElement
+    );
     const skeletonTransformer = PipelineFactory.createSkeletonTransformer();
-    const formProcessor = PipelineFactory.createFormProcessor(videoElement, canvasElement);
+    const formProcessor = PipelineFactory.createFormProcessor(
+      videoElement,
+      canvasElement
+    );
     const repProcessor = PipelineFactory.createRepProcessor();
-    
+
     // Create the pipeline with all stages
     return new Pipeline(
       frameAcquisition,
@@ -30,7 +41,7 @@ export class PipelineFactory {
       repProcessor
     );
   }
-  
+
   /**
    * Create a frame acquisition component
    */
@@ -40,7 +51,7 @@ export class PipelineFactory {
   ): FrameAcquisition {
     return new VideoFrameAcquisition(videoElement, canvasElement);
   }
-  
+
   /**
    * Create a skeleton transformer component
    * This combines the pose detection and skeleton construction stages
@@ -48,7 +59,7 @@ export class PipelineFactory {
   static createSkeletonTransformer(): SkeletonTransformer {
     return new PoseSkeletonTransformer();
   }
-  
+
   /**
    * Create a form processor component
    */
@@ -58,11 +69,11 @@ export class PipelineFactory {
   ): FormProcessor {
     return new SwingFormProcessor(videoElement, canvasElement);
   }
-  
+
   /**
    * Create a rep processor component
    */
   static createRepProcessor(): RepProcessor {
     return new SwingRepProcessor();
   }
-} 
+}

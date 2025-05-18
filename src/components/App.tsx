@@ -1,11 +1,12 @@
-import React, { useEffect, useState, useRef } from 'react';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import { PipelineFactory } from '../pipeline/PipelineFactory';
-import { Pipeline, PipelineResult } from '../pipeline/Pipeline';
-import { AppState } from '../types';
-import { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
+import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
+import type { AppState } from '../types';
 import { SwingAnalyzerViewModel } from '../viewmodels/SwingAnalyzerViewModel';
-import VideoSection from './VideoSection';
 import AnalysisSection from './AnalysisSection';
+import VideoSection from './VideoSection';
 import './App.css';
 
 export const App: React.FC = () => {
@@ -20,29 +21,29 @@ export const App: React.FC = () => {
       count: 0,
       isHinge: false,
       lastHingeState: false,
-      hingeThreshold: 45
+      hingeThreshold: 45,
     },
     showBodyParts: true,
     bodyPartDisplayTime: 0.5,
-    currentRepIndex: 0
+    currentRepIndex: 0,
   });
-  
+
   const [status, setStatus] = useState<string>('Loading model...');
   const [repCount, setRepCount] = useState<number>(0);
   const [spineAngle, setSpineAngle] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  
+
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const checkpointGridRef = useRef<HTMLDivElement>(null);
-  
+
   // Pipeline references
   const pipelineRef = useRef<Pipeline | null>(null);
   const frameAcquisitionRef = useRef<VideoFrameAcquisition | null>(null);
   const viewModelRef = useRef<SwingAnalyzerViewModel | null>(null);
-  
+
   // Initialize pipeline and models
   useEffect(() => {
     const initializePipeline = async () => {
@@ -53,22 +54,26 @@ export const App: React.FC = () => {
             videoRef.current,
             canvasRef.current
           );
-          
+
           pipelineRef.current = pipeline;
-          
+
           // Get frame acquisition for direct media control
           frameAcquisitionRef.current = PipelineFactory.createFrameAcquisition(
             videoRef.current,
             canvasRef.current
           ) as VideoFrameAcquisition;
-          
+
           // Create the view model for skeleton rendering
-          const repCounterElement = document.getElementById('rep-counter') || document.createElement('div');
-          const spineAngleElement = document.getElementById('spine-angle') || document.createElement('div');
-          
+          const repCounterElement =
+            document.getElementById('rep-counter') ||
+            document.createElement('div');
+          const spineAngleElement =
+            document.getElementById('spine-angle') ||
+            document.createElement('div');
+
           // Initialize the pipeline first
           await pipeline.initialize();
-          
+
           // Create ViewModel after pipeline is initialized so it has the correct state
           viewModelRef.current = new SwingAnalyzerViewModel(
             pipeline,
@@ -78,14 +83,14 @@ export const App: React.FC = () => {
             spineAngleElement,
             {
               ...appState,
-              isModelLoaded: true // Explicitly set model as loaded
+              isModelLoaded: true, // Explicitly set model as loaded
             }
           );
-          
+
           // Make sure the ViewModel knows the model is loaded
           await viewModelRef.current.initialize();
-          
-          setAppState(prev => ({ ...prev, isModelLoaded: true }));
+
+          setAppState((prev) => ({ ...prev, isModelLoaded: true }));
           setStatus('Ready. Upload a video or start camera.');
         }
       } catch (error) {
@@ -93,9 +98,9 @@ export const App: React.FC = () => {
         setStatus('Error: Failed to initialize model.');
       }
     };
-    
+
     initializePipeline();
-    
+
     // Cleanup on unmount
     return () => {
       if (pipelineRef.current) {
@@ -103,124 +108,161 @@ export const App: React.FC = () => {
       }
     };
   }, []);
-  
+
   // Start camera
   const startCamera = async () => {
     if (!frameAcquisitionRef.current) return;
-    
+
     setStatus('Starting camera...');
     try {
       await frameAcquisitionRef.current.startCamera(appState.cameraMode);
-      
+
       if (videoRef.current) {
         videoRef.current.onloadedmetadata = () => {
           startProcessing();
         };
       }
-      
-      setAppState(prev => ({ ...prev, usingCamera: true }));
+
+      setAppState((prev) => ({ ...prev, usingCamera: true }));
     } catch (error) {
       console.error('Error accessing camera:', error);
       setStatus('Error: Could not access camera.');
     }
   };
-  
+
   // Switch camera
   const switchCamera = async () => {
     if (!frameAcquisitionRef.current || !appState.usingCamera) return;
-    
-    const newMode = appState.cameraMode === 'environment' ? 'user' : 'environment';
-    
+
+    const newMode =
+      appState.cameraMode === 'environment' ? 'user' : 'environment';
+
     try {
       await frameAcquisitionRef.current.stopCamera();
       await frameAcquisitionRef.current.startCamera(newMode);
-      
-      setAppState(prev => ({ ...prev, cameraMode: newMode }));
+
+      setAppState((prev) => ({ ...prev, cameraMode: newMode }));
     } catch (error) {
       console.error('Error switching camera:', error);
       setStatus('Error: Could not switch camera.');
     }
   };
-  
+
   // Handle video upload
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || !event.target.files[0] || !frameAcquisitionRef.current || !videoRef.current) return;
-    
+    if (
+      !event.target.files ||
+      !event.target.files[0] ||
+      !frameAcquisitionRef.current ||
+      !videoRef.current
+    )
+      return;
+
     const file = event.target.files[0];
     const fileURL = URL.createObjectURL(file);
-    
-    frameAcquisitionRef.current.loadVideoFromURL(fileURL)
+
+    frameAcquisitionRef.current
+      .loadVideoFromURL(fileURL)
       .then(() => {
         setStatus(`Loaded video: ${file.name}`);
-        setAppState(prev => ({ ...prev, usingCamera: false }));
-        
+        setAppState((prev) => ({ ...prev, usingCamera: false }));
+
         // Check readyState to determine if metadata is loaded
         if (videoRef.current && videoRef.current.readyState >= 2) {
           // Metadata is already loaded, call play directly
-          console.log('[DEBUG] handleVideoUpload: Metadata already loaded (readyState >= 2), playing directly');
+          console.log(
+            '[DEBUG] handleVideoUpload: Metadata already loaded (readyState >= 2), playing directly'
+          );
           play();
         } else if (videoRef.current) {
           // Metadata not yet loaded, set up a one-time event listener
-          console.log('[DEBUG] handleVideoUpload: Metadata not loaded yet, setting loadeddata listener');
-          videoRef.current.addEventListener('loadeddata', () => {
-            console.log('[DEBUG] handleVideoUpload: loadeddata event fired, now playing');
-            play();
-          }, { once: true }); // Use once: true to automatically remove the listener after it fires
+          console.log(
+            '[DEBUG] handleVideoUpload: Metadata not loaded yet, setting loadeddata listener'
+          );
+          videoRef.current.addEventListener(
+            'loadeddata',
+            () => {
+              console.log(
+                '[DEBUG] handleVideoUpload: loadeddata event fired, now playing'
+              );
+              play();
+            },
+            { once: true }
+          ); // Use once: true to automatically remove the listener after it fires
         }
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('Error loading video:', error);
         setStatus('Error: Could not load video.');
       });
   };
-  
+
   // Load hardcoded video
   const loadHardcodedVideo = async () => {
     if (!frameAcquisitionRef.current || !videoRef.current) return;
-    
+
     console.log('[DEBUG] loadHardcodedVideo: Function called');
     setStatus('Loading hardcoded video...');
     try {
       // Load the hardcoded video from public directory
       const videoURL = '/videos/swing-sample.mp4';
-      console.log(`[DEBUG] loadHardcodedVideo: Attempting to load video from ${videoURL}`);
+      console.log(
+        `[DEBUG] loadHardcodedVideo: Attempting to load video from ${videoURL}`
+      );
       await frameAcquisitionRef.current.loadVideoFromURL(videoURL);
-      
+
       console.log('[DEBUG] loadHardcodedVideo: Video URL loaded successfully');
-      setAppState(prev => ({ ...prev, usingCamera: false }));
+      setAppState((prev) => ({ ...prev, usingCamera: false }));
       setStatus('Hardcoded video loaded.');
-      
+
       // Check readyState to determine if metadata is loaded
       if (videoRef.current && videoRef.current.readyState >= 2) {
         // Metadata is already loaded, call play directly
-        console.log('[DEBUG] loadHardcodedVideo: Metadata already loaded (readyState >= 2), playing directly');
+        console.log(
+          '[DEBUG] loadHardcodedVideo: Metadata already loaded (readyState >= 2), playing directly'
+        );
         play();
       } else if (videoRef.current) {
         // Metadata not yet loaded, set up a one-time event listener
-        console.log('[DEBUG] loadHardcodedVideo: Metadata not loaded yet, setting loadeddata listener');
-        videoRef.current.addEventListener('loadeddata', () => {
-          console.log('[DEBUG] loadHardcodedVideo: loadeddata event fired, now playing');
-          play();
-        }, { once: true }); // Use once: true to automatically remove the listener after it fires
+        console.log(
+          '[DEBUG] loadHardcodedVideo: Metadata not loaded yet, setting loadeddata listener'
+        );
+        videoRef.current.addEventListener(
+          'loadeddata',
+          () => {
+            console.log(
+              '[DEBUG] loadHardcodedVideo: loadeddata event fired, now playing'
+            );
+            play();
+          },
+          { once: true }
+        ); // Use once: true to automatically remove the listener after it fires
       }
     } catch (error) {
       console.error('[DEBUG] loadHardcodedVideo: Error loading video:', error);
       setStatus('Error: Could not load hardcoded video.');
     }
   };
-  
+
   // Play/Pause toggle
   const togglePlayPause = () => {
     console.log('[DEBUG] togglePlayPause: Function called');
     if (!videoRef.current) return;
-    
+
     if (videoRef.current.paused) {
-      console.log('[DEBUG] togglePlayPause: Video is paused, attempting to play');
-      videoRef.current.play().then(() => {
-        console.log('[DEBUG] togglePlayPause: Video play() promise resolved');
-        setIsPlaying(true);
-        startProcessing();
-      }).catch(err => console.error('[DEBUG] togglePlayPause: Error playing video:', err));
+      console.log(
+        '[DEBUG] togglePlayPause: Video is paused, attempting to play'
+      );
+      videoRef.current
+        .play()
+        .then(() => {
+          console.log('[DEBUG] togglePlayPause: Video play() promise resolved');
+          setIsPlaying(true);
+          startProcessing();
+        })
+        .catch((err) =>
+          console.error('[DEBUG] togglePlayPause: Error playing video:', err)
+        );
     } else {
       console.log('[DEBUG] togglePlayPause: Video is playing, pausing now');
       videoRef.current.pause();
@@ -228,73 +270,86 @@ export const App: React.FC = () => {
       stopProcessing();
     }
   };
-  
+
   // Stop video
   const stopVideo = () => {
     if (!videoRef.current || !pipelineRef.current) return;
-    
+
     videoRef.current.pause();
     videoRef.current.currentTime = 0;
     setIsPlaying(false);
-    
+
     stopProcessing();
-    
+
     if (viewModelRef.current) {
       console.log('[DEBUG] stopVideo: Using ViewModel to reset pipeline state');
       viewModelRef.current.reset();
     } else {
-      console.log('[DEBUG] stopVideo: ViewModel not available, resetting pipeline directly');
+      console.log(
+        '[DEBUG] stopVideo: ViewModel not available, resetting pipeline directly'
+      );
       pipelineRef.current.reset();
     }
-    
+
     setRepCount(0);
     setSpineAngle(0);
   };
-  
+
   // Play video explicitly (without toggling)
   const play = () => {
     console.log('[DEBUG] play: Function called, conditions:', {
       videoRef: Boolean(videoRef.current),
       isModelLoaded: appState.isModelLoaded,
-      isPaused: videoRef.current?.paused
+      isPaused: videoRef.current?.paused,
     });
-    
+
     if (!videoRef.current || !appState.isModelLoaded) return;
-    
+
     if (videoRef.current.paused) {
       console.log('[DEBUG] play: Video is paused, attempting to play');
-      videoRef.current.play().then(() => {
-        console.log('[DEBUG] play: Video play() promise resolved');
-        setIsPlaying(true);
-        console.log('[DEBUG] play: Calling startProcessing()');
-        startProcessing();
-      }).catch(err => console.error('[DEBUG] play: Error playing video:', err));
+      videoRef.current
+        .play()
+        .then(() => {
+          console.log('[DEBUG] play: Video play() promise resolved');
+          setIsPlaying(true);
+          console.log('[DEBUG] play: Calling startProcessing()');
+          startProcessing();
+        })
+        .catch((err) =>
+          console.error('[DEBUG] play: Error playing video:', err)
+        );
     } else {
       console.log('[DEBUG] play: Video is already playing');
     }
   };
-  
+
   // Start processing pipeline
   const startProcessing = () => {
     console.log('[DEBUG] startProcessing: Function called, conditions:', {
       pipelineExists: Boolean(pipelineRef.current),
       isProcessing: appState.isProcessing,
-      viewModelExists: Boolean(viewModelRef.current)
+      viewModelExists: Boolean(viewModelRef.current),
     });
-    
+
     if (!pipelineRef.current || appState.isProcessing) return;
-    
+
     if (viewModelRef.current) {
-      console.log('[DEBUG] startProcessing: Using ViewModel for pipeline processing');
+      console.log(
+        '[DEBUG] startProcessing: Using ViewModel for pipeline processing'
+      );
       viewModelRef.current.startProcessing();
-      setAppState(prev => ({ ...prev, isProcessing: true }));
+      setAppState((prev) => ({ ...prev, isProcessing: true }));
     } else {
-      console.log('[DEBUG] startProcessing: ViewModel not available, falling back to direct pipeline');
+      console.log(
+        '[DEBUG] startProcessing: ViewModel not available, falling back to direct pipeline'
+      );
       const pipelineObservable = pipelineRef.current.start();
-      
-      setAppState(prev => ({ ...prev, isProcessing: true }));
-      
-      console.log('[DEBUG] startProcessing: Subscribing to pipeline observable');
+
+      setAppState((prev) => ({ ...prev, isProcessing: true }));
+
+      console.log(
+        '[DEBUG] startProcessing: Subscribing to pipeline observable'
+      );
       pipelineObservable.subscribe({
         next: (result: PipelineResult) => {
           console.log('[DEBUG] Pipeline update received:', result);
@@ -306,115 +361,136 @@ export const App: React.FC = () => {
         error: (err) => {
           console.error('[DEBUG] Pipeline error:', err);
           setStatus('Error in processing pipeline');
-        }
+        },
       });
     }
   };
-  
+
   // Stop processing pipeline
   const stopProcessing = () => {
     if (!pipelineRef.current || !appState.isProcessing) return;
-    
+
     if (viewModelRef.current) {
       console.log('[DEBUG] stopProcessing: Using ViewModel to stop pipeline');
       viewModelRef.current.stopProcessing();
     } else {
-      console.log('[DEBUG] stopProcessing: ViewModel not available, stopping pipeline directly');
+      console.log(
+        '[DEBUG] stopProcessing: ViewModel not available, stopping pipeline directly'
+      );
       pipelineRef.current.stop();
     }
-    
-    setAppState(prev => ({ ...prev, isProcessing: false }));
+
+    setAppState((prev) => ({ ...prev, isProcessing: false }));
   };
-  
+
   // Set display mode
   const setDisplayMode = (mode: 'both' | 'video' | 'overlay') => {
-    setAppState(prev => ({ ...prev, displayMode: mode }));
-    
+    setAppState((prev) => ({ ...prev, displayMode: mode }));
+
     if (viewModelRef.current) {
-      console.log('[DEBUG] setDisplayMode: Using ViewModel for display mode:', mode);
-      
+      console.log(
+        '[DEBUG] setDisplayMode: Using ViewModel for display mode:',
+        mode
+      );
+
       // This is a workaround since we don't have a direct method in ViewModel
-      const updatedState = { ...viewModelRef.current.getAppState(), displayMode: mode };
-      
+      const updatedState = {
+        ...viewModelRef.current.getAppState(),
+        displayMode: mode,
+      };
+
       switch (mode) {
         case 'both':
-          videoRef.current!.style.opacity = '1';
-          canvasRef.current!.style.display = 'block';
+          videoRef.current?.style.opacity = '1';
+          canvasRef.current?.style.display = 'block';
           break;
         case 'video':
-          videoRef.current!.style.opacity = '1';
-          canvasRef.current!.style.display = 'none';
+          videoRef.current?.style.opacity = '1';
+          canvasRef.current?.style.display = 'none';
           break;
         case 'overlay':
-          videoRef.current!.style.opacity = '0.1';
-          canvasRef.current!.style.display = 'block';
+          videoRef.current?.style.opacity = '0.1';
+          canvasRef.current?.style.display = 'block';
           break;
       }
     }
   };
-  
+
   // Rep navigation
   const navigateToPreviousRep = () => {
     if (appState.currentRepIndex > 0) {
-      setAppState(prev => ({ ...prev, currentRepIndex: prev.currentRepIndex - 1 }));
+      setAppState((prev) => ({
+        ...prev,
+        currentRepIndex: prev.currentRepIndex - 1,
+      }));
     }
   };
-  
+
   const navigateToNextRep = () => {
     if (appState.currentRepIndex < repCount - 1) {
-      setAppState(prev => ({ ...prev, currentRepIndex: prev.currentRepIndex + 1 }));
+      setAppState((prev) => ({
+        ...prev,
+        currentRepIndex: prev.currentRepIndex + 1,
+      }));
     }
   };
-  
+
   // Calculate canvas styles based on video dimensions
   const getVideoContainerClass = () => {
     if (!videoRef.current) return '';
-    
+
     const { videoWidth, videoHeight } = videoRef.current;
     return videoWidth > videoHeight ? 'video-landscape' : 'video-portrait';
   };
-  
+
   // Make sure the canvas is properly sized to match the video
   useEffect(() => {
     const updateCanvasDimensions = () => {
       if (videoRef.current && canvasRef.current) {
         if (videoRef.current.videoWidth && videoRef.current.videoHeight) {
-          console.log('[DEBUG] Updating canvas dimensions to match video:', 
-            videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
-          
+          console.log(
+            '[DEBUG] Updating canvas dimensions to match video:',
+            videoRef.current.videoWidth,
+            'x',
+            videoRef.current.videoHeight
+          );
+
           canvasRef.current.width = videoRef.current.videoWidth;
           canvasRef.current.height = videoRef.current.videoHeight;
         }
       }
     };
-    
+
     // Update dimensions initially
     updateCanvasDimensions();
-    
+
     // Add event listeners
     const handleLoadedMetadata = () => updateCanvasDimensions();
     const handleResize = () => updateCanvasDimensions();
-    
+
     if (videoRef.current) {
       videoRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
       window.addEventListener('resize', handleResize);
     }
-    
+
     // Cleanup
     return () => {
       if (videoRef.current) {
-        videoRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        videoRef.current.removeEventListener(
+          'loadedmetadata',
+          handleLoadedMetadata
+        );
       }
       window.removeEventListener('resize', handleResize);
     };
   }, [videoRef, canvasRef]);
-  
+
   return (
     <>
       <header>
         <h1>Swing Analyzer</h1>
       </header>
-      
+
       <main>
         <VideoSection
           videoRef={videoRef}
@@ -430,7 +506,7 @@ export const App: React.FC = () => {
           stopVideo={stopVideo}
           getVideoContainerClass={getVideoContainerClass}
         />
-        
+
         <AnalysisSection
           appState={appState}
           status={status}
@@ -444,4 +520,4 @@ export const App: React.FC = () => {
       </main>
     </>
   );
-}; 
+};

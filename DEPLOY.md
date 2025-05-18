@@ -5,6 +5,7 @@ This guide explains how to deploy the Swing Analyzer application to GitHub Pages
 ## How it Works
 
 We've set up a GitHub Actions workflow that automatically:
+
 1. Builds the application when you push to the main branch
 2. Deploys the compiled files to the `gh-pages` branch
 3. Makes the application available online through GitHub Pages
@@ -50,11 +51,13 @@ video-edit/                 # Root repository
 ## Viewing Your Deployed Application
 
 Once configured, your application will be available at:
+
 ```
 https://<username>.github.io/<repository-name>/
 ```
 
 For example:
+
 ```
 https://idvorkin.github.io/video-edit/
 ```
@@ -62,6 +65,7 @@ https://idvorkin.github.io/video-edit/
 ## Manual Deployment
 
 If you need to manually trigger a deployment:
+
 1. Go to the **Actions** tab in your repository
 2. Select the **Deploy to GitHub Pages** workflow
 3. Click **Run workflow**
@@ -82,4 +86,4 @@ If your deployment isn't working:
 - Development: `npm start` runs a local development server
 - Production: `npm run build` creates optimized files for deployment
 
-The deployed version will use the production build, which is optimized for performance. 
+The deployed version will use the production build, which is optimized for performance.

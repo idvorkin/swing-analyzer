@@ -1,5 +1,5 @@
-import React from 'react';
-import { AppState } from '../types';
+import type React from 'react';
+import type { AppState } from '../types';
 
 interface AnalysisSectionProps {
   appState: AppState;
@@ -20,13 +20,17 @@ const AnalysisSection: React.FC<AnalysisSectionProps> = ({
   checkpointGridRef,
   navigateToPreviousRep,
   navigateToNextRep,
-  setDisplayMode
+  setDisplayMode,
 }) => {
   return (
     <>
       <div className="metrics">
-          <p> Reps: <span id="rep-counter">{repCount}</span> [angle] <span id="spine-angle">{spineAngle}°</span> </p>
-          <div id="status">{status}</div>
+        <p>
+          {' '}
+          Reps: <span id="rep-counter">{repCount}</span> [angle]{' '}
+          <span id="spine-angle">{spineAngle}°</span>{' '}
+        </p>
+        <div id="status">{status}</div>
 
         <div className="form-checkpoints">
           <div className="checkpoint-header">
@@ -57,7 +61,7 @@ const AnalysisSection: React.FC<AnalysisSectionProps> = ({
             id="checkpoint-grid-container"
             className="checkpoint-grid-container"
             ref={checkpointGridRef}
-          ></div>
+          />
         </div>
       </div>
 

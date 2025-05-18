@@ -18,13 +18,7 @@
       "global": "process"
     }
   },
-  "keywords": [
-    "pose",
-    "detection",
-    "swing",
-    "analysis",
-    "mediapipe"
-  ],
+  "keywords": ["pose", "detection", "swing", "analysis", "mediapipe"],
   "author": "",
   "license": "MIT",
   "dependencies": {

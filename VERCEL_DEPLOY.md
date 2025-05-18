@@ -44,16 +44,19 @@ git push -u origin main
 #### Option B: Deploy using Vercel CLI
 
 1. Install the Vercel CLI:
+
    ```bash
    npm install -g vercel
    ```
 
 2. Login to Vercel:
+
    ```bash
    vercel login
    ```
 
 3. Deploy from your project directory:
+
    ```bash
    vercel
    ```
@@ -68,6 +71,7 @@ Your project has been configured for Vercel with the following files:
 2. Updated `package.json` - Includes the Vercel build command
 
 The current configuration:
+
 - Uses Parcel to build the application
 - Outputs to the `dist` directory
 - Sets up proper routing for the Single Page Application
@@ -93,4 +97,4 @@ After deployment:
 
 1. Vercel will provide you with a URL for your deployed application
 2. You can configure a custom domain in your Vercel project settings
-3. Your application will automatically redeploy when you push changes to your GitHub repository 
+3. Your application will automatically redeploy when you push changes to your GitHub repository

@@ -30,7 +30,7 @@ export enum FormPosition {
   Top = 'top',
   Hinge = 'hinge',
   Bottom = 'bottom',
-  Release = 'release'
+  Release = 'release',
 }
 
 export interface FormCheckpoint {
@@ -75,7 +75,7 @@ export const CocoBodyParts = {
   LEFT_KNEE: 13,
   RIGHT_KNEE: 14,
   LEFT_ANKLE: 15,
-  RIGHT_ANKLE: 16
+  RIGHT_ANKLE: 16,
 };
 
 // Old BodyParts enum - keeping for backward compatibility
@@ -133,5 +133,5 @@ export const MediaPipeBodyParts = {
   LEFT_HEEL: 29,
   RIGHT_HEEL: 30,
   LEFT_FOOT_INDEX: 31,
-  RIGHT_FOOT_INDEX: 32
+  RIGHT_FOOT_INDEX: 32,
 };

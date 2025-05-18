@@ -1,4 +1,4 @@
-import { PoseKeypoint, Point } from '../types';
+import { Point, type PoseKeypoint } from '../types';
 
 /**
  * Represents a skeleton constructed from keypoints
@@ -47,10 +47,10 @@ export class Skeleton {
    */
   getConfidence(): number {
     const scores = this.keypoints
-      .filter(kp => kp.score !== undefined)
-      .map(kp => kp.score!);
-    
+      .filter((kp) => kp.score !== undefined)
+      .map((kp) => kp.score!);
+
     if (scores.length === 0) return 0;
     return scores.reduce((sum, score) => sum + score, 0) / scores.length;
   }
-} 
+}

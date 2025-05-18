@@ -5,6 +5,7 @@ Follow these steps to set up and run the Swing Analyzer application:
 ## Setup
 
 1. **Install Node.js** if you don't have it already:
+
    - Download from [nodejs.org](https://nodejs.org)
    - Recommended version: 16.x or newer
 
@@ -21,6 +22,7 @@ Follow these steps to set up and run the Swing Analyzer application:
 ## Running the Application
 
 1. **Start the development server**:
+
    ```bash
    npm start
    ```
@@ -54,10 +56,11 @@ npm run build
 ```
 
 This creates optimized files in the `dist` directory that you can deploy to any static web hosting service:
+
 - GitHub Pages
 - Netlify
 - Vercel
 - Amazon S3
 - etc.
 
-No server-side code is needed as everything runs in the browser. 
+No server-side code is needed as everything runs in the browser.

@@ -82,6 +82,7 @@ This project is configured for easy deployment to Vercel:
 For detailed instructions, see [VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md)
 
 Alternatively, use our deployment script:
+
 ```bash
 ./deploy-to-vercel.sh
 ```
@@ -91,11 +92,13 @@ Alternatively, use our deployment script:
 This project is also set up for automatic deployment to GitHub Pages:
 
 1. When you push to the `main` branch, a GitHub Actions workflow will:
+
    - Build the application
    - Deploy it to the `gh-pages` branch
    - Make it available on GitHub Pages
 
 2. The deployed application will be available at:
+
    ```
    https://<username>.github.io/<repository-name>/
    ```
@@ -121,4 +124,4 @@ This web implementation replaces the original Python YOLO-based code with a brow
 
 ## License
 
-MIT 
+MIT

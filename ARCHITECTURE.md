@@ -9,20 +9,20 @@ graph TD
     subgraph "UX Layer"
         A1[View Components] --> A2[ViewModels]
     end
-    
+
     subgraph "Core Logic Layer"
         B1[Pipeline] --> B2[PipelineFactory]
         B2 --> B3[Pipeline Stages]
         B3 --> B4[Reactive Processing]
     end
-    
+
     subgraph "Pipeline Stages"
         C1[VideoFrameAcquisition]
         C2[PoseSkeletonTransformer]
         C3[SwingFormProcessor]
         C4[SwingRepProcessor]
     end
-    
+
     subgraph "Data Models"
         D1[Skeleton]
         D2[FormCheckpoint]
@@ -30,13 +30,13 @@ graph TD
         D4[FrameEvent]
         D5[CheckpointEvent]
     end
-    
+
     subgraph "Services"
         E2[FormCheckpointLogic]
         E3[FormCheckpointUX]
         E4[SkeletonRenderer]
     end
-    
+
     A2 --> B1
     B1 -.-> D3
     C1 -.-> D4
@@ -55,23 +55,23 @@ flowchart LR
     B --> |Observable<SkeletonEvent>| C[SwingFormProcessor]
     C --> |Observable<CheckpointEvent>| D[SwingRepProcessor]
     D --> |PipelineResult| E[UI Components]
-    
+
     subgraph "Frame Acquisition"
         A
     end
-    
+
     subgraph "Pose Detection & Skeleton Construction"
         B
     end
-    
+
     subgraph "Form Analysis"
         C
     end
-    
+
     subgraph "Rep Counting & Analysis"
         D
     end
-    
+
     subgraph "User Experience"
         E
     end
@@ -87,7 +87,6 @@ flowchart LR
   - Checkpoint Grid Display
   - Metrics Display
   - Rep Counter Display
-  
 - **ViewModels**: Bridge between UI and logic
   - `SwingAnalyzerViewModel.ts` - manages application state and UI updates
   - `FormCheckpointViewModel.ts` - presents checkpoints visually
@@ -97,21 +96,26 @@ flowchart LR
 The swing analyzer uses a reactive pipeline architecture based on RxJS Observables for processing video frames:
 
 ### Pipeline Structure:
+
 - **Pipeline**: Orchestrates the entire flow from frame acquisition to rep analysis
 - **PipelineFactory**: Creates and configures all pipeline components
 - **PipelineInterfaces**: Defines the contract for each processing stage
 
 ### Pipeline Stages:
+
 1. **VideoFrameAcquisition (Frame Acquisition)**
+
    - Source: Camera or Video
    - Output: Observable<FrameEvent> with raw image frames and metadata
 
 2. **PoseSkeletonTransformer (Pose Detection & Skeleton Construction)**
+
    - Input: FrameEvent
    - Process: TensorFlow.js/MoveNet model for pose detection and skeleton creation
    - Output: Observable<SkeletonEvent> with connected body structure
 
 3. **SwingFormProcessor (Form Analysis)**
+
    - Input: SkeletonEvent
    - Process: Identify specific positions (Top, Hinge, Bottom, Release)
    - Output: Observable<CheckpointEvent> with form checkpoints
@@ -132,11 +136,13 @@ The swing analyzer uses a reactive pipeline architecture based on RxJS Observabl
 ## Services
 
 - **FormCheckpointLogic**: Business logic for analyzing form checkpoints
+
   - Implements form checkpoint detection algorithms
   - Analyzes body positions and angles for proper form
   - Determines when key swing positions occur
 
 - **FormCheckpointUX**: UI representation of form checkpoints
+
   - Renders the visual representation of checkpoints
   - Manages checkpoint grid visualization
   - Handles checkpoint image capturing and display
@@ -159,4 +165,4 @@ The swing analyzer uses a reactive pipeline architecture based on RxJS Observabl
 - Reactive streaming architecture for efficient frame processing
 - Web workers for computation-intensive operations
 - Model caching for faster loading
-- GPU acceleration through WebGL backend 
+- GPU acceleration through WebGL backend
