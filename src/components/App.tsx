@@ -120,61 +120,85 @@ export const App: React.FC = () => {
   
   // Handle video upload
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || !event.target.files[0] || !frameAcquisitionRef.current) return;
+    if (!event.target.files || !event.target.files[0] || !frameAcquisitionRef.current || !videoRef.current) return;
     
     const file = event.target.files[0];
     const fileURL = URL.createObjectURL(file);
     
-    frameAcquisitionRef.current.loadVideoFromURL(fileURL);
-    
-    setStatus(`Loaded video: ${file.name}`);
-    setAppState(prev => ({ ...prev, usingCamera: false }));
-    
-    if (videoRef.current) {
-      videoRef.current.onloadedmetadata = () => {
-        if (videoRef.current) {
-          videoRef.current.play().catch(err => console.error('Error playing video:', err));
+    frameAcquisitionRef.current.loadVideoFromURL(fileURL)
+      .then(() => {
+        setStatus(`Loaded video: ${file.name}`);
+        setAppState(prev => ({ ...prev, usingCamera: false }));
+        
+        // Check readyState to determine if metadata is loaded
+        if (videoRef.current && videoRef.current.readyState >= 2) {
+          // Metadata is already loaded, call play directly
+          console.log('[DEBUG] handleVideoUpload: Metadata already loaded (readyState >= 2), playing directly');
+          play();
+        } else if (videoRef.current) {
+          // Metadata not yet loaded, set up a one-time event listener
+          console.log('[DEBUG] handleVideoUpload: Metadata not loaded yet, setting loadeddata listener');
+          videoRef.current.addEventListener('loadeddata', () => {
+            console.log('[DEBUG] handleVideoUpload: loadeddata event fired, now playing');
+            play();
+          }, { once: true }); // Use once: true to automatically remove the listener after it fires
         }
-      };
-    }
+      })
+      .catch(error => {
+        console.error('Error loading video:', error);
+        setStatus('Error: Could not load video.');
+      });
   };
   
   // Load hardcoded video
   const loadHardcodedVideo = async () => {
-    if (!frameAcquisitionRef.current) return;
+    if (!frameAcquisitionRef.current || !videoRef.current) return;
     
+    console.log('[DEBUG] loadHardcodedVideo: Function called');
     setStatus('Loading hardcoded video...');
     try {
       // Load the hardcoded video from public directory
       const videoURL = '/videos/swing-sample.mp4';
+      console.log(`[DEBUG] loadHardcodedVideo: Attempting to load video from ${videoURL}`);
       await frameAcquisitionRef.current.loadVideoFromURL(videoURL);
       
+      console.log('[DEBUG] loadHardcodedVideo: Video URL loaded successfully');
       setAppState(prev => ({ ...prev, usingCamera: false }));
       setStatus('Hardcoded video loaded.');
       
-      if (videoRef.current) {
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current) {
-            videoRef.current.play().catch(err => console.error('Error playing video:', err));
-          }
-        };
+      // Check readyState to determine if metadata is loaded
+      if (videoRef.current && videoRef.current.readyState >= 2) {
+        // Metadata is already loaded, call play directly
+        console.log('[DEBUG] loadHardcodedVideo: Metadata already loaded (readyState >= 2), playing directly');
+        play();
+      } else if (videoRef.current) {
+        // Metadata not yet loaded, set up a one-time event listener
+        console.log('[DEBUG] loadHardcodedVideo: Metadata not loaded yet, setting loadeddata listener');
+        videoRef.current.addEventListener('loadeddata', () => {
+          console.log('[DEBUG] loadHardcodedVideo: loadeddata event fired, now playing');
+          play();
+        }, { once: true }); // Use once: true to automatically remove the listener after it fires
       }
     } catch (error) {
-      console.error('Error loading hardcoded video:', error);
+      console.error('[DEBUG] loadHardcodedVideo: Error loading video:', error);
       setStatus('Error: Could not load hardcoded video.');
     }
   };
   
   // Play/Pause toggle
   const togglePlayPause = () => {
+    console.log('[DEBUG] togglePlayPause: Function called');
     if (!videoRef.current) return;
     
     if (videoRef.current.paused) {
+      console.log('[DEBUG] togglePlayPause: Video is paused, attempting to play');
       videoRef.current.play().then(() => {
+        console.log('[DEBUG] togglePlayPause: Video play() promise resolved');
         setIsPlaying(true);
         startProcessing();
-      }).catch(err => console.error('Error playing video:', err));
+      }).catch(err => console.error('[DEBUG] togglePlayPause: Error playing video:', err));
     } else {
+      console.log('[DEBUG] togglePlayPause: Video is playing, pausing now');
       videoRef.current.pause();
       setIsPlaying(false);
       stopProcessing();
@@ -195,14 +219,44 @@ export const App: React.FC = () => {
     setSpineAngle(0);
   };
   
+  // Play video explicitly (without toggling)
+  const play = () => {
+    console.log('[DEBUG] play: Function called, conditions:', {
+      videoRef: Boolean(videoRef.current),
+      isModelLoaded: appState.isModelLoaded,
+      isPaused: videoRef.current?.paused
+    });
+    
+    if (!videoRef.current || !appState.isModelLoaded) return;
+    
+    if (videoRef.current.paused) {
+      console.log('[DEBUG] play: Video is paused, attempting to play');
+      videoRef.current.play().then(() => {
+        console.log('[DEBUG] play: Video play() promise resolved');
+        setIsPlaying(true);
+        console.log('[DEBUG] play: Calling startProcessing()');
+        startProcessing();
+      }).catch(err => console.error('[DEBUG] play: Error playing video:', err));
+    } else {
+      console.log('[DEBUG] play: Video is already playing');
+    }
+  };
+  
   // Start processing pipeline
   const startProcessing = () => {
+    console.log('[DEBUG] startProcessing: Function called, conditions:', {
+      pipelineExists: Boolean(pipelineRef.current),
+      isProcessing: appState.isProcessing
+    });
+    
     if (!pipelineRef.current || appState.isProcessing) return;
     
+    console.log('[DEBUG] startProcessing: Starting pipeline');
     const pipelineObservable = pipelineRef.current.start();
     
     setAppState(prev => ({ ...prev, isProcessing: true }));
     
+    console.log('[DEBUG] startProcessing: Subscribing to pipeline observable');
     pipelineObservable.subscribe({
       next: (result: PipelineResult) => {
         setRepCount(result.repCount);
@@ -211,7 +265,7 @@ export const App: React.FC = () => {
         }
       },
       error: (err) => {
-        console.error('Pipeline error:', err);
+        console.error('[DEBUG] Pipeline error:', err);
         setStatus('Error in processing pipeline');
       }
     });

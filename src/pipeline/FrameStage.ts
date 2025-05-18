@@ -145,18 +145,22 @@ export class FrameStage implements FrameAcquisition {
    * Load a video from URL
    */
   loadVideoFromURL(url: string): Promise<void> {
+    console.log(`[DEBUG] FrameStage.loadVideoFromURL: Called with URL: ${url}`);
+    
     return new Promise<void>((resolve, reject) => {
       // Stop camera if running
       this.stopCamera();
       
       // Set up event listeners
       const handleError = () => {
+        console.error(`[DEBUG] FrameStage.loadVideoFromURL: Error event triggered for ${url}`);
         reject(new Error(`Failed to load video from URL: ${url}`));
       };
       
       const handleLoaded = () => {
+        console.log(`[DEBUG] FrameStage.loadVideoFromURL: loadedmetadata event triggered`);
         this.updateCanvasDimensions();
-        console.log(`Video loaded: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`);
+        console.log(`[DEBUG] FrameStage.loadVideoFromURL: Video loaded: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`);
         resolve();
         
         // Remove listeners
@@ -165,10 +169,12 @@ export class FrameStage implements FrameAcquisition {
       };
       
       // Set up listeners
+      console.log(`[DEBUG] FrameStage.loadVideoFromURL: Setting up event listeners`);
       this.videoElement.addEventListener('error', handleError);
       this.videoElement.addEventListener('loadedmetadata', handleLoaded);
       
       // Load the video
+      console.log(`[DEBUG] FrameStage.loadVideoFromURL: Setting video.src to ${url}`);
       this.videoElement.src = url;
     });
   }
