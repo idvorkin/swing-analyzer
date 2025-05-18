@@ -24,16 +24,25 @@ export class SkeletonRenderer {
    * Render a skeleton on the canvas
    */
   renderSkeleton(skeleton: Skeleton, timestamp: number): void {
-    if (!skeleton) return;
+    if (!skeleton) {
+      console.warn("SkeletonRenderer: No skeleton provided");
+      return;
+    }
     
     const ctx = this.canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.error("SkeletonRenderer: Could not get canvas context");
+      return;
+    }
+    
+    console.log("SkeletonRenderer: Starting render with canvas dimensions", this.canvas.width, "x", this.canvas.height);
     
     // Clear previous drawing
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     
     // Get keypoints from skeleton
     const keypoints = skeleton.getKeypoints();
+    console.log("SkeletonRenderer: Drawing", keypoints.length, "keypoints");
     
     // Draw connections first (so they appear behind the points)
     this.drawConnections(ctx, keypoints);
@@ -115,6 +124,14 @@ export class SkeletonRenderer {
       ctx.moveTo(midShoulderX, midShoulderY);
       ctx.lineTo(midHipX, midHipY);
       ctx.stroke();
+      console.log("SkeletonRenderer: Drew spine line from", midShoulderX, midShoulderY, "to", midHipX, midHipY);
+    } else {
+      console.log("SkeletonRenderer: Couldn't draw spine, not all points visible", {
+        leftShoulder: leftShoulder?.visibility,
+        rightShoulder: rightShoulder?.visibility,
+        leftHip: leftHip?.visibility,
+        rightHip: rightHip?.visibility
+      });
     }
     
     // Reset for normal connections
@@ -122,6 +139,7 @@ export class SkeletonRenderer {
     ctx.strokeStyle = this.connectionColor;
     ctx.lineWidth = 2;
     
+    let connectionsDrawn = 0;
     // Draw all connections
     for (const [i, j] of connections) {
       const pointA = keypoints[i];
@@ -134,10 +152,12 @@ export class SkeletonRenderer {
       ) {
         ctx.moveTo(pointA.x, pointA.y);
         ctx.lineTo(pointB.x, pointB.y);
+        connectionsDrawn++;
       }
     }
     
     ctx.stroke();
+    console.log("SkeletonRenderer: Drew", connectionsDrawn, "of", connections.length, "possible connections");
   }
   
   /**

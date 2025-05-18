@@ -3,6 +3,8 @@ import { PipelineFactory } from '../pipeline/PipelineFactory';
 import { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import { AppState } from '../types';
 import { FrameStage } from '../pipeline/FrameStage';
+import VideoSection from './VideoSection';
+import AnalysisSection from './AnalysisSection';
 import './App.css';
 
 export const App: React.FC = () => {
@@ -259,9 +261,68 @@ export const App: React.FC = () => {
     console.log('[DEBUG] startProcessing: Subscribing to pipeline observable');
     pipelineObservable.subscribe({
       next: (result: PipelineResult) => {
+        console.log('[DEBUG] Pipeline update received:', result);
         setRepCount(result.repCount);
         if (result.skeleton) {
           setSpineAngle(Math.round(result.skeleton.getSpineAngle() || 0));
+          
+          // Render the skeleton on canvas
+          console.log('[DEBUG] Rendering skeleton with', result.skeleton.getKeypoints().length, 'keypoints');
+          const ctx = canvasRef.current?.getContext('2d');
+          if (ctx && canvasRef.current) {
+            // Clear previous drawing
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            
+            // Draw keypoints
+            const keypoints = result.skeleton.getKeypoints();
+            keypoints.forEach(point => {
+              if (point && point.visibility && point.visibility > 0.5) {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI);
+                ctx.fillStyle = '#00ff00';
+                ctx.fill();
+              }
+            });
+            
+            // Draw connections
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            // Define basic connections (you could expand this)
+            const connections = [
+              [5, 6], // shoulders
+              [5, 7], // left shoulder to elbow
+              [7, 9], // left elbow to wrist
+              [6, 8], // right shoulder to elbow
+              [8, 10], // right elbow to wrist
+              [5, 11], // left shoulder to hip
+              [6, 12], // right shoulder to hip
+              [11, 12], // hips
+              [11, 13], // left hip to knee
+              [13, 15], // left knee to ankle
+              [12, 14], // right hip to knee
+              [14, 16]  // right knee to ankle
+            ];
+            
+            for (const [i, j] of connections) {
+              const pointA = keypoints[i];
+              const pointB = keypoints[j];
+              
+              if (
+                pointA && pointB && 
+                pointA.visibility && pointB.visibility && 
+                pointA.visibility > 0.5 && pointB.visibility > 0.5
+              ) {
+                ctx.moveTo(pointA.x, pointA.y);
+                ctx.lineTo(pointB.x, pointB.y);
+              }
+            }
+            
+            ctx.stroke();
+          } else {
+            console.error('[DEBUG] Could not get canvas context for rendering');
+          }
         }
       },
       error: (err) => {
@@ -305,6 +366,41 @@ export const App: React.FC = () => {
     return videoWidth > videoHeight ? 'video-landscape' : 'video-portrait';
   };
   
+  // Make sure the canvas is properly sized to match the video
+  useEffect(() => {
+    const updateCanvasDimensions = () => {
+      if (videoRef.current && canvasRef.current) {
+        if (videoRef.current.videoWidth && videoRef.current.videoHeight) {
+          console.log('[DEBUG] Updating canvas dimensions to match video:', 
+            videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+          
+          canvasRef.current.width = videoRef.current.videoWidth;
+          canvasRef.current.height = videoRef.current.videoHeight;
+        }
+      }
+    };
+    
+    // Update dimensions initially
+    updateCanvasDimensions();
+    
+    // Add event listeners
+    const handleLoadedMetadata = () => updateCanvasDimensions();
+    const handleResize = () => updateCanvasDimensions();
+    
+    if (videoRef.current) {
+      videoRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
+      window.addEventListener('resize', handleResize);
+    }
+    
+    // Cleanup
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      }
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [videoRef, canvasRef]);
+  
   return (
     <>
       <header>
@@ -312,144 +408,31 @@ export const App: React.FC = () => {
       </header>
       
       <main>
-        <div className="top-controls">
-          <div className="file-input">
-            <input 
-              type="file" 
-              id="video-upload" 
-              accept="video/*"
-              ref={fileInputRef}
-              onChange={handleVideoUpload}
-            />
-            <label htmlFor="video-upload" className="file-label">Choose File</label>
-          </div>
-          <button 
-            id="load-hardcoded-btn" 
-            className="hardcoded-btn"
-            onClick={loadHardcodedVideo}
-          >
-            Load Hardcoded
-          </button>
-          <button 
-            id="camera-btn"
-            onClick={startCamera}
-          >
-            Start Camera
-          </button>
-          <button 
-            id="switch-camera-btn"
-            onClick={switchCamera}
-            disabled={!appState.usingCamera}
-          >
-            Swap Camera
-          </button>
-        </div>
+        <VideoSection
+          videoRef={videoRef}
+          canvasRef={canvasRef}
+          fileInputRef={fileInputRef}
+          appState={appState}
+          isPlaying={isPlaying}
+          startCamera={startCamera}
+          switchCamera={switchCamera}
+          handleVideoUpload={handleVideoUpload}
+          loadHardcodedVideo={loadHardcodedVideo}
+          togglePlayPause={togglePlayPause}
+          stopVideo={stopVideo}
+          getVideoContainerClass={getVideoContainerClass}
+        />
         
-        <div className={`video-container ${getVideoContainerClass()}`}>
-          <video 
-            id="video" 
-            ref={videoRef} 
-            playsInline
-          ></video>
-          <canvas 
-            id="output-canvas" 
-            ref={canvasRef}
-          ></canvas>
-          <div className="video-controls">
-            <button 
-              id="play-pause-btn" 
-              className="toggle-button"
-              disabled={!appState.isModelLoaded}
-              onClick={togglePlayPause}
-            >
-              {isPlaying ? 'Pause' : 'Play'}
-            </button>
-            <button 
-              id="stop-btn"
-              disabled={!appState.isModelLoaded}
-              onClick={stopVideo}
-            >
-              Stop
-            </button>
-          </div>
-        </div>
-        
-        <div className="metrics">
-          <h2>Swing Analysis</h2>
-          <div>
-            <p>Reps: <span id="rep-counter">{repCount}</span></p>
-            <p>Spine Angle: <span id="spine-angle">{spineAngle}°</span></p>
-          </div>
-          <div id="status">{status}</div>
-          
-          <div className="form-checkpoints">
-            <div className="checkpoint-header">
-              <h3>Checkpoints</h3>
-              <div className="rep-navigation">
-                <button 
-                  id="prev-rep-btn" 
-                  className="nav-btn"
-                  disabled={appState.currentRepIndex <= 0}
-                  onClick={navigateToPreviousRep}
-                >
-                  ◀ Previous
-                </button>
-                <span id="current-rep">
-                  Rep {appState.currentRepIndex + 1}/{repCount || 0}
-                </span>
-                <button 
-                  id="next-rep-btn" 
-                  className="nav-btn"
-                  disabled={appState.currentRepIndex >= repCount - 1}
-                  onClick={navigateToNextRep}
-                >
-                  Next ▶
-                </button>
-              </div>
-            </div>
-            <div 
-              id="checkpoint-grid-container" 
-              className="checkpoint-grid-container"
-              ref={checkpointGridRef}
-            ></div>
-          </div>
-        </div>
-        
-        <div className="debug-controls">
-          <h3>Debug Options</h3>
-          <div className="debug-options">
-            <label>
-              <input 
-                type="radio" 
-                name="display-mode" 
-                value="both"
-                checked={appState.displayMode === 'both'}
-                onChange={() => setDisplayMode('both')}
-              /> 
-              Show Video + Overlay
-            </label>
-            <label>
-              <input 
-                type="radio" 
-                name="display-mode" 
-                value="video"
-                checked={appState.displayMode === 'video'}
-                onChange={() => setDisplayMode('video')}
-              /> 
-              Video Only
-            </label>
-            <label>
-              <input 
-                type="radio" 
-                name="display-mode" 
-                value="overlay"
-                checked={appState.displayMode === 'overlay'}
-                onChange={() => setDisplayMode('overlay')}
-              /> 
-              Overlay Only
-            </label>
-          </div>
-        </div>
+        <AnalysisSection
+          appState={appState}
+          status={status}
+          repCount={repCount}
+          spineAngle={spineAngle}
+          checkpointGridRef={checkpointGridRef}
+          navigateToPreviousRep={navigateToPreviousRep}
+          navigateToNextRep={navigateToNextRep}
+          setDisplayMode={setDisplayMode}
+        />
       </main>
     </>
   );

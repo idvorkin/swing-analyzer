@@ -154,7 +154,12 @@ export class SwingAnalyzerViewModel {
    */
   private renderSkeleton(skeleton: Skeleton): void {
     if (skeleton) {
+      console.log("Rendering skeleton with", skeleton.getKeypoints().length, "keypoints");
+      console.log("Canvas dimensions:", this.canvasElement.width, "x", this.canvasElement.height);
+      console.log("Skeleton visibility:", skeleton.hasRequiredKeypoints());
       this.skeletonRenderer.renderSkeleton(skeleton, performance.now());
+    } else {
+      console.warn("No skeleton to render");
     }
   }
   

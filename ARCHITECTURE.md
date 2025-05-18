@@ -11,48 +11,52 @@ graph TD
     end
     
     subgraph "Core Logic Layer"
-        B1[PoseDetector] --> B2[SkeletonBuilder]
-        B2 --> B3[AngleCalculator]
-        B3 --> B4[FormAnalyzer]
-        B4 --> B5[RepDetector]
+        B1[Pipeline] --> B2[PipelineFactory]
+        B2 --> B3[Pipeline Stages]
+        B3 --> B4[Reactive Processing]
+    end
+    
+    subgraph "Pipeline Stages"
+        C1[FrameStage]
+        C2[PoseStage]
+        C3[SkeletonStage]
+        C4[FormStage]
+        C5[RepStage]
     end
     
     subgraph "Data Models"
-        C1[Point]
-        C2[PoseKeypoint]
-        C3[PoseResult]
-        C4[Skeleton]
-        C5[FormCheckpoint]
-        C6[RepData]
+        D1[Skeleton]
+        D2[FormCheckpoint]
+        D3[PipelineResult]
+        D4[FrameEvent]
+        D5[CheckpointEvent]
     end
     
     subgraph "Services"
-        D1[ModelLoader]
-        D2[FrameProcessor]
-        D3[MetricsCalculator]
-        D4[StateManager]
+        E2[FormCheckpointLogic]
+        E3[FormCheckpointUX]
+        E4[SkeletonRenderer]
     end
     
     A2 --> B1
-    B5 --> A2
-    B1 -.-> C3
-    B2 -.-> C4
-    B4 -.-> C5
-    B5 -.-> C6
-    D1 --> B1
-    D2 --> B1
-    B3 --> D3
-    D4 --> A2
+    B1 -.-> D3
+    C1 -.-> D4
+    C4 -.-> D5
+    C3 -.-> D1
+    C4 -.-> D2
+    E2 --> C4
+    E4 --> A1
 ```
 
-## Processing Pipeline
+## Reactive Processing Pipeline
 
 ```mermaid
 flowchart LR
-    A[Frame] --> B[KeyPoints]
-    B --> C[Skeleton]
-    C --> D[FormCheckpoints]
-    D --> E[SwingReps]
+    A[FrameStage] --> |Observable<FrameEvent>| B[PoseStage]
+    B --> |Observable<PoseEvent>| C[SkeletonStage]
+    C --> |Observable<SkeletonEvent>| D[FormStage]
+    D --> |Observable<CheckpointEvent>| E[RepStage]
+    E --> |PipelineResult| F[UI Components]
     
     subgraph "Frame Acquisition"
         A
@@ -73,66 +77,97 @@ flowchart LR
     subgraph "Swing Rep Analysis"
         E
     end
+    
+    subgraph "User Experience"
+        F
+    end
 ```
 
 ## UX Layer Details
 
 - **View Components**: UI elements that users interact with directly
-  - Camera/Video Input
-  - Pose Visualization Overlay
+  - `App.tsx` - Main application component
+  - `VideoSection.tsx` - Video input display and controls
+  - `AnalysisSection.tsx` - Analysis results and metrics
+  - Camera/Video Input with overlay visualization
+  - Checkpoint Grid Display
   - Metrics Display
   - Rep Counter Display
+  
 - **ViewModels**: Bridge between UI and logic
-  - SwingAnalyzerViewModel - manages application state and UI updates
-  - FormCheckpointViewModel - presents checkpoints visually
+  - `SwingAnalyzerViewModel.ts` - manages application state and UI updates
+  - `FormCheckpointViewModel.ts` - presents checkpoints visually
 
-## Processing Pipeline Details
+## Pipeline Architecture Details
+
+The swing analyzer uses a reactive pipeline architecture based on RxJS Observables for processing video frames:
+
+### Pipeline Structure:
+- **Pipeline**: Orchestrates the entire flow from frame acquisition to rep analysis
+- **PipelineFactory**: Creates and configures all pipeline components
+- **PipelineInterfaces**: Defines the contract for each processing stage
 
 ### Pipeline Stages:
-1. **Frame Acquisition**
+1. **FrameStage (Frame Acquisition)**
    - Source: Camera or Video
-   - Output: Raw image frames
+   - Output: Observable<FrameEvent> with raw image frames and metadata
 
-2. **Pose Detection**
-   - Input: Raw frames
+2. **PoseStage (Pose Detection)**
+   - Input: FrameEvent
    - Process: TensorFlow.js/MoveNet model
-   - Output: List<KeyPoints> (body keypoints with coordinates)
+   - Output: Observable<PoseEvent> with keypoints and confidence scores
 
-3. **Skeleton Construction**
-   - Input: List<KeyPoints>
+3. **SkeletonStage (Skeleton Construction)**
+   - Input: PoseEvent
    - Process: Connect keypoints, calculate angles
-   - Output: Skeleton (connected body parts with derived metrics)
+   - Output: Observable<SkeletonEvent> with connected body structure
 
-4. **FormCheckpoint Detection**
-   - Input: Skeleton + time data
+4. **FormStage (FormCheckpoint Detection)**
+   - Input: SkeletonEvent
    - Process: Identify specific positions (Top, Hinge, Bottom, Release)
-   - Output: FormCheckpoints with timestamps and metrics
+   - Output: Observable<CheckpointEvent> with form checkpoints
 
-5. **Swing Rep Analysis**
-   - Input: FormCheckpoints
+5. **RepStage (Swing Rep Analysis)**
+   - Input: CheckpointEvent
    - Process: Pattern recognition of complete swing motion
-   - Output: SwingReps (counted repetitions with all checkpoints)
+   - Output: Observable<RepEvent> with rep count and metrics
 
 ## Data Models
 
-- **Point**: Basic x,y,z coordinate
-- **PoseKeypoint**: Body keypoint with position and confidence
-- **PoseResult**: Complete set of keypoints from a frame
-- **Skeleton**: Connected structure of keypoints
+- **Skeleton**: Connected structure of keypoints and relationships
 - **FormCheckpoint**: Key position in swing with metrics
-- **RepData**: Complete repetition with all checkpoints
-
-## Core Logic Layer
-
-- **PoseDetector**: Interface with ML model
-- **SkeletonBuilder**: Construct skeleton from keypoints
-- **AngleCalculator**: Calculate joint angles
-- **FormAnalyzer**: Analyze swing form
-- **RepDetector**: Detect and count complete swing repetitions
+- **PoseResult**: Complete set of keypoints from a frame
+- **PipelineResult**: Combined output from the pipeline
+- **FrameEvent**, **PoseEvent**, **SkeletonEvent**, **CheckpointEvent**: Event objects for pipeline communication
 
 ## Services
 
-- **ModelLoader**: Load and initialize TensorFlow model
-- **FrameProcessor**: Process video/camera frames
-- **MetricsCalculator**: Calculate swing metrics
-- **StateManager**: Manage application state 
+- **FormCheckpointLogic**: Business logic for analyzing form checkpoints
+  - Implements form checkpoint detection algorithms
+  - Analyzes body positions and angles for proper form
+  - Determines when key swing positions occur
+
+- **FormCheckpointUX**: UI representation of form checkpoints
+  - Renders the visual representation of checkpoints
+  - Manages checkpoint grid visualization
+  - Handles checkpoint image capturing and display
+
+- **SkeletonRenderer**: Visualization of skeleton and pose data
+  - Renders pose skeleton on canvas
+  - Draws connections between body keypoints
+  - Highlights specific body parts during analysis
+
+## Technology Stack
+
+- **React**: UI framework
+- **TypeScript**: Type-safe JavaScript
+- **RxJS**: Reactive programming library for asynchronous processing
+- **TensorFlow.js**: Machine learning library for pose detection
+- **Canvas API**: Visualization of pose and analysis
+
+## Performance Optimizations
+
+- Reactive streaming architecture for efficient frame processing
+- Web workers for computation-intensive operations
+- Model caching for faster loading
+- GPU acceleration through WebGL backend 
