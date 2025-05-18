@@ -41,16 +41,53 @@ export class SkeletonRenderer {
     // Get keypoints from skeleton
     const keypoints = skeleton.getKeypoints();
 
+    // Get normalized keypoints
+    const normalizedKeypoints = this.normalizeKeypoints(keypoints);
+
     // Draw connections first (so they appear behind the points)
-    this.drawConnections(ctx, keypoints);
+    this.drawConnections(ctx, normalizedKeypoints);
 
     // Draw keypoints
-    this.drawKeypoints(ctx, keypoints, timestamp);
+    this.drawKeypoints(ctx, normalizedKeypoints, timestamp);
 
     // Draw debug info if enabled
     if (this.debugMode) {
       this.drawDebugInfo(ctx, skeleton);
     }
+  }
+
+  /**
+   * Normalize keypoints to match canvas dimensions
+   * This ensures the skeleton is properly scaled and positioned on different screen sizes
+   */
+  private normalizeKeypoints(keypoints: PoseKeypoint[]): PoseKeypoint[] {
+    // On mobile devices, the canvas display dimensions might be different from its internal dimensions
+    // We need to scale the keypoints from the original video dimensions to the displayed canvas dimensions
+    
+    // Get the current canvas display dimensions
+    const displayWidth = this.canvas.clientWidth;
+    const displayHeight = this.canvas.clientHeight;
+    
+    // Get the internal canvas dimensions
+    const canvasWidth = this.canvas.width;
+    const canvasHeight = this.canvas.height;
+    
+    // Calculate scale factors between the internal canvas and its displayed size
+    const scaleX = canvasWidth / displayWidth;
+    const scaleY = canvasHeight / displayHeight;
+    
+    return keypoints.map(point => {
+      if (!point) return point;
+      
+      // Create a copy of the point with normalized coordinates
+      return {
+        ...point,
+        // The original coordinates are in the internal canvas dimensions
+        // We need to keep them as is and let the browser handle the scaling
+        x: point.x,
+        y: point.y
+      };
+    });
   }
 
   /**

@@ -238,6 +238,7 @@ export class VideoFrameAcquisition implements FrameAcquisition {
    */
   private updateCanvasDimensions(): void {
     if (this.videoElement.videoWidth && this.videoElement.videoHeight) {
+      // Set the internal dimensions of the canvas to match the video dimensions exactly
       this.canvasElement.width = this.videoElement.videoWidth;
       this.canvasElement.height = this.videoElement.videoHeight;
 
@@ -248,11 +249,26 @@ export class VideoFrameAcquisition implements FrameAcquisition {
       // Update container class based on orientation
       const videoContainer = this.videoElement.parentElement;
       if (videoContainer) {
-        videoContainer.classList.remove('video-portrait', 'video-landscape');
-        videoContainer.classList.add(
-          isPortrait ? 'video-portrait' : 'video-landscape'
-        );
+        if (isPortrait) {
+          videoContainer.classList.add('portrait-video');
+          videoContainer.classList.remove('landscape-video');
+        } else {
+          videoContainer.classList.add('landscape-video');
+          videoContainer.classList.remove('portrait-video');
+        }
       }
+
+      // Log dimensions for debugging
+      console.log(
+        `Canvas dimensions updated: ${this.canvasElement.width}x${this.canvasElement.height} (video: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight})`
+      );
+
+      // Ensure the canvas element style position is absolute and covers the video exactly
+      this.canvasElement.style.position = 'absolute';
+      this.canvasElement.style.top = '0';
+      this.canvasElement.style.left = '0';
+      this.canvasElement.style.width = '100%';
+      this.canvasElement.style.height = '100%';
     }
   }
 }
