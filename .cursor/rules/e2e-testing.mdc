@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Swing Analyzer E2E Testing Guidelines
+
+## Test Environment Setup
+- The development server must be running at http://localhost:1234 before running e2e tests
+- **IMPORTANT: Always assume the server is already running**
+- Only check server status if tests fail with connection errors
+
+## Running Tests
+- Run via web report server: `npx playwright test --reporter=list` (preferred)
+
+
+## Troubleshooting
+- If connection errors occur, check if port 1234 is in use: `lsof -i :1234`
+- Tests may trigger warnings about spine angle being 0 - this is expected in test environments
+- Some tests have longer timeouts (60 seconds) to allow for model loading
