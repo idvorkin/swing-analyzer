@@ -27,7 +27,10 @@ export class SwingRepProcessor implements RepProcessor {
    * Returns an Observable that emits rep events
    */
   updateRepCount(checkpointEvent: FormEvent): Observable<RepEvent> {
+    console.log(`SwingRepProcessor: Received checkpoint event for position ${checkpointEvent.position}`);
+    
     if (!checkpointEvent.skeletonEvent.skeleton || !checkpointEvent.position) {
+      console.warn(`SwingRepProcessor: Invalid checkpoint event - missing skeleton or position`);
       // No skeleton data or position to process
       return of({
         repCount: this.repCount,
@@ -40,14 +43,17 @@ export class SwingRepProcessor implements RepProcessor {
     
     // Add this position to our detected positions for this rep
     this.detectedPositions.add(currentPosition);
+    console.log(`SwingRepProcessor: Added position ${currentPosition}, detected positions now: ${Array.from(this.detectedPositions).join(', ')}`);
     
     // Check for rep completion
     let repIncremented = false;
     
     // If we've seen a Release position followed by a Top position, we've completed a rep
     if (this.lastPosition === SwingPosition.Release && currentPosition === SwingPosition.Top) {
+      console.log(`SwingRepProcessor: Detected transition from Release to Top, checking for rep completion`);
       // Check if we've seen all positions in the correct sequence
       if (this.hasCompletedFullCycle()) {
+        console.log(`SwingRepProcessor: Full cycle detected, incrementing rep count`);
         this.incrementRepCount();
         repIncremented = true;
         
@@ -74,11 +80,14 @@ export class SwingRepProcessor implements RepProcessor {
             armToSpineAngle: this.currentRep?.checkpoints.get(SwingPosition.Release)?.armToSpineAngle
           }
         });
+      } else {
+        console.log(`SwingRepProcessor: Full cycle not detected, positions detected: ${Array.from(this.detectedPositions).join(', ')}`);
       }
     }
 
     // Update last position
     this.lastPosition = currentPosition;
+    console.log(`SwingRepProcessor: Updated last position to ${this.lastPosition}`);
 
     // If we have a checkpoint and current rep exists, store the checkpoint
     if (checkpointEvent.checkpoint && this.currentRep) {
@@ -86,6 +95,7 @@ export class SwingRepProcessor implements RepProcessor {
         checkpointEvent.checkpoint.position,
         checkpointEvent.checkpoint
       );
+      console.log(`SwingRepProcessor: Stored checkpoint for position ${checkpointEvent.checkpoint.position} in rep ${this.currentRep.repNumber}`);
     }
 
     // Create a new rep if we don't have one
@@ -94,6 +104,7 @@ export class SwingRepProcessor implements RepProcessor {
         repNumber: this.repCount + 1, // Next rep (current count + 1)
         checkpoints: new Map(),
       };
+      console.log(`SwingRepProcessor: Created new rep with number ${this.currentRep.repNumber}`);
 
       // If we have a checkpoint, add it
       if (checkpointEvent.checkpoint) {
@@ -101,9 +112,11 @@ export class SwingRepProcessor implements RepProcessor {
           checkpointEvent.checkpoint.position,
           checkpointEvent.checkpoint
         );
+        console.log(`SwingRepProcessor: Added first checkpoint for position ${checkpointEvent.checkpoint.position}`);
       }
     }
 
+    console.log(`SwingRepProcessor: Emitting RepEvent with repCount=${this.repCount}, repIncremented=${repIncremented}`);
     return of({
       repCount: this.repCount,
       checkpointEvent,

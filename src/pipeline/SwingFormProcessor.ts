@@ -35,11 +35,11 @@ export class SwingFormProcessor implements FormProcessor {
     [SwingPosition.Release]: 30, // Mid-point up
   };
 
-  // Threshold to detect a new cycle starting - lowered for easier detection
-  private readonly CYCLE_RESET_THRESHOLD = 25; // Degrees from vertical (was 15)
+  // Threshold to detect a new cycle starting - lowered even more for easier detection
+  private readonly CYCLE_RESET_THRESHOLD = 35; // Degrees from vertical (was 25)
 
   // Lower the minimum angle for cycle detection to make testing easier
-  private readonly MIN_CYCLE_ANGLE = 40; // Was 60
+  private readonly MIN_CYCLE_ANGLE = 35; // Was 40
 
   // Tracking swing direction
   private isDownswing = true;
@@ -47,6 +47,9 @@ export class SwingFormProcessor implements FormProcessor {
   
   // Tracking swing angle extremes for cycle detection
   private maxSpineAngleInCycle = 0;
+
+  // Track last logged spine angle to reduce console noise
+  private lastLoggedAngle = 0;
 
   constructor(
     private videoElement: HTMLVideoElement,
@@ -69,12 +72,15 @@ export class SwingFormProcessor implements FormProcessor {
     const spineAngle = Math.abs(skeleton.getSpineAngle());
     const timestamp = skeletonEvent.poseEvent.frameEvent.timestamp;
     
-    // DEBUG: Log basic frame info
-    console.log(`Processing frame: spineAngle=${spineAngle.toFixed(2)}°, ts=${timestamp}`);
+    // Log only significant angle changes to reduce noise (>5 degrees)
+    const lastLoggedAngle = this.lastLoggedAngle || 0;
+    if (Math.abs(spineAngle - lastLoggedAngle) > 5) {
+      console.log(`Significant angle change: ${lastLoggedAngle.toFixed(1)}° → ${spineAngle.toFixed(1)}°, arm=${skeleton.getArmToSpineAngle().toFixed(1)}°`);
+      this.lastLoggedAngle = spineAngle;
+    }
     
     // Get arm to spine angle from skeleton
     const armToSpineAngle = skeleton.getArmToSpineAngle();
-    console.log(`Arm-to-spine angle: ${armToSpineAngle.toFixed(2)}°`);
 
     // Detect swing direction
     const isIncreasing = spineAngle > this.prevSpineAngle;
@@ -84,12 +90,18 @@ export class SwingFormProcessor implements FormProcessor {
     this.prevSpineAngle = spineAngle;
 
     // Track max angle in cycle for cycle detection
+    const oldMax = this.maxSpineAngleInCycle;
     this.maxSpineAngleInCycle = Math.max(this.maxSpineAngleInCycle, spineAngle);
-    console.log(`Max angle in cycle: ${this.maxSpineAngleInCycle.toFixed(2)}°, direction: ${this.isDownswing ? 'down' : 'up'}`);
+    
+    // Only log when max angle increases significantly
+    if (this.maxSpineAngleInCycle > oldMax + 5) {
+      console.log(`New cycle max angle: ${this.maxSpineAngleInCycle.toFixed(1)}°, direction: ${this.isDownswing ? 'down' : 'up'}`);
+    }
 
     // Check for cycle reset (going back to top)
     if (this.maxSpineAngleInCycle > this.MIN_CYCLE_ANGLE && spineAngle < this.CYCLE_RESET_THRESHOLD) {
-      console.log(`===== CYCLE COMPLETE: Processing best candidates =====`);
+      console.log(`===== CYCLE COMPLETE: Max=${this.maxSpineAngleInCycle.toFixed(1)}°, current=${spineAngle.toFixed(1)}° =====`);
+      
       // We've completed a cycle, process the best candidates
       const formEvents: FormEvent[] = [];
       
@@ -99,7 +111,7 @@ export class SwingFormProcessor implements FormProcessor {
       for (const position of sequence) {
         const candidate = this.bestPositionCandidates.get(position);
         if (candidate) {
-          console.log(`Found best candidate for ${position}: spine=${candidate.spineAngle.toFixed(2)}°, arm=${candidate.armToSpineAngle.toFixed(2)}°`);
+          console.log(`Found ${position}: spine=${candidate.spineAngle.toFixed(1)}°, arm=${candidate.armToSpineAngle.toFixed(1)}°`);
           // Create a checkpoint from the best candidate
           const checkpoint = this.createCheckpoint(
             position,

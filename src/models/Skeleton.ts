@@ -27,8 +27,6 @@ export class Skeleton {
    * Initialize keypoint name -> index mapping
    */
   private initKeypointMapping(): void {
-    console.log('Initializing keypoint mapping...');
-    
     // Create a mapping from all body part names to their indices
     Object.entries(MediaPipeBodyParts).forEach(([name, index]) => {
       const lowerName = name.toLowerCase();
@@ -49,80 +47,6 @@ export class Skeleton {
         this.keypointMapping[withoutPrefix] = index;
       }
     });
-    
-    console.log('Keypoint mapping created:', Object.keys(this.keypointMapping).length, 'entries');
-    // Log some important keypoints
-    console.log('rightshoulder index:', this.keypointMapping['rightshoulder']);
-    console.log('leftshoulder index:', this.keypointMapping['leftshoulder']);
-    console.log('shoulder index:', this.keypointMapping['shoulder']);
-    console.log('rightelbow index:', this.keypointMapping['rightelbow']);
-    console.log('leftelbow index:', this.keypointMapping['leftelbow']);
-    console.log('elbow index:', this.keypointMapping['elbow']);
-  }
-
-  /**
-   * Debug method to log all available keypoints
-   */
-  debugKeypoints(): void {
-    console.log('=== DEBUG KEYPOINTS ===');
-    console.log(`Total keypoints: ${this.keypoints.length}`);
-    
-    this.keypoints.forEach((kp, i) => {
-      console.log(`Keypoint #${i}: x=${kp.x.toFixed(2)}, y=${kp.y.toFixed(2)}, score=${kp.score?.toFixed(2) || 'N/A'}`);
-    });
-    
-    // Try to find the important keypoints by index
-    const rightShoulderIndex = this.keypointMapping['rightshoulder'];
-    const leftShoulderIndex = this.keypointMapping['leftshoulder'];
-    const rightElbowIndex = this.keypointMapping['rightelbow'];
-    const leftElbowIndex = this.keypointMapping['leftelbow'];
-    const rightHipIndex = this.keypointMapping['righthip'];
-    const leftHipIndex = this.keypointMapping['lefthip'];
-    
-    console.log('Important keypoints:');
-    if (rightShoulderIndex !== undefined) {
-      const kp = this.keypoints[rightShoulderIndex];
-      console.log(`- Right Shoulder (${rightShoulderIndex}): ${kp ? `(${kp.x.toFixed(2)}, ${kp.y.toFixed(2)})` : 'not found'}`);
-    } else {
-      console.log('- Right Shoulder: Index not mapped');
-    }
-    
-    if (leftShoulderIndex !== undefined) {
-      const kp = this.keypoints[leftShoulderIndex];
-      console.log(`- Left Shoulder (${leftShoulderIndex}): ${kp ? `(${kp.x.toFixed(2)}, ${kp.y.toFixed(2)})` : 'not found'}`);
-    } else {
-      console.log('- Left Shoulder: Index not mapped');
-    }
-    
-    if (rightElbowIndex !== undefined) {
-      const kp = this.keypoints[rightElbowIndex];
-      console.log(`- Right Elbow (${rightElbowIndex}): ${kp ? `(${kp.x.toFixed(2)}, ${kp.y.toFixed(2)})` : 'not found'}`);
-    } else {
-      console.log('- Right Elbow: Index not mapped');
-    }
-    
-    if (leftElbowIndex !== undefined) {
-      const kp = this.keypoints[leftElbowIndex];
-      console.log(`- Left Elbow (${leftElbowIndex}): ${kp ? `(${kp.x.toFixed(2)}, ${kp.y.toFixed(2)})` : 'not found'}`);
-    } else {
-      console.log('- Left Elbow: Index not mapped');
-    }
-    
-    if (rightHipIndex !== undefined) {
-      const kp = this.keypoints[rightHipIndex];
-      console.log(`- Right Hip (${rightHipIndex}): ${kp ? `(${kp.x.toFixed(2)}, ${kp.y.toFixed(2)})` : 'not found'}`);
-    } else {
-      console.log('- Right Hip: Index not mapped');
-    }
-    
-    if (leftHipIndex !== undefined) {
-      const kp = this.keypoints[leftHipIndex];
-      console.log(`- Left Hip (${leftHipIndex}): ${kp ? `(${kp.x.toFixed(2)}, ${kp.y.toFixed(2)})` : 'not found'}`);
-    } else {
-      console.log('- Left Hip: Index not mapped');
-    }
-    
-    console.log('=== END DEBUG KEYPOINTS ===');
   }
 
   /**
@@ -157,11 +81,6 @@ export class Skeleton {
       
       // Get arm vector (from shoulder to elbow)
       const elbow = this.getKeypointByName('rightElbow') || this.getKeypointByName('leftElbow');
-
-      console.log('DEBUG keypoints for arm-to-spine angle:');
-      console.log('- hip:', hip ? `found (${hip.x.toFixed(2)}, ${hip.y.toFixed(2)})` : 'not found');
-      console.log('- shoulder:', shoulder ? `found (${shoulder.x.toFixed(2)}, ${shoulder.y.toFixed(2)})` : 'not found');
-      console.log('- elbow:', elbow ? `found (${elbow.x.toFixed(2)}, ${elbow.y.toFixed(2)})` : 'not found');
       
       if (hip && shoulder && elbow) {
         // Calculate vectors
@@ -174,10 +93,6 @@ export class Skeleton {
           x: elbow.x - shoulder.x,
           y: elbow.y - shoulder.y
         };
-
-        console.log('Vector calculations:');
-        console.log('- spineVector:', spineVector);
-        console.log('- armVector:', armVector);
         
         // Calculate dot product
         const dotProduct = spineVector.x * armVector.x + spineVector.y * armVector.y;
@@ -186,27 +101,17 @@ export class Skeleton {
         const spineMag = Math.sqrt(spineVector.x * spineVector.x + spineVector.y * spineVector.y);
         const armMag = Math.sqrt(armVector.x * armVector.x + armVector.y * armVector.y);
         
-        console.log('Angle calculations:');
-        console.log('- dotProduct:', dotProduct);
-        console.log('- spineMag:', spineMag);
-        console.log('- armMag:', armMag);
-        console.log('- cos(angle):', dotProduct / (spineMag * armMag));
-
         // Calculate angle in radians and convert to degrees
         const cosAngle = Math.min(Math.max(dotProduct / (spineMag * armMag), -1), 1); // Clamp to [-1, 1]
         const angleRad = Math.acos(cosAngle);
         const angleDeg = angleRad * (180 / Math.PI);
         
-        console.log('Final angle:', angleDeg.toFixed(2), 'degrees');
-        
         this._armToSpineAngle = angleDeg;
         return angleDeg;
       } else {
-        console.warn('Missing required keypoints for arm-to-spine angle calculation');
+        this._armToSpineAngle = 0; // Default if keypoints not available
+        return 0;
       }
-      
-      this._armToSpineAngle = 0; // Default if keypoints not available
-      return 0;
     } catch (e) {
       console.error('Error calculating arm-to-spine angle:', e);
       this._armToSpineAngle = 0;
