@@ -55,8 +55,25 @@ export class SwingRepProcessor implements RepProcessor {
         this.detectedPositions.clear();
         this.detectedPositions.add(SwingPosition.Top); // Start the next rep at Top
 
-        // Log the rep completion
-        console.log(`Rep ${this.repCount} detected - full swing cycle completed`, this.currentRep);
+        // Log the rep completion with angles for each position
+        console.log(`Rep ${this.repCount} detected - full swing cycle completed`, {
+          top: {
+            spineAngle: this.currentRep?.checkpoints.get(SwingPosition.Top)?.spineAngle,
+            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPosition.Top)?.armToSpineAngle
+          },
+          hinge: {
+            spineAngle: this.currentRep?.checkpoints.get(SwingPosition.Hinge)?.spineAngle,
+            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPosition.Hinge)?.armToSpineAngle
+          },
+          bottom: {
+            spineAngle: this.currentRep?.checkpoints.get(SwingPosition.Bottom)?.spineAngle,
+            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPosition.Bottom)?.armToSpineAngle
+          },
+          release: {
+            spineAngle: this.currentRep?.checkpoints.get(SwingPosition.Release)?.spineAngle,
+            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPosition.Release)?.armToSpineAngle
+          }
+        });
       }
     }
 

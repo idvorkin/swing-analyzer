@@ -18,10 +18,35 @@ export class SwingFormProcessor implements FormProcessor {
   // Map of detected positions in current rep
   private detectedPositions = new Map<SwingPosition, FormCheckpoint>();
 
-  // Angle thresholds for position detection
-  private readonly HINGE_THRESHOLD = 20; // Degrees from vertical
-  private readonly BOTTOM_THRESHOLD = 60; // Degrees from vertical
-  private readonly RELEASE_THRESHOLD = 45; // Degrees from vertical
+  // Track best candidates for each position within a swing cycle
+  private bestPositionCandidates = new Map<SwingPosition, {
+    skeleton: Skeleton;
+    timestamp: number;
+    spineAngle: number;
+    armToSpineAngle: number;
+    angleDelta: number; // how close to the ideal angle
+  }>();
+
+  // Ideal target angles for each position
+  private readonly IDEAL_ANGLES = {
+    [SwingPosition.Top]: 0,      // Most vertical
+    [SwingPosition.Hinge]: 45,   // Mid-point down
+    [SwingPosition.Bottom]: 90,  // Most horizontal
+    [SwingPosition.Release]: 30, // Mid-point up
+  };
+
+  // Threshold to detect a new cycle starting - lowered for easier detection
+  private readonly CYCLE_RESET_THRESHOLD = 25; // Degrees from vertical (was 15)
+
+  // Lower the minimum angle for cycle detection to make testing easier
+  private readonly MIN_CYCLE_ANGLE = 40; // Was 60
+
+  // Tracking swing direction
+  private isDownswing = true;
+  private prevSpineAngle = 0;
+  
+  // Tracking swing angle extremes for cycle detection
+  private maxSpineAngleInCycle = 0;
 
   constructor(
     private videoElement: HTMLVideoElement,
@@ -41,43 +66,127 @@ export class SwingFormProcessor implements FormProcessor {
     }
 
     const skeleton = skeletonEvent.skeleton;
-    const spineAngle = skeleton.getSpineAngle();
+    const spineAngle = Math.abs(skeleton.getSpineAngle());
     const timestamp = skeletonEvent.poseEvent.frameEvent.timestamp;
+    
+    // DEBUG: Log basic frame info
+    console.log(`Processing frame: spineAngle=${spineAngle.toFixed(2)}°, ts=${timestamp}`);
+    
+    // Get arm to spine angle from skeleton
+    const armToSpineAngle = skeleton.getArmToSpineAngle();
+    console.log(`Arm-to-spine angle: ${armToSpineAngle.toFixed(2)}°`);
 
-    // Auto-reset positions when going back to top after a full cycle
-    if (this.isFullCycleComplete() && Math.abs(spineAngle) < this.HINGE_THRESHOLD) {
-      this.detectedPositions.clear();
-      this.lastPosition = SwingPosition.Top;
+    // Detect swing direction
+    const isIncreasing = spineAngle > this.prevSpineAngle;
+    if (Math.abs(spineAngle - this.prevSpineAngle) > 3) { // Only change direction on significant changes
+      this.isDownswing = isIncreasing;
+    }
+    this.prevSpineAngle = spineAngle;
+
+    // Track max angle in cycle for cycle detection
+    this.maxSpineAngleInCycle = Math.max(this.maxSpineAngleInCycle, spineAngle);
+    console.log(`Max angle in cycle: ${this.maxSpineAngleInCycle.toFixed(2)}°, direction: ${this.isDownswing ? 'down' : 'up'}`);
+
+    // Check for cycle reset (going back to top)
+    if (this.maxSpineAngleInCycle > this.MIN_CYCLE_ANGLE && spineAngle < this.CYCLE_RESET_THRESHOLD) {
+      console.log(`===== CYCLE COMPLETE: Processing best candidates =====`);
+      // We've completed a cycle, process the best candidates
+      const formEvents: FormEvent[] = [];
+      
+      // Process positions in the correct sequence
+      const sequence = [SwingPosition.Top, SwingPosition.Hinge, SwingPosition.Bottom, SwingPosition.Release];
+      
+      for (const position of sequence) {
+        const candidate = this.bestPositionCandidates.get(position);
+        if (candidate) {
+          console.log(`Found best candidate for ${position}: spine=${candidate.spineAngle.toFixed(2)}°, arm=${candidate.armToSpineAngle.toFixed(2)}°`);
+          // Create a checkpoint from the best candidate
+          const checkpoint = this.createCheckpoint(
+            position,
+            candidate.skeleton,
+            candidate.timestamp,
+            candidate.spineAngle,
+            candidate.armToSpineAngle
+          );
+          
+          // Store in detected positions map
+          this.detectedPositions.set(position, checkpoint);
+          
+          // Create form event
+          formEvents.push({
+            checkpoint,
+            position,
+            skeletonEvent: {
+              ...skeletonEvent,
+              skeleton: candidate.skeleton
+            },
+          });
+        } else {
+          console.warn(`No candidate found for position ${position}`);
+        }
+      }
+      
+      // Reset for next cycle
+      this.bestPositionCandidates.clear();
+      this.maxSpineAngleInCycle = 0;
+      
+      // If we have events, return the first one and queue the rest (or create a multicasting observable)
+      if (formEvents.length > 0) {
+        console.log(`Emitting form event for position: ${formEvents[0].position}`);
+        return of(formEvents[0]); // For simplicity, just return the first event
+      } else {
+        console.warn('No form events to emit after cycle completion');
+      }
+      
+      return EMPTY;
     }
 
-    // Detect position based on spine angle and previous position
-    const { newPosition, hasTransition } =
-      this.detectPositionTransition(spineAngle);
-
-    // If we have a position transition or it's a new rep's first position
-    if (hasTransition || (this.detectedPositions.size === 0 && newPosition)) {
-      // Capture the checkpoint
-      const checkpoint = this.captureCheckpoint(
-        newPosition || SwingPosition.Top,
-        skeleton,
-        timestamp
-      );
-
-      // Update last position
-      this.lastPosition = newPosition || SwingPosition.Top;
-
-      // Store in detected positions map
-      this.detectedPositions.set(newPosition || SwingPosition.Top, checkpoint);
-
-      return of({
-        checkpoint,
-        position: newPosition,
-        skeletonEvent,
-      });
+    // Update best candidates for each position based on how close we are to the ideal angle
+    this.updatePositionCandidate(SwingPosition.Top, skeleton, timestamp, spineAngle, armToSpineAngle);
+    
+    // Only consider Hinge in the downswing
+    if (this.isDownswing) {
+      this.updatePositionCandidate(SwingPosition.Hinge, skeleton, timestamp, spineAngle, armToSpineAngle);
+    }
+    
+    // Consider Bottom position at any time (will be constrained by angle)
+    this.updatePositionCandidate(SwingPosition.Bottom, skeleton, timestamp, spineAngle, armToSpineAngle);
+    
+    // Only consider Release in the upswing
+    if (!this.isDownswing) {
+      this.updatePositionCandidate(SwingPosition.Release, skeleton, timestamp, spineAngle, armToSpineAngle);
     }
 
     // No new checkpoint detected, return empty observable
     return EMPTY;
+  }
+
+  /**
+   * Update the best candidate for a position if this frame is better
+   */
+  private updatePositionCandidate(
+    position: SwingPosition,
+    skeleton: Skeleton,
+    timestamp: number,
+    spineAngle: number,
+    armToSpineAngle: number
+  ): void {
+    const idealAngle = this.IDEAL_ANGLES[position];
+    const angleDelta = Math.abs(spineAngle - idealAngle);
+    
+    const currentBest = this.bestPositionCandidates.get(position);
+    
+    // Update if this is the first candidate or better than existing
+    if (!currentBest || angleDelta < currentBest.angleDelta) {
+      this.bestPositionCandidates.set(position, {
+        skeleton,
+        timestamp,
+        spineAngle,
+        armToSpineAngle,
+        angleDelta,
+      });
+      console.log(`Updated best candidate for ${position}: spine=${spineAngle.toFixed(2)}°, arm=${armToSpineAngle.toFixed(2)}°, delta=${angleDelta.toFixed(2)}`);
+    }
   }
 
   /**
@@ -98,75 +207,22 @@ export class SwingFormProcessor implements FormProcessor {
    */
   reset(): void {
     this.detectedPositions.clear();
+    this.bestPositionCandidates.clear();
     this.lastPosition = SwingPosition.Top;
+    this.maxSpineAngleInCycle = 0;
+    this.prevSpineAngle = 0;
+    this.isDownswing = true;
   }
 
   /**
-   * Detect position transitions based on spine angle and state machine
+   * Create a checkpoint from skeleton data
    */
-  private detectPositionTransition(spineAngle: number): {
-    newPosition: SwingPosition | null;
-    hasTransition: boolean;
-  } {
-    const absAngle = Math.abs(spineAngle);
-    let newPosition: SwingPosition | null = null;
-    let hasTransition = false;
-
-    // State machine for position detection
-    switch (this.lastPosition) {
-      case SwingPosition.Top:
-        // From Top, we can only go to Hinge
-        if (
-          absAngle > this.HINGE_THRESHOLD &&
-          !this.detectedPositions.has(SwingPosition.Hinge)
-        ) {
-          newPosition = SwingPosition.Hinge;
-          hasTransition = true;
-        }
-        break;
-
-      case SwingPosition.Hinge:
-        // From Hinge, we can go to Bottom
-        if (
-          absAngle > this.BOTTOM_THRESHOLD &&
-          !this.detectedPositions.has(SwingPosition.Bottom)
-        ) {
-          newPosition = SwingPosition.Bottom;
-          hasTransition = true;
-        }
-        break;
-
-      case SwingPosition.Bottom:
-        // From Bottom, we can go to Release
-        if (
-          absAngle < this.RELEASE_THRESHOLD &&
-          !this.detectedPositions.has(SwingPosition.Release)
-        ) {
-          newPosition = SwingPosition.Release;
-          hasTransition = true;
-        }
-        break;
-
-      case SwingPosition.Release:
-        // From Release, we go back to Top for the next rep
-        // This happens automatically when the rep counter increases
-        if (absAngle < this.HINGE_THRESHOLD) {
-          newPosition = SwingPosition.Top;
-          hasTransition = true;
-        }
-        break;
-    }
-
-    return { newPosition, hasTransition };
-  }
-
-  /**
-   * Capture a checkpoint from the current video frame
-   */
-  private captureCheckpoint(
+  private createCheckpoint(
     position: SwingPosition,
     skeleton: Skeleton,
-    timestamp: number
+    timestamp: number,
+    spineAngle: number,
+    armToSpineAngle: number
   ): FormCheckpoint {
     // Create a temporary canvas to blend video and skeleton
     const tempCanvas = document.createElement('canvas');
@@ -204,12 +260,13 @@ export class SwingFormProcessor implements FormProcessor {
       );
     }
 
-    // Create a checkpoint with the capture
+    // Create a checkpoint with the capture including the arm-to-spine angle
     return {
       position,
       timestamp,
       image: imageData,
-      spineAngle: skeleton.getSpineAngle(),
+      spineAngle: spineAngle,
+      armToSpineAngle: armToSpineAngle,
       skeleton: skeleton,
     };
   }

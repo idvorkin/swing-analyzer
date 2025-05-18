@@ -31,6 +31,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const [status, setStatus] = useState<string>('Loading model...');
   const [repCount, setRepCount] = useState<number>(0);
   const [spineAngle, setSpineAngle] = useState<number>(0);
+  const [armToSpineAngle, setArmToSpineAngle] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   // Refs
@@ -99,11 +100,22 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     // Subscribe to pipeline results
     const pipelineObservable = pipeline.start();
     
+    // Debug frame counter
+    let frameCount = 0;
+    
     // Subscribe to skeleton events to render every detected skeleton
     skeletonSubscriptionRef.current = pipeline.getSkeletonEvents().subscribe({
       next: (skeletonEvent: SkeletonEvent) => {
         if (skeletonEvent.skeleton) {
+          // Debug keypoints on first few frames
+          if (frameCount < 5) {
+            console.log(`=== DEBUG FRAME ${frameCount} ===`);
+            skeletonEvent.skeleton.debugKeypoints();
+            frameCount++;
+          }
+          
           setSpineAngle(Math.round(skeletonEvent.skeleton.getSpineAngle() || 0));
+          setArmToSpineAngle(Math.round(skeletonEvent.skeleton.getArmToSpineAngle() || 0));
           renderSkeleton(skeletonEvent.skeleton);
         }
       },
@@ -420,6 +432,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     status,
     repCount,
     spineAngle,
+    armToSpineAngle,
     isPlaying,
     
     // Refs

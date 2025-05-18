@@ -542,6 +542,11 @@ button:disabled {
   border-radius: 0 0 0 4px;
 }
 
+.angle-label.arm-angle {
+  top: 25px; /* Position below the spine angle */
+  background-color: rgba(76, 175, 80, 0.7); /* Green background to distinguish */
+}
+
 .no-checkpoints {
   display: flex;
   align-items: center;
@@ -595,6 +600,19 @@ button:disabled {
   background-color: rgba(26, 115, 232, 0.3);
   padding: 6px 12px;
   border-radius: 20px;
+}
+
+.fullscreen-arm-angle {
+  font-size: 18px;
+  background-color: rgba(76, 175, 80, 0.3); /* Green background to match grid view */
+  padding: 6px 12px;
+  border-radius: 20px;
+  margin-left: 10px;
+}
+
+.fullscreen-angles {
+  display: flex;
+  align-items: center;
 }
 
 .fullscreen-image {

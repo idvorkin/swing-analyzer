@@ -245,11 +245,85 @@ export class SkeletonRenderer {
     // Draw spine angle
     const spineAngle = skeleton.getSpineAngle().toFixed(1);
     ctx.fillText(`Spine Angle: ${spineAngle}°`, 10, 20);
+    
+    // Draw arm-to-spine angle
+    const armToSpineAngle = skeleton.getArmToSpineAngle().toFixed(1);
+    ctx.fillText(`Arm-Spine Angle: ${armToSpineAngle}°`, 10, 40);
+
+    // Visualize arm-to-spine angle calculation
+    this.visualizeArmToSpineAngle(ctx, skeleton);
 
     // Draw grid if needed
     if (this.debugMode) {
       this.drawDebugGrid(ctx);
     }
+  }
+
+  /**
+   * Visualize the arm-to-spine angle calculation
+   */
+  private visualizeArmToSpineAngle(
+    ctx: CanvasRenderingContext2D,
+    skeleton: Skeleton
+  ): void {
+    // Get required keypoints
+    const keypoints = skeleton.getKeypoints();
+    const hip = skeleton.getKeypointByName('rightHip') || skeleton.getKeypointByName('leftHip');
+    const shoulder = skeleton.getKeypointByName('rightShoulder') || skeleton.getKeypointByName('leftShoulder');
+    const elbow = skeleton.getKeypointByName('rightElbow') || skeleton.getKeypointByName('leftElbow');
+
+    if (!hip || !shoulder || !elbow) {
+      // Draw error message if keypoints not found
+      ctx.fillStyle = '#ff0000';
+      ctx.fillText('Error: Missing keypoints for arm-spine angle', 10, 60);
+      
+      // Log which keypoints are missing
+      ctx.fillText(`  Hip: ${hip ? 'Found' : 'Missing'}`, 10, 80);
+      ctx.fillText(`  Shoulder: ${shoulder ? 'Found' : 'Missing'}`, 10, 100);
+      ctx.fillText(`  Elbow: ${elbow ? 'Found' : 'Missing'}`, 10, 120);
+      return;
+    }
+
+    // Set styles for vectors
+    ctx.lineWidth = 3;
+    
+    // Draw spine vector
+    ctx.beginPath();
+    ctx.strokeStyle = '#00ffff'; // Cyan
+    ctx.moveTo(hip.x, hip.y);
+    ctx.lineTo(shoulder.x, shoulder.y);
+    ctx.stroke();
+    
+    // Draw arm vector
+    ctx.beginPath();
+    ctx.strokeStyle = '#ff00ff'; // Magenta
+    ctx.moveTo(shoulder.x, shoulder.y);
+    ctx.lineTo(elbow.x, elbow.y);
+    ctx.stroke();
+    
+    // Draw dots at the keypoints with labels
+    ctx.fillStyle = '#00ffff';
+    ctx.beginPath();
+    ctx.arc(hip.x, hip.y, 6, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillText('Hip', hip.x + 10, hip.y);
+    
+    ctx.fillStyle = '#ffff00';
+    ctx.beginPath();
+    ctx.arc(shoulder.x, shoulder.y, 6, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillText('Shoulder', shoulder.x + 10, shoulder.y);
+    
+    ctx.fillStyle = '#ff00ff';
+    ctx.beginPath();
+    ctx.arc(elbow.x, elbow.y, 6, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillText('Elbow', elbow.x + 10, elbow.y);
+    
+    // Draw calculated arm-to-spine angle
+    const armToSpineAngle = skeleton.getArmToSpineAngle().toFixed(1);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${armToSpineAngle}°`, shoulder.x - 20, shoulder.y - 10);
   }
 
   /**

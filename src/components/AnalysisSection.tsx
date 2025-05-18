@@ -14,6 +14,7 @@ const AnalysisSection: React.FC = () => {
     status,
     repCount,
     spineAngle,
+    armToSpineAngle,
     checkpointGridRef,
     navigateToPreviousRep,
     navigateToNextRep,
@@ -44,6 +45,31 @@ const AnalysisSection: React.FC = () => {
   // Effect to render checkpoints when rep index changes
   useEffect(() => {
     renderCheckpointGrid();
+  }, [appState.currentRepIndex, repCount]);
+
+  // Effect to log angle values when checkpoints change
+  useEffect(() => {
+    if (!pipelineRef.current) return;
+    
+    const repProcessor = pipelineRef.current.getRepProcessor();
+    if (!repProcessor) return;
+    
+    const completedReps = repProcessor.getAllReps();
+    if (completedReps.length === 0) return;
+    
+    const currentRep = completedReps[appState.currentRepIndex];
+    if (!currentRep) return;
+    
+    // Log all angles for the current rep
+    console.log('Current rep checkpoint angles:');
+    positionOrder.forEach(position => {
+      const checkpoint = currentRep.checkpoints.get(position);
+      if (checkpoint) {
+        console.log(`${position} - spine: ${checkpoint.spineAngle.toFixed(2)}°, arm: ${checkpoint.armToSpineAngle.toFixed(2)}°`);
+      } else {
+        console.log(`${position} - not detected`);
+      }
+    });
   }, [appState.currentRepIndex, repCount]);
 
   // Render the checkpoint grid for the current rep
@@ -108,10 +134,16 @@ const AnalysisSection: React.FC = () => {
         // Add angle info
         const angleLabel = document.createElement('div');
         angleLabel.className = 'angle-label';
-        angleLabel.textContent = `${Math.round(checkpoint.spineAngle)}°`;
+        angleLabel.textContent = `Spine: ${Math.round(checkpoint.spineAngle)}°`;
+        
+        // Add arm-to-spine angle info
+        const armAngleLabel = document.createElement('div');
+        armAngleLabel.className = 'angle-label arm-angle';
+        armAngleLabel.textContent = `Arm: ${Math.round(checkpoint.armToSpineAngle)}°`;
         
         cell.appendChild(label);
         cell.appendChild(angleLabel);
+        cell.appendChild(armAngleLabel);
         
         // Add click handler for fullscreen
         cell.addEventListener('click', () => {
@@ -215,8 +247,13 @@ const AnalysisSection: React.FC = () => {
           <div className="fullscreen-title">
             Rep {currentRep.repNumber} - {positionLabels[selectedCheckpoint.position]} Position
           </div>
-          <div className="fullscreen-spine-angle">
-            Spine Angle: {Math.round(checkpoint.spineAngle)}°
+          <div className="fullscreen-angles">
+            <div className="fullscreen-spine-angle">
+              Spine Angle: {Math.round(checkpoint.spineAngle)}°
+            </div>
+            <div className="fullscreen-arm-angle">
+              Arm-to-Spine Angle: {Math.round(checkpoint.armToSpineAngle)}°
+            </div>
           </div>
         </div>
         
@@ -302,6 +339,18 @@ const AnalysisSection: React.FC = () => {
             <div className="metric-info">
               <div className="metric-label">Spine Angle</div>
               <div className="metric-value" id="spine-angle">{spineAngle}°</div>
+            </div>
+          </div>
+          
+          <div className="metric-card">
+            <div className="metric-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17 15l1.55 1.55c-.96 1.69-3.33 3.04-5.55 3.37V11h3V9h-3V7.82C14.16 7.4 15 6.3 15 5c0-1.65-1.35-3-3-3S9 3.35 9 5c0 1.3.84 2.4 2 2.82V9H8v2h3v8.92c-2.22-.33-4.59-1.68-5.55-3.37L7 15l-4-3v3c0 3.88 4.92 7 9 7s9-3.12 9-7v-3l-4 3zM12 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z" />
+              </svg>
+            </div>
+            <div className="metric-info">
+              <div className="metric-label">Arm-to-Spine Angle</div>
+              <div className="metric-value" id="arm-angle">{armToSpineAngle}°</div>
             </div>
           </div>
         </div>

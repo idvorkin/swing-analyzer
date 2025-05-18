@@ -40,6 +40,7 @@ export interface FormCheckpoint {
   timestamp: number;
   image: ImageData;
   spineAngle: number;
+  armToSpineAngle: number;
   skeleton: Skeleton;
 }
 
