@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Swing Analyzer', () => {
-  test('should load hardcoded video successfully', async ({ page }) => {
+  test('should load hardcoded video successfully and autoplay', async ({ page }) => {
     // Navigate to the application
     await page.goto('http://localhost:1234');
     
@@ -22,21 +22,10 @@ test.describe('Swing Analyzer', () => {
     expect(videoSrc).toBeTruthy();
     expect(videoSrc).toContain('/videos/swing-sample.mp4');
     
-    // The video may not autoplay - click the play button if needed
-    const playPauseButton = page.locator('#play-pause-btn');
-    const buttonText = await playPauseButton.textContent();
+    // Verify that the Play/Pause button shows "Pause", indicating video is playing
+    await expect(page.locator('#play-pause-btn')).toHaveText('Pause');
     
-    if (buttonText === 'Play') {
-      // Click the play button
-      await playPauseButton.click();
-      // Wait for button text to change to "Pause"
-      await expect(playPauseButton).toHaveText('Pause');
-    } else {
-      // If already showing "Pause", video should be playing
-      await expect(playPauseButton).toHaveText('Pause');
-    }
-    
-    // Give video a moment to start playing
+    // Give video a moment to ensure it's playing
     await page.waitForTimeout(1000);
     
     // Check if video is actually playing
