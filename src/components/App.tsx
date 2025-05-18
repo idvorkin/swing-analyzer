@@ -3,6 +3,7 @@ import { PipelineFactory } from '../pipeline/PipelineFactory';
 import { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import { AppState } from '../types';
 import { FrameStage } from '../pipeline/FrameStage';
+import { SwingAnalyzerViewModel } from '../viewmodels/SwingAnalyzerViewModel';
 import VideoSection from './VideoSection';
 import AnalysisSection from './AnalysisSection';
 import './App.css';
@@ -40,6 +41,7 @@ export const App: React.FC = () => {
   // Pipeline references
   const pipelineRef = useRef<Pipeline | null>(null);
   const frameAcquisitionRef = useRef<FrameStage | null>(null);
+  const viewModelRef = useRef<SwingAnalyzerViewModel | null>(null);
   
   // Initialize pipeline and models
   useEffect(() => {
@@ -60,8 +62,28 @@ export const App: React.FC = () => {
             canvasRef.current
           ) as FrameStage;
           
-          // Initialize the pipeline
+          // Create the view model for skeleton rendering
+          const repCounterElement = document.getElementById('rep-counter') || document.createElement('div');
+          const spineAngleElement = document.getElementById('spine-angle') || document.createElement('div');
+          
+          // Initialize the pipeline first
           await pipeline.initialize();
+          
+          // Create ViewModel after pipeline is initialized so it has the correct state
+          viewModelRef.current = new SwingAnalyzerViewModel(
+            pipeline,
+            videoRef.current,
+            canvasRef.current,
+            repCounterElement,
+            spineAngleElement,
+            {
+              ...appState,
+              isModelLoaded: true // Explicitly set model as loaded
+            }
+          );
+          
+          // Make sure the ViewModel knows the model is loaded
+          await viewModelRef.current.initialize();
           
           setAppState(prev => ({ ...prev, isModelLoaded: true }));
           setStatus('Ready. Upload a video or start camera.');
@@ -216,7 +238,15 @@ export const App: React.FC = () => {
     setIsPlaying(false);
     
     stopProcessing();
-    pipelineRef.current.reset();
+    
+    if (viewModelRef.current) {
+      console.log('[DEBUG] stopVideo: Using ViewModel to reset pipeline state');
+      viewModelRef.current.reset();
+    } else {
+      console.log('[DEBUG] stopVideo: ViewModel not available, resetting pipeline directly');
+      pipelineRef.current.reset();
+    }
+    
     setRepCount(0);
     setSpineAngle(0);
   };
@@ -248,101 +278,79 @@ export const App: React.FC = () => {
   const startProcessing = () => {
     console.log('[DEBUG] startProcessing: Function called, conditions:', {
       pipelineExists: Boolean(pipelineRef.current),
-      isProcessing: appState.isProcessing
+      isProcessing: appState.isProcessing,
+      viewModelExists: Boolean(viewModelRef.current)
     });
     
     if (!pipelineRef.current || appState.isProcessing) return;
     
-    console.log('[DEBUG] startProcessing: Starting pipeline');
-    const pipelineObservable = pipelineRef.current.start();
-    
-    setAppState(prev => ({ ...prev, isProcessing: true }));
-    
-    console.log('[DEBUG] startProcessing: Subscribing to pipeline observable');
-    pipelineObservable.subscribe({
-      next: (result: PipelineResult) => {
-        console.log('[DEBUG] Pipeline update received:', result);
-        setRepCount(result.repCount);
-        if (result.skeleton) {
-          setSpineAngle(Math.round(result.skeleton.getSpineAngle() || 0));
-          
-          // Render the skeleton on canvas
-          console.log('[DEBUG] Rendering skeleton with', result.skeleton.getKeypoints().length, 'keypoints');
-          const ctx = canvasRef.current?.getContext('2d');
-          if (ctx && canvasRef.current) {
-            // Clear previous drawing
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            
-            // Draw keypoints
-            const keypoints = result.skeleton.getKeypoints();
-            keypoints.forEach(point => {
-              if (point && point.visibility && point.visibility > 0.5) {
-                ctx.beginPath();
-                ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI);
-                ctx.fillStyle = '#00ff00';
-                ctx.fill();
-              }
-            });
-            
-            // Draw connections
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            
-            // Define basic connections (you could expand this)
-            const connections = [
-              [5, 6], // shoulders
-              [5, 7], // left shoulder to elbow
-              [7, 9], // left elbow to wrist
-              [6, 8], // right shoulder to elbow
-              [8, 10], // right elbow to wrist
-              [5, 11], // left shoulder to hip
-              [6, 12], // right shoulder to hip
-              [11, 12], // hips
-              [11, 13], // left hip to knee
-              [13, 15], // left knee to ankle
-              [12, 14], // right hip to knee
-              [14, 16]  // right knee to ankle
-            ];
-            
-            for (const [i, j] of connections) {
-              const pointA = keypoints[i];
-              const pointB = keypoints[j];
-              
-              if (
-                pointA && pointB && 
-                pointA.visibility && pointB.visibility && 
-                pointA.visibility > 0.5 && pointB.visibility > 0.5
-              ) {
-                ctx.moveTo(pointA.x, pointA.y);
-                ctx.lineTo(pointB.x, pointB.y);
-              }
-            }
-            
-            ctx.stroke();
-          } else {
-            console.error('[DEBUG] Could not get canvas context for rendering');
+    if (viewModelRef.current) {
+      console.log('[DEBUG] startProcessing: Using ViewModel for pipeline processing');
+      viewModelRef.current.startProcessing();
+      setAppState(prev => ({ ...prev, isProcessing: true }));
+    } else {
+      console.log('[DEBUG] startProcessing: ViewModel not available, falling back to direct pipeline');
+      const pipelineObservable = pipelineRef.current.start();
+      
+      setAppState(prev => ({ ...prev, isProcessing: true }));
+      
+      console.log('[DEBUG] startProcessing: Subscribing to pipeline observable');
+      pipelineObservable.subscribe({
+        next: (result: PipelineResult) => {
+          console.log('[DEBUG] Pipeline update received:', result);
+          setRepCount(result.repCount);
+          if (result.skeleton) {
+            setSpineAngle(Math.round(result.skeleton.getSpineAngle() || 0));
           }
+        },
+        error: (err) => {
+          console.error('[DEBUG] Pipeline error:', err);
+          setStatus('Error in processing pipeline');
         }
-      },
-      error: (err) => {
-        console.error('[DEBUG] Pipeline error:', err);
-        setStatus('Error in processing pipeline');
-      }
-    });
+      });
+    }
   };
   
   // Stop processing pipeline
   const stopProcessing = () => {
     if (!pipelineRef.current || !appState.isProcessing) return;
     
-    pipelineRef.current.stop();
+    if (viewModelRef.current) {
+      console.log('[DEBUG] stopProcessing: Using ViewModel to stop pipeline');
+      viewModelRef.current.stopProcessing();
+    } else {
+      console.log('[DEBUG] stopProcessing: ViewModel not available, stopping pipeline directly');
+      pipelineRef.current.stop();
+    }
+    
     setAppState(prev => ({ ...prev, isProcessing: false }));
   };
   
   // Set display mode
   const setDisplayMode = (mode: 'both' | 'video' | 'overlay') => {
     setAppState(prev => ({ ...prev, displayMode: mode }));
+    
+    if (viewModelRef.current) {
+      console.log('[DEBUG] setDisplayMode: Using ViewModel for display mode:', mode);
+      
+      // This is a workaround since we don't have a direct method in ViewModel
+      const updatedState = { ...viewModelRef.current.getAppState(), displayMode: mode };
+      
+      switch (mode) {
+        case 'both':
+          videoRef.current!.style.opacity = '1';
+          canvasRef.current!.style.display = 'block';
+          break;
+        case 'video':
+          videoRef.current!.style.opacity = '1';
+          canvasRef.current!.style.display = 'none';
+          break;
+        case 'overlay':
+          videoRef.current!.style.opacity = '0.1';
+          canvasRef.current!.style.display = 'block';
+          break;
+      }
+    }
   };
   
   // Rep navigation

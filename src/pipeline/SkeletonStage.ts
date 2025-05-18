@@ -31,6 +31,10 @@ export const SKELETON_CONNECTIONS = [
  * Skeleton construction stage - builds a skeleton from pose keypoints detected by ML model
  */
 export class SkeletonStage implements SkeletonConstruction {
+  // Throttle logging
+  private lastLogTime = 0;
+  private logThrottleMs = 1000; // 1 second
+
   /**
    * Build a skeleton from a pose event
    * Returns an Observable that emits the skeleton event
@@ -90,7 +94,14 @@ export class SkeletonStage implements SkeletonConstruction {
       const deltaY = bottomY - topY; // Inverted because Y axis points down in screen coordinates
       
       const angle = Math.abs(Math.atan2(deltaX, deltaY) * 180 / Math.PI);
-      console.log(`Spine angle calculated (shoulders-hips): ${angle.toFixed(2)}°`);
+      
+      // Throttle logging to once per second
+      const now = Date.now();
+      if (now - this.lastLogTime > this.logThrottleMs) {
+        console.log(`Spine angle calculated (shoulders-hips): ${angle.toFixed(2)}°`);
+        this.lastLogTime = now;
+      }
+      
       return angle;
     }
     
@@ -129,7 +140,13 @@ export class SkeletonStage implements SkeletonConstruction {
       // We need to adjust because face and spine angles have different reference points
       let spineAngle = Math.abs(faceAngle) * 0.5;
       
-      console.log(`Spine angle approximated from face: ${spineAngle.toFixed(2)}° (face angle: ${faceAngle.toFixed(2)}°)`);
+      // Throttle logging to once per second
+      const now = Date.now();
+      if (now - this.lastLogTime > this.logThrottleMs) {
+        console.log(`Spine angle approximated from face: ${spineAngle.toFixed(2)}° (face angle: ${faceAngle.toFixed(2)}°)`);
+        this.lastLogTime = now;
+      }
+      
       return spineAngle;
     }
     

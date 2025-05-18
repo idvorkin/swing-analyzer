@@ -18,6 +18,11 @@ export class SwingAnalyzerViewModel {
   // Skeleton renderer
   private skeletonRenderer: SkeletonRenderer;
   
+  // Throttle logging
+  private lastPipelineLogTime = 0;
+  private lastRenderLogTime = 0;
+  private logThrottleMs = 1000; // 1 second
+  
   constructor(
     private pipeline: Pipeline,
     private videoElement: HTMLVideoElement,
@@ -123,11 +128,26 @@ export class SwingAnalyzerViewModel {
    * Handle updates from the pipeline
    */
   private handlePipelineUpdate(result: PipelineResult): void {
-    // Update UI with new data
+    const currentTime = performance.now();
+    if (currentTime - this.lastPipelineLogTime >= this.logThrottleMs) {
+      this.lastPipelineLogTime = currentTime;
+      console.log("===== SwingAnalyzerViewModel: PIPELINE UPDATE RECEIVED =====");
+      console.log("SwingAnalyzerViewModel: RepCount:", this.pipeline.getRepCount());
+      console.log("SwingAnalyzerViewModel: Has Skeleton:", !!result.skeleton);
+      
+      if (result.skeleton) {
+        console.log("SwingAnalyzerViewModel: Skeleton angle:", result.skeleton.getSpineAngle().toFixed(2));
+        console.log("SwingAnalyzerViewModel: Keypoints:", result.skeleton.getKeypoints().length);
+      }
+      
+      console.log("===== SwingAnalyzerViewModel: PIPELINE UPDATE PROCESSED =====");
+    }
+    
+    // Update UI with new data (always do this regardless of logging)
     this.updateRepCounterDisplay();
     this.updateSpineAngleDisplay(result.skeleton.getSpineAngle());
     
-    // Render skeleton on canvas
+    // Render skeleton on canvas (always do this regardless of logging)
     this.renderSkeleton(result.skeleton);
   }
   
@@ -153,13 +173,33 @@ export class SwingAnalyzerViewModel {
    * Render skeleton on canvas
    */
   private renderSkeleton(skeleton: Skeleton): void {
+    // Always render the skeleton, regardless of logging
     if (skeleton) {
-      console.log("Rendering skeleton with", skeleton.getKeypoints().length, "keypoints");
-      console.log("Canvas dimensions:", this.canvasElement.width, "x", this.canvasElement.height);
-      console.log("Skeleton visibility:", skeleton.hasRequiredKeypoints());
+      const currentTime = performance.now();
+      
+      // Only log if we're past the throttle time
+      if (currentTime - this.lastRenderLogTime >= this.logThrottleMs) {
+        this.lastRenderLogTime = currentTime;
+        console.log("===== SwingAnalyzerViewModel: RENDERING SKELETON =====");
+        console.log("SwingAnalyzerViewModel: Rendering skeleton with", skeleton.getKeypoints().length, "keypoints");
+        console.log("SwingAnalyzerViewModel: Canvas dimensions:", this.canvasElement.width, "x", this.canvasElement.height);
+        console.log("SwingAnalyzerViewModel: Skeleton visibility:", skeleton.hasRequiredKeypoints());
+      }
+      
+      // Always call the renderer
       this.skeletonRenderer.renderSkeleton(skeleton, performance.now());
+      
+      // Only log completion if we're logging the start
+      if (currentTime - this.lastRenderLogTime >= this.logThrottleMs) {
+        console.log("===== SwingAnalyzerViewModel: SKELETON RENDERING COMPLETE =====");
+      }
     } else {
-      console.warn("No skeleton to render");
+      // Only log warnings about missing skeleton if we're past the throttle time
+      const currentTime = performance.now();
+      if (currentTime - this.lastRenderLogTime >= this.logThrottleMs) {
+        this.lastRenderLogTime = currentTime;
+        console.warn("SwingAnalyzerViewModel: No skeleton to render");
+      }
     }
   }
   
