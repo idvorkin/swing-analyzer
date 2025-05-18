@@ -1,11 +1,11 @@
 import { FrameAcquisition, FrameEvent } from './PipelineInterfaces';
 import { Observable, fromEvent, interval, Subject, NEVER } from 'rxjs';
-import { map, takeUntil, switchMap, tap } from 'rxjs/operators';
+import { map, takeUntil, switchMap } from 'rxjs/operators';
 
 /**
- * Frame acquisition stage - handles frame acquisition from video element or camera
+ * Video frame acquisition - handles frame acquisition from video element or camera
  */
-export class FrameStage implements FrameAcquisition {
+export class VideoFrameAcquisition implements FrameAcquisition {
   private stop$ = new Subject<void>();
   private frameRate = 30; // Default frame rate in fps
   
@@ -145,7 +145,7 @@ export class FrameStage implements FrameAcquisition {
    * Load a video from URL
    */
   loadVideoFromURL(url: string): Promise<void> {
-    console.log(`[DEBUG] FrameStage.loadVideoFromURL: Called with URL: ${url}`);
+    console.log(`[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Called with URL: ${url}`);
     
     return new Promise<void>((resolve, reject) => {
       // Stop camera if running
@@ -153,14 +153,14 @@ export class FrameStage implements FrameAcquisition {
       
       // Set up event listeners
       const handleError = () => {
-        console.error(`[DEBUG] FrameStage.loadVideoFromURL: Error event triggered for ${url}`);
+        console.error(`[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Error event triggered for ${url}`);
         reject(new Error(`Failed to load video from URL: ${url}`));
       };
       
       const handleLoaded = () => {
-        console.log(`[DEBUG] FrameStage.loadVideoFromURL: loadedmetadata event triggered`);
+        console.log(`[DEBUG] VideoFrameAcquisition.loadVideoFromURL: loadedmetadata event triggered`);
         this.updateCanvasDimensions();
-        console.log(`[DEBUG] FrameStage.loadVideoFromURL: Video loaded: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`);
+        console.log(`[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Video loaded: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`);
         resolve();
         
         // Remove listeners
@@ -169,12 +169,12 @@ export class FrameStage implements FrameAcquisition {
       };
       
       // Set up listeners
-      console.log(`[DEBUG] FrameStage.loadVideoFromURL: Setting up event listeners`);
+      console.log(`[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Setting up event listeners`);
       this.videoElement.addEventListener('error', handleError);
       this.videoElement.addEventListener('loadedmetadata', handleLoaded);
       
       // Load the video
-      console.log(`[DEBUG] FrameStage.loadVideoFromURL: Setting video.src to ${url}`);
+      console.log(`[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Setting video.src to ${url}`);
       this.videoElement.src = url;
     });
   }

@@ -31,19 +31,20 @@ export interface FrameEvent {
 }
 
 /**
- * Pose detection stage - detects keypoints from frames
+ * Skeleton transformer stage - transforms frames into skeleton models
+ * Combines pose detection and skeleton construction into a single stage
  */
-export interface PoseDetection {
+export interface SkeletonTransformer {
   /**
-   * Initialize the pose detector
+   * Initialize the skeleton transformer
    */
   initialize(): Promise<void>;
   
   /**
-   * Detect pose from a frame event
-   * Returns an Observable that emits the pose result or null
+   * Transform a frame event into a skeleton
+   * Returns an Observable that emits the skeleton event
    */
-  detectPose(frameEvent: FrameEvent): Observable<PoseEvent>;
+  transformToSkeleton(frameEvent: FrameEvent): Observable<SkeletonEvent>;
 }
 
 /**
@@ -55,17 +56,6 @@ export interface PoseEvent {
 }
 
 /**
- * Skeleton building stage - creates skeleton from keypoints
- */
-export interface SkeletonConstruction {
-  /**
-   * Build a skeleton from a pose event
-   * Returns an Observable that emits the skeleton
-   */
-  buildSkeleton(poseEvent: PoseEvent): Observable<SkeletonEvent>;
-}
-
-/**
  * A skeleton event with the skeleton and original frame data
  */
 export interface SkeletonEvent {
@@ -74,9 +64,10 @@ export interface SkeletonEvent {
 }
 
 /**
- * Form checkpoint detection stage - identifies key positions in the motion
+ * Form processor stage - processes skeletons to identify form positions
+ * Maintains state for form analysis
  */
-export interface FormCheckpointDetection {
+export interface FormProcessor {
   /**
    * Process a skeleton to identify checkpoints
    * Returns an Observable that emits checkpoint events
@@ -84,7 +75,7 @@ export interface FormCheckpointDetection {
   processFrame(skeletonEvent: SkeletonEvent, repCount: number): Observable<CheckpointEvent>;
   
   /**
-   * Reset the checkpoint detector state
+   * Reset the form processor state
    */
   reset(): void;
 }
@@ -99,9 +90,10 @@ export interface CheckpointEvent {
 }
 
 /**
- * Swing rep analysis stage - analyzes complete repetitions
+ * Rep processor stage - processes form checkpoints to count and analyze repetitions
+ * Maintains state for repetition tracking
  */
-export interface SwingRepAnalysis {
+export interface RepProcessor {
   /**
    * Update rep count based on checkpoint event
    * Returns an Observable that emits rep count updates

@@ -1,12 +1,12 @@
 import { FormCheckpoint, FormPosition } from '../types';
 import { Skeleton } from '../models/Skeleton';
-import { FormCheckpointDetection, SkeletonEvent, CheckpointEvent } from './PipelineInterfaces';
+import { FormProcessor, SkeletonEvent, CheckpointEvent } from './PipelineInterfaces';
 import { Observable, of } from 'rxjs';
 
 /**
- * Form checkpoint detection stage - analyzes skeletons to detect form checkpoints (key positions in swing)
+ * Swing form processor - processes skeletons to identify swing form positions and checkpoints
  */
-export class FormStage implements FormCheckpointDetection {
+export class SwingFormProcessor implements FormProcessor {
   // Last detected position
   private lastPosition = FormPosition.Top;
   
@@ -24,7 +24,7 @@ export class FormStage implements FormCheckpointDetection {
   ) {}
   
   /**
-   * Process a skeleton event to detect checkpoints
+   * Process a skeleton to identify checkpoints
    * Returns an Observable that emits checkpoint events
    */
   processFrame(skeletonEvent: SkeletonEvent, repCount: number): Observable<CheckpointEvent> {
@@ -85,7 +85,7 @@ export class FormStage implements FormCheckpointDetection {
   private lastRepCount = -1;
   
   /**
-   * Reset all detected positions
+   * Reset the form processor state
    */
   reset(): void {
     this.detectedPositions.clear();

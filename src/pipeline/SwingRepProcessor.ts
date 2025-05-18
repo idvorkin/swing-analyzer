@@ -1,12 +1,11 @@
-import { FormCheckpoint, FormPosition, RepCounter, RepData } from '../types';
-import { Skeleton } from '../models/Skeleton';
-import { SwingRepAnalysis, CheckpointEvent, RepEvent } from './PipelineInterfaces';
+import { RepCounter, RepData } from '../types';
+import { RepProcessor, CheckpointEvent, RepEvent } from './PipelineInterfaces';
 import { Observable, of } from 'rxjs';
 
 /**
- * Swing rep analysis stage - analyzes skeletons and checkpoints to detect and count swing repetitions
+ * Swing rep processor - processes form checkpoints to count and analyze swing repetitions
  */
-export class RepStage implements SwingRepAnalysis {
+export class SwingRepProcessor implements RepProcessor {
   // Track rep state
   private repCounter: RepCounter = {
     count: 0,

@@ -1,4 +1,4 @@
-import { FrameAcquisition, PoseDetection, SkeletonConstruction, FormCheckpointDetection, SwingRepAnalysis, CheckpointEvent } from './PipelineInterfaces';
+import { FrameAcquisition, SkeletonTransformer, FormProcessor, RepProcessor, CheckpointEvent } from './PipelineInterfaces';
 import { Skeleton } from '../models/Skeleton';
 import { FormCheckpoint } from '../types';
 import { Observable, Subject, Subscription } from 'rxjs';
@@ -10,7 +10,6 @@ import { switchMap, tap, share } from 'rxjs/operators';
 export class Pipeline {
   // Latest data from the pipeline
   private latestSkeleton: Skeleton | null = null;
-  private latestCheckpoint: FormCheckpoint | null = null;
   private repCount = 0;
   
   // Processing state
@@ -23,18 +22,17 @@ export class Pipeline {
   
   constructor(
     private frameAcquisition: FrameAcquisition,
-    private poseDetector: PoseDetection,
-    private skeletonBuilder: SkeletonConstruction,
-    private formAnalyzer: FormCheckpointDetection,
-    private repDetector: SwingRepAnalysis
+    private skeletonTransformer: SkeletonTransformer,
+    private formProcessor: FormProcessor,
+    private repProcessor: RepProcessor
   ) {}
   
   /**
    * Initialize the pipeline
    */
   async initialize(): Promise<void> {
-    // Initialize pose detector
-    await this.poseDetector.initialize();
+    // Initialize skeleton transformer
+    await this.skeletonTransformer.initialize();
   }
   
   /**
@@ -52,20 +50,17 @@ export class Pipeline {
     
     // Set up the reactive pipeline
     this.pipelineSubscription = frameStream.pipe(
-      // Stage 1: Pose Detection
-      switchMap(frameEvent => this.poseDetector.detectPose(frameEvent)),
+      // Stage 1: Skeleton Transformation (combined pose detection and skeleton construction)
+      switchMap(frameEvent => this.skeletonTransformer.transformToSkeleton(frameEvent)),
       
-      // Stage 2: Skeleton Construction
-      switchMap(poseEvent => this.skeletonBuilder.buildSkeleton(poseEvent)),
-      
-      // Stage 3: Form Checkpoint Detection
+      // Stage 2: Form Processing
       switchMap(skeletonEvent => {
         // Store latest skeleton
         if (skeletonEvent.skeleton) {
           this.latestSkeleton = skeletonEvent.skeleton;
         }
         
-        return this.formAnalyzer.processFrame(skeletonEvent, this.repCount);
+        return this.formProcessor.processFrame(skeletonEvent, this.repCount);
       }),
       
       // Emit checkpoint events
@@ -74,14 +69,9 @@ export class Pipeline {
         this.checkpointSubject.next(checkpointEvent);
       }),
       
-      // Stage 4: Swing Rep Analysis
+      // Stage 3: Rep Processing
       switchMap(checkpointEvent => {
-        // Store latest checkpoint
-        if (checkpointEvent.checkpoint) {
-          this.latestCheckpoint = checkpointEvent.checkpoint;
-        }
-        
-        return this.repDetector.updateRepCount(checkpointEvent);
+        return this.repProcessor.updateRepCount(checkpointEvent);
       }),
       
       // Update rep count and emit result
@@ -145,10 +135,9 @@ export class Pipeline {
    * Reset the pipeline state
    */
   reset(): void {
-    this.repDetector.reset();
-    this.formAnalyzer.reset();
+    this.repProcessor.reset();
+    this.formProcessor.reset();
     this.latestSkeleton = null;
-    this.latestCheckpoint = null;
     this.repCount = 0;
   }
   

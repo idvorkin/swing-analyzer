@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { PipelineFactory } from '../pipeline/PipelineFactory';
 import { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import { AppState } from '../types';
-import { FrameStage } from '../pipeline/FrameStage';
+import { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
 import { SwingAnalyzerViewModel } from '../viewmodels/SwingAnalyzerViewModel';
 import VideoSection from './VideoSection';
 import AnalysisSection from './AnalysisSection';
@@ -40,7 +40,7 @@ export const App: React.FC = () => {
   
   // Pipeline references
   const pipelineRef = useRef<Pipeline | null>(null);
-  const frameAcquisitionRef = useRef<FrameStage | null>(null);
+  const frameAcquisitionRef = useRef<VideoFrameAcquisition | null>(null);
   const viewModelRef = useRef<SwingAnalyzerViewModel | null>(null);
   
   // Initialize pipeline and models
@@ -60,7 +60,7 @@ export const App: React.FC = () => {
           frameAcquisitionRef.current = PipelineFactory.createFrameAcquisition(
             videoRef.current,
             canvasRef.current
-          ) as FrameStage;
+          ) as VideoFrameAcquisition;
           
           // Create the view model for skeleton rendering
           const repCounterElement = document.getElementById('rep-counter') || document.createElement('div');

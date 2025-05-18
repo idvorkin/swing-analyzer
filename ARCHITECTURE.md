@@ -17,11 +17,10 @@ graph TD
     end
     
     subgraph "Pipeline Stages"
-        C1[FrameStage]
-        C2[PoseStage]
-        C3[SkeletonStage]
-        C4[FormStage]
-        C5[RepStage]
+        C1[VideoFrameAcquisition]
+        C2[PoseSkeletonTransformer]
+        C3[SwingFormProcessor]
+        C4[SwingRepProcessor]
     end
     
     subgraph "Data Models"
@@ -41,10 +40,10 @@ graph TD
     A2 --> B1
     B1 -.-> D3
     C1 -.-> D4
-    C4 -.-> D5
-    C3 -.-> D1
-    C4 -.-> D2
-    E2 --> C4
+    C3 -.-> D5
+    C2 -.-> D1
+    C3 -.-> D2
+    E2 --> C3
     E4 --> A1
 ```
 
@@ -52,34 +51,29 @@ graph TD
 
 ```mermaid
 flowchart LR
-    A[FrameStage] --> |Observable<FrameEvent>| B[PoseStage]
-    B --> |Observable<PoseEvent>| C[SkeletonStage]
-    C --> |Observable<SkeletonEvent>| D[FormStage]
-    D --> |Observable<CheckpointEvent>| E[RepStage]
-    E --> |PipelineResult| F[UI Components]
+    A[VideoFrameAcquisition] --> |Observable<FrameEvent>| B[PoseSkeletonTransformer]
+    B --> |Observable<SkeletonEvent>| C[SwingFormProcessor]
+    C --> |Observable<CheckpointEvent>| D[SwingRepProcessor]
+    D --> |PipelineResult| E[UI Components]
     
     subgraph "Frame Acquisition"
         A
     end
     
-    subgraph "Pose Detection"
+    subgraph "Pose Detection & Skeleton Construction"
         B
     end
     
-    subgraph "Skeleton Construction"
+    subgraph "Form Analysis"
         C
     end
     
-    subgraph "FormCheckpoint Detection"
+    subgraph "Rep Counting & Analysis"
         D
     end
     
-    subgraph "Swing Rep Analysis"
-        E
-    end
-    
     subgraph "User Experience"
-        F
+        E
     end
 ```
 
@@ -108,26 +102,21 @@ The swing analyzer uses a reactive pipeline architecture based on RxJS Observabl
 - **PipelineInterfaces**: Defines the contract for each processing stage
 
 ### Pipeline Stages:
-1. **FrameStage (Frame Acquisition)**
+1. **VideoFrameAcquisition (Frame Acquisition)**
    - Source: Camera or Video
    - Output: Observable<FrameEvent> with raw image frames and metadata
 
-2. **PoseStage (Pose Detection)**
+2. **PoseSkeletonTransformer (Pose Detection & Skeleton Construction)**
    - Input: FrameEvent
-   - Process: TensorFlow.js/MoveNet model
-   - Output: Observable<PoseEvent> with keypoints and confidence scores
-
-3. **SkeletonStage (Skeleton Construction)**
-   - Input: PoseEvent
-   - Process: Connect keypoints, calculate angles
+   - Process: TensorFlow.js/MoveNet model for pose detection and skeleton creation
    - Output: Observable<SkeletonEvent> with connected body structure
 
-4. **FormStage (FormCheckpoint Detection)**
+3. **SwingFormProcessor (Form Analysis)**
    - Input: SkeletonEvent
    - Process: Identify specific positions (Top, Hinge, Bottom, Release)
    - Output: Observable<CheckpointEvent> with form checkpoints
 
-5. **RepStage (Swing Rep Analysis)**
+4. **SwingRepProcessor (Rep Counting & Analysis)**
    - Input: CheckpointEvent
    - Process: Pattern recognition of complete swing motion
    - Output: Observable<RepEvent> with rep count and metrics
