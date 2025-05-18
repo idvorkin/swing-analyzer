@@ -1,5 +1,5 @@
 import { type Observable, of } from 'rxjs';
-import type { RepCounter, RepData } from '../types';
+import { SwingPosition, type RepCounter, type RepData } from '../types';
 import type {
   FormEvent,
   RepEvent,
@@ -8,6 +8,7 @@ import type {
 
 /**
  * Swing rep processor - processes form checkpoints to count and analyze swing repetitions
+ * Based on detecting swing positions instead of raw angles
  */
 export class SwingRepProcessor implements RepProcessor {
   // Track rep state
@@ -15,54 +16,59 @@ export class SwingRepProcessor implements RepProcessor {
     count: 0,
     isHinge: false,
     lastHingeState: false,
-    hingeThreshold: 45, // Degrees, matching original implementation
+    hingeThreshold: 45, // Kept for backwards compatibility
   };
 
   // Store completed reps
   private completedReps: RepData[] = [];
   private currentRep: RepData | null = null;
+  
+  // Positions in current swing
+  private detectedPositions = new Set<SwingPosition>();
+  private lastPosition: SwingPosition | null = null;
 
   /**
    * Update rep count based on checkpoint event
    * Returns an Observable that emits rep events
    */
   updateRepCount(checkpointEvent: FormEvent): Observable<RepEvent> {
-    if (!checkpointEvent.skeletonEvent.skeleton) {
-      // No skeleton data to process
+    if (!checkpointEvent.skeletonEvent.skeleton || !checkpointEvent.position) {
+      // No skeleton data or position to process
       return of({
         repCount: this.repCounter.count,
         checkpointEvent,
       });
     }
 
-    const skeleton = checkpointEvent.skeletonEvent.skeleton;
-    const spineAngle = skeleton.getSpineAngle();
-
-    // Calculate if the position is hinged based on spine angle
-    // Note: The logic here is intentionally inverted from the original implementation
-    // In the original, isHinge=true means the person is UPRIGHT (not hinged)
-    // This is more intuitive: isHinge=true means they ARE in a hinged position
-    const isHinge = Math.abs(spineAngle) < this.repCounter.hingeThreshold;
-
-    // Track whether we incremented a rep in this update
+    // Get the current position from the form event
+    const currentPosition = checkpointEvent.position;
+    
+    // Add this position to our detected positions for this rep
+    this.detectedPositions.add(currentPosition);
+    
+    // Check for rep completion
     let repIncremented = false;
+    
+    // If we've seen a Release position followed by a Top position, we've completed a rep
+    if (this.lastPosition === SwingPosition.Release && currentPosition === SwingPosition.Top) {
+      // Check if we've seen all positions in the correct sequence
+      if (this.hasCompletedFullCycle()) {
+        this.incrementRepCount();
+        repIncremented = true;
+        
+        // Reset detected positions for next rep
+        this.detectedPositions.clear();
+        this.detectedPositions.add(SwingPosition.Top); // Start the next rep at Top
 
-    // Only count a rep when transitioning from hinge to not-hinge (straightening up)
-    if (this.repCounter.lastHingeState && !isHinge) {
-      this.incrementRepCount();
-      repIncremented = true;
-
-      // Log the rep completion
-      console.log(
-        `Rep ${this.repCounter.count} detected - spine angle: ${spineAngle.toFixed(1)}°`
-      );
+        // Log the rep completion
+        console.log(`Rep ${this.repCounter.count} detected - full swing cycle completed`);
+      }
     }
 
-    // Update state for next time
-    this.repCounter.isHinge = isHinge;
-    this.repCounter.lastHingeState = isHinge;
+    // Update last position
+    this.lastPosition = currentPosition;
 
-    // If we have a new checkpoint and current rep exists, store the checkpoint
+    // If we have a checkpoint and current rep exists, store the checkpoint
     if (checkpointEvent.checkpoint && this.currentRep) {
       this.currentRep.checkpoints.set(
         checkpointEvent.checkpoint.position,
@@ -94,6 +100,18 @@ export class SwingRepProcessor implements RepProcessor {
   }
 
   /**
+   * Check if we've detected all positions in the correct sequence
+   */
+  private hasCompletedFullCycle(): boolean {
+    return (
+      this.detectedPositions.has(SwingPosition.Top) &&
+      this.detectedPositions.has(SwingPosition.Hinge) &&
+      this.detectedPositions.has(SwingPosition.Bottom) &&
+      this.detectedPositions.has(SwingPosition.Release)
+    );
+  }
+
+  /**
    * Get the current rep count
    */
   getRepCount(): number {
@@ -112,6 +130,8 @@ export class SwingRepProcessor implements RepProcessor {
     };
     this.completedReps = [];
     this.currentRep = null;
+    this.detectedPositions.clear();
+    this.lastPosition = null;
   }
 
   /**
@@ -130,6 +150,7 @@ export class SwingRepProcessor implements RepProcessor {
 
   /**
    * Set the hinge threshold angle
+   * Kept for backwards compatibility
    */
   setHingeThreshold(degrees: number): void {
     this.repCounter.hingeThreshold = degrees;
