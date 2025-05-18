@@ -70,38 +70,23 @@ footer a:hover {
   display: flex;
   margin-bottom: 25px;
   background-color: white;
-  padding: 20px;
+  padding: 15px;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
-.control-group {
+.control-row {
   width: 100%;
-}
-
-.control-group h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #1a2a6c;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.buttons-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-  width: 100%;
-}
-
-.buttons-row:last-child {
-  margin-bottom: 0;
+  flex-direction: row;
+  gap: 10px;
+  flex-wrap: nowrap;
 }
 
 .file-input {
   position: relative;
   flex: 1;
-  min-width: 120px;
+  min-width: 0;
 }
 
 #video-upload {
@@ -117,7 +102,7 @@ footer a:hover {
   background: linear-gradient(135deg, #4285f4, #1a73e8);
   color: white;
   border: none;
-  padding: 12px 20px;
+  padding: 10px 15px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
@@ -130,6 +115,7 @@ footer a:hover {
   width: 100%;
   min-height: 45px;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .file-label:hover {
@@ -141,6 +127,7 @@ footer a:hover {
 .icon {
   display: inline-block;
   margin-right: 6px;
+  flex-shrink: 0;
 }
 
 .icon-right {
@@ -152,7 +139,7 @@ button {
   background: linear-gradient(135deg, #4285f4, #1a73e8);
   color: white;
   border: none;
-  padding: 12px 20px;
+  padding: 10px 15px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
@@ -160,10 +147,11 @@ button {
   transition: all 0.3s;
   box-shadow: 0 2px 5px rgba(26, 115, 232, 0.2);
   flex: 1;
-  min-width: 120px;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  white-space: nowrap;
 }
 
 button:hover {
@@ -381,12 +369,12 @@ button:disabled {
 .rep-navigation {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 #current-rep {
   font-weight: 600;
-  min-width: 70px;
+  min-width: 40px;
   text-align: center;
   color: #495057;
   background-color: #f8f9fa;
@@ -407,9 +395,10 @@ button:disabled {
 
 .nav-btn {
   background: linear-gradient(135deg, #6c757d, #495057);
-  min-width: 100px;
+  min-width: 80px;
   transition: all 0.2s ease;
   box-shadow: 0 2px 5px rgba(108, 117, 125, 0.2);
+  padding: 8px 15px;
 }
 
 .nav-btn:not(:disabled):hover {
@@ -420,15 +409,27 @@ button:disabled {
 
 @media (max-width: 768px) {
   .top-controls {
-    flex-direction: column;
+    padding: 12px;
   }
   
-  .buttons-row {
-    flex-direction: column;
+  .control-row {
+    flex-wrap: wrap;
+    gap: 8px;
   }
   
   button, .file-label {
-    width: 100%;
+    flex: 1 0 calc(50% - 4px);
+    min-width: calc(50% - 4px);
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  
+  .icon {
+    margin-right: 4px;
+  }
+  
+  .icon-right {
+    margin-left: 4px;
   }
 
   .metrics-data {

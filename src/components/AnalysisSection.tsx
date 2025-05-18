@@ -61,10 +61,10 @@ const AnalysisSection: React.FC = () => {
                 <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
                 </svg>
-                Previous
+                Prev
               </button>
               <span id="current-rep">
-                Rep {appState.currentRepIndex + 1}/{repCount || 0}
+                {appState.currentRepIndex + 1}/{repCount || 0}
               </span>
               <button
                 id="next-rep-btn"
@@ -99,7 +99,7 @@ const AnalysisSection: React.FC = () => {
               checked={appState.displayMode === 'both'}
               onChange={() => setDisplayMode('both')}
             />
-            Show Video + Overlay
+            Both
           </label>
           <label>
             <input
@@ -109,7 +109,7 @@ const AnalysisSection: React.FC = () => {
               checked={appState.displayMode === 'video'}
               onChange={() => setDisplayMode('video')}
             />
-            Video Only
+            Video
           </label>
           <label>
             <input
@@ -119,7 +119,7 @@ const AnalysisSection: React.FC = () => {
               checked={appState.displayMode === 'overlay'}
               onChange={() => setDisplayMode('overlay')}
             />
-            Overlay Only
+            Overlay
           </label>
         </div>
       </div>
