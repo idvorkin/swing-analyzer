@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import type { AppState } from '../types';
 
 interface VideoSectionProps {

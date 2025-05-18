@@ -158,7 +158,9 @@ export class VideoFrameAcquisition implements FrameAcquisition {
 
     // Check for empty URL
     if (!url || url.trim() === '') {
-      console.error('[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Empty URL provided');
+      console.error(
+        '[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Empty URL provided'
+      );
       return Promise.reject(new Error('Empty URL provided'));
     }
 

@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Link, Route, Routes } from 'react-router-dom';
 import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import {
   createFrameAcquisition,
@@ -287,7 +288,8 @@ const MainApplication: React.FC = () => {
 
   // Stop video
   const stopVideo = () => {
-    if (!videoRef.current || !pipelineRef.current) return;
+    if (!videoRef.current || !pipelineRef.current || !viewModelRef.current)
+      return;
 
     videoRef.current.pause();
     videoRef.current.currentTime = 0;
@@ -295,15 +297,8 @@ const MainApplication: React.FC = () => {
 
     stopProcessing();
 
-    if (viewModelRef.current) {
-      console.log('[DEBUG] stopVideo: Using ViewModel to reset pipeline state');
-      viewModelRef.current.reset();
-    } else {
-      console.log(
-        '[DEBUG] stopVideo: ViewModel not available, resetting pipeline directly'
-      );
-      pipelineRef.current.reset();
-    }
+    console.log('[DEBUG] stopVideo: Using ViewModel to reset pipeline state');
+    viewModelRef.current.reset();
 
     setRepCount(0);
     setSpineAngle(0);
@@ -345,55 +340,23 @@ const MainApplication: React.FC = () => {
       viewModelExists: Boolean(viewModelRef.current),
     });
 
-    if (!pipelineRef.current || appState.isProcessing) return;
+    if (!pipelineRef.current || appState.isProcessing || !viewModelRef.current)
+      return;
 
-    if (viewModelRef.current) {
-      console.log(
-        '[DEBUG] startProcessing: Using ViewModel for pipeline processing'
-      );
-      viewModelRef.current.startProcessing();
-      setAppState((prev) => ({ ...prev, isProcessing: true }));
-    } else {
-      console.log(
-        '[DEBUG] startProcessing: ViewModel not available, falling back to direct pipeline'
-      );
-      const pipelineObservable = pipelineRef.current.start();
-
-      setAppState((prev) => ({ ...prev, isProcessing: true }));
-
-      console.log(
-        '[DEBUG] startProcessing: Subscribing to pipeline observable'
-      );
-      pipelineObservable.subscribe({
-        next: (result: PipelineResult) => {
-          console.log('[DEBUG] Pipeline update received:', result);
-          setRepCount(result.repCount);
-          if (result.skeleton) {
-            setSpineAngle(Math.round(result.skeleton.getSpineAngle() || 0));
-          }
-        },
-        error: (err) => {
-          console.error('[DEBUG] Pipeline error:', err);
-          setStatus('Error in processing pipeline');
-        },
-      });
-    }
+    console.log(
+      '[DEBUG] startProcessing: Using ViewModel for pipeline processing'
+    );
+    viewModelRef.current.startProcessing();
+    setAppState((prev) => ({ ...prev, isProcessing: true }));
   };
 
   // Stop processing pipeline
   const stopProcessing = () => {
-    if (!pipelineRef.current || !appState.isProcessing) return;
+    if (!pipelineRef.current || !appState.isProcessing || !viewModelRef.current)
+      return;
 
-    if (viewModelRef.current) {
-      console.log('[DEBUG] stopProcessing: Using ViewModel to stop pipeline');
-      viewModelRef.current.stopProcessing();
-    } else {
-      console.log(
-        '[DEBUG] stopProcessing: ViewModel not available, stopping pipeline directly'
-      );
-      pipelineRef.current.stop();
-    }
-
+    console.log('[DEBUG] stopProcessing: Using ViewModel to stop pipeline');
+    viewModelRef.current.stopProcessing();
     setAppState((prev) => ({ ...prev, isProcessing: false }));
   };
 

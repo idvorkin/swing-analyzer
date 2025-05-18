@@ -8,7 +8,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
-  
+
   use: {
     baseURL: 'http://localhost:1234',
     trace: 'on-first-retry',
@@ -28,4 +28,4 @@ export default defineConfig({
     port: 1234,
     reuseExistingServer: !process.env.CI,
   },
-}); 
+});

@@ -18,7 +18,7 @@ npm test
 npm run test:ui
 
 # Run tests in headed mode (with browser visible)
-npm run test:headed 
+npm run test:headed
 
 # Run tests in debug mode
 npm run test:debug
@@ -55,4 +55,4 @@ To install Playwright browsers for CI, run:
 
 ```bash
 npx playwright install --with-deps
-``` 
+```
