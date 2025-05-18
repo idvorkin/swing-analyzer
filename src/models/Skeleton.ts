@@ -10,6 +10,9 @@ export class Skeleton {
   
   // Arm-to-spine angle cache (computed lazily)
   private _armToSpineAngle: number | null = null;
+  
+  // Arm-to-vertical angle cache (computed lazily)
+  private _armToVerticalAngle: number | null = null;
 
   constructor(
     // Raw keypoints from the pose detection
@@ -119,6 +122,61 @@ export class Skeleton {
     } catch (e) {
       console.error('Error calculating arm-to-spine angle:', e);
       this._armToSpineAngle = 0;
+      return 0;
+    }
+  }
+
+  /**
+   * Get the arm-to-vertical angle
+   * This is the angle between the arm vector (shoulder to elbow) and
+   * a vertical line pointing downward (0° is arm pointing straight down, 90° is horizontal, 180° is pointing up)
+   */
+  getArmToVerticalAngle(): number {
+    // If already calculated, return cached value
+    if (this._armToVerticalAngle !== null) {
+      return this._armToVerticalAngle;
+    }
+
+    try {
+      // Get shoulder and elbow keypoints
+      const shoulder = this.getKeypointByName('rightShoulder') || this.getKeypointByName('leftShoulder');
+      const elbow = this.getKeypointByName('rightElbow') || this.getKeypointByName('leftElbow');
+      
+      if (shoulder && elbow) {
+        // Calculate arm vector (from shoulder to elbow)
+        const armVector = {
+          x: elbow.x - shoulder.x,
+          y: elbow.y - shoulder.y
+        };
+        
+        // Vertical vector pointing downward
+        const verticalVector = {
+          x: 0,
+          y: 1 // Pointing down (Y increases downward in image coordinates)
+        };
+        
+        // Calculate dot product
+        const dotProduct = armVector.x * verticalVector.x + armVector.y * verticalVector.y;
+        
+        // Calculate magnitudes
+        const armMag = Math.sqrt(armVector.x * armVector.x + armVector.y * armVector.y);
+        const verticalMag = Math.sqrt(verticalVector.x * verticalVector.x + verticalVector.y * verticalVector.y); // Will be 1
+        
+        // Calculate angle in radians and convert to degrees
+        const cosAngle = Math.min(Math.max(dotProduct / (armMag * verticalMag), -1), 1); // Clamp to [-1, 1]
+        const angleRad = Math.acos(cosAngle);
+        const angleDeg = angleRad * (180 / Math.PI);
+        
+        this._armToVerticalAngle = angleDeg;
+        return angleDeg;
+      } else {
+        console.warn('Missing keypoints for arm-to-vertical angle calculation');
+        this._armToVerticalAngle = 0; // Default if keypoints not available
+        return 0;
+      }
+    } catch (e) {
+      console.error('Error calculating arm-to-vertical angle:', e);
+      this._armToVerticalAngle = 0;
       return 0;
     }
   }

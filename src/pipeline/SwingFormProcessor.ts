@@ -21,6 +21,7 @@ export class SwingFormProcessor implements FormProcessor {
     timestamp: number;
     spineAngle: number;
     armToSpineAngle: number;
+    armToVerticalAngle: number; // added arm-to-vertical angle
     angleDelta: number; // how close to the ideal angle
     image: ImageData; // captured image at the exact moment
   }>();
@@ -76,8 +77,9 @@ export class SwingFormProcessor implements FormProcessor {
       this.lastLoggedAngle = spineAngle;
     }
     
-    // Get arm to spine angle from skeleton
+    // Get arm angles from skeleton
     const armToSpineAngle = skeleton.getArmToSpineAngle();
+    const armToVerticalAngle = skeleton.getArmToVerticalAngle();
 
     // Detect swing direction
     const isIncreasing = spineAngle > this.prevSpineAngle;
@@ -108,7 +110,7 @@ export class SwingFormProcessor implements FormProcessor {
       for (const position of sequence) {
         const candidate = this.bestPositionCandidates.get(position);
         if (candidate) {
-          console.log(`Found ${position}: spine=${candidate.spineAngle.toFixed(1)}°, arm=${candidate.armToSpineAngle.toFixed(1)}°`);
+          console.log(`Found ${position}: spine=${candidate.spineAngle.toFixed(1)}°, arm-spine=${candidate.armToSpineAngle.toFixed(1)}°, arm-vertical=${candidate.armToVerticalAngle.toFixed(1)}°`);
           // Create a checkpoint from the best candidate
           const checkpoint = this.createCheckpoint(
             position,
@@ -116,6 +118,7 @@ export class SwingFormProcessor implements FormProcessor {
             candidate.timestamp,
             candidate.spineAngle,
             candidate.armToSpineAngle,
+            candidate.armToVerticalAngle,
             candidate.image
           );
           
@@ -152,19 +155,19 @@ export class SwingFormProcessor implements FormProcessor {
     }
 
     // Update best candidates for each position based on how close we are to the ideal angle
-    this.updatePositionCandidate(SwingPositionName.Top, skeleton, timestamp, spineAngle, armToSpineAngle);
+    this.updatePositionCandidate(SwingPositionName.Top, skeleton, timestamp, spineAngle, armToSpineAngle, armToVerticalAngle);
     
     // Only consider Hinge in the downswing
     if (this.isDownswing) {
-      this.updatePositionCandidate(SwingPositionName.Hinge, skeleton, timestamp, spineAngle, armToSpineAngle);
+      this.updatePositionCandidate(SwingPositionName.Hinge, skeleton, timestamp, spineAngle, armToSpineAngle, armToVerticalAngle);
     }
     
     // Consider Bottom position at any time (will be constrained by angle)
-    this.updatePositionCandidate(SwingPositionName.Bottom, skeleton, timestamp, spineAngle, armToSpineAngle);
+    this.updatePositionCandidate(SwingPositionName.Bottom, skeleton, timestamp, spineAngle, armToSpineAngle, armToVerticalAngle);
     
     // Only consider Release in the upswing
     if (!this.isDownswing) {
-      this.updatePositionCandidate(SwingPositionName.Release, skeleton, timestamp, spineAngle, armToSpineAngle);
+      this.updatePositionCandidate(SwingPositionName.Release, skeleton, timestamp, spineAngle, armToSpineAngle, armToVerticalAngle);
     }
 
     // No new checkpoint detected, return empty observable
@@ -179,26 +182,67 @@ export class SwingFormProcessor implements FormProcessor {
     skeleton: Skeleton,
     timestamp: number,
     spineAngle: number,
-    armToSpineAngle: number
+    armToSpineAngle: number,
+    armToVerticalAngle: number
   ): void {
     const idealAngle = this.IDEAL_ANGLES[position];
-    const angleDelta = Math.abs(spineAngle - idealAngle);
+    let angleDelta = Math.abs(spineAngle - idealAngle);
+    
+    // Special case for Top position: consider both spine angle and arm-to-vertical angle
+    if (position === SwingPositionName.Top) {
+      // We want spine close to vertical (0°) AND arm angle close to vertical but pointing up (180°)
+      // Normalize spine angle delta to 0-1 range (assuming max spine angle is around 90°)
+      const normalizedSpineDelta = angleDelta / 90;
+      
+      // Normalize arm angle to 0-1 range where 1 is arm pointing straight up (180°) 
+      // and 0 is arm pointing straight down (0°)
+      const normalizedArmAngle = armToVerticalAngle / 180;
+      
+      // Combined metric: balance between vertical spine and arm pointing up
+      // Lower value is better (0 would be perfect)
+      // Weight spine angle and arm angle equally (50% each)
+      angleDelta = (normalizedSpineDelta * 0.5) - (normalizedArmAngle * 0.5);
+    }
     
     const currentBest = this.bestPositionCandidates.get(position);
     
-    // Update if this is the first candidate or better than existing
-    if (!currentBest || angleDelta < currentBest.angleDelta) {
-      // Capture the image right away to ensure it matches the angles
-      const image = this.captureCurrentFrame();
-      
-      this.bestPositionCandidates.set(position, {
-        skeleton,
-        timestamp,
-        spineAngle,
-        armToSpineAngle,
-        angleDelta,
-        image
-      });
+    // Special comparison for Top position
+    if (position === SwingPositionName.Top) {
+      // For Top position, we want to minimize our combined metric
+      // Only update if this is the first candidate or better than existing
+      if (!currentBest || angleDelta < currentBest.angleDelta) {
+        // Capture the image right away to ensure it matches the angles
+        const image = this.captureCurrentFrame();
+        
+        this.bestPositionCandidates.set(position, {
+          skeleton,
+          timestamp,
+          spineAngle,
+          armToSpineAngle,
+          armToVerticalAngle,
+          angleDelta,
+          image
+        });
+        
+        // Log when we find a better candidate for top position
+        console.log(`Better Top candidate: spine=${spineAngle.toFixed(1)}°, arm-vertical=${armToVerticalAngle.toFixed(1)}°, metric=${angleDelta.toFixed(3)}`);
+      }
+    } else {
+      // For other positions, use the original logic based solely on spine angle
+      if (!currentBest || angleDelta < currentBest.angleDelta) {
+        // Capture the image right away to ensure it matches the angles
+        const image = this.captureCurrentFrame();
+        
+        this.bestPositionCandidates.set(position, {
+          skeleton,
+          timestamp,
+          spineAngle,
+          armToSpineAngle,
+          armToVerticalAngle,
+          angleDelta,
+          image
+        });
+      }
     }
   }
   
@@ -265,6 +309,7 @@ export class SwingFormProcessor implements FormProcessor {
     timestamp: number,
     spineAngle: number,
     armToSpineAngle: number,
+    armToVerticalAngle: number,
     image: ImageData
   ): SwingForm {
     // Create a checkpoint with the pre-captured image
@@ -274,6 +319,7 @@ export class SwingFormProcessor implements FormProcessor {
       image,
       spineAngle,
       armToSpineAngle,
+      armToVerticalAngle,
       skeleton,
     };
   }

@@ -41,6 +41,7 @@ export interface FormCheckpoint {
   image: ImageData;
   spineAngle: number;
   armToSpineAngle: number;
+  armToVerticalAngle: number; // Angle between arm and vertical (0° is down, 180° is up)
   skeleton: Skeleton;
 }
 
