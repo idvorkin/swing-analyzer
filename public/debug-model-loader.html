@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug MoveNet Loader</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+</head>
+<body>
+    <h1>Debug MoveNet Loader</h1>
+    <p>Check the browser console for messages.</p>
+    <button onclick="loadModel()">Load Model (Default URL)</button>
+    <button onclick="loadModelLocal()">Load Model (Local URL - after download)</button>
+    <div id="status">Status: Idle</div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+
+        async function initTf() {
+            await tf.setBackend('webgl');
+            statusDiv.textContent = 'TensorFlow.js backend set to WebGL.';
+            console.log('TensorFlow.js backend set to WebGL.');
+            await tf.ready();
+            console.log('TensorFlow.js ready.');
+        }
+
+        async function loadModel() {
+            statusDiv.textContent = 'Attempting to load model with default URL...';
+            console.log('Attempting to load model with default URL...');
+            try {
+                await initTf();
+                const detectorConfig = {
+                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+                    enableSmoothing: true
+                    // No modelUrl initially, to test default behavior
+                };
+                const detector = await poseDetection.createDetector(
+                    poseDetection.SupportedModels.MoveNet,
+                    detectorConfig
+                );
+                console.log('SUCCESS: MoveNet detector created successfully using default URL!', detector);
+                statusDiv.textContent = 'SUCCESS: MoveNet detector created successfully using default URL!';
+            } catch (error) {
+                console.error('FAILED to load MoveNet with default URL:', error);
+                statusDiv.textContent = 'FAILED to load MoveNet with default URL: ' + error.message;
+            }
+        }
+
+        async function loadModelLocal() {
+            statusDiv.textContent = 'Attempting to load model with LOCAL URL... Ensure files are in public/tfjs-models/movenet-lightning/';
+            console.log('Attempting to load model with LOCAL URL...');
+            try {
+                await initTf();
+                const detectorConfig = {
+                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+                    enableSmoothing: true,
+                    modelUrl: '/tfjs-models/movenet-lightning/model.json' // Path for self-hosted model
+                };
+                const detector = await poseDetection.createDetector(
+                    poseDetection.SupportedModels.MoveNet,
+                    detectorConfig
+                );
+                console.log('SUCCESS: MoveNet detector created successfully using LOCAL URL!', detector);
+                statusDiv.textContent = 'SUCCESS: MoveNet detector created successfully using LOCAL URL!';
+            } catch (error) {
+                console.error('FAILED to load MoveNet with LOCAL URL:', error);
+                statusDiv.textContent = 'FAILED to load MoveNet with LOCAL URL: ' + error.message;
+            }
+        }
+
+        // Optional: Automatically try to initialize TF on page load
+        // initTf().catch(console.error);
+    </script>
+</body>
+</html> 

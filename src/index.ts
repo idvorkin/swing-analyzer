@@ -6,6 +6,7 @@ import '@tensorflow/tfjs-converter';
 import React from 'react';
 // React imports
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import { App } from './components/App';
 
 // Initialize TensorFlow backend
@@ -36,7 +37,9 @@ async function initialize() {
     const rootElement = document.getElementById('root');
     if (rootElement) {
       const root = createRoot(rootElement);
-      root.render(React.createElement(App));
+      root.render(
+        React.createElement(BrowserRouter, null, React.createElement(App))
+      );
     } else {
       console.error('Root element not found');
     }
@@ -53,7 +56,9 @@ async function initialize() {
       const rootElement = document.getElementById('root');
       if (rootElement) {
         const root = createRoot(rootElement);
-        root.render(React.createElement(App));
+        root.render(
+          React.createElement(BrowserRouter, null, React.createElement(App))
+        );
       }
     } catch (cpuErr) {
       console.error('Failed to initialize any TensorFlow backend:', cpuErr);

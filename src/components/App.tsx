@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Routes, Route, Link } from 'react-router-dom';
 import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import {
   createFrameAcquisition,
@@ -10,8 +11,16 @@ import { SwingAnalyzerViewModel } from '../viewmodels/SwingAnalyzerViewModel';
 import AnalysisSection from './AnalysisSection';
 import VideoSection from './VideoSection';
 import './App.css';
+import DebugModelLoaderPage from './DebugModelLoaderPage';
 
-export const App: React.FC = () => {
+// Placeholder for the new debug page component (will be created in a separate file)
+// const DebugModelLoaderPagePlaceholder: React.FC = () => { // This is no longer needed
+// ... placeholder code ...
+// };
+
+// Component for the main application layout and functionality
+const MainApplication: React.FC = () => {
+  console.log('MainApplication: Component rendering started.');
   // State
   const [appState, setAppState] = useState<AppState>({
     usingCamera: false,
@@ -494,6 +503,9 @@ export const App: React.FC = () => {
     <>
       <header>
         <h1>Swing Analyzer</h1>
+        <nav>
+          <Link to="/debug-model-loader">Go to Debug Page</Link>
+        </nav>
       </header>
 
       <main>
@@ -524,5 +536,15 @@ export const App: React.FC = () => {
         />
       </main>
     </>
+  );
+};
+
+export const App: React.FC = () => {
+  console.log('App (Router): Component rendering started.');
+  return (
+    <Routes>
+      <Route path="/" element={<MainApplication />} />
+      <Route path="/debug-model-loader" element={<DebugModelLoaderPage />} />
+    </Routes>
   );
 };

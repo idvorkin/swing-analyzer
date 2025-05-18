@@ -19,7 +19,8 @@
   "alias": {
     "process": {
       "global": "process"
-    }
+    },
+    "react-router/dom": "./node_modules/react-router-dom/dist/index.mjs"
   },
   "keywords": [
     "pose",
@@ -40,6 +41,7 @@
     "playwright": "^1.52.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.6.0",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
