@@ -19,7 +19,8 @@ const AnalysisSection: React.FC = () => {
     navigateToPreviousRep,
     navigateToNextRep,
     setDisplayMode,
-    pipelineRef
+    pipelineRef,
+    videoStartTime
   } = useSwingAnalyzerContext();
 
   // State for fullscreen mode
@@ -240,6 +241,17 @@ const AnalysisSection: React.FC = () => {
       </div>
     );
     
+    // Calculate relative time if video start time is available
+    const formattedTime = videoStartTime 
+      ? (() => {
+          const totalMs = checkpoint.timestamp - videoStartTime;
+          const minutes = Math.floor(totalMs / 60000);
+          const seconds = Math.floor((totalMs % 60000) / 1000);
+          const ms = Math.floor((totalMs % 1000) / 10); // Get 2 digits of milliseconds
+          return `Video Time: ${minutes}:${seconds.toString().padStart(2, '0')}:${ms.toString().padStart(2, '0')}`;
+        })()
+      : new Date(checkpoint.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+    
     // Create a canvas element to render the image data
     return (
       <div className="fullscreen-checkpoint">
@@ -255,7 +267,16 @@ const AnalysisSection: React.FC = () => {
               Arm-to-Spine Angle: {Math.round(checkpoint.armToSpineAngle)}°
             </div>
             <div className="fullscreen-timestamp">
-              Time: {new Date(checkpoint.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3})}
+              {videoStartTime 
+                ? (() => {
+                    const totalMs = checkpoint.timestamp - videoStartTime;
+                    const minutes = Math.floor(totalMs / 60000);
+                    const seconds = Math.floor((totalMs % 60000) / 1000);
+                    const ms = Math.floor((totalMs % 1000) / 10); // Get 2 digits of milliseconds
+                    return `Video Time: ${minutes}:${seconds.toString().padStart(2, '0')}:${ms.toString().padStart(2, '0')}`;
+                  })()
+                : `Timestamp: ${new Date(checkpoint.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}`
+              }
             </div>
           </div>
         </div>

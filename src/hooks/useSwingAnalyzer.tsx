@@ -33,6 +33,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const [spineAngle, setSpineAngle] = useState<number>(0);
   const [armToSpineAngle, setArmToSpineAngle] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [videoStartTime, setVideoStartTime] = useState<number | null>(null);
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -229,6 +230,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         .play()
         .then(() => {
           setIsPlaying(true);
+          setVideoStartTime(performance.now());
           // Start pipeline only if not already processing
           if (pipelineRef.current && !appState.isProcessing) {
             startProcessing();
@@ -247,6 +249,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         .play()
         .then(() => {
           setIsPlaying(true);
+          setVideoStartTime(performance.now());
           // Pipeline will automatically start processing frames due to reactive stream
         })
         .catch((err) => console.error('[DEBUG] togglePlayPause: Error playing video:', err));
@@ -378,6 +381,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     videoRef.current.pause();
     videoRef.current.currentTime = 0;
     setIsPlaying(false);
+    setVideoStartTime(null);
     
     // Just reset the pipeline state, don't stop it
     if (pipelineRef.current) {
@@ -424,6 +428,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     spineAngle,
     armToSpineAngle,
     isPlaying,
+    videoStartTime,
     
     // Refs
     videoRef,

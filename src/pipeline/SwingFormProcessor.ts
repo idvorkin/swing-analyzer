@@ -25,6 +25,7 @@ export class SwingFormProcessor implements FormProcessor {
     spineAngle: number;
     armToSpineAngle: number;
     angleDelta: number; // how close to the ideal angle
+    image: ImageData; // captured image at the exact moment
   }>();
 
   // Ideal target angles for each position
@@ -118,7 +119,8 @@ export class SwingFormProcessor implements FormProcessor {
             candidate.skeleton,
             candidate.timestamp,
             candidate.spineAngle,
-            candidate.armToSpineAngle
+            candidate.armToSpineAngle,
+            candidate.image
           );
           
           // Store in detected positions map
@@ -190,52 +192,25 @@ export class SwingFormProcessor implements FormProcessor {
     
     // Update if this is the first candidate or better than existing
     if (!currentBest || angleDelta < currentBest.angleDelta) {
+      // Capture the image right away to ensure it matches the angles
+      const image = this.captureCurrentFrame();
+      
       this.bestPositionCandidates.set(position, {
         skeleton,
         timestamp,
         spineAngle,
         armToSpineAngle,
         angleDelta,
+        image
       });
       console.log(`Updated best candidate for ${position}: spine=${spineAngle.toFixed(2)}°, arm=${armToSpineAngle.toFixed(2)}°, delta=${angleDelta.toFixed(2)}`);
     }
   }
-
+  
   /**
-   * Check if a full swing cycle has been completed
-   * A full cycle is when we've detected all positions: Top -> Hinge -> Bottom -> Release
+   * Capture the current frame with skeleton overlay
    */
-  private isFullCycleComplete(): boolean {
-    return (
-      this.detectedPositions.has(SwingPosition.Top) &&
-      this.detectedPositions.has(SwingPosition.Hinge) &&
-      this.detectedPositions.has(SwingPosition.Bottom) &&
-      this.detectedPositions.has(SwingPosition.Release)
-    );
-  }
-
-  /**
-   * Reset the form processor state
-   */
-  reset(): void {
-    this.detectedPositions.clear();
-    this.bestPositionCandidates.clear();
-    this.lastPosition = SwingPosition.Top;
-    this.maxSpineAngleInCycle = 0;
-    this.prevSpineAngle = 0;
-    this.isDownswing = true;
-  }
-
-  /**
-   * Create a checkpoint from skeleton data
-   */
-  private createCheckpoint(
-    position: SwingPosition,
-    skeleton: Skeleton,
-    timestamp: number,
-    spineAngle: number,
-    armToSpineAngle: number
-  ): FormCheckpoint {
+  private captureCurrentFrame(): ImageData {
     // Create a temporary canvas to blend video and skeleton
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = this.canvasElement.width;
@@ -271,15 +246,54 @@ export class SwingFormProcessor implements FormProcessor {
         tempCanvas.height
       );
     }
+    
+    return imageData;
+  }
 
-    // Create a checkpoint with the capture including the arm-to-spine angle
+  /**
+   * Check if a full swing cycle has been completed
+   * A full cycle is when we've detected all positions: Top -> Hinge -> Bottom -> Release
+   */
+  private isFullCycleComplete(): boolean {
+    return (
+      this.detectedPositions.has(SwingPosition.Top) &&
+      this.detectedPositions.has(SwingPosition.Hinge) &&
+      this.detectedPositions.has(SwingPosition.Bottom) &&
+      this.detectedPositions.has(SwingPosition.Release)
+    );
+  }
+
+  /**
+   * Reset the form processor state
+   */
+  reset(): void {
+    this.detectedPositions.clear();
+    this.bestPositionCandidates.clear();
+    this.lastPosition = SwingPosition.Top;
+    this.maxSpineAngleInCycle = 0;
+    this.prevSpineAngle = 0;
+    this.isDownswing = true;
+  }
+
+  /**
+   * Create a checkpoint from skeleton data
+   */
+  private createCheckpoint(
+    position: SwingPosition,
+    skeleton: Skeleton,
+    timestamp: number,
+    spineAngle: number,
+    armToSpineAngle: number,
+    image: ImageData
+  ): FormCheckpoint {
+    // Create a checkpoint with the pre-captured image
     return {
       position,
       timestamp,
-      image: imageData,
-      spineAngle: spineAngle,
-      armToSpineAngle: armToSpineAngle,
-      skeleton: skeleton,
+      image,
+      spineAngle,
+      armToSpineAngle,
+      skeleton,
     };
   }
 
