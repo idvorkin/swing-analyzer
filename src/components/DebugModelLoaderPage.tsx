@@ -68,7 +68,7 @@ const DebugModelLoaderPage: React.FC = () => {
       const detectorConfig: poseDetection.MoveNetModelConfig = {
         modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
         enableSmoothing: true,
-        modelUrl: '/tfjs-models/movenet-lightning/model.json', // Path for self-hosted model
+        modelUrl: '/models/movenet-lightning/model.json', // Path for self-hosted model
       };
       const detector = await poseDetection.createDetector(
         poseDetection.SupportedModels.MoveNet,
@@ -82,6 +82,47 @@ const DebugModelLoaderPage: React.FC = () => {
     }
   };
 
+  const loadModelWithPipelineLogic = async () => {
+    if (!tfReady) {
+      setStatus('TensorFlow.js not ready yet. Please wait.');
+      console.log('DebugPage: TensorFlow.js not ready for Pipeline Logic test.');
+      return;
+    }
+    setStatus('Attempting to load model with Pipeline Logic...');
+    console.log('DebugPage: Attempting to load model with Pipeline Logic...');
+    try {
+      // Ensure backend is set (though initTf should handle this)
+      if (tf.getBackend() !== 'webgl') {
+        await tf.setBackend('webgl');
+      }
+      await tf.ready();
+      console.log(`DebugPage: Using TensorFlow.js backend: ${tf.getBackend()} for Pipeline Logic test.`);
+
+      // Configure TensorFlow.js for better performance (same as in PoseSkeletonTransformer)
+      tf.env().set('WEBGL_CPU_FORWARD', false);
+      tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
+      console.log('DebugPage: TF env flags set for Pipeline Logic: WEBGL_CPU_FORWARD=false, WEBGL_FORCE_F16_TEXTURES=true');
+
+      const detectorConfig: poseDetection.MoveNetModelConfig = {
+        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+        enableSmoothing: true,
+        modelUrl: '/models/movenet-lightning/model.json', // Local model URL
+      };
+      console.log('DebugPage: Using detectorConfig for Pipeline Logic:', detectorConfig);
+
+      const detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.MoveNet,
+        detectorConfig
+      );
+
+      console.log('DebugPage: SUCCESS: MoveNet detector created successfully using Pipeline Logic!', detector);
+      setStatus('SUCCESS: MoveNet detector created successfully using Pipeline Logic!');
+    } catch (error) {
+      console.error('DebugPage: FAILED to load MoveNet with Pipeline Logic:', error);
+      setStatus('FAILED to load MoveNet with Pipeline Logic: ' + (error as Error).message);
+    }
+  };
+
   return (
     <div style={{ padding: '20px' }}>
       <h1>Debug MoveNet Loader (React Component)</h1>
@@ -92,8 +133,11 @@ const DebugModelLoaderPage: React.FC = () => {
         <button onClick={loadModelWithDefaultUrl} disabled={!tfReady} style={{ marginRight: '10px' }}>
           Load Model (Default TFHub URL)
         </button>
-        <button onClick={loadModelWithLocalUrl} disabled={!tfReady}>
-          Load Model (Local /tfjs-models/ URL)
+        <button onClick={loadModelWithLocalUrl} disabled={!tfReady} style={{ marginRight: '10px' }}>
+          Load Model (Local /models/ URL)
+        </button>
+        <button onClick={loadModelWithPipelineLogic} disabled={!tfReady}>
+          Load Model (Pipeline Logic)
         </button>
       </div>
       <hr />

@@ -504,7 +504,7 @@ const MainApplication: React.FC = () => {
       <header>
         <h1>Swing Analyzer</h1>
         <nav>
-          <Link to="/debug-model-loader">Go to Debug Page</Link>
+          <Link to="/debug">Debug Model Loader</Link>
         </nav>
       </header>
 
@@ -539,12 +539,22 @@ const MainApplication: React.FC = () => {
   );
 };
 
+// Main App component that sets up routing
 export const App: React.FC = () => {
-  console.log('App (Router): Component rendering started.');
+  console.log('App: Component rendering started, setting up routes.');
   return (
-    <Routes>
-      <Route path="/" element={<MainApplication />} />
-      <Route path="/debug-model-loader" element={<DebugModelLoaderPage />} />
-    </Routes>
+    <>
+      <nav>
+        <Link to="/">Home</Link> | <Link to="/debug">Debug Model Loader</Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<MainApplication />} />
+        <Route path="/debug" element={<DebugModelLoaderPage />} />
+      </Routes>
+    </>
   );
 };
+
+// If you want to keep the existing export default, you can alias it or change it.
+// For simplicity, if App is the main export, we can do:
+export default App;
