@@ -33,7 +33,8 @@
     "@tensorflow-models/pose-detection": "^2.1.0",
     "@tensorflow/tfjs-backend-webgl": "^4.4.0",
     "@tensorflow/tfjs-converter": "^4.4.0",
-    "@tensorflow/tfjs-core": "^4.4.0"
+    "@tensorflow/tfjs-core": "^4.4.0",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "buffer": "^6.0.3",
