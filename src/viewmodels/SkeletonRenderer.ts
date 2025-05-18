@@ -62,6 +62,27 @@ export class SkeletonRenderer {
   }
 
   /**
+   * Check if a keypoint is visible with sufficient confidence
+   * Supports both 'score' (MoveNet) and 'visibility' (BlazePose) properties
+   */
+  private isPointVisible(point: PoseKeypoint): boolean {
+    if (!point) {
+      return false;
+    }
+
+    // Different models use different confidence thresholds
+    // MoveNet uses 'score', BlazePose uses 'visibility'
+    const confidence =
+      point.score !== undefined
+        ? point.score
+        : point.visibility !== undefined
+          ? point.visibility
+          : 0;
+
+    return confidence > 0.2; // Threshold to consider a point visible
+  }
+
+  /**
    * Draw line connections between keypoints
    */
   private drawConnections(
@@ -71,11 +92,6 @@ export class SkeletonRenderer {
     // Set line style
     ctx.strokeStyle = this.connectionColor;
     ctx.lineWidth = 2;
-
-    // Helper to determine if a point is visible enough to be used for connections
-    const isPointVisibleForSpine = (point: PoseKeypoint): boolean => {
-      return point && point.visibility !== undefined && point.visibility > 0.5;
-    };
 
     // Define the connections to draw (pairs of keypoint indices)
     const connections = [
@@ -117,10 +133,10 @@ export class SkeletonRenderer {
     const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
 
     if (
-      isPointVisibleForSpine(leftShoulder) &&
-      isPointVisibleForSpine(rightShoulder) &&
-      isPointVisibleForSpine(leftHip) &&
-      isPointVisibleForSpine(rightHip)
+      this.isPointVisible(leftShoulder) &&
+      this.isPointVisible(rightShoulder) &&
+      this.isPointVisible(leftHip) &&
+      this.isPointVisible(rightHip)
     ) {
       // Calculate midpoints
       const midShoulderX = (leftShoulder.x + rightShoulder.x) / 2;
@@ -144,10 +160,10 @@ export class SkeletonRenderer {
       console.log(
         "SkeletonRenderer: Couldn't draw spine, not all points visible",
         {
-          leftShoulder: leftShoulder?.visibility,
-          rightShoulder: rightShoulder?.visibility,
-          leftHip: leftHip?.visibility,
-          rightHip: rightHip?.visibility,
+          leftShoulder: this.getConfidence(leftShoulder),
+          rightShoulder: this.getConfidence(rightShoulder),
+          leftHip: this.getConfidence(leftHip),
+          rightHip: this.getConfidence(rightHip),
         }
       );
     }
@@ -164,12 +180,8 @@ export class SkeletonRenderer {
       const pointB = keypoints[j];
 
       if (
-        pointA &&
-        pointB &&
-        pointA.visibility &&
-        pointB.visibility &&
-        pointA.visibility > 0.5 &&
-        pointB.visibility > 0.5
+        this.isPointVisible(pointA) &&
+        this.isPointVisible(pointB)
       ) {
         ctx.moveTo(pointA.x, pointA.y);
         ctx.lineTo(pointB.x, pointB.y);
@@ -185,6 +197,15 @@ export class SkeletonRenderer {
       connections.length,
       'possible connections'
     );
+  }
+
+  /**
+   * Gets the confidence value of a keypoint, handling different model outputs
+   */
+  private getConfidence(point: PoseKeypoint): number {
+    if (!point) return 0;
+    return point.score !== undefined ? point.score : 
+           point.visibility !== undefined ? point.visibility : 0;
   }
 
   /**
@@ -209,7 +230,7 @@ export class SkeletonRenderer {
 
     // Draw each keypoint
     keypoints.forEach((point, index) => {
-      if (point?.visibility && point.visibility > 0.5) {
+      if (this.isPointVisible(point)) {
         // Draw point circle
         ctx.beginPath();
         ctx.arc(point.x, point.y, this.keyPointRadius, 0, 2 * Math.PI);
@@ -258,7 +279,7 @@ export class SkeletonRenderer {
     const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
     if (leftShoulder) {
       ctx.fillText(
-        `L.Shoulder: ${(leftShoulder.visibility || 0).toFixed(2)}`,
+        `L.Shoulder: ${this.getConfidence(leftShoulder).toFixed(2)}`,
         padding,
         height - padding - lineHeight * 2
       );
@@ -268,7 +289,7 @@ export class SkeletonRenderer {
     const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
     if (rightShoulder) {
       ctx.fillText(
-        `R.Shoulder: ${(rightShoulder.visibility || 0).toFixed(2)}`,
+        `R.Shoulder: ${this.getConfidence(rightShoulder).toFixed(2)}`,
         padding,
         height - padding - lineHeight
       );
