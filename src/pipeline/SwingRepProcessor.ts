@@ -1,7 +1,7 @@
 import { type Observable, of } from 'rxjs';
 import type { RepCounter, RepData } from '../types';
 import type {
-  CheckpointEvent,
+  FormEvent,
   RepEvent,
   RepProcessor,
 } from './PipelineInterfaces';
@@ -26,7 +26,7 @@ export class SwingRepProcessor implements RepProcessor {
    * Update rep count based on checkpoint event
    * Returns an Observable that emits rep events
    */
-  updateRepCount(checkpointEvent: CheckpointEvent): Observable<RepEvent> {
+  updateRepCount(checkpointEvent: FormEvent): Observable<RepEvent> {
     if (!checkpointEvent.skeletonEvent.skeleton) {
       // No skeleton data to process
       return of({

@@ -2,7 +2,7 @@ import { type Observable, of } from 'rxjs';
 import type { Skeleton } from '../models/Skeleton';
 import { type FormCheckpoint, SwingPosition } from '../types';
 import type {
-  CheckpointEvent,
+  FormEvent,
   FormProcessor,
   SkeletonEvent,
 } from './PipelineInterfaces';
@@ -34,7 +34,7 @@ export class SwingFormProcessor implements FormProcessor {
   processFrame(
     skeletonEvent: SkeletonEvent,
     repCount: number
-  ): Observable<CheckpointEvent> {
+  ): Observable<FormEvent> {
     // If no skeleton was detected, return null checkpoint
     if (!skeletonEvent.skeleton) {
       return of({

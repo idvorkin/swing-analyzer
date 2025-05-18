@@ -3,7 +3,7 @@ import { share, switchMap, tap } from 'rxjs/operators';
 import type { Skeleton } from '../models/Skeleton';
 import type { FormCheckpoint } from '../types';
 import type {
-  CheckpointEvent,
+  FormEvent,
   FormProcessor,
   FrameAcquisition,
   RepProcessor,
@@ -24,7 +24,7 @@ export class Pipeline {
 
   // Output subjects
   private resultSubject = new Subject<PipelineResult>();
-  private checkpointSubject = new Subject<CheckpointEvent>();
+  private checkpointSubject = new Subject<FormEvent>();
 
   constructor(
     private frameAcquisition: FrameAcquisition,
@@ -121,7 +121,7 @@ export class Pipeline {
   /**
    * Get an observable for checkpoint events
    */
-  getCheckpointEvents(): Observable<CheckpointEvent> {
+  getCheckpointEvents(): Observable<FormEvent> {
     return this.checkpointSubject.asObservable();
   }
 

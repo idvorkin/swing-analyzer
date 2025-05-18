@@ -29,7 +29,7 @@ graph TD
         D2[FormCheckpoint]
         D3[PipelineResult]
         D4[FrameEvent]
-        D5[CheckpointEvent]
+        D5[FormEvent]
     end
 
     subgraph "Services"
@@ -54,7 +54,7 @@ graph TD
 flowchart LR
     A[VideoFrameAcquisition] --> |Observable<FrameEvent>| B[PoseSkeletonTransformer]
     B --> |Observable<SkeletonEvent>| C[SwingFormProcessor]
-    C --> |Observable<CheckpointEvent>| D[SwingRepProcessor]
+    C --> |Observable<FormEvent>| D[SwingRepProcessor]
     D --> |PipelineResult| E[Custom Hooks & Context]
     E --> |State & Props| F[UI Components]
 
@@ -127,10 +127,10 @@ The swing analyzer uses a reactive pipeline architecture based on RxJS Observabl
 
    - Input: SkeletonEvent
    - Process: Identify specific positions (Top, Hinge, Bottom, Release)
-   - Output: Observable<CheckpointEvent> with form checkpoints
+   - Output: Observable<FormEvent> with form checkpoints
 
 4. **SwingRepProcessor (Rep Counting & Analysis)**
-   - Input: CheckpointEvent
+   - Input: FormEvent
    - Process: Pattern recognition of complete swing motion
    - Output: Observable<RepEvent> with rep count and metrics
 
@@ -140,7 +140,7 @@ The swing analyzer uses a reactive pipeline architecture based on RxJS Observabl
 - **FormCheckpoint**: Key position in swing with metrics
 - **PoseResult**: Complete set of keypoints from a frame
 - **PipelineResult**: Combined output from the pipeline
-- **FrameEvent**, **PoseEvent**, **SkeletonEvent**, **CheckpointEvent**: Event objects for pipeline communication
+- **FrameEvent**, **PoseEvent**, **SkeletonEvent**, **FormEvent**: Event objects for pipeline communication
 
 ## Services
 

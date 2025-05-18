@@ -4,13 +4,20 @@ import * as tf from '@tensorflow/tfjs-core';
 import { type Observable, from, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Skeleton } from '../models/Skeleton';
-import { CocoBodyParts, type PoseKeypoint } from '../types';
+import { CocoBodyParts, type PoseKeypoint, type PoseResult } from '../types';
 import type {
   FrameEvent,
-  PoseEvent,
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
+
+/**
+ * A pose event with the pose result and original frame data
+ */
+export interface PoseEvent {
+  pose: PoseResult | null;
+  frameEvent: FrameEvent;
+}
 
 /**
  * Defines body part connections for the skeleton

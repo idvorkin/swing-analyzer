@@ -7,6 +7,7 @@ import {
   type PoseResult,
   type RepData,
 } from '../types';
+import type { PoseEvent } from './PoseSkeletonTransformer';
 
 /**
  * Frame acquisition stage - processes raw video/camera frames
@@ -54,14 +55,6 @@ export interface SkeletonTransformer {
 }
 
 /**
- * A pose event with the pose result and original frame data
- */
-export interface PoseEvent {
-  pose: PoseResult | null;
-  frameEvent: FrameEvent;
-}
-
-/**
  * A skeleton event with the skeleton and original frame data
  */
 export interface SkeletonEvent {
@@ -81,7 +74,7 @@ export interface FormProcessor {
   processFrame(
     skeletonEvent: SkeletonEvent,
     repCount: number
-  ): Observable<CheckpointEvent>;
+  ): Observable<FormEvent>;
 
   /**
    * Reset the form processor state
@@ -92,7 +85,7 @@ export interface FormProcessor {
 /**
  * A checkpoint event with the checkpoint and skeleton data
  */
-export interface CheckpointEvent {
+export interface FormEvent {
   checkpoint: FormCheckpoint | null;
   position: SwingPosition | null;
   skeletonEvent: SkeletonEvent;
@@ -107,7 +100,7 @@ export interface RepProcessor {
    * Update rep count based on checkpoint event
    * Returns an Observable that emits rep count updates
    */
-  updateRepCount(checkpointEvent: CheckpointEvent): Observable<RepEvent>;
+  updateRepCount(checkpointEvent: FormEvent): Observable<RepEvent>;
 
   /**
    * Get the current rep count
@@ -130,6 +123,6 @@ export interface RepProcessor {
  */
 export interface RepEvent {
   repCount: number;
-  checkpointEvent: CheckpointEvent;
+  checkpointEvent: FormEvent;
   repIncremented?: boolean;
 }
