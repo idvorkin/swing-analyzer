@@ -1,4 +1,4 @@
-import { FrameAcquisition, PoseDetection, SkeletonConstruction, FormCheckpointDetection, SwingRepAnalysis } from './PipelineInterfaces';
+import { FrameAcquisition, PoseDetection, SkeletonConstruction, FormCheckpointDetection, SwingRepAnalysis, CheckpointEvent } from './PipelineInterfaces';
 import { Skeleton } from '../models/Skeleton';
 import { FormCheckpoint } from '../types';
 import { Observable, Subject, Subscription } from 'rxjs';
@@ -19,6 +19,7 @@ export class Pipeline {
   
   // Output subjects
   private resultSubject = new Subject<PipelineResult>();
+  private checkpointSubject = new Subject<CheckpointEvent>();
   
   constructor(
     private frameAcquisition: FrameAcquisition,
@@ -67,6 +68,12 @@ export class Pipeline {
         return this.formAnalyzer.processFrame(skeletonEvent, this.repCount);
       }),
       
+      // Emit checkpoint events
+      tap(checkpointEvent => {
+        // Pass checkpoint event to subscribers
+        this.checkpointSubject.next(checkpointEvent);
+      }),
+      
       // Stage 4: Swing Rep Analysis
       switchMap(checkpointEvent => {
         // Store latest checkpoint
@@ -100,14 +107,23 @@ export class Pipeline {
       error => {
         console.error('Error in pipeline:', error);
         this.resultSubject.error(error);
+        this.checkpointSubject.error(error);
       },
       () => {
         this.resultSubject.complete();
+        this.checkpointSubject.complete();
         this.isActive = false;
       }
     );
     
     return this.resultSubject.asObservable();
+  }
+  
+  /**
+   * Get an observable for checkpoint events
+   */
+  getCheckpointEvents(): Observable<CheckpointEvent> {
+    return this.checkpointSubject.asObservable();
   }
   
   /**

@@ -1,7 +1,9 @@
 import { PipelineFactory } from './pipeline/PipelineFactory';
 import { SwingAnalyzerViewModel } from './viewmodels/SwingAnalyzerViewModel';
+import { FormCheckpointViewModel } from './viewmodels/FormCheckpointViewModel';
 import { FrameStage } from './pipeline/FrameStage';
 import { AppState } from './types';
+import { FormCheckpointChecker } from './FormCheckpointChecker';
 
 // Main application class
 class SwingAnalyzerApp {
@@ -30,6 +32,10 @@ class SwingAnalyzerApp {
   // Component references
   private frameAcquisition!: FrameStage;
   private viewModel!: SwingAnalyzerViewModel;
+  private formViewModel!: FormCheckpointViewModel;
+  
+  // Compatibility layer for legacy code
+  private formCheckpointChecker!: FormCheckpointChecker;
   
   // Application state
   private appState: AppState = {
@@ -97,6 +103,18 @@ class SwingAnalyzerApp {
       this.spineAngle,
       this.appState
     );
+    
+    // Create form checkpoint view model
+    this.formViewModel = new FormCheckpointViewModel(
+      pipeline,
+      this.video,
+      this.canvas,
+      this.checkpointGridContainer,
+      this.appState
+    );
+    
+    // Create compatibility layer for legacy code
+    this.formCheckpointChecker = new FormCheckpointChecker(this.formViewModel);
     
     // Get frame acquisition component for direct media control
     this.frameAcquisition = PipelineFactory.createFrameAcquisition(
@@ -176,6 +194,10 @@ class SwingAnalyzerApp {
     
     try {
       await this.viewModel.initialize();
+      
+      // Initialize form checkpoint view model
+      this.formViewModel.initialize();
+      
       this.updateStatus('Ready. Upload a video or start camera.');
       this.updateButtonStates(true, false, false);
     } catch (error) {
@@ -349,19 +371,45 @@ class SwingAnalyzerApp {
   }
   
   /**
-   * Navigate to previous rep
+   * Navigate to the previous rep
    */
   private navigateToPreviousRep(): void {
-    // To be implemented in phase 3
-    console.log('Navigate to previous rep');
+    const currentIndex = this.appState.currentRepIndex;
+    if (currentIndex > 0) {
+      if (this.formViewModel.navigateToRep(currentIndex - 1)) {
+        this.appState.currentRepIndex--;
+        this.updateRepNavigationUI();
+      }
+    }
   }
   
   /**
-   * Navigate to next rep
+   * Navigate to the next rep
    */
   private navigateToNextRep(): void {
-    // To be implemented in phase 3
-    console.log('Navigate to next rep');
+    const currentIndex = this.appState.currentRepIndex;
+    const totalReps = this.formViewModel.getRepCount();
+    if (currentIndex < totalReps - 1) {
+      if (this.formViewModel.navigateToRep(currentIndex + 1)) {
+        this.appState.currentRepIndex++;
+        this.updateRepNavigationUI();
+      }
+    }
+  }
+  
+  /**
+   * Update rep navigation UI
+   */
+  private updateRepNavigationUI(): void {
+    const currentIndex = this.appState.currentRepIndex;
+    const totalReps = this.formViewModel.getRepCount();
+    
+    this.currentRepEl.textContent = totalReps > 0 ? 
+      `${currentIndex + 1} / ${totalReps}` : 
+      '0 / 0';
+    
+    this.prevRepBtn.disabled = currentIndex <= 0;
+    this.nextRepBtn.disabled = currentIndex >= totalReps - 1;
   }
 }
 
