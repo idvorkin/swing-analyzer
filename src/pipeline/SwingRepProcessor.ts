@@ -1,5 +1,5 @@
 import { type Observable, of } from 'rxjs';
-import { SwingPosition, type RepCounter, type RepData } from '../types';
+import { SwingPosition, type RepData } from '../types';
 import type {
   FormEvent,
   RepEvent,
@@ -11,13 +11,8 @@ import type {
  * Based on detecting swing positions instead of raw angles
  */
 export class SwingRepProcessor implements RepProcessor {
-  // Track rep state
-  private repCounter: RepCounter = {
-    count: 0,
-    isHinge: false,
-    lastHingeState: false,
-    hingeThreshold: 45, // Kept for backwards compatibility
-  };
+  // Simple counter for reps
+  private repCount = 0;
 
   // Store completed reps
   private completedReps: RepData[] = [];
@@ -35,7 +30,7 @@ export class SwingRepProcessor implements RepProcessor {
     if (!checkpointEvent.skeletonEvent.skeleton || !checkpointEvent.position) {
       // No skeleton data or position to process
       return of({
-        repCount: this.repCounter.count,
+        repCount: this.repCount,
         checkpointEvent,
       });
     }
@@ -61,7 +56,7 @@ export class SwingRepProcessor implements RepProcessor {
         this.detectedPositions.add(SwingPosition.Top); // Start the next rep at Top
 
         // Log the rep completion
-        console.log(`Rep ${this.repCounter.count} detected - full swing cycle completed`);
+        console.log(`Rep ${this.repCount} detected - full swing cycle completed`, this.detectedPositions);
       }
     }
 
@@ -79,7 +74,7 @@ export class SwingRepProcessor implements RepProcessor {
     // Create a new rep if we don't have one
     if (this.currentRep === null) {
       this.currentRep = {
-        repNumber: this.repCounter.count + 1, // Next rep (current count + 1)
+        repNumber: this.repCount + 1, // Next rep (current count + 1)
         checkpoints: new Map(),
       };
 
@@ -93,7 +88,7 @@ export class SwingRepProcessor implements RepProcessor {
     }
 
     return of({
-      repCount: this.repCounter.count,
+      repCount: this.repCount,
       checkpointEvent,
       repIncremented,
     });
@@ -115,19 +110,14 @@ export class SwingRepProcessor implements RepProcessor {
    * Get the current rep count
    */
   getRepCount(): number {
-    return this.repCounter.count;
+    return this.repCount;
   }
 
   /**
    * Reset the rep counter
    */
   reset(): void {
-    this.repCounter = {
-      count: 0,
-      isHinge: false,
-      lastHingeState: false,
-      hingeThreshold: this.repCounter.hingeThreshold,
-    };
+    this.repCount = 0;
     this.completedReps = [];
     this.currentRep = null;
     this.detectedPositions.clear();
@@ -149,29 +139,21 @@ export class SwingRepProcessor implements RepProcessor {
   }
 
   /**
-   * Set the hinge threshold angle
-   * Kept for backwards compatibility
-   */
-  setHingeThreshold(degrees: number): void {
-    this.repCounter.hingeThreshold = degrees;
-  }
-
-  /**
    * Increment the rep count and update the completed reps collection
    */
   private incrementRepCount(): void {
-    this.repCounter.count += 1;
+    this.repCount += 1;
 
     // If we have a current rep, add it to completed reps
     if (this.currentRep) {
       // Update the rep number to match the new count
-      this.currentRep.repNumber = this.repCounter.count;
+      this.currentRep.repNumber = this.repCount;
       this.completedReps.push(this.currentRep);
     }
 
     // Start a new rep
     this.currentRep = {
-      repNumber: this.repCounter.count + 1, // Next rep
+      repNumber: this.repCount + 1, // Next rep
       checkpoints: new Map(),
     };
   }
