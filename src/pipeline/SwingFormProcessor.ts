@@ -1,6 +1,6 @@
 import { type Observable, of } from 'rxjs';
 import type { Skeleton } from '../models/Skeleton';
-import { type FormCheckpoint, FormPosition } from '../types';
+import { type FormCheckpoint, SwingPosition } from '../types';
 import type {
   CheckpointEvent,
   FormProcessor,
@@ -12,10 +12,10 @@ import type {
  */
 export class SwingFormProcessor implements FormProcessor {
   // Last detected position
-  private lastPosition = FormPosition.Top;
+  private lastPosition = SwingPosition.Top;
 
   // Map of detected positions in current rep
-  private detectedPositions = new Map<FormPosition, FormCheckpoint>();
+  private detectedPositions = new Map<SwingPosition, FormCheckpoint>();
 
   // Angle thresholds for position detection
   private readonly HINGE_THRESHOLD = 20; // Degrees from vertical
@@ -51,7 +51,7 @@ export class SwingFormProcessor implements FormProcessor {
     // If this is a new rep, reset positions
     if (repCount === 0 || this.lastRepCount !== repCount) {
       this.detectedPositions.clear();
-      this.lastPosition = FormPosition.Top;
+      this.lastPosition = SwingPosition.Top;
       this.lastRepCount = repCount;
     }
 
@@ -63,16 +63,16 @@ export class SwingFormProcessor implements FormProcessor {
     if (hasTransition || (this.detectedPositions.size === 0 && newPosition)) {
       // Capture the checkpoint
       const checkpoint = this.captureCheckpoint(
-        newPosition || FormPosition.Top,
+        newPosition || SwingPosition.Top,
         skeleton,
         timestamp
       );
 
       // Update last position
-      this.lastPosition = newPosition || FormPosition.Top;
+      this.lastPosition = newPosition || SwingPosition.Top;
 
       // Store in detected positions map
-      this.detectedPositions.set(newPosition || FormPosition.Top, checkpoint);
+      this.detectedPositions.set(newPosition || SwingPosition.Top, checkpoint);
 
       return of({
         checkpoint,
@@ -97,7 +97,7 @@ export class SwingFormProcessor implements FormProcessor {
    */
   reset(): void {
     this.detectedPositions.clear();
-    this.lastPosition = FormPosition.Top;
+    this.lastPosition = SwingPosition.Top;
     this.lastRepCount = -1;
   }
 
@@ -105,53 +105,53 @@ export class SwingFormProcessor implements FormProcessor {
    * Detect position transitions based on spine angle and state machine
    */
   private detectPositionTransition(spineAngle: number): {
-    newPosition: FormPosition | null;
+    newPosition: SwingPosition | null;
     hasTransition: boolean;
   } {
     const absAngle = Math.abs(spineAngle);
-    let newPosition: FormPosition | null = null;
+    let newPosition: SwingPosition | null = null;
     let hasTransition = false;
 
     // State machine for position detection
     switch (this.lastPosition) {
-      case FormPosition.Top:
+      case SwingPosition.Top:
         // From Top, we can only go to Hinge
         if (
           absAngle > this.HINGE_THRESHOLD &&
-          !this.detectedPositions.has(FormPosition.Hinge)
+          !this.detectedPositions.has(SwingPosition.Hinge)
         ) {
-          newPosition = FormPosition.Hinge;
+          newPosition = SwingPosition.Hinge;
           hasTransition = true;
         }
         break;
 
-      case FormPosition.Hinge:
+      case SwingPosition.Hinge:
         // From Hinge, we can go to Bottom
         if (
           absAngle > this.BOTTOM_THRESHOLD &&
-          !this.detectedPositions.has(FormPosition.Bottom)
+          !this.detectedPositions.has(SwingPosition.Bottom)
         ) {
-          newPosition = FormPosition.Bottom;
+          newPosition = SwingPosition.Bottom;
           hasTransition = true;
         }
         break;
 
-      case FormPosition.Bottom:
+      case SwingPosition.Bottom:
         // From Bottom, we can go to Release
         if (
           absAngle < this.RELEASE_THRESHOLD &&
-          !this.detectedPositions.has(FormPosition.Release)
+          !this.detectedPositions.has(SwingPosition.Release)
         ) {
-          newPosition = FormPosition.Release;
+          newPosition = SwingPosition.Release;
           hasTransition = true;
         }
         break;
 
-      case FormPosition.Release:
+      case SwingPosition.Release:
         // From Release, we go back to Top for the next rep
         // This happens automatically when the rep counter increases
         if (absAngle < this.HINGE_THRESHOLD) {
-          newPosition = FormPosition.Top;
+          newPosition = SwingPosition.Top;
           hasTransition = true;
         }
         break;
@@ -164,7 +164,7 @@ export class SwingFormProcessor implements FormProcessor {
    * Capture a checkpoint from the current video frame
    */
   private captureCheckpoint(
-    position: FormPosition,
+    position: SwingPosition,
     skeleton: Skeleton,
     timestamp: number
   ): FormCheckpoint {
@@ -210,20 +210,21 @@ export class SwingFormProcessor implements FormProcessor {
       timestamp,
       image: imageData,
       spineAngle: skeleton.getSpineAngle(),
+      skeleton: skeleton,
     };
   }
 
   /**
    * Get all detected positions for the current rep
    */
-  getDetectedPositions(): Map<FormPosition, FormCheckpoint> {
+  getDetectedPositions(): Map<SwingPosition, FormCheckpoint> {
     return this.detectedPositions;
   }
 
   /**
    * Check if a specific position has been detected in the current rep
    */
-  hasDetectedPosition(position: FormPosition): boolean {
+  hasDetectedPosition(position: SwingPosition): boolean {
     return this.detectedPositions.has(position);
   }
 }

@@ -1,3 +1,5 @@
+import { Skeleton } from './models/Skeleton';
+
 export interface Point {
   x: number;
   y: number;
@@ -26,7 +28,7 @@ export interface RepCounter {
   hingeThreshold: number;
 }
 
-export enum FormPosition {
+export enum SwingPosition {
   Top = 'top',
   Hinge = 'hinge',
   Bottom = 'bottom',
@@ -34,15 +36,16 @@ export enum FormPosition {
 }
 
 export interface FormCheckpoint {
-  position: FormPosition;
+  position: SwingPosition;
   timestamp: number;
   image: ImageData;
   spineAngle: number;
+  skeleton: Skeleton;
 }
 
 export interface RepData {
   repNumber: number;
-  checkpoints: Map<FormPosition, FormCheckpoint>;
+  checkpoints: Map<SwingPosition, FormCheckpoint>;
 }
 
 export interface AppState {

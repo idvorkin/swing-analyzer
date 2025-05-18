@@ -2,7 +2,7 @@ import type { Observable } from 'rxjs';
 import type { Skeleton } from '../models/Skeleton';
 import {
   type FormCheckpoint,
-  type FormPosition,
+  type SwingPosition,
   PoseKeypoint,
   type PoseResult,
   type RepData,
@@ -94,7 +94,7 @@ export interface FormProcessor {
  */
 export interface CheckpointEvent {
   checkpoint: FormCheckpoint | null;
-  position: FormPosition | null;
+  position: SwingPosition | null;
   skeletonEvent: SkeletonEvent;
 }
 
