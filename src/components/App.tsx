@@ -502,7 +502,7 @@ const MainApplication: React.FC = () => {
   return (
     <>
       <header>
-        <h2>Swing Coach 3</h2>
+        <h1>Swing Analyzer</h1>
       </header>
 
       <main>
