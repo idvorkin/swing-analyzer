@@ -3,7 +3,6 @@ import { SwingAnalyzerViewModel } from './viewmodels/SwingAnalyzerViewModel';
 import { FormCheckpointViewModel } from './viewmodels/FormCheckpointViewModel';
 import { FrameStage } from './pipeline/FrameStage';
 import { AppState } from './types';
-import { FormCheckpointChecker } from './FormCheckpointChecker';
 
 // Main application class
 class SwingAnalyzerApp {
@@ -33,9 +32,6 @@ class SwingAnalyzerApp {
   private frameAcquisition!: FrameStage;
   private viewModel!: SwingAnalyzerViewModel;
   private formViewModel!: FormCheckpointViewModel;
-  
-  // Compatibility layer for legacy code
-  private formCheckpointChecker!: FormCheckpointChecker;
   
   // Application state
   private appState: AppState = {
@@ -112,9 +108,6 @@ class SwingAnalyzerApp {
       this.checkpointGridContainer,
       this.appState
     );
-    
-    // Create compatibility layer for legacy code
-    this.formCheckpointChecker = new FormCheckpointChecker(this.formViewModel);
     
     // Get frame acquisition component for direct media control
     this.frameAcquisition = PipelineFactory.createFrameAcquisition(
