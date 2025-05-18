@@ -9,6 +9,7 @@ import type {
   RepProcessor,
   SkeletonEvent,
   SkeletonTransformer,
+  RepEvent,
 } from './PipelineInterfaces';
 
 /**
@@ -118,25 +119,24 @@ export class Pipeline {
         // Share the pipeline with multiple subscribers
         share()
       )
-      .subscribe(
-        // The tap operator above handles the next notification
-        (repEvent) => {
+      .subscribe({
+        next: (_: RepEvent) => {
           console.log(`Pipeline subscription: Processing complete for rep event`);
         },
-        (error) => {
+        error: (error) => {
           console.error('Error in pipeline:', error);
           this.resultSubject.error(error);
           this.checkpointSubject.error(error);
           this.skeletonSubject.error(error);
         },
-        () => {
+        complete: () => {
           console.log('Pipeline complete');
           this.resultSubject.complete();
           this.checkpointSubject.complete();
           this.skeletonSubject.complete();
           this.isActive = false;
         }
-      );
+      });
 
     console.log("Pipeline subscriptions set up and active");
     return this.resultSubject.asObservable();

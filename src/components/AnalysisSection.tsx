@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
-import { SwingPosition, type RepData, type FormCheckpoint } from '../types';
+import { SwingPositionName } from '../types';
 
 // Interface for the selected checkpoint when in fullscreen mode
 interface SelectedCheckpoint {
   repIndex: number;
-  position: SwingPosition;
+  position: SwingPositionName;
 }
 
 const AnalysisSection: React.FC = () => {
@@ -29,18 +29,18 @@ const AnalysisSection: React.FC = () => {
 
   // Position order for navigation
   const positionOrder = [
-    SwingPosition.Top,
-    SwingPosition.Hinge,
-    SwingPosition.Bottom,
-    SwingPosition.Release
+    SwingPositionName.Top,
+    SwingPositionName.Hinge,
+    SwingPositionName.Bottom,
+    SwingPositionName.Release
   ];
 
   // Position labels for display
   const positionLabels = {
-    [SwingPosition.Top]: 'Top',
-    [SwingPosition.Hinge]: 'Hinge',
-    [SwingPosition.Bottom]: 'Bottom',
-    [SwingPosition.Release]: 'Release'
+    [SwingPositionName.Top]: 'Top',
+    [SwingPositionName.Hinge]: 'Hinge',
+    [SwingPositionName.Bottom]: 'Bottom',
+    [SwingPositionName.Release]: 'Release'
   };
 
   // Effect to render checkpoints when rep index changes
@@ -240,17 +240,6 @@ const AnalysisSection: React.FC = () => {
         Checkpoint not available
       </div>
     );
-    
-    // Calculate relative time if video start time is available
-    const formattedTime = videoStartTime 
-      ? (() => {
-          const totalMs = checkpoint.timestamp - videoStartTime;
-          const minutes = Math.floor(totalMs / 60000);
-          const seconds = Math.floor((totalMs % 60000) / 1000);
-          const ms = Math.floor((totalMs % 1000) / 10); // Get 2 digits of milliseconds
-          return `Video Time: ${minutes}:${seconds.toString().padStart(2, '0')}:${ms.toString().padStart(2, '0')}`;
-        })()
-      : new Date(checkpoint.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
     
     // Create a canvas element to render the image data
     return (

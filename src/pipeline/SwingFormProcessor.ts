@@ -1,6 +1,6 @@
-import { type Observable, of, EMPTY, from } from 'rxjs';
+import { type Observable, EMPTY, from } from 'rxjs';
 import type { Skeleton } from '../models/Skeleton';
-import { type FormCheckpoint, SwingPosition } from '../types';
+import { type FormCheckpoint as SwingForm, SwingPositionName as SwingPositionName } from '../types';
 import type {
   FormEvent,
   FormProcessor,
@@ -12,14 +12,11 @@ import type {
  * Swing form processor - processes skeletons to identify swing form positions and checkpoints
  */
 export class SwingFormProcessor implements FormProcessor {
-  // Last detected position
-  private lastPosition = SwingPosition.Top;
-
   // Map of detected positions in current rep
-  private detectedPositions = new Map<SwingPosition, FormCheckpoint>();
+  private detectedPositions = new Map<SwingPositionName, SwingForm>();
 
   // Track best candidates for each position within a swing cycle
-  private bestPositionCandidates = new Map<SwingPosition, {
+  private bestPositionCandidates = new Map<SwingPositionName, {
     skeleton: Skeleton;
     timestamp: number;
     spineAngle: number;
@@ -30,10 +27,10 @@ export class SwingFormProcessor implements FormProcessor {
 
   // Ideal target angles for each position
   private readonly IDEAL_ANGLES = {
-    [SwingPosition.Top]: 0,      // Most vertical
-    [SwingPosition.Hinge]: 45,   // Mid-point down
-    [SwingPosition.Bottom]: 90,  // Most horizontal
-    [SwingPosition.Release]: 30, // Mid-point up
+    [SwingPositionName.Top]: 0,      // Most vertical
+    [SwingPositionName.Hinge]: 45,   // Mid-point down
+    [SwingPositionName.Bottom]: 85,  // Most horizontal
+    [SwingPositionName.Release]: 35, // Mid-point up
   };
 
   // Threshold to detect a new cycle starting - lowered even more for easier detection
@@ -46,7 +43,7 @@ export class SwingFormProcessor implements FormProcessor {
   private isDownswing = true;
   private prevSpineAngle = 0;
   
-  // Tracking swing angle extremes for cycle detection
+  // Track maximum angle in the current cycle
   private maxSpineAngleInCycle = 0;
 
   // Track last logged spine angle to reduce console noise
@@ -107,7 +104,7 @@ export class SwingFormProcessor implements FormProcessor {
       const formEvents: FormEvent[] = [];
       
       // Process positions in the correct sequence
-      const sequence = [SwingPosition.Top, SwingPosition.Hinge, SwingPosition.Bottom, SwingPosition.Release];
+      const sequence = [SwingPositionName.Top, SwingPositionName.Hinge, SwingPositionName.Bottom, SwingPositionName.Release];
       
       for (const position of sequence) {
         const candidate = this.bestPositionCandidates.get(position);
@@ -156,19 +153,19 @@ export class SwingFormProcessor implements FormProcessor {
     }
 
     // Update best candidates for each position based on how close we are to the ideal angle
-    this.updatePositionCandidate(SwingPosition.Top, skeleton, timestamp, spineAngle, armToSpineAngle);
+    this.updatePositionCandidate(SwingPositionName.Top, skeleton, timestamp, spineAngle, armToSpineAngle);
     
     // Only consider Hinge in the downswing
     if (this.isDownswing) {
-      this.updatePositionCandidate(SwingPosition.Hinge, skeleton, timestamp, spineAngle, armToSpineAngle);
+      this.updatePositionCandidate(SwingPositionName.Hinge, skeleton, timestamp, spineAngle, armToSpineAngle);
     }
     
     // Consider Bottom position at any time (will be constrained by angle)
-    this.updatePositionCandidate(SwingPosition.Bottom, skeleton, timestamp, spineAngle, armToSpineAngle);
+    this.updatePositionCandidate(SwingPositionName.Bottom, skeleton, timestamp, spineAngle, armToSpineAngle);
     
     // Only consider Release in the upswing
     if (!this.isDownswing) {
-      this.updatePositionCandidate(SwingPosition.Release, skeleton, timestamp, spineAngle, armToSpineAngle);
+      this.updatePositionCandidate(SwingPositionName.Release, skeleton, timestamp, spineAngle, armToSpineAngle);
     }
 
     // No new checkpoint detected, return empty observable
@@ -179,7 +176,7 @@ export class SwingFormProcessor implements FormProcessor {
    * Update the best candidate for a position if this frame is better
    */
   private updatePositionCandidate(
-    position: SwingPosition,
+    position: SwingPositionName,
     skeleton: Skeleton,
     timestamp: number,
     spineAngle: number,
@@ -251,25 +248,11 @@ export class SwingFormProcessor implements FormProcessor {
   }
 
   /**
-   * Check if a full swing cycle has been completed
-   * A full cycle is when we've detected all positions: Top -> Hinge -> Bottom -> Release
-   */
-  private isFullCycleComplete(): boolean {
-    return (
-      this.detectedPositions.has(SwingPosition.Top) &&
-      this.detectedPositions.has(SwingPosition.Hinge) &&
-      this.detectedPositions.has(SwingPosition.Bottom) &&
-      this.detectedPositions.has(SwingPosition.Release)
-    );
-  }
-
-  /**
    * Reset the form processor state
    */
   reset(): void {
     this.detectedPositions.clear();
     this.bestPositionCandidates.clear();
-    this.lastPosition = SwingPosition.Top;
     this.maxSpineAngleInCycle = 0;
     this.prevSpineAngle = 0;
     this.isDownswing = true;
@@ -279,13 +262,13 @@ export class SwingFormProcessor implements FormProcessor {
    * Create a checkpoint from skeleton data
    */
   private createCheckpoint(
-    position: SwingPosition,
+    position: SwingPositionName,
     skeleton: Skeleton,
     timestamp: number,
     spineAngle: number,
     armToSpineAngle: number,
     image: ImageData
-  ): FormCheckpoint {
+  ): SwingForm {
     // Create a checkpoint with the pre-captured image
     return {
       position,
@@ -300,14 +283,14 @@ export class SwingFormProcessor implements FormProcessor {
   /**
    * Get all detected positions for the current rep
    */
-  getDetectedPositions(): Map<SwingPosition, FormCheckpoint> {
+  getDetectedPositions(): Map<SwingPositionName, SwingForm> {
     return this.detectedPositions;
   }
 
   /**
    * Check if a specific position has been detected in the current rep
    */
-  hasDetectedPosition(position: SwingPosition): boolean {
+  hasDetectedPosition(position: SwingPositionName): boolean {
     return this.detectedPositions.has(position);
   }
 }

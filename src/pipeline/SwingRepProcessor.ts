@@ -1,5 +1,5 @@
 import { type Observable, of } from 'rxjs';
-import { SwingPosition, type RepData } from '../types';
+import { SwingPositionName, type RepData } from '../types';
 import type {
   FormEvent,
   RepEvent,
@@ -19,8 +19,8 @@ export class SwingRepProcessor implements RepProcessor {
   private currentRep: RepData | null = null;
   
   // Positions in current swing
-  private detectedPositions = new Set<SwingPosition>();
-  private lastPosition: SwingPosition | null = null;
+  private detectedPositions = new Set<SwingPositionName>();
+  private lastPosition: SwingPositionName | null = null;
 
   /**
    * Update rep count based on checkpoint event
@@ -49,7 +49,7 @@ export class SwingRepProcessor implements RepProcessor {
     let repIncremented = false;
     
     // If we've seen a Release position followed by a Top position, we've completed a rep
-    if (this.lastPosition === SwingPosition.Release && currentPosition === SwingPosition.Top) {
+    if (this.lastPosition === SwingPositionName.Release && currentPosition === SwingPositionName.Top) {
       console.log(`SwingRepProcessor: Detected transition from Release to Top, checking for rep completion`);
       // Check if we've seen all positions in the correct sequence
       if (this.hasCompletedFullCycle()) {
@@ -59,25 +59,25 @@ export class SwingRepProcessor implements RepProcessor {
         
         // Reset detected positions for next rep
         this.detectedPositions.clear();
-        this.detectedPositions.add(SwingPosition.Top); // Start the next rep at Top
+        this.detectedPositions.add(SwingPositionName.Top); // Start the next rep at Top
 
         // Log the rep completion with angles for each position
         console.log(`Rep ${this.repCount} detected - full swing cycle completed`, {
           top: {
-            spineAngle: this.currentRep?.checkpoints.get(SwingPosition.Top)?.spineAngle,
-            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPosition.Top)?.armToSpineAngle
+            spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Top)?.spineAngle,
+            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Top)?.armToSpineAngle
           },
           hinge: {
-            spineAngle: this.currentRep?.checkpoints.get(SwingPosition.Hinge)?.spineAngle,
-            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPosition.Hinge)?.armToSpineAngle
+            spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Hinge)?.spineAngle,
+            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Hinge)?.armToSpineAngle
           },
           bottom: {
-            spineAngle: this.currentRep?.checkpoints.get(SwingPosition.Bottom)?.spineAngle,
-            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPosition.Bottom)?.armToSpineAngle
+            spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Bottom)?.spineAngle,
+            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Bottom)?.armToSpineAngle
           },
           release: {
-            spineAngle: this.currentRep?.checkpoints.get(SwingPosition.Release)?.spineAngle,
-            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPosition.Release)?.armToSpineAngle
+            spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Release)?.spineAngle,
+            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Release)?.armToSpineAngle
           }
         });
       } else {
@@ -129,10 +129,10 @@ export class SwingRepProcessor implements RepProcessor {
    */
   private hasCompletedFullCycle(): boolean {
     return (
-      this.detectedPositions.has(SwingPosition.Top) &&
-      this.detectedPositions.has(SwingPosition.Hinge) &&
-      this.detectedPositions.has(SwingPosition.Bottom) &&
-      this.detectedPositions.has(SwingPosition.Release)
+      this.detectedPositions.has(SwingPositionName.Top) &&
+      this.detectedPositions.has(SwingPositionName.Hinge) &&
+      this.detectedPositions.has(SwingPositionName.Bottom) &&
+      this.detectedPositions.has(SwingPositionName.Release)
     );
   }
 

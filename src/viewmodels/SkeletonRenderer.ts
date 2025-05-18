@@ -267,7 +267,6 @@ export class SkeletonRenderer {
     skeleton: Skeleton
   ): void {
     // Get required keypoints
-    const keypoints = skeleton.getKeypoints();
     const hip = skeleton.getKeypointByName('rightHip') || skeleton.getKeypointByName('leftHip');
     const shoulder = skeleton.getKeypointByName('rightShoulder') || skeleton.getKeypointByName('leftShoulder');
     const elbow = skeleton.getKeypointByName('rightElbow') || skeleton.getKeypointByName('leftElbow');
@@ -388,9 +387,8 @@ export class SkeletonRenderer {
     const timestamp = Date.now();
     
     // Draw connections and keypoints
-    const keypoints = skeleton.getKeypoints();
-    this.drawConnections(context, keypoints);
-    this.drawKeypoints(context, keypoints, timestamp);
+    this.drawConnections(context, skeleton.getKeypoints());
+    this.drawKeypoints(context, skeleton.getKeypoints(), timestamp);
   }
 
   /**

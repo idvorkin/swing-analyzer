@@ -28,7 +28,7 @@ export interface RepCounter {
   hingeThreshold: number;
 }
 
-export enum SwingPosition {
+export enum SwingPositionName {
   Top = 'top',
   Hinge = 'hinge',
   Bottom = 'bottom',
@@ -36,7 +36,7 @@ export enum SwingPosition {
 }
 
 export interface FormCheckpoint {
-  position: SwingPosition;
+  position: SwingPositionName;
   timestamp: number;
   image: ImageData;
   spineAngle: number;
@@ -46,7 +46,7 @@ export interface FormCheckpoint {
 
 export interface RepData {
   repNumber: number;
-  checkpoints: Map<SwingPosition, FormCheckpoint>;
+  checkpoints: Map<SwingPositionName, FormCheckpoint>;
 }
 
 export interface AppState {
