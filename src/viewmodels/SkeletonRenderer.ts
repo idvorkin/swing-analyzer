@@ -35,19 +35,11 @@ export class SkeletonRenderer {
       return;
     }
 
-    console.log(
-      'SkeletonRenderer: Starting render with canvas dimensions',
-      this.canvas.width,
-      'x',
-      this.canvas.height
-    );
-
     // Clear previous drawing
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Get keypoints from skeleton
     const keypoints = skeleton.getKeypoints();
-    console.log('SkeletonRenderer: Drawing', keypoints.length, 'keypoints');
 
     // Draw connections first (so they appear behind the points)
     this.drawConnections(ctx, keypoints);
@@ -148,24 +140,6 @@ export class SkeletonRenderer {
       ctx.moveTo(midShoulderX, midShoulderY);
       ctx.lineTo(midHipX, midHipY);
       ctx.stroke();
-      console.log(
-        'SkeletonRenderer: Drew spine line from',
-        midShoulderX,
-        midShoulderY,
-        'to',
-        midHipX,
-        midHipY
-      );
-    } else {
-      console.log(
-        "SkeletonRenderer: Couldn't draw spine, not all points visible",
-        {
-          leftShoulder: this.getConfidence(leftShoulder),
-          rightShoulder: this.getConfidence(rightShoulder),
-          leftHip: this.getConfidence(leftHip),
-          rightHip: this.getConfidence(rightHip),
-        }
-      );
     }
 
     // Reset for normal connections
@@ -190,13 +164,6 @@ export class SkeletonRenderer {
     }
 
     ctx.stroke();
-    console.log(
-      'SkeletonRenderer: Drew',
-      connectionsDrawn,
-      'of',
-      connections.length,
-      'possible connections'
-    );
   }
 
   /**

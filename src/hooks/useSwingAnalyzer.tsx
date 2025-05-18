@@ -99,8 +99,6 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     
     pipelineSubscriptionRef.current = pipelineObservable.subscribe({
       next: (result: PipelineResult) => {
-        console.log('[DEBUG] Pipeline update received');
-        
         // Update state
         setRepCount(result.repCount);
         if (result.skeleton) {

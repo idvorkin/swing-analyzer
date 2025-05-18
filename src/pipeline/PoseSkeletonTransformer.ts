@@ -206,15 +206,6 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
 
       const angle = Math.abs((Math.atan2(deltaX, deltaY) * 180) / Math.PI);
 
-      // Throttle logging to once per second
-      const now = Date.now();
-      if (now - this.lastLogTime > this.logThrottleMs) {
-        console.log(
-          `Spine angle calculated (shoulders-hips): ${angle.toFixed(2)}°`
-        );
-        this.lastLogTime = now;
-      }
-
       return angle;
     }
 
@@ -244,7 +235,6 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
         eyeY = rightEye.y;
       } else {
         // No eyes visible
-        console.log('No visible eyes found for angle calculation');
         return 0;
       }
 
@@ -259,20 +249,10 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       // We need to adjust because face and spine angles have different reference points
       const spineAngle = Math.abs(faceAngle) * 0.5;
 
-      // Throttle logging to once per second
-      const now = Date.now();
-      if (now - this.lastLogTime > this.logThrottleMs) {
-        console.log(
-          `Spine angle approximated from face: ${spineAngle.toFixed(2)}° (face angle: ${faceAngle.toFixed(2)}°)`
-        );
-        this.lastLogTime = now;
-      }
-
       return spineAngle;
     }
 
     // 3. If nothing else works, use vertical screen orientation
-    console.log('Could not find enough points to calculate spine angle');
     return 0;
   }
 

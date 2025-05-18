@@ -168,10 +168,6 @@ export class SwingFormProcessor implements FormProcessor {
     skeleton: Skeleton,
     timestamp: number
   ): FormCheckpoint {
-    console.log(
-      `Capturing position: ${position}, spine angle: ${skeleton.getSpineAngle().toFixed(2)}`
-    );
-
     // Create a temporary canvas to blend video and skeleton
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = this.canvasElement.width;
