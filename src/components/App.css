@@ -411,40 +411,55 @@ button:disabled {
   .top-controls {
     padding: 12px;
   }
-  
+
   .control-row {
     flex-wrap: wrap;
     gap: 8px;
   }
-  
-  button, .file-label {
+
+  button,
+  .file-label {
     flex: 1 0 calc(50% - 4px);
     min-width: calc(50% - 4px);
     padding: 8px 12px;
     font-size: 14px;
   }
-  
+
   .icon {
     margin-right: 4px;
   }
-  
+
   .icon-right {
     margin-left: 4px;
   }
 
   .metrics-data {
-    flex-direction: column;
+    flex-direction: row;
   }
-  
+
+  .metric-card {
+    padding: 10px;
+  }
+
+  .metric-icon {
+    margin-right: 10px;
+  }
+
   .checkpoint-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+    flex-direction: row;
+    align-items: center;
   }
-  
-  .rep-navigation {
-    width: 100%;
-    justify-content: space-between;
+
+  .nav-btn {
+    min-width: 70px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  #current-rep {
+    min-width: 30px;
+    padding: 4px 8px;
+    font-size: 13px;
   }
 }
 
