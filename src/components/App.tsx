@@ -146,7 +146,7 @@ export const App: React.FC = () => {
     setStatus('Loading hardcoded video...');
     try {
       // Load the hardcoded video from public directory
-      const videoURL = '/videos/sample-swing.mp4';
+      const videoURL = '/videos/swing-sample.mp4';
       await frameAcquisitionRef.current.loadVideoFromURL(videoURL);
       
       setAppState(prev => ({ ...prev, usingCamera: false }));
