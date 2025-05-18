@@ -6,6 +6,13 @@ node_modules
 # Testing
 /coverage
 
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/e2e-tests/.auth/
+
 # Production build
 /build
 /dist

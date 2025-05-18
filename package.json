@@ -6,7 +6,10 @@
     "start": "parcel public/index.html",
     "build": "parcel build public/index.html --dist-dir dist",
     "vercel-build": "parcel build public/index.html --dist-dir dist",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug"
   },
   "browserslist": [
     "last 3 chrome versions",
@@ -18,7 +21,13 @@
       "global": "process"
     }
   },
-  "keywords": ["pose", "detection", "swing", "analysis", "mediapipe"],
+  "keywords": [
+    "pose",
+    "detection",
+    "swing",
+    "analysis",
+    "mediapipe"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -28,11 +37,14 @@
     "@tensorflow/tfjs-backend-webgl": "^4.4.0",
     "@tensorflow/tfjs-converter": "^4.4.0",
     "@tensorflow/tfjs-core": "^4.4.0",
+    "playwright": "^1.52.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.39.0",
+    "@types/node": "^20.8.6",
     "@types/react": "^18.2.47",
     "@types/react-dom": "^18.2.18",
     "buffer": "^6.0.3",
