@@ -98,8 +98,10 @@ export class FormCheckpointViewModel {
       }
 
       // Store checkpoint
-      const repMap = this.checkpointsPerRep.get(repCount)!;
-      repMap.set(event.position, event.checkpoint);
+      const repMap = this.checkpointsPerRep.get(repCount);
+      if (repMap) {
+        repMap.set(event.position, event.checkpoint);
+      }
 
       // Update display
       this.updateDisplay();
@@ -251,10 +253,12 @@ export class FormCheckpointViewModel {
     // Get the rep checkpoints
     const repMap = this.checkpointsPerRep.get(this.appState.currentRepIndex);
     if (repMap && clickedPosition && repMap.has(clickedPosition)) {
-      const checkpoint = repMap.get(clickedPosition)!;
-      this.showFullscreen(checkpoint);
-      this.currentFullscreenRep = this.appState.currentRepIndex;
-      this.currentFullscreenPosition = clickedPosition;
+      const checkpoint = repMap.get(clickedPosition);
+      if (checkpoint) {
+        this.showFullscreen(checkpoint);
+        this.currentFullscreenRep = this.appState.currentRepIndex;
+        this.currentFullscreenPosition = clickedPosition;
+      }
     }
   }
 
@@ -309,8 +313,10 @@ export class FormCheckpointViewModel {
       this.currentFullscreenRep = newRep;
 
       // Show in fullscreen
-      const checkpoint = repMap.get(newPosition)!;
-      this.displayFullscreenCheckpoint(checkpoint, newRep);
+      const checkpoint = repMap.get(newPosition);
+      if (checkpoint) {
+        this.displayFullscreenCheckpoint(checkpoint, newRep);
+      }
     }
   }
 

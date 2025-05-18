@@ -1,7 +1,9 @@
-import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
-import { PipelineFactory } from '../pipeline/PipelineFactory';
+import {
+  createFrameAcquisition,
+  createPipeline,
+} from '../pipeline/PipelineFactory';
 import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
 import type { AppState } from '../types';
 import { SwingAnalyzerViewModel } from '../viewmodels/SwingAnalyzerViewModel';
@@ -50,15 +52,12 @@ export const App: React.FC = () => {
       try {
         if (videoRef.current && canvasRef.current) {
           // Create pipeline components
-          const pipeline = PipelineFactory.createPipeline(
-            videoRef.current,
-            canvasRef.current
-          );
+          const pipeline = createPipeline(videoRef.current, canvasRef.current);
 
           pipelineRef.current = pipeline;
 
           // Get frame acquisition for direct media control
-          frameAcquisitionRef.current = PipelineFactory.createFrameAcquisition(
+          frameAcquisitionRef.current = createFrameAcquisition(
             videoRef.current,
             canvasRef.current
           ) as VideoFrameAcquisition;
@@ -107,7 +106,7 @@ export const App: React.FC = () => {
         pipelineRef.current.stop();
       }
     };
-  }, []);
+  }, [appState]);
 
   // Start camera
   const startCamera = async () => {
@@ -205,7 +204,13 @@ export const App: React.FC = () => {
     setStatus('Loading hardcoded video...');
     try {
       // Load the hardcoded video from public directory
+      // Make sure the path is correct - it needs to be relative to the public directory
       const videoURL = '/videos/swing-sample.mp4';
+      
+      if (!videoURL) {
+        throw new Error('Video URL is empty');
+      }
+      
       console.log(
         `[DEBUG] loadHardcodedVideo: Attempting to load video from ${videoURL}`
       );
@@ -401,16 +406,16 @@ export const App: React.FC = () => {
 
       switch (mode) {
         case 'both':
-          videoRef.current?.style.opacity = '1';
-          canvasRef.current?.style.display = 'block';
+          if (videoRef.current) videoRef.current.style.opacity = '1';
+          if (canvasRef.current) canvasRef.current.style.display = 'block';
           break;
         case 'video':
-          videoRef.current?.style.opacity = '1';
-          canvasRef.current?.style.display = 'none';
+          if (videoRef.current) videoRef.current.style.opacity = '1';
+          if (canvasRef.current) canvasRef.current.style.display = 'none';
           break;
         case 'overlay':
-          videoRef.current?.style.opacity = '0.1';
-          canvasRef.current?.style.display = 'block';
+          if (videoRef.current) videoRef.current.style.opacity = '0.1';
+          if (canvasRef.current) canvasRef.current.style.display = 'block';
           break;
       }
     }
@@ -483,7 +488,7 @@ export const App: React.FC = () => {
       }
       window.removeEventListener('resize', handleResize);
     };
-  }, [videoRef, canvasRef]);
+  }, []);
 
   return (
     <>

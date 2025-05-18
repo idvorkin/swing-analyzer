@@ -86,7 +86,7 @@ export class SwingAnalyzerViewModel {
     // Subscribe to pipeline results
     this.pipelineSubscription = this.pipeline.start().subscribe(
       (result: PipelineResult) => this.handlePipelineUpdate(result),
-      (error: any) => console.error('Pipeline error:', error),
+      (error: Error) => console.error('Pipeline error:', error),
       () => {
         console.log('Pipeline processing completed');
         this.appState.isProcessing = false;

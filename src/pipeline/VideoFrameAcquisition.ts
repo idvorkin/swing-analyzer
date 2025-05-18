@@ -97,7 +97,10 @@ export class VideoFrameAcquisition implements FrameAcquisition {
     const stream = this.videoElement.srcObject as MediaStream;
 
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+      const tracks = stream.getTracks();
+      for (const track of tracks) {
+        track.stop();
+      }
       this.videoElement.srcObject = null;
     }
   }
@@ -152,6 +155,12 @@ export class VideoFrameAcquisition implements FrameAcquisition {
     console.log(
       `[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Called with URL: ${url}`
     );
+
+    // Check for empty URL
+    if (!url || url.trim() === '') {
+      console.error('[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Empty URL provided');
+      return Promise.reject(new Error('Empty URL provided'));
+    }
 
     return new Promise<void>((resolve, reject) => {
       // Stop camera if running

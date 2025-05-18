@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import type { AppState } from '../types';
 
 interface VideoSectionProps {
@@ -49,23 +49,27 @@ const VideoSection: React.FC<VideoSectionProps> = ({
           id="load-hardcoded-btn"
           className="hardcoded-btn"
           onClick={loadHardcodedVideo}
+          type="button"
         >
           Load Hardcoded
         </button>
-        <button id="camera-btn" onClick={startCamera}>
+        <button id="camera-btn" onClick={startCamera} type="button">
           Start Camera
         </button>
         <button
           id="switch-camera-btn"
           onClick={switchCamera}
           disabled={!appState.usingCamera}
+          type="button"
         >
           Swap Camera
         </button>
       </div>
 
       <div className={`video-container ${getVideoContainerClass()}`}>
-        <video id="video" ref={videoRef} playsInline />
+        <video id="video" ref={videoRef} playsInline>
+          {/* Remove the track element with empty src that causes browser errors */}
+        </video>
         <canvas id="output-canvas" ref={canvasRef} />
         <div className="video-controls">
           <button
@@ -73,6 +77,7 @@ const VideoSection: React.FC<VideoSectionProps> = ({
             className="toggle-button"
             disabled={!appState.isModelLoaded}
             onClick={togglePlayPause}
+            type="button"
           >
             {isPlaying ? 'Pause' : 'Play'}
           </button>
@@ -80,6 +85,7 @@ const VideoSection: React.FC<VideoSectionProps> = ({
             id="stop-btn"
             disabled={!appState.isModelLoaded}
             onClick={stopVideo}
+            type="button"
           >
             Stop
           </button>

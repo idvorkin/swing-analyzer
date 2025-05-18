@@ -41,6 +41,7 @@ const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                 className="nav-btn"
                 disabled={appState.currentRepIndex <= 0}
                 onClick={navigateToPreviousRep}
+                type="button"
               >
                 ◀ Previous
               </button>
@@ -52,6 +53,7 @@ const AnalysisSection: React.FC<AnalysisSectionProps> = ({
                 className="nav-btn"
                 disabled={appState.currentRepIndex >= repCount - 1}
                 onClick={navigateToNextRep}
+                type="button"
               >
                 Next ▶
               </button>

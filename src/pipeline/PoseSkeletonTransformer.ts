@@ -224,8 +224,8 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
 
     if (nose && (leftEye || rightEye) && this.isPointVisible(nose)) {
       // Use visible eye, or average of both if available
-      let eyeX;
-      let eyeY;
+      let eyeX = 0;
+      let eyeY = 0;
 
       if (
         leftEye &&

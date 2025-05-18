@@ -63,16 +63,16 @@ export class SwingFormProcessor implements FormProcessor {
     if (hasTransition || (this.detectedPositions.size === 0 && newPosition)) {
       // Capture the checkpoint
       const checkpoint = this.captureCheckpoint(
-        newPosition!,
+        newPosition || FormPosition.Top,
         skeleton,
         timestamp
       );
 
       // Update last position
-      this.lastPosition = newPosition!;
+      this.lastPosition = newPosition || FormPosition.Top;
 
       // Store in detected positions map
-      this.detectedPositions.set(newPosition!, checkpoint);
+      this.detectedPositions.set(newPosition || FormPosition.Top, checkpoint);
 
       return of({
         checkpoint,

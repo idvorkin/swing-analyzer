@@ -1,5 +1,5 @@
 import type { Skeleton } from '../models/Skeleton';
-import { CocoBodyParts } from '../types';
+import { CocoBodyParts, type PoseKeypoint } from '../types';
 
 /**
  * Responsible for rendering skeleton and pose data on a canvas
@@ -66,14 +66,14 @@ export class SkeletonRenderer {
    */
   private drawConnections(
     ctx: CanvasRenderingContext2D,
-    keypoints: any[]
+    keypoints: PoseKeypoint[]
   ): void {
     // Set line style
     ctx.strokeStyle = this.connectionColor;
     ctx.lineWidth = 2;
 
     // Helper to determine if a point is visible enough to be used for connections
-    const isPointVisibleForSpine = (point: any): boolean => {
+    const isPointVisibleForSpine = (point: PoseKeypoint): boolean => {
       return point && point.visibility !== undefined && point.visibility > 0.5;
     };
 
@@ -192,7 +192,7 @@ export class SkeletonRenderer {
    */
   private drawKeypoints(
     ctx: CanvasRenderingContext2D,
-    keypoints: any[],
+    keypoints: PoseKeypoint[],
     timestamp: number
   ): void {
     // Determine if we should show the body part labels
