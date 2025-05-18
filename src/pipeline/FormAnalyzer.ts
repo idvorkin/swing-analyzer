@@ -39,29 +39,36 @@ export class FormAnalyzer implements FormCheckpointDetection {
     
     const skeleton = skeletonEvent.skeleton;
     const spineAngle = skeleton.getSpineAngle();
+    const timestamp = skeletonEvent.poseEvent.frameEvent.timestamp;
     
-    // Detect position based on spine angle
-    const detectedPosition = this.detectPosition(spineAngle);
+    // If this is a new rep, reset positions
+    if (repCount === 0 || this.lastRepCount !== repCount) {
+      this.detectedPositions.clear();
+      this.lastPosition = FormPosition.Top;
+      this.lastRepCount = repCount;
+    }
     
-    // Create checkpoint event (in Phase 2, this will capture image data)
-    if (detectedPosition !== null && detectedPosition !== this.lastPosition) {
-      // Position transition detected
-      this.lastPosition = detectedPosition;
+    // Detect position based on spine angle and previous position
+    const {newPosition, hasTransition} = this.detectPositionTransition(spineAngle);
+    
+    // If we have a position transition or it's a new rep's first position
+    if (hasTransition || (this.detectedPositions.size === 0 && newPosition)) {
+      // Capture the checkpoint
+      const checkpoint = this.captureCheckpoint(
+        newPosition!, 
+        skeleton, 
+        timestamp
+      );
       
-      // In Phase 2, we'll create a real checkpoint here
-      const checkpoint: FormCheckpoint = {
-        position: detectedPosition,
-        timestamp: skeletonEvent.poseEvent.frameEvent.timestamp,
-        image: new ImageData(1, 1), // Placeholder, will be implemented in Phase 2
-        spineAngle: spineAngle
-      };
+      // Update last position
+      this.lastPosition = newPosition!;
       
       // Store in detected positions map
-      this.detectedPositions.set(detectedPosition, checkpoint);
+      this.detectedPositions.set(newPosition!, checkpoint);
       
       return of({
         checkpoint,
-        position: detectedPosition,
+        position: newPosition,
         skeletonEvent
       });
     }
@@ -74,49 +81,124 @@ export class FormAnalyzer implements FormCheckpointDetection {
     });
   }
   
+  // Track the last rep count to detect new reps
+  private lastRepCount = -1;
+  
   /**
    * Reset all detected positions
    */
   reset(): void {
     this.detectedPositions.clear();
     this.lastPosition = FormPosition.Top;
+    this.lastRepCount = -1;
   }
   
   /**
-   * Detect position based on spine angle
-   * This is a simplified placeholder for Phase 2 implementation
+   * Detect position transitions based on spine angle and state machine
    */
-  private detectPosition(spineAngle: number): FormPosition | null {
+  private detectPositionTransition(spineAngle: number): {newPosition: FormPosition | null, hasTransition: boolean} {
     const absAngle = Math.abs(spineAngle);
+    let newPosition: FormPosition | null = null;
+    let hasTransition = false;
     
-    // Simple state machine for position detection
+    // State machine for position detection
     switch (this.lastPosition) {
       case FormPosition.Top:
-        if (absAngle > this.HINGE_THRESHOLD) {
-          return FormPosition.Hinge;
+        // From Top, we can only go to Hinge
+        if (absAngle > this.HINGE_THRESHOLD && !this.detectedPositions.has(FormPosition.Hinge)) {
+          newPosition = FormPosition.Hinge;
+          hasTransition = true;
         }
         break;
         
       case FormPosition.Hinge:
-        if (absAngle > this.BOTTOM_THRESHOLD) {
-          return FormPosition.Bottom;
+        // From Hinge, we can go to Bottom
+        if (absAngle > this.BOTTOM_THRESHOLD && !this.detectedPositions.has(FormPosition.Bottom)) {
+          newPosition = FormPosition.Bottom;
+          hasTransition = true;
         }
         break;
         
       case FormPosition.Bottom:
-        if (absAngle < this.RELEASE_THRESHOLD) {
-          return FormPosition.Release;
+        // From Bottom, we can go to Release
+        if (absAngle < this.RELEASE_THRESHOLD && !this.detectedPositions.has(FormPosition.Release)) {
+          newPosition = FormPosition.Release;
+          hasTransition = true;
         }
         break;
         
       case FormPosition.Release:
+        // From Release, we go back to Top for the next rep
+        // This happens automatically when the rep counter increases
         if (absAngle < this.HINGE_THRESHOLD) {
-          return FormPosition.Top;
+          newPosition = FormPosition.Top;
+          hasTransition = true;
         }
         break;
     }
     
-    // No position change
-    return null;
+    return {newPosition, hasTransition};
+  }
+  
+  /**
+   * Capture a checkpoint from the current video frame
+   */
+  private captureCheckpoint(position: FormPosition, skeleton: Skeleton, timestamp: number): FormCheckpoint {
+    console.log(`Capturing position: ${position}, spine angle: ${skeleton.getSpineAngle().toFixed(2)}`);
+    
+    // Create a temporary canvas to blend video and skeleton
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = this.canvasElement.width;
+    tempCanvas.height = this.canvasElement.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    let imageData = new ImageData(1, 1); // Default
+    
+    if (tempCtx) {
+      // First draw the video frame
+      tempCtx.drawImage(
+        this.videoElement,
+        0, 0,
+        tempCanvas.width,
+        tempCanvas.height
+      );
+      
+      // Then draw the canvas with the skeleton overlay
+      tempCtx.drawImage(
+        this.canvasElement,
+        0, 0,
+        tempCanvas.width,
+        tempCanvas.height
+      );
+      
+      // Get the combined image data
+      imageData = tempCtx.getImageData(
+        0, 0,
+        tempCanvas.width,
+        tempCanvas.height
+      );
+    }
+    
+    // Create a checkpoint with the capture
+    return {
+      position,
+      timestamp,
+      image: imageData,
+      spineAngle: skeleton.getSpineAngle()
+    };
+  }
+  
+  /**
+   * Get all detected positions for the current rep
+   */
+  getDetectedPositions(): Map<FormPosition, FormCheckpoint> {
+    return this.detectedPositions;
+  }
+  
+  /**
+   * Check if a specific position has been detected in the current rep
+   */
+  hasDetectedPosition(position: FormPosition): boolean {
+    return this.detectedPositions.has(position);
   }
 } 

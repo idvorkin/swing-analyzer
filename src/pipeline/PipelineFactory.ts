@@ -1,9 +1,9 @@
 import { Pipeline } from './Pipeline';
-import { FrameProcessor } from './FrameProcessor';
 import { PoseDetector } from './PoseDetector';
 import { SkeletonBuilder } from './SkeletonBuilder';
 import { FormAnalyzer } from './FormAnalyzer';
 import { RepDetector } from './RepDetector';
+import { VideoFrameAcquisition } from './FrameAcquisition';
 import { FrameAcquisition, PoseDetection, SkeletonConstruction, FormCheckpointDetection, SwingRepAnalysis } from './PipelineInterfaces';
 
 /**
@@ -18,7 +18,7 @@ export class PipelineFactory {
     canvasElement: HTMLCanvasElement
   ): Pipeline {
     // Create each pipeline stage
-    const frameProcessor = PipelineFactory.createFrameProcessor(videoElement, canvasElement);
+    const frameAcquisition = PipelineFactory.createFrameAcquisition(videoElement, canvasElement);
     const poseDetector = PipelineFactory.createPoseDetector();
     const skeletonBuilder = PipelineFactory.createSkeletonBuilder();
     const formAnalyzer = PipelineFactory.createFormAnalyzer(videoElement, canvasElement);
@@ -26,7 +26,7 @@ export class PipelineFactory {
     
     // Create the pipeline with all stages
     return new Pipeline(
-      frameProcessor,
+      frameAcquisition,
       poseDetector,
       skeletonBuilder,
       formAnalyzer,
@@ -35,13 +35,13 @@ export class PipelineFactory {
   }
   
   /**
-   * Create a frame processor
+   * Create a frame acquisition component
    */
-  static createFrameProcessor(
+  static createFrameAcquisition(
     videoElement: HTMLVideoElement,
     canvasElement: HTMLCanvasElement
   ): FrameAcquisition {
-    return new FrameProcessor(videoElement, canvasElement);
+    return new VideoFrameAcquisition(videoElement, canvasElement);
   }
   
   /**

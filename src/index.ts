@@ -3,8 +3,8 @@ import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 import '@tensorflow/tfjs-converter';
 
-// Import all other modules
-import './main';
+// Import application
+import './app';
 
 // Initialize TensorFlow backend
 async function initialize() {

@@ -5,6 +5,29 @@ import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 /**
+ * Defines body part connections for the skeleton
+ */
+export const SKELETON_CONNECTIONS = [
+  // Torso
+  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.RIGHT_SHOULDER],
+  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_HIP],
+  [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_HIP],
+  [CocoBodyParts.LEFT_HIP, CocoBodyParts.RIGHT_HIP],
+  
+  // Arms
+  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_ELBOW],
+  [CocoBodyParts.LEFT_ELBOW, CocoBodyParts.LEFT_WRIST],
+  [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_ELBOW],
+  [CocoBodyParts.RIGHT_ELBOW, CocoBodyParts.RIGHT_WRIST],
+  
+  // Legs
+  [CocoBodyParts.LEFT_HIP, CocoBodyParts.LEFT_KNEE],
+  [CocoBodyParts.LEFT_KNEE, CocoBodyParts.LEFT_ANKLE],
+  [CocoBodyParts.RIGHT_HIP, CocoBodyParts.RIGHT_KNEE],
+  [CocoBodyParts.RIGHT_KNEE, CocoBodyParts.RIGHT_ANKLE],
+];
+
+/**
  * Builds a skeleton from pose keypoints detected by ML model
  */
 export class SkeletonBuilder implements SkeletonConstruction {
@@ -37,11 +60,81 @@ export class SkeletonBuilder implements SkeletonConstruction {
   
   /**
    * Calculate the angle of the spine from vertical (0° is upright)
-   * This will be moved from SwingAnalyzer.ts in phase 2
+   * Adapted from SwingAnalyzer.calculateSpineVertical
    */
   private calculateSpineVertical(keypoints: PoseKeypoint[]): number {
-    // Currently a placeholder - will be implemented in phase 2
-    // This logic will come from SwingAnalyzer.calculateSpineVertical
+    // 1. First approach: Use shoulders and hips if available (best)
+    const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
+    const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
+    const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
+    const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+    
+    // Safe array of points that exist and are visible
+    const safeShoulders = [];
+    const safeHips = [];
+    
+    if (leftShoulder && this.isPointVisible(leftShoulder)) safeShoulders.push(leftShoulder);
+    if (rightShoulder && this.isPointVisible(rightShoulder)) safeShoulders.push(rightShoulder);
+    if (leftHip && this.isPointVisible(leftHip)) safeHips.push(leftHip);
+    if (rightHip && this.isPointVisible(rightHip)) safeHips.push(rightHip);
+    
+    if (safeShoulders.length > 0 && safeHips.length > 0) {
+      // Calculate average positions
+      const topX = safeShoulders.reduce((sum, p) => sum + p.x, 0) / safeShoulders.length;
+      const topY = safeShoulders.reduce((sum, p) => sum + p.y, 0) / safeShoulders.length;
+      const bottomX = safeHips.reduce((sum, p) => sum + p.x, 0) / safeHips.length;
+      const bottomY = safeHips.reduce((sum, p) => sum + p.y, 0) / safeHips.length;
+      
+      // Calculate angle from vertical axis
+      const deltaX = topX - bottomX;
+      const deltaY = bottomY - topY; // Inverted because Y axis points down in screen coordinates
+      
+      const angle = Math.abs(Math.atan2(deltaX, deltaY) * 180 / Math.PI);
+      console.log(`Spine angle calculated (shoulders-hips): ${angle.toFixed(2)}°`);
+      return angle;
+    }
+    
+    // 2. Second approach: Use face orientation as fallback
+    const nose = keypoints[CocoBodyParts.NOSE];
+    const leftEye = keypoints[CocoBodyParts.LEFT_EYE];
+    const rightEye = keypoints[CocoBodyParts.RIGHT_EYE];
+    
+    if (nose && (leftEye || rightEye) && this.isPointVisible(nose)) {
+      // Use visible eye, or average of both if available
+      let eyeX, eyeY;
+      
+      if (leftEye && rightEye && this.isPointVisible(leftEye) && this.isPointVisible(rightEye)) {
+        eyeX = (leftEye.x + rightEye.x) / 2;
+        eyeY = (leftEye.y + rightEye.y) / 2;
+      } else if (leftEye && this.isPointVisible(leftEye)) {
+        eyeX = leftEye.x;
+        eyeY = leftEye.y;
+      } else if (rightEye && this.isPointVisible(rightEye)) {
+        eyeX = rightEye.x;
+        eyeY = rightEye.y;
+      } else {
+        // No eyes visible
+        console.log("No visible eyes found for angle calculation");
+        return 0;
+      }
+      
+      // Calculate angle of face from vertical
+      // This assumes head tilt correlates with body tilt
+      const deltaX = eyeX - nose.x;
+      const deltaY = nose.y - eyeY; // Inverted because Y axis points down
+      
+      // Add 90 degrees to convert from face orientation to body orientation (approximate)
+      const faceAngle = Math.atan2(deltaX, deltaY) * 180 / Math.PI;
+      // Map face angle to spine angle - this is a rough approximation
+      // We need to adjust because face and spine angles have different reference points
+      let spineAngle = Math.abs(faceAngle) * 0.5;
+      
+      console.log(`Spine angle approximated from face: ${spineAngle.toFixed(2)}° (face angle: ${faceAngle.toFixed(2)}°)`);
+      return spineAngle;
+    }
+    
+    // 3. If nothing else works, use vertical screen orientation
+    console.log("Could not find enough points to calculate spine angle");
     return 0;
   }
   
@@ -60,7 +153,23 @@ export class SkeletonBuilder implements SkeletonConstruction {
     // Check if all required keypoints are visible
     return requiredParts.every(index => {
       const point = keypoints[index];
-      return point && point.visibility !== undefined && point.visibility > 0.5;
+      return point && this.isPointVisible(point);
     });
+  }
+  
+  /**
+   * Check if a keypoint is visible with sufficient confidence
+   */
+  private isPointVisible(point: PoseKeypoint): boolean {
+    if (!point) {
+      return false;
+    }
+    
+    // Different models use different confidence thresholds
+    // MoveNet uses 'score', BlazePose uses 'visibility'
+    const confidence = point.score !== undefined ? point.score : 
+                       point.visibility !== undefined ? point.visibility : 0;
+    
+    return confidence > 0.2; // Threshold to consider a point visible
   }
 } 

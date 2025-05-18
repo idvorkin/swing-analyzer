@@ -2,6 +2,7 @@ import { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import { AppState, FormPosition } from '../types';
 import { Skeleton } from '../models/Skeleton';
 import { Subscription } from 'rxjs';
+import { SkeletonRenderer } from './SkeletonRenderer';
 
 /**
  * ViewModel that coordinates between the processing pipeline and the UI
@@ -13,6 +14,9 @@ export class SwingAnalyzerViewModel {
   
   // Subscription to pipeline results
   private pipelineSubscription: Subscription | null = null;
+  
+  // Skeleton renderer
+  private skeletonRenderer: SkeletonRenderer;
   
   constructor(
     private pipeline: Pipeline,
@@ -40,6 +44,13 @@ export class SwingAnalyzerViewModel {
       currentRepIndex: 0,
       ...initialState
     };
+    
+    // Initialize skeleton renderer
+    this.skeletonRenderer = new SkeletonRenderer(this.canvasElement);
+    this.skeletonRenderer.setBodyPartDisplay(
+      this.appState.showBodyParts,
+      this.appState.bodyPartDisplayTime
+    );
   }
   
   /**
@@ -140,11 +151,56 @@ export class SwingAnalyzerViewModel {
   
   /**
    * Render skeleton on canvas
-   * This is a placeholder - in phase 2 we'll implement the full visualization
    */
   private renderSkeleton(skeleton: Skeleton): void {
-    // This will be implemented in phase 2
-    // Will draw the skeleton connections and keypoints
+    if (skeleton) {
+      this.skeletonRenderer.renderSkeleton(skeleton, performance.now());
+    }
+  }
+  
+  /**
+   * Set body part display options
+   */
+  setBodyPartDisplay(show: boolean, displaySeconds: number): void {
+    this.appState.showBodyParts = show;
+    this.appState.bodyPartDisplayTime = displaySeconds;
+    this.skeletonRenderer.setBodyPartDisplay(show, displaySeconds);
+  }
+  
+  /**
+   * Set debug mode
+   */
+  setDebugMode(enabled: boolean): void {
+    this.skeletonRenderer.setDebugMode(enabled);
+  }
+  
+  /**
+   * Set display mode
+   */
+  setDisplayMode(mode: 'both' | 'video' | 'overlay'): void {
+    this.appState.displayMode = mode;
+    
+    switch (mode) {
+      case 'both':
+        this.videoElement.style.opacity = '1';
+        this.canvasElement.style.display = 'block';
+        break;
+      case 'video':
+        this.videoElement.style.opacity = '1';
+        this.canvasElement.style.display = 'none';
+        break;
+      case 'overlay':
+        this.videoElement.style.opacity = '0.1';
+        this.canvasElement.style.display = 'block';
+        
+        // Set canvas background to black
+        const ctx = this.canvasElement.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = 'black';
+          ctx.fillRect(0, 0, this.canvasElement.width, this.canvasElement.height);
+        }
+        break;
+    }
   }
   
   /**
