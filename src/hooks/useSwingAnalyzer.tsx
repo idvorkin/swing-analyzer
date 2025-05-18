@@ -427,6 +427,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     canvasRef,
     fileInputRef,
     checkpointGridRef,
+    pipelineRef,
     
     // Actions
     startCamera,

@@ -180,6 +180,13 @@ export class Pipeline {
   getLatestSkeleton(): Skeleton | null {
     return this.latestSkeleton;
   }
+
+  /**
+   * Get the rep processor
+   */
+  getRepProcessor(): RepProcessor {
+    return this.repProcessor;
+  }
 }
 
 /**

@@ -1,5 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import { SwingPosition, type RepData, type FormCheckpoint } from '../types';
+
+// Interface for the selected checkpoint when in fullscreen mode
+interface SelectedCheckpoint {
+  repIndex: number;
+  position: SwingPosition;
+}
 
 const AnalysisSection: React.FC = () => {
   const {
@@ -10,8 +17,260 @@ const AnalysisSection: React.FC = () => {
     checkpointGridRef,
     navigateToPreviousRep,
     navigateToNextRep,
-    setDisplayMode
+    setDisplayMode,
+    pipelineRef
   } = useSwingAnalyzerContext();
+
+  // State for fullscreen mode
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedCheckpoint, setSelectedCheckpoint] = useState<SelectedCheckpoint | null>(null);
+
+  // Position order for navigation
+  const positionOrder = [
+    SwingPosition.Top,
+    SwingPosition.Hinge,
+    SwingPosition.Bottom,
+    SwingPosition.Release
+  ];
+
+  // Position labels for display
+  const positionLabels = {
+    [SwingPosition.Top]: 'Top',
+    [SwingPosition.Hinge]: 'Hinge',
+    [SwingPosition.Bottom]: 'Bottom',
+    [SwingPosition.Release]: 'Release'
+  };
+
+  // Effect to render checkpoints when rep index changes
+  useEffect(() => {
+    renderCheckpointGrid();
+  }, [appState.currentRepIndex, repCount]);
+
+  // Render the checkpoint grid for the current rep
+  const renderCheckpointGrid = () => {
+    const gridContainer = checkpointGridRef.current;
+    if (!gridContainer || !pipelineRef.current) return;
+
+    // Clear previous content
+    gridContainer.innerHTML = '';
+
+    // Exit if no reps
+    if (repCount === 0) {
+      gridContainer.innerHTML = '<div class="no-checkpoints">Complete a rep to see checkpoints</div>';
+      return;
+    }
+
+    // Get the rep processor from the pipeline
+    const repProcessor = pipelineRef.current.getRepProcessor();
+    if (!repProcessor) return;
+
+    // Get completed reps
+    const completedReps = repProcessor.getAllReps();
+    
+    // Check if we have reps
+    if (completedReps.length === 0) return;
+
+    // Get the current rep based on currentRepIndex
+    const currentRep = completedReps[appState.currentRepIndex];
+    if (!currentRep) return;
+
+    // Create grid layout
+    const gridLayout = document.createElement('div');
+    gridLayout.className = 'checkpoint-grid';
+
+    // Add each position to the grid
+    positionOrder.forEach((position) => {
+      const checkpoint = currentRep.checkpoints.get(position);
+      const cell = document.createElement('div');
+      cell.className = 'checkpoint-cell';
+      
+      if (checkpoint) {
+        // Create a canvas and render the checkpoint image
+        const canvas = document.createElement('canvas');
+        canvas.width = checkpoint.image.width;
+        canvas.height = checkpoint.image.height;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.objectFit = 'contain';
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.putImageData(checkpoint.image, 0, 0);
+        }
+        
+        cell.appendChild(canvas);
+        
+        // Add position label
+        const label = document.createElement('div');
+        label.className = 'position-label';
+        label.textContent = positionLabels[position];
+        
+        // Add angle info
+        const angleLabel = document.createElement('div');
+        angleLabel.className = 'angle-label';
+        angleLabel.textContent = `${Math.round(checkpoint.spineAngle)}°`;
+        
+        cell.appendChild(label);
+        cell.appendChild(angleLabel);
+        
+        // Add click handler for fullscreen
+        cell.addEventListener('click', () => {
+          setSelectedCheckpoint({
+            repIndex: appState.currentRepIndex,
+            position
+          });
+          setIsFullscreen(true);
+        });
+      } else {
+        // Empty cell with position name
+        cell.textContent = `${positionLabels[position]} - Not detected`;
+        cell.style.display = 'flex';
+        cell.style.alignItems = 'center';
+        cell.style.justifyContent = 'center';
+        cell.style.color = '#888';
+        cell.style.fontSize = '12px';
+      }
+      
+      gridLayout.appendChild(cell);
+    });
+
+    // Add grid to container
+    gridContainer.appendChild(gridLayout);
+  };
+
+  // Fullscreen navigation
+  const navigateFullscreen = (direction: 'next' | 'prev') => {
+    if (!selectedCheckpoint || !pipelineRef.current) return;
+    
+    const repProcessor = pipelineRef.current.getRepProcessor();
+    if (!repProcessor) return;
+    
+    const completedReps = repProcessor.getAllReps();
+    if (completedReps.length === 0) return;
+    
+    const { repIndex, position } = selectedCheckpoint;
+    const currentPosIndex = positionOrder.indexOf(position);
+    
+    let newPosIndex = currentPosIndex;
+    let newRepIndex = repIndex;
+    
+    if (direction === 'next') {
+      newPosIndex++;
+      if (newPosIndex >= positionOrder.length) {
+        newPosIndex = 0;
+        newRepIndex = Math.min(repIndex + 1, completedReps.length - 1);
+      }
+    } else {
+      newPosIndex--;
+      if (newPosIndex < 0) {
+        newPosIndex = positionOrder.length - 1;
+        newRepIndex = Math.max(repIndex - 1, 0);
+      }
+    }
+    
+    // Update app state if rep changed
+    if (newRepIndex !== repIndex) {
+      if (newRepIndex > repIndex) {
+        navigateToNextRep();
+      } else {
+        navigateToPreviousRep();
+      }
+    }
+    
+    setSelectedCheckpoint({
+      repIndex: newRepIndex,
+      position: positionOrder[newPosIndex]
+    });
+  };
+
+  // Close fullscreen
+  const closeFullscreen = () => {
+    setIsFullscreen(false);
+    setSelectedCheckpoint(null);
+  };
+
+  // Render fullscreen checkpoint
+  const renderFullscreenCheckpoint = () => {
+    if (!selectedCheckpoint || !pipelineRef.current) return null;
+    
+    const repProcessor = pipelineRef.current.getRepProcessor();
+    if (!repProcessor) return null;
+    
+    const completedReps = repProcessor.getAllReps();
+    if (completedReps.length === 0 || selectedCheckpoint.repIndex >= completedReps.length) return null;
+    
+    const currentRep = completedReps[selectedCheckpoint.repIndex];
+    const checkpoint = currentRep.checkpoints.get(selectedCheckpoint.position);
+    
+    if (!checkpoint) return (
+      <div className="fullscreen-message">
+        Checkpoint not available
+      </div>
+    );
+    
+    // Create a canvas element to render the image data
+    return (
+      <div className="fullscreen-checkpoint">
+        <div className="fullscreen-header">
+          <div className="fullscreen-title">
+            Rep {currentRep.repNumber} - {positionLabels[selectedCheckpoint.position]} Position
+          </div>
+          <div className="fullscreen-spine-angle">
+            Spine Angle: {Math.round(checkpoint.spineAngle)}°
+          </div>
+        </div>
+        
+        <div className="fullscreen-image">
+          <canvas
+            ref={(canvas) => {
+              if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  canvas.width = checkpoint.image.width;
+                  canvas.height = checkpoint.image.height;
+                  ctx.putImageData(checkpoint.image, 0, 0);
+                }
+              }
+            }}
+            style={{
+              maxWidth: '100%',
+              maxHeight: 'calc(100vh - 150px)',
+              objectFit: 'contain'
+            }}
+          />
+        </div>
+        
+        <div className="fullscreen-controls">
+          <button
+            className="fullscreen-nav-btn"
+            onClick={() => navigateFullscreen('prev')}
+          >
+            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+            </svg>
+            Previous
+          </button>
+          
+          <button
+            className="fullscreen-close-btn"
+            onClick={closeFullscreen}
+          >
+            Close
+          </button>
+          
+          <button
+            className="fullscreen-nav-btn"
+            onClick={() => navigateFullscreen('next')}
+          >
+            Next
+            <svg className="icon-right" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <section className="analysis-section">
@@ -123,6 +382,13 @@ const AnalysisSection: React.FC = () => {
           </label>
         </div>
       </div>
+
+      {/* Fullscreen checkpoint modal */}
+      {isFullscreen && (
+        <div className="fullscreen-modal">
+          {renderFullscreenCheckpoint()}
+        </div>
+      )}
     </section>
   );
 };
