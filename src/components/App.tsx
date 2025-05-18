@@ -38,6 +38,10 @@ export const App: React.FC = () => {
         <nav>
           <Link to="/">Home</Link> | <Link to="/debug">Debug Model Loader</Link>
         </nav>
+        <div className="external-links">
+          <a href="https://github.com/idvorkin/swing-analyzer" target="_blank" rel="noopener noreferrer">Source Code on GitHub</a> | 
+          <a href="https://idvork.in/kettlebell" target="_blank" rel="noopener noreferrer">What are Swings?</a>
+        </div>
       </footer>
     </SwingAnalyzerProvider>
   );
