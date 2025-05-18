@@ -56,7 +56,7 @@ export class SwingRepProcessor implements RepProcessor {
         this.detectedPositions.add(SwingPosition.Top); // Start the next rep at Top
 
         // Log the rep completion
-        console.log(`Rep ${this.repCount} detected - full swing cycle completed`, this.detectedPositions);
+        console.log(`Rep ${this.repCount} detected - full swing cycle completed`, this.currentRep);
       }
     }
 
