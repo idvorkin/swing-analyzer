@@ -1,35 +1,22 @@
-import type React from 'react';
-import type { AppState } from '../types';
+import React from 'react';
+import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 
-interface VideoSectionProps {
-  videoRef: React.MutableRefObject<HTMLVideoElement | null>;
-  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
-  fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
-  appState: AppState;
-  isPlaying: boolean;
-  startCamera: () => void;
-  switchCamera: () => void;
-  handleVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  loadHardcodedVideo: () => void;
-  togglePlayPause: () => void;
-  stopVideo: () => void;
-  getVideoContainerClass: () => string;
-}
+const VideoSection: React.FC = () => {
+  const {
+    videoRef,
+    canvasRef,
+    fileInputRef,
+    appState,
+    isPlaying,
+    startCamera,
+    switchCamera,
+    handleVideoUpload,
+    loadHardcodedVideo,
+    togglePlayPause,
+    stopVideo,
+    getVideoContainerClass
+  } = useSwingAnalyzerContext();
 
-const VideoSection: React.FC<VideoSectionProps> = ({
-  videoRef,
-  canvasRef,
-  fileInputRef,
-  appState,
-  isPlaying,
-  startCamera,
-  switchCamera,
-  handleVideoUpload,
-  loadHardcodedVideo,
-  togglePlayPause,
-  stopVideo,
-  getVideoContainerClass,
-}) => {
   return (
     <>
       <div className="top-controls">

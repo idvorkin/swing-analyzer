@@ -1,27 +1,18 @@
-import type React from 'react';
-import type { AppState } from '../types';
+import React from 'react';
+import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 
-interface AnalysisSectionProps {
-  appState: AppState;
-  status: string;
-  repCount: number;
-  spineAngle: number;
-  checkpointGridRef: React.MutableRefObject<HTMLDivElement | null>;
-  navigateToPreviousRep: () => void;
-  navigateToNextRep: () => void;
-  setDisplayMode: (mode: 'both' | 'video' | 'overlay') => void;
-}
+const AnalysisSection: React.FC = () => {
+  const {
+    appState,
+    status,
+    repCount,
+    spineAngle,
+    checkpointGridRef,
+    navigateToPreviousRep,
+    navigateToNextRep,
+    setDisplayMode
+  } = useSwingAnalyzerContext();
 
-const AnalysisSection: React.FC<AnalysisSectionProps> = ({
-  appState,
-  status,
-  repCount,
-  spineAngle,
-  checkpointGridRef,
-  navigateToPreviousRep,
-  navigateToNextRep,
-  setDisplayMode,
-}) => {
   return (
     <>
       <div className="metrics">
