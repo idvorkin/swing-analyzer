@@ -62,7 +62,7 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       const detectorConfig = {
         modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
         enableSmoothing: true,
-        // modelUrl: 'https://storage.googleapis.com/tfjs-models/google/movenet/singlepose/lightning/4/model.json', // <-- COMMENT THIS OUT
+        // No modelUrl - use default from tfhub.dev
       };
 
       this.detector = await poseDetection.createDetector(

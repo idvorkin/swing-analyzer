@@ -106,7 +106,7 @@ const DebugModelLoaderPage: React.FC = () => {
       const detectorConfig: poseDetection.MoveNetModelConfig = {
         modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
         enableSmoothing: true,
-        modelUrl: '/models/movenet-lightning/model.json', // Local model URL
+        // No modelUrl - use default from tfhub.dev
       };
       console.log('DebugPage: Using detectorConfig for Pipeline Logic:', detectorConfig);
 
