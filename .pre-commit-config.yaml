@@ -25,6 +25,6 @@ repos:
         entry: npx tsc --noEmit
         language: node
         pass_filenames: false
-        types: [ts, tsx]
-        # Run on all TypeScript files, regardless of which ones changed
+        files: \.(ts|tsx)$
+        types: [file]
         require_serial: true
