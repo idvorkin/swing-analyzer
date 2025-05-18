@@ -1,0 +1,21 @@
+repos:
+  # Biome for JavaScript, TypeScript, JSON, CSS, JSX, etc.
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v1.0.0
+    hooks:
+      - id: biome-check
+        name: Biome (check)
+        description: Run Biome's checks on supported files
+        files: \.(js|ts|jsx|tsx|json|css)$
+        types: [file]
+  
+  # Prettier as fallback for file types Biome doesn't support
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        name: Prettier (fallback)
+        exclude: \.(js|ts|jsx|tsx|json|css)$
+        types_or: [markdown, yaml, html, scss, less, xml, vue, svelte]
+        additional_dependencies:
+          - prettier@3.1.0 
