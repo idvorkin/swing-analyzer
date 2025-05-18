@@ -7,17 +7,19 @@ test.describe('Swing Analyzer', () => {
     await page.goto('http://localhost:1234');
 
     // Wait for the model to load
-    await page.waitForSelector('#status:has-text("Ready")');
+    await page.waitForSelector('.status-indicator:has-text("Ready")');
 
     // Click the "Load Hardcoded" button
     await page.click('#load-hardcoded-btn');
 
     // Wait for the video to load
-    await page.waitForSelector('#status:has-text("Hardcoded video loaded.")');
+    await page.waitForSelector(
+      '.status-indicator:has-text("Hardcoded video loaded.")'
+    );
 
     // Verify that "Hardcoded video loaded." is visible in the UI
     await expect(
-      page.locator('#status:has-text("Hardcoded video loaded.")')
+      page.locator('.status-indicator:has-text("Hardcoded video loaded.")')
     ).toBeVisible();
 
     // Verify that the video element has a source
