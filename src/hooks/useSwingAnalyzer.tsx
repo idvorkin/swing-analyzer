@@ -45,8 +45,6 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const pipelineRef = useRef<Pipeline | null>(null);
   const frameAcquisitionRef = useRef<VideoFrameAcquisition | null>(null);
   const skeletonRendererRef = useRef<SkeletonRenderer | null>(null);
-  const pipelineSubscriptionRef = useRef<any>(null);
-  const skeletonSubscriptionRef = useRef<any>(null);
 
   // Initialize pipeline and models
   useEffect(() => {
@@ -86,23 +84,30 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
     // Cleanup on unmount
     return () => {
-      stopProcessing();
+      if (pipelineRef.current) {
+        stopProcessing();
+        pipelineRef.current = null;
+      }
+      
+      if (frameAcquisitionRef.current) {
+        try {
+          frameAcquisitionRef.current.stopCamera();
+        } catch (err) {
+          console.error('Error stopping camera:', err);
+        }
+        frameAcquisitionRef.current = null;
+      }
     };
   }, []);
 
-  // Start processing pipeline
-  const startProcessing = useCallback(() => {
-    console.log('[DEBUG] startProcessing: Function called');
+  // Setup persistent subscriptions to pipeline events and start it once
+  useEffect(() => {
+    if (!pipelineRef.current) return;
     
-    if (!pipelineRef.current || appState.isProcessing) return;
-
     const pipeline = pipelineRef.current;
     
-    // Subscribe to pipeline results
-    const pipelineObservable = pipeline.start();
-    
     // Subscribe to skeleton events to render every detected skeleton
-    skeletonSubscriptionRef.current = pipeline.getSkeletonEvents().subscribe({
+    const skeletonSubscription = pipeline.getSkeletonEvents().subscribe({
       next: (skeletonEvent: SkeletonEvent) => {
         if (skeletonEvent.skeleton) {
           setSpineAngle(Math.round(skeletonEvent.skeleton.getSpineAngle() || 0));
@@ -116,7 +121,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     });
     
     // Subscribe to pipeline results for rep counting and other state
-    pipelineSubscriptionRef.current = pipelineObservable.subscribe({
+    const pipelineObservable = pipeline.start();
+    const pipelineSubscription = pipelineObservable.subscribe({
       next: (result: PipelineResult) => {
         // Update rep count
         setRepCount(result.repCount);
@@ -131,26 +137,67 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       }
     });
 
+    // Mark pipeline as processing now - it will automatically respond to video play/pause
     setAppState((prev) => ({ ...prev, isProcessing: true }));
-  }, [appState.isProcessing]);
+    
+    // Clean up subscriptions on unmount
+    return () => {
+      // Make sure pipeline is stopped before unsubscribing
+      pipeline.stop();
+      skeletonSubscription.unsubscribe();
+      pipelineSubscription.unsubscribe();
+    };
+  }, []);
 
-  // Stop processing pipeline
+  // Add video event listeners to manage UI state only (not pipeline)
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    const handlePlay = () => {
+      setIsPlaying(true);
+      setVideoStartTime(performance.now());
+      // Don't manage pipeline here - VideoFrameAcquisition handles this internally
+    };
+    
+    const handlePause = () => {
+      setIsPlaying(false);
+      // Don't manage pipeline here - VideoFrameAcquisition handles this internally
+    };
+    
+    const handleEnded = () => {
+      setIsPlaying(false);
+      // When video ends completely, we should reset the pipeline
+      reset();
+    };
+    
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+    video.addEventListener('ended', handleEnded);
+    
+    return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      video.removeEventListener('ended', handleEnded);
+    };
+  }, []);
+
+  // Manual control of pipeline - rarely needed now
+  const startProcessing = useCallback(() => {
+    if (!pipelineRef.current) return;
+    
+    // Pipeline will automatically respond to video play/pause
+    pipelineRef.current.start();
+    setAppState((prev) => ({ ...prev, isProcessing: true }));
+  }, []);
+
+  // Manual control of pipeline - rarely needed now
   const stopProcessing = useCallback(() => {
-    if (!pipelineRef.current || !appState.isProcessing) return;
-
-    if (pipelineSubscriptionRef.current) {
-      pipelineSubscriptionRef.current.unsubscribe();
-      pipelineSubscriptionRef.current = null;
-    }
-
-    if (skeletonSubscriptionRef.current) {
-      skeletonSubscriptionRef.current.unsubscribe();
-      skeletonSubscriptionRef.current = null;
-    }
-
+    if (!pipelineRef.current) return;
+    
     pipelineRef.current.stop();
     setAppState((prev) => ({ ...prev, isProcessing: false }));
-  }, [appState.isProcessing]);
+  }, []);
 
   // Reset state
   const reset = useCallback(() => {
@@ -221,26 +268,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     }
   }, []);
 
-  // Play video explicitly
-  const play = useCallback(() => {
-    if (!videoRef.current || !appState.isModelLoaded) return;
-
-    if (videoRef.current.paused) {
-      videoRef.current
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          setVideoStartTime(performance.now());
-          // Start pipeline only if not already processing
-          if (pipelineRef.current && !appState.isProcessing) {
-            startProcessing();
-          }
-        })
-        .catch((err) => console.error('[DEBUG] play: Error playing video:', err));
-    }
-  }, [appState.isModelLoaded, appState.isProcessing, startProcessing]);
-
-  // Toggle play/pause
+  // Toggle play/pause - only controls video, not pipeline
   const togglePlayPause = useCallback(() => {
     if (!videoRef.current) return;
 
@@ -248,15 +276,16 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       videoRef.current
         .play()
         .then(() => {
-          setIsPlaying(true);
-          setVideoStartTime(performance.now());
-          // Pipeline will automatically start processing frames due to reactive stream
+          // UI events are handled by event listeners
+          // Pipeline automatically responds to play/pause via VideoFrameAcquisition
         })
-        .catch((err) => console.error('[DEBUG] togglePlayPause: Error playing video:', err));
+        .catch((err) => {
+          console.error('Error playing video:', err);
+          setStatus('Error: Could not play video.');
+        });
     } else {
       videoRef.current.pause();
-      setIsPlaying(false);
-      // Pipeline will automatically stop processing frames due to reactive stream
+      // Pipeline automatically responds to play/pause via VideoFrameAcquisition
     }
   }, []);
 
@@ -274,8 +303,10 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
       if (videoRef.current) {
         videoRef.current.onloadedmetadata = () => {
-          // Start the pipeline once the camera is ready
-          startProcessing();
+          // Video play event will start the pipeline
+          videoRef.current?.play().catch(err => {
+            console.error('Error starting camera video playback:', err);
+          });
         };
       }
 
@@ -284,7 +315,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       console.error('Error accessing camera:', error);
       setStatus('Error: Could not access camera.');
     }
-  }, [appState.cameraMode, appState.isProcessing, startProcessing, stopProcessing]);
+  }, [appState.cameraMode, appState.isProcessing, stopProcessing]);
 
   // Switch camera
   const switchCamera = useCallback(async () => {
@@ -301,15 +332,41 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       await frameAcquisitionRef.current.stopCamera();
       await frameAcquisitionRef.current.startCamera(newMode);
       
-      // Restart pipeline with new camera
-      startProcessing();
+      // Video play event will restart the pipeline
+      if (videoRef.current) {
+        videoRef.current.play().catch(err => {
+          console.error('Error restarting video after camera switch:', err);
+        });
+      }
       
       setAppState((prev) => ({ ...prev, cameraMode: newMode }));
     } catch (error) {
       console.error('Error switching camera:', error);
       setStatus('Error: Could not switch camera.');
     }
-  }, [appState.cameraMode, appState.usingCamera, appState.isProcessing, startProcessing, stopProcessing]);
+  }, [appState.cameraMode, appState.usingCamera, appState.isProcessing, stopProcessing]);
+
+  // Stop video and reset state
+  const resetVideoAndState = useCallback(() => {
+    if (!videoRef.current || !pipelineRef.current) return;
+    
+    // Stop current video playback
+    videoRef.current.pause();
+    videoRef.current.currentTime = 0;
+    
+    // Reset pipeline state - don't stop it, just reset its internal state
+    if (pipelineRef.current) {
+      pipelineRef.current.reset();
+    }
+    
+    // Reset UI state
+    setVideoStartTime(null);
+    setRepCount(0);
+    setSpineAngle(0);
+    
+    // Reset display mode to ensure overlay is visible
+    setDisplayMode(appState.displayMode);
+  }, [appState.displayMode]);
 
   // Load hardcoded video
   const loadHardcodedVideo = useCallback(async () => {
@@ -318,10 +375,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     console.log('[DEBUG] loadHardcodedVideo: Function called');
     setStatus('Loading hardcoded video...');
     try {
-      // Stop pipeline if it's running
-      if (pipelineRef.current && appState.isProcessing) {
-        stopProcessing();
-      }
+      // Reset state and stop current video
+      resetVideoAndState();
       
       const videoURL = '/videos/swing-sample.mp4';
 
@@ -333,25 +388,43 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       setAppState((prev) => ({ ...prev, usingCamera: false }));
       setStatus('Hardcoded video loaded.');
 
+      // Make sure the canvas is visible before playing
+      if (canvasRef.current) {
+        canvasRef.current.style.display = 'block';
+      }
+      
+      // Force pipeline reset before playing
+      if (pipelineRef.current) {
+        pipelineRef.current.reset();
+      }
+
+      // Video element event handlers will handle pipeline start
       if (videoRef.current && videoRef.current.readyState >= 2) {
-        play();
+        videoRef.current.play().catch(err => {
+          console.error('Error playing hardcoded video:', err);
+        });
       } else if (videoRef.current) {
-        videoRef.current.addEventListener('loadeddata', () => play(), { once: true });
+        videoRef.current.addEventListener('loadeddata', () => {
+          // Reset display mode again just to be safe
+          setDisplayMode(appState.displayMode);
+          
+          videoRef.current?.play().catch(err => {
+            console.error('Error playing hardcoded video after load:', err);
+          });
+        }, { once: true });
       }
     } catch (error) {
       console.error('[DEBUG] loadHardcodedVideo: Error loading video:', error);
       setStatus('Error: Could not load hardcoded video.');
     }
-  }, [appState.isProcessing, play, stopProcessing]);
+  }, [resetVideoAndState]);
 
   // Handle video upload
   const handleVideoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || !event.target.files[0] || !frameAcquisitionRef.current || !videoRef.current) return;
 
-    // Stop pipeline if it's running
-    if (pipelineRef.current && appState.isProcessing) {
-      stopProcessing();
-    }
+    // Reset state and stop current video
+    resetVideoAndState();
     
     const file = event.target.files[0];
     const fileURL = URL.createObjectURL(file);
@@ -362,36 +435,29 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         setStatus(`Loaded video: ${file.name}`);
         setAppState((prev) => ({ ...prev, usingCamera: false }));
 
+        // Video element event handlers will handle pipeline start
         if (videoRef.current && videoRef.current.readyState >= 2) {
-          play();
+          videoRef.current.play().catch(err => {
+            console.error('Error playing uploaded video:', err);
+          });
         } else if (videoRef.current) {
-          videoRef.current.addEventListener('loadeddata', () => play(), { once: true });
+          videoRef.current.addEventListener('loadeddata', () => {
+            videoRef.current?.play().catch(err => {
+              console.error('Error playing uploaded video after load:', err);
+            });
+          }, { once: true });
         }
       })
       .catch((error) => {
         console.error('Error loading video:', error);
         setStatus('Error: Could not load video.');
       });
-  }, [appState.isProcessing, play, stopProcessing]);
+  }, [resetVideoAndState]);
 
   // Stop video
   const stopVideo = useCallback(() => {
-    if (!videoRef.current || !pipelineRef.current) return;
-
-    videoRef.current.pause();
-    videoRef.current.currentTime = 0;
-    setIsPlaying(false);
-    setVideoStartTime(null);
-    
-    // Just reset the pipeline state, don't stop it
-    if (pipelineRef.current) {
-      pipelineRef.current.reset();
-    }
-    
-    // Reset UI state
-    setRepCount(0);
-    setSpineAngle(0);
-  }, []);
+    resetVideoAndState();
+  }, [resetVideoAndState]);
 
   // Rep navigation
   const navigateToPreviousRep = useCallback(() => {
@@ -444,7 +510,6 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     loadHardcodedVideo,
     togglePlayPause,
     stopVideo,
-    play,
     startProcessing,
     stopProcessing,
     reset,

@@ -73,7 +73,6 @@ export class SwingFormProcessor implements FormProcessor {
     // Log only significant angle changes to reduce noise (>5 degrees)
     const lastLoggedAngle = this.lastLoggedAngle || 0;
     if (Math.abs(spineAngle - lastLoggedAngle) > 5) {
-      console.log(`Significant angle change: ${lastLoggedAngle.toFixed(1)}° → ${spineAngle.toFixed(1)}°, arm=${skeleton.getArmToSpineAngle().toFixed(1)}°`);
       this.lastLoggedAngle = spineAngle;
     }
     
@@ -200,7 +199,6 @@ export class SwingFormProcessor implements FormProcessor {
         angleDelta,
         image
       });
-      console.log(`Updated best candidate for ${position}: spine=${spineAngle.toFixed(2)}°, arm=${armToSpineAngle.toFixed(2)}°, delta=${angleDelta.toFixed(2)}`);
     }
   }
   
