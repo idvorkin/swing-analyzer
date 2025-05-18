@@ -7,6 +7,7 @@ import type {
   FormProcessor,
   FrameAcquisition,
   RepProcessor,
+  SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
 
@@ -25,6 +26,7 @@ export class Pipeline {
   // Output subjects
   private resultSubject = new Subject<PipelineResult>();
   private checkpointSubject = new Subject<FormEvent>();
+  private skeletonSubject = new Subject<SkeletonEvent>();
 
   constructor(
     private frameAcquisition: FrameAcquisition,
@@ -62,13 +64,19 @@ export class Pipeline {
           this.skeletonTransformer.transformToSkeleton(frameEvent)
         ),
 
-        // Stage 2: Form Processing
-        switchMap((skeletonEvent) => {
+        // Emit every skeleton event regardless of whether it results in a checkpoint
+        tap((skeletonEvent) => {
+          // Emit the skeleton event to subscribers
+          this.skeletonSubject.next(skeletonEvent);
+          
           // Store latest skeleton
           if (skeletonEvent.skeleton) {
             this.latestSkeleton = skeletonEvent.skeleton;
           }
+        }),
 
+        // Stage 2: Form Processing
+        switchMap((skeletonEvent) => {
           return this.formProcessor.processFrame(skeletonEvent);
         }),
 
@@ -107,10 +115,12 @@ export class Pipeline {
           console.error('Error in pipeline:', error);
           this.resultSubject.error(error);
           this.checkpointSubject.error(error);
+          this.skeletonSubject.error(error);
         },
         () => {
           this.resultSubject.complete();
           this.checkpointSubject.complete();
+          this.skeletonSubject.complete();
           this.isActive = false;
         }
       );
@@ -123,6 +133,13 @@ export class Pipeline {
    */
   getCheckpointEvents(): Observable<FormEvent> {
     return this.checkpointSubject.asObservable();
+  }
+
+  /**
+   * Get an observable for all skeleton events
+   */
+  getSkeletonEvents(): Observable<SkeletonEvent> {
+    return this.skeletonSubject.asObservable();
   }
 
   /**

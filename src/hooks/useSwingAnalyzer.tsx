@@ -5,6 +5,7 @@ import { type AppState } from '../types';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import { createFrameAcquisition, createPipeline } from '../pipeline/PipelineFactory';
 import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
+import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 
 export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   // State
@@ -43,6 +44,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const frameAcquisitionRef = useRef<VideoFrameAcquisition | null>(null);
   const skeletonRendererRef = useRef<SkeletonRenderer | null>(null);
   const pipelineSubscriptionRef = useRef<any>(null);
+  const skeletonSubscriptionRef = useRef<any>(null);
 
   // Initialize pipeline and models
   useEffect(() => {
@@ -97,14 +99,24 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     // Subscribe to pipeline results
     const pipelineObservable = pipeline.start();
     
+    // Subscribe to skeleton events to render every detected skeleton
+    skeletonSubscriptionRef.current = pipeline.getSkeletonEvents().subscribe({
+      next: (skeletonEvent: SkeletonEvent) => {
+        if (skeletonEvent.skeleton) {
+          setSpineAngle(Math.round(skeletonEvent.skeleton.getSpineAngle() || 0));
+          renderSkeleton(skeletonEvent.skeleton);
+        }
+      },
+      error: (err) => {
+        console.error('Skeleton event error:', err);
+      }
+    });
+    
+    // Subscribe to pipeline results for rep counting and other state
     pipelineSubscriptionRef.current = pipelineObservable.subscribe({
       next: (result: PipelineResult) => {
-        // Update state
+        // Update rep count
         setRepCount(result.repCount);
-        if (result.skeleton) {
-          setSpineAngle(Math.round(result.skeleton.getSpineAngle() || 0));
-          renderSkeleton(result.skeleton);
-        }
       },
       error: (err) => {
         console.error('Pipeline error:', err);
@@ -126,6 +138,11 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     if (pipelineSubscriptionRef.current) {
       pipelineSubscriptionRef.current.unsubscribe();
       pipelineSubscriptionRef.current = null;
+    }
+
+    if (skeletonSubscriptionRef.current) {
+      skeletonSubscriptionRef.current.unsubscribe();
+      skeletonSubscriptionRef.current = null;
     }
 
     pipelineRef.current.stop();
