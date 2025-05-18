@@ -16,3 +16,15 @@ repos:
         types_or: [markdown, yaml, html, scss, less, xml, vue, svelte]
         additional_dependencies:
           - prettier@3.1.0
+
+  # TypeScript type checking
+  - repo: local
+    hooks:
+      - id: typescript-type-check
+        name: TypeScript Type Check
+        entry: npx tsc --noEmit
+        language: node
+        pass_filenames: false
+        types: [ts, tsx]
+        # Run on all TypeScript files, regardless of which ones changed
+        require_serial: true

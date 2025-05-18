@@ -1,4 +1,4 @@
-import { type Observable, of } from 'rxjs';
+import { type Observable, of, EMPTY } from 'rxjs';
 import type { Skeleton } from '../models/Skeleton';
 import { type FormCheckpoint, SwingPosition } from '../types';
 import type {
@@ -7,6 +7,7 @@ import type {
   SkeletonEvent,
 } from './PipelineInterfaces';
 
+// Test comment for pre-commit hook - Type checking
 /**
  * Swing form processor - processes skeletons to identify swing form positions and checkpoints
  */
@@ -29,30 +30,24 @@ export class SwingFormProcessor implements FormProcessor {
 
   /**
    * Process a skeleton to identify checkpoints
-   * Returns an Observable that emits checkpoint events
+   * Returns an Observable that emits checkpoint events only when transitions occur
    */
   processFrame(
-    skeletonEvent: SkeletonEvent,
-    repCount: number
+    skeletonEvent: SkeletonEvent
   ): Observable<FormEvent> {
-    // If no skeleton was detected, return null checkpoint
+    // If no skeleton was detected, return empty observable
     if (!skeletonEvent.skeleton) {
-      return of({
-        checkpoint: null,
-        position: null,
-        skeletonEvent,
-      });
+      return EMPTY;
     }
 
     const skeleton = skeletonEvent.skeleton;
     const spineAngle = skeleton.getSpineAngle();
     const timestamp = skeletonEvent.poseEvent.frameEvent.timestamp;
 
-    // If this is a new rep, reset positions
-    if (repCount === 0 || this.lastRepCount !== repCount) {
+    // Auto-reset positions when going back to top after a full cycle
+    if (this.isFullCycleComplete() && Math.abs(spineAngle) < this.HINGE_THRESHOLD) {
       this.detectedPositions.clear();
       this.lastPosition = SwingPosition.Top;
-      this.lastRepCount = repCount;
     }
 
     // Detect position based on spine angle and previous position
@@ -81,16 +76,22 @@ export class SwingFormProcessor implements FormProcessor {
       });
     }
 
-    // No new checkpoint detected
-    return of({
-      checkpoint: null,
-      position: this.lastPosition,
-      skeletonEvent,
-    });
+    // No new checkpoint detected, return empty observable
+    return EMPTY;
   }
 
-  // Track the last rep count to detect new reps
-  private lastRepCount = -1;
+  /**
+   * Check if a full swing cycle has been completed
+   * A full cycle is when we've detected all positions: Top -> Hinge -> Bottom -> Release
+   */
+  private isFullCycleComplete(): boolean {
+    return (
+      this.detectedPositions.has(SwingPosition.Top) &&
+      this.detectedPositions.has(SwingPosition.Hinge) &&
+      this.detectedPositions.has(SwingPosition.Bottom) &&
+      this.detectedPositions.has(SwingPosition.Release)
+    );
+  }
 
   /**
    * Reset the form processor state
@@ -98,7 +99,6 @@ export class SwingFormProcessor implements FormProcessor {
   reset(): void {
     this.detectedPositions.clear();
     this.lastPosition = SwingPosition.Top;
-    this.lastRepCount = -1;
   }
 
   /**

@@ -64,18 +64,6 @@ export class SkeletonRenderer {
     // On mobile devices, the canvas display dimensions might be different from its internal dimensions
     // We need to scale the keypoints from the original video dimensions to the displayed canvas dimensions
     
-    // Get the current canvas display dimensions
-    const displayWidth = this.canvas.clientWidth;
-    const displayHeight = this.canvas.clientHeight;
-    
-    // Get the internal canvas dimensions
-    const canvasWidth = this.canvas.width;
-    const canvasHeight = this.canvas.height;
-    
-    // Calculate scale factors between the internal canvas and its displayed size
-    const scaleX = canvasWidth / displayWidth;
-    const scaleY = canvasHeight / displayHeight;
-    
     return keypoints.map(point => {
       if (!point) return point;
       
@@ -204,15 +192,6 @@ export class SkeletonRenderer {
   }
 
   /**
-   * Gets the confidence value of a keypoint, handling different model outputs
-   */
-  private getConfidence(point: PoseKeypoint): number {
-    if (!point) return 0;
-    return point.score !== undefined ? point.score : 
-           point.visibility !== undefined ? point.visibility : 0;
-  }
-
-  /**
    * Draw keypoints with optional labels
    */
   private drawKeypoints(
@@ -258,45 +237,18 @@ export class SkeletonRenderer {
     ctx: CanvasRenderingContext2D,
     skeleton: Skeleton
   ): void {
-    const width = this.canvas.width;
-    const height = this.canvas.height;
-    const padding = 10;
-    const lineHeight = 20;
-
-    // Set debug text style
+    // Set text style for debug info
     ctx.font = '14px monospace';
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = '#ffff00';
     ctx.textAlign = 'left';
 
     // Draw spine angle
-    const spineAngle = skeleton.getSpineAngle();
-    ctx.fillText(
-      `Spine Angle: ${spineAngle.toFixed(1)}°`,
-      padding,
-      height - padding - lineHeight * 3
-    );
+    const spineAngle = skeleton.getSpineAngle().toFixed(1);
+    ctx.fillText(`Spine Angle: ${spineAngle}°`, 10, 20);
 
-    // Draw visibility scores for key joints
-    const keypoints = skeleton.getKeypoints();
-
-    // Left shoulder visibility
-    const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
-    if (leftShoulder) {
-      ctx.fillText(
-        `L.Shoulder: ${this.getConfidence(leftShoulder).toFixed(2)}`,
-        padding,
-        height - padding - lineHeight * 2
-      );
-    }
-
-    // Right shoulder visibility
-    const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
-    if (rightShoulder) {
-      ctx.fillText(
-        `R.Shoulder: ${this.getConfidence(rightShoulder).toFixed(2)}`,
-        padding,
-        height - padding - lineHeight
-      );
+    // Draw grid if needed
+    if (this.debugMode) {
+      this.drawDebugGrid(ctx);
     }
   }
 
@@ -346,5 +298,54 @@ export class SkeletonRenderer {
     };
 
     return bodyPartNames[index] || `Point ${index}`;
+  }
+
+  /**
+   * Render a skeleton to a given canvas context
+   */
+  renderSkeletonToCanvas(
+    skeleton: Skeleton,
+    context: CanvasRenderingContext2D
+  ): void {
+    if (!skeleton) return;
+
+    // Render the skeleton using existing methods
+    // Get current timestamp for consistent rendering
+    const timestamp = Date.now();
+    
+    // Draw connections and keypoints
+    const keypoints = skeleton.getKeypoints();
+    this.drawConnections(context, keypoints);
+    this.drawKeypoints(context, keypoints, timestamp);
+  }
+
+  /**
+   * Render a simple debug grid on the canvas
+   */
+  private drawDebugGrid(context: CanvasRenderingContext2D): void {
+    const height = context.canvas.height;
+    const width = context.canvas.width;
+    
+    // Draw horizontal lines
+    context.beginPath();
+    context.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    context.lineWidth = 1;
+    
+    // Draw grid lines
+    const gridSize = 50;
+    
+    // Horizontal lines
+    for (let y = 0; y < height; y += gridSize) {
+      context.moveTo(0, y);
+      context.lineTo(width, y);
+    }
+    
+    // Vertical lines
+    for (let x = 0; x < width; x += gridSize) {
+      context.moveTo(x, 0);
+      context.lineTo(x, height);
+    }
+    
+    context.stroke();
   }
 }

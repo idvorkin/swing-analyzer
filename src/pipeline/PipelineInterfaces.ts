@@ -3,8 +3,6 @@ import type { Skeleton } from '../models/Skeleton';
 import {
   type FormCheckpoint,
   type SwingPosition,
-  PoseKeypoint,
-  type PoseResult,
   type RepData,
 } from '../types';
 import type { PoseEvent } from './PoseSkeletonTransformer';
@@ -72,8 +70,7 @@ export interface FormProcessor {
    * Returns an Observable that emits checkpoint events
    */
   processFrame(
-    skeletonEvent: SkeletonEvent,
-    repCount: number
+    skeletonEvent: SkeletonEvent
   ): Observable<FormEvent>;
 
   /**

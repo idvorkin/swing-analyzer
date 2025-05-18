@@ -1,4 +1,4 @@
-import { Point, type PoseKeypoint } from '../types';
+import { type PoseKeypoint } from '../types';
 
 /**
  * Represents a skeleton constructed from keypoints

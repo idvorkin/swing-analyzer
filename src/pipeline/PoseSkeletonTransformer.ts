@@ -47,14 +47,11 @@ export const SKELETON_CONNECTIONS = [
  * This combines the functionality of pose detection and skeleton construction
  */
 export class PoseSkeletonTransformer implements SkeletonTransformer {
+  // Store the pose detector instance
   private detector: poseDetection.PoseDetector | null = null;
 
-  // Throttle logging
-  private lastLogTime = 0;
-  private logThrottleMs = 1000; // 1 second
-
   /**
-   * Initialize the pose detector model
+   * Initialize the pose detection model
    */
   async initialize(): Promise<void> {
     try {

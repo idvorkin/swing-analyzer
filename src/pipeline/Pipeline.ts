@@ -69,7 +69,7 @@ export class Pipeline {
             this.latestSkeleton = skeletonEvent.skeleton;
           }
 
-          return this.formProcessor.processFrame(skeletonEvent, this.repCount);
+          return this.formProcessor.processFrame(skeletonEvent);
         }),
 
         // Emit checkpoint events
