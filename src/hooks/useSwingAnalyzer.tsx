@@ -303,7 +303,10 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         .play()
         .then(() => {
           setIsPlaying(true);
-          startProcessing();
+          // Small delay to ensure video is actually playing before starting the pipeline
+          setTimeout(() => {
+            startProcessing();
+          }, 50);
         })
         .catch((err) => console.error('[DEBUG] play: Error playing video:', err));
     }
@@ -318,7 +321,10 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         .play()
         .then(() => {
           setIsPlaying(true);
-          startProcessing();
+          // Small delay to ensure video is actually playing before starting the pipeline
+          setTimeout(() => {
+            startProcessing();
+          }, 50);
         })
         .catch((err) => console.error('[DEBUG] togglePlayPause: Error playing video:', err));
     } else {

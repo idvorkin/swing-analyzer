@@ -6,8 +6,9 @@ This document outlines the architecture of the Swing Analyzer application, showi
 
 ```mermaid
 graph TD
-    subgraph "UX Layer"
-        A1[View Components] --> A2[ViewModels]
+    subgraph "React UI Layer"
+        A1[View Components] --> A2[Context API]
+        A2 --> A3[Custom Hooks]
     end
 
     subgraph "Core Logic Layer"
@@ -37,14 +38,14 @@ graph TD
         E4[SkeletonRenderer]
     end
 
-    A2 --> B1
+    A3 --> B1
     B1 -.-> D3
     C1 -.-> D4
     C3 -.-> D5
     C2 -.-> D1
     C3 -.-> D2
     E2 --> C3
-    E4 --> A1
+    E4 --> A3
 ```
 
 ## Reactive Processing Pipeline
@@ -54,7 +55,8 @@ flowchart LR
     A[VideoFrameAcquisition] --> |Observable<FrameEvent>| B[PoseSkeletonTransformer]
     B --> |Observable<SkeletonEvent>| C[SwingFormProcessor]
     C --> |Observable<CheckpointEvent>| D[SwingRepProcessor]
-    D --> |PipelineResult| E[UI Components]
+    D --> |PipelineResult| E[Custom Hooks & Context]
+    E --> |State & Props| F[UI Components]
 
     subgraph "Frame Acquisition"
         A
@@ -72,24 +74,31 @@ flowchart LR
         D
     end
 
-    subgraph "User Experience"
+    subgraph "State Management"
         E
+    end
+
+    subgraph "User Interface"
+        F
     end
 ```
 
-## UX Layer Details
+## React UI Layer Details
 
 - **View Components**: UI elements that users interact with directly
-  - `App.tsx` - Main application component
+  - `App.tsx` - Main application component and context provider
   - `VideoSection.tsx` - Video input display and controls
   - `AnalysisSection.tsx` - Analysis results and metrics
   - Camera/Video Input with overlay visualization
   - Checkpoint Grid Display
   - Metrics Display
   - Rep Counter Display
-- **ViewModels**: Bridge between UI and logic
-  - `SwingAnalyzerViewModel.ts` - manages application state and UI updates
-  - `FormCheckpointViewModel.ts` - presents checkpoints visually
+  
+- **Context API**: State sharing across components
+  - `SwingAnalyzerContext.tsx` - React context for providing shared state to all components
+  
+- **Custom Hooks**: Encapsulate UI logic and pipeline interaction
+  - `useSwingAnalyzer.tsx` - Main hook that manages state, pipeline interactions, and reactive processing
 
 ## Pipeline Architecture Details
 
@@ -152,9 +161,19 @@ The swing analyzer uses a reactive pipeline architecture based on RxJS Observabl
   - Draws connections between body keypoints
   - Highlights specific body parts during analysis
 
+## React State Management
+
+- **Application State**: Managed through React hooks (useState, useEffect, useRef)
+- **Shared State**: Provided to all components through React Context
+- **Reactive State Updates**: State is updated through RxJS pipeline subscriptions
+- **Component Organization**: 
+  - Provider pattern for global state access
+  - Container components for layout and structure
+  - Presentation components for UI rendering
+
 ## Technology Stack
 
-- **React**: UI framework
+- **React**: UI framework with hooks and context for state management
 - **TypeScript**: Type-safe JavaScript
 - **RxJS**: Reactive programming library for asynchronous processing
 - **TensorFlow.js**: Machine learning library for pose detection
@@ -166,3 +185,4 @@ The swing analyzer uses a reactive pipeline architecture based on RxJS Observabl
 - Web workers for computation-intensive operations
 - Model caching for faster loading
 - GPU acceleration through WebGL backend
+- React memoization and callback optimization
