@@ -3,8 +3,10 @@ import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 import '@tensorflow/tfjs-converter';
 
-// Import application
-import './app';
+// React imports
+import { createRoot } from 'react-dom/client';
+import { App } from './components/App';
+import React from 'react';
 
 // Initialize TensorFlow backend
 async function initialize() {
@@ -27,12 +29,28 @@ async function initialize() {
     if (currentBackend !== 'webgl') {
       console.warn(`WebGL not available, using ${currentBackend} instead. Performance may be affected.`);
     }
+    
+    // Render React app after TensorFlow initialization
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      const root = createRoot(rootElement);
+      root.render(React.createElement(App));
+    } else {
+      console.error("Root element not found");
+    }
   } catch (err) {
     console.error("Failed to initialize TensorFlow backend:", err);
     // Try fallback to CPU as last resort
     try {
       await tf.setBackend('cpu');
       console.warn("Fallback to CPU backend. Performance will be severely limited.");
+      
+      // Still try to render React app
+      const rootElement = document.getElementById('root');
+      if (rootElement) {
+        const root = createRoot(rootElement);
+        root.render(React.createElement(App));
+      }
     } catch (cpuErr) {
       console.error("Failed to initialize any TensorFlow backend:", cpuErr);
     }
