@@ -130,6 +130,7 @@ export class Skeleton {
    * Get the arm-to-vertical angle
    * This is the angle between the arm vector (shoulder to elbow) and
    * a vertical line pointing downward (0° is arm pointing straight down, 90° is horizontal, 180° is pointing up)
+   * Negative values indicate the arm is pointing to the left, positive to the right
    */
   getArmToVerticalAngle(): number {
     // If already calculated, return cached value
@@ -165,7 +166,12 @@ export class Skeleton {
         // Calculate angle in radians and convert to degrees
         const cosAngle = Math.min(Math.max(dotProduct / (armMag * verticalMag), -1), 1); // Clamp to [-1, 1]
         const angleRad = Math.acos(cosAngle);
-        const angleDeg = angleRad * (180 / Math.PI);
+        let angleDeg = angleRad * (180 / Math.PI);
+        
+        // Make the angle signed: negative if arm is pointing left (x < 0), positive if pointing right
+        if (armVector.x < 0) {
+          angleDeg = -angleDeg;
+        }
         
         this._armToVerticalAngle = angleDeg;
         return angleDeg;

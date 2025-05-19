@@ -66,7 +66,7 @@ const AnalysisSection: React.FC = () => {
     positionOrder.forEach(position => {
       const checkpoint = currentRep.checkpoints.get(position);
       if (checkpoint) {
-        console.log(`${position} - spine: ${checkpoint.spineAngle.toFixed(2)}°, arm: ${checkpoint.armToSpineAngle.toFixed(2)}°`);
+        console.log(`${position} - spine: ${checkpoint.spineAngle.toFixed(2)}°, arm-vertical: ${checkpoint.armToVerticalAngle.toFixed(2)}°`);
       } else {
         console.log(`${position} - not detected`);
       }
@@ -137,10 +137,10 @@ const AnalysisSection: React.FC = () => {
         angleLabel.className = 'angle-label';
         angleLabel.textContent = `Spine: ${Math.round(checkpoint.spineAngle)}°`;
         
-        // Add arm-to-spine angle info
+        // Add arm-to-vertical angle info
         const armAngleLabel = document.createElement('div');
         armAngleLabel.className = 'angle-label arm-angle';
-        armAngleLabel.textContent = `Arm: ${Math.round(checkpoint.armToSpineAngle)}°`;
+        armAngleLabel.textContent = `Arm: ${Math.round(checkpoint.armToVerticalAngle)}°`;
         
         cell.appendChild(label);
         cell.appendChild(angleLabel);
@@ -253,7 +253,7 @@ const AnalysisSection: React.FC = () => {
               Spine Angle: {Math.round(checkpoint.spineAngle)}°
             </div>
             <div className="fullscreen-arm-angle">
-              Arm-to-Spine Angle: {Math.round(checkpoint.armToSpineAngle)}°
+              Arm-to-Vertical Angle: {Math.round(checkpoint.armToVerticalAngle)}°
             </div>
             <div className="fullscreen-timestamp">
               {videoStartTime 
@@ -362,7 +362,7 @@ const AnalysisSection: React.FC = () => {
               </svg>
             </div>
             <div className="metric-info">
-              <div className="metric-label">Arm-to-Spine Angle</div>
+              <div className="metric-label">Arm-to-Vertical Angle</div>
               <div className="metric-value" id="arm-angle">{armToSpineAngle}°</div>
             </div>
           </div>

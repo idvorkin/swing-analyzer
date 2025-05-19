@@ -111,7 +111,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       next: (skeletonEvent: SkeletonEvent) => {
         if (skeletonEvent.skeleton) {
           setSpineAngle(Math.round(skeletonEvent.skeleton.getSpineAngle() || 0));
-          setArmToSpineAngle(Math.round(skeletonEvent.skeleton.getArmToSpineAngle() || 0));
+          setArmToSpineAngle(Math.round(skeletonEvent.skeleton.getArmToVerticalAngle() || 0));
           renderSkeleton(skeletonEvent.skeleton);
         }
       },
@@ -347,7 +347,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         if (skeletonEvent && skeletonEvent.skeleton) {
           // Update UI with angles
           setSpineAngle(Math.round(skeletonEvent.skeleton.getSpineAngle() || 0));
-          setArmToSpineAngle(Math.round(skeletonEvent.skeleton.getArmToSpineAngle() || 0));
+          setArmToSpineAngle(Math.round(skeletonEvent.skeleton.getArmToVerticalAngle() || 0));
           
           // Render the skeleton directly
           if (skeletonRendererRef.current) {

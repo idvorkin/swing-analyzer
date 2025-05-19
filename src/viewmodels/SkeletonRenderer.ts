@@ -50,19 +50,19 @@ export class SkeletonRenderer {
     // Draw keypoints
     this.drawKeypoints(ctx, normalizedKeypoints, timestamp);
 
-    // Always draw the arm-to-spine angle visualization
-    this.visualizeArmToSpineAngle(ctx, skeleton);
+    // Always draw the arm-to-vertical angle visualization
+    this.visualizeArmToVerticalAngle(ctx, skeleton);
 
     // Draw debug info if enabled
     if (this.debugMode) {
       this.drawDebugInfo(ctx, skeleton);
     } else {
-      // Even if debug mode is off, still show the arm-spine angle
-      const armToSpineAngle = skeleton.getArmToSpineAngle().toFixed(1);
+      // Even if debug mode is off, still show the arm-vertical angle
+      const armToVerticalAngle = skeleton.getArmToVerticalAngle().toFixed(1);
       ctx.font = '14px monospace';
       ctx.fillStyle = '#ffff00';
       ctx.textAlign = 'left';
-      ctx.fillText(`Arm-Spine Angle: ${armToSpineAngle}°`, 10, 40);
+      ctx.fillText(`Arm-Vertical Angle: ${armToVerticalAngle}°`, 10, 40);
     }
   }
 
@@ -256,12 +256,12 @@ export class SkeletonRenderer {
     const spineAngle = skeleton.getSpineAngle().toFixed(1);
     ctx.fillText(`Spine Angle: ${spineAngle}°`, 10, 20);
     
-    // Draw arm-to-spine angle
-    const armToSpineAngle = skeleton.getArmToSpineAngle().toFixed(1);
-    ctx.fillText(`Arm-Spine Angle: ${armToSpineAngle}°`, 10, 40);
+    // Draw arm-to-vertical angle
+    const armToVerticalAngle = skeleton.getArmToVerticalAngle().toFixed(1);
+    ctx.fillText(`Arm-Vertical Angle: ${armToVerticalAngle}°`, 10, 40);
 
-    // Always visualize the arm-to-spine angle, regardless of debug mode
-    this.visualizeArmToSpineAngle(ctx, skeleton);
+    // Always visualize the arm-to-vertical angle, regardless of debug mode
+    this.visualizeArmToVerticalAngle(ctx, skeleton);
 
     // Draw grid if needed
     if (this.debugMode) {
@@ -270,37 +270,35 @@ export class SkeletonRenderer {
   }
 
   /**
-   * Visualize the arm-to-spine angle calculation
+   * Visualize the arm-to-vertical angle calculation
    */
-  private visualizeArmToSpineAngle(
+  private visualizeArmToVerticalAngle(
     ctx: CanvasRenderingContext2D,
     skeleton: Skeleton
   ): void {
     // Get required keypoints
-    const hip = skeleton.getKeypointByName('rightHip') || skeleton.getKeypointByName('leftHip');
     const shoulder = skeleton.getKeypointByName('rightShoulder') || skeleton.getKeypointByName('leftShoulder');
     const elbow = skeleton.getKeypointByName('rightElbow') || skeleton.getKeypointByName('leftElbow');
 
-    if (!hip || !shoulder || !elbow) {
+    if (!shoulder || !elbow) {
       // Draw error message if keypoints not found
       ctx.fillStyle = '#ff0000';
-      ctx.fillText('Error: Missing keypoints for arm-spine angle', 10, 60);
+      ctx.fillText('Error: Missing keypoints for arm-vertical angle', 10, 60);
       
       // Log which keypoints are missing
-      ctx.fillText(`  Hip: ${hip ? 'Found' : 'Missing'}`, 10, 80);
-      ctx.fillText(`  Shoulder: ${shoulder ? 'Found' : 'Missing'}`, 10, 100);
-      ctx.fillText(`  Elbow: ${elbow ? 'Found' : 'Missing'}`, 10, 120);
+      ctx.fillText(`  Shoulder: ${shoulder ? 'Found' : 'Missing'}`, 10, 80);
+      ctx.fillText(`  Elbow: ${elbow ? 'Found' : 'Missing'}`, 10, 100);
       return;
     }
 
     // Set styles for vectors
     ctx.lineWidth = 3;
     
-    // Draw spine vector
+    // Draw vertical vector
     ctx.beginPath();
     ctx.strokeStyle = '#00ffff'; // Cyan
-    ctx.moveTo(hip.x, hip.y);
-    ctx.lineTo(shoulder.x, shoulder.y);
+    ctx.moveTo(shoulder.x, shoulder.y);
+    ctx.lineTo(shoulder.x, shoulder.y + 100); // 100px down from shoulder
     ctx.stroke();
     
     // Draw arm vector in bright yellow - this is what we want to highlight
@@ -314,9 +312,9 @@ export class SkeletonRenderer {
     // Draw dots at the keypoints with labels
     ctx.fillStyle = '#00ffff';
     ctx.beginPath();
-    ctx.arc(hip.x, hip.y, 6, 0, 2 * Math.PI);
+    ctx.arc(shoulder.x, shoulder.y + 100, 6, 0, 2 * Math.PI);
     ctx.fill();
-    ctx.fillText('Hip', hip.x + 10, hip.y);
+    ctx.fillText('Vertical', shoulder.x + 10, shoulder.y + 100);
     
     ctx.fillStyle = '#ffff00';
     ctx.beginPath();
@@ -330,10 +328,10 @@ export class SkeletonRenderer {
     ctx.fill();
     ctx.fillText('Elbow', elbow.x + 10, elbow.y);
     
-    // Draw calculated arm-to-spine angle
-    const armToSpineAngle = skeleton.getArmToSpineAngle().toFixed(1);
+    // Draw calculated arm-to-vertical angle
+    const armToVerticalAngle = skeleton.getArmToVerticalAngle().toFixed(1);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`${armToSpineAngle}°`, shoulder.x - 20, shoulder.y - 10);
+    ctx.fillText(`${armToVerticalAngle}°`, shoulder.x - 20, shoulder.y - 10);
   }
 
   /**
