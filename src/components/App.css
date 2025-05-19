@@ -446,59 +446,63 @@ button:disabled {
   transform: translateY(-1px);
 }
 
+/* Mobile-specific rep navigation controls */
 @media (max-width: 768px) {
-  .top-controls {
-    padding: 12px;
+  .rep-navigation {
+    gap: 5px;
   }
-
-  .control-row {
-    flex-wrap: wrap;
-    gap: 8px;
+  
+  .rep-navigation .button-text {
+    display: none; /* Hide text on mobile */
   }
-
-  button,
-  .file-label {
-    flex: 1 0 calc(50% - 4px);
-    min-width: calc(50% - 4px);
-    padding: 8px 12px;
-    font-size: 14px;
-  }
-
-  .icon {
-    margin-right: 4px;
-  }
-
-  .icon-right {
-    margin-left: 4px;
-  }
-
-  .metrics-data {
-    flex-direction: row;
-  }
-
-  .metric-card {
-    padding: 10px;
-  }
-
-  .metric-icon {
-    margin-right: 10px;
-  }
-
-  .checkpoint-header {
-    flex-direction: row;
+  
+  .rep-navigation .nav-btn {
+    min-width: 0;
+    padding: 8px;
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    display: flex;
     align-items: center;
+    justify-content: center;
   }
-
-  .nav-btn {
-    min-width: 70px;
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-
+  
   #current-rep {
     min-width: 30px;
     padding: 4px 8px;
     font-size: 13px;
+  }
+}
+
+/* Mobile styles for all controls */
+@media (max-width: 768px) {
+  .video-controls {
+    gap: 8px;
+    padding: 0 10px;
+  }
+  
+  .video-controls button {
+    min-width: 0;
+    padding: 8px 10px;
+    flex: 1;
+  }
+  
+  .video-controls .button-text {
+    display: none; /* Hide text on mobile */
+  }
+  
+  #play-pause-btn {
+    min-width: 0;
+    flex: 2; /* Give play/pause button more space */
+  }
+  
+  #prev-frame-btn, #next-frame-btn {
+    min-width: 0;
+    flex: 1;
+    padding: 8px;
+  }
+  
+  #stop-btn {
+    flex: 1;
   }
 }
 
@@ -741,5 +745,18 @@ button:disabled {
     padding: 8px 15px;
     font-size: 14px;
     flex: 1;
+  }
+  
+  .fullscreen-controls .button-text {
+    display: none; /* Hide text on mobile */
+  }
+  
+  .fullscreen-nav-btn {
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }

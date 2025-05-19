@@ -298,21 +298,21 @@ const AnalysisSection: React.FC = () => {
             <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
             </svg>
-            Previous
+            <span className="button-text">Previous</span>
           </button>
           
           <button
             className="fullscreen-close-btn"
             onClick={closeFullscreen}
           >
-            Close
+            <span className="button-text">Close</span>
           </button>
           
           <button
             className="fullscreen-nav-btn"
             onClick={() => navigateFullscreen('next')}
           >
-            Next
+            <span className="button-text">Next</span>
             <svg className="icon-right" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
             </svg>
@@ -382,7 +382,7 @@ const AnalysisSection: React.FC = () => {
                 <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
                 </svg>
-                Prev
+                <span className="button-text">Prev</span>
               </button>
               <span id="current-rep">
                 {appState.currentRepIndex + 1}/{repCount || 0}
@@ -394,7 +394,7 @@ const AnalysisSection: React.FC = () => {
                 onClick={navigateToNextRep}
                 type="button"
               >
-                Next
+                <span className="button-text">Next</span>
                 <svg className="icon icon-right" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
                 </svg>
