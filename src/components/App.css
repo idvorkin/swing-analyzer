@@ -278,6 +278,39 @@ button:disabled {
   min-width: 120px;
 }
 
+/* Mobile-specific video controls */
+@media (max-width: 768px) {
+  .video-controls {
+    gap: 8px;
+    padding: 0 10px;
+  }
+  
+  .video-controls button {
+    min-width: 0;
+    padding: 8px 10px;
+    flex: 1;
+  }
+  
+  .video-controls .button-text {
+    display: none; /* Hide text on mobile */
+  }
+  
+  #play-pause-btn {
+    min-width: 0;
+    flex: 2; /* Give play/pause button more space */
+  }
+  
+  #prev-frame-btn, #next-frame-btn {
+    min-width: 0;
+    flex: 1;
+    padding: 8px;
+  }
+  
+  #stop-btn {
+    flex: 1;
+  }
+}
+
 /* Analysis Section */
 .analysis-section {
   margin-bottom: 30px;

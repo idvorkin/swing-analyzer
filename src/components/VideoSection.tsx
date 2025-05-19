@@ -85,6 +85,7 @@ const VideoSection: React.FC = () => {
             <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M7 6c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1s-1-.45-1-1V7c0-.55.45-1 1-1zm3.66 6.82l5.77 4.07c.66.47 1.58-.01 1.58-.82V7.93c0-.81-.91-1.28-1.58-.82l-5.77 4.07c-.57.4-.57 1.24 0 1.64z"/>
             </svg>
+            <span className="button-text">Prev</span>
           </button>
           
           <button
@@ -101,7 +102,7 @@ const VideoSection: React.FC = () => {
                 <path d="M8 5v14l11-7z"/>
               )}
             </svg>
-            {isPlaying ? 'Pause' : 'Play'}
+            <span className="button-text">{isPlaying ? 'Pause' : 'Play'}</span>
           </button>
           
           <button
@@ -114,6 +115,7 @@ const VideoSection: React.FC = () => {
             <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M7.58 16.89l5.77-4.07c.56-.4.56-1.24 0-1.63L7.58 7.11C6.91 6.65 6 7.12 6 7.93v8.14c0 .81.91 1.28 1.58.82zM16 7v10c0 .55.45 1 1 1s1-.45 1-1V7c0-.55-.45-1-1-1s-1 .45-1 1z"/>
             </svg>
+            <span className="button-text">Next</span>
           </button>
           
           <button
@@ -125,7 +127,7 @@ const VideoSection: React.FC = () => {
             <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6 6h12v12H6z"/>
             </svg>
-            Stop
+            <span className="button-text">Stop</span>
           </button>
         </div>
       </div>
