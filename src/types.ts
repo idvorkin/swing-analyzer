@@ -23,14 +23,14 @@ export interface PoseResult {
 
 export interface RepCounter {
   count: number;
-  isHinge: boolean;
-  lastHingeState: boolean;
-  hingeThreshold: number;
+  isConnect: boolean;
+  lastConnectState: boolean;
+  connectThreshold: number;
 }
 
 export enum SwingPositionName {
   Top = 'top',
-  Hinge = 'hinge',
+  Connect = 'connect',
   Bottom = 'bottom',
   Release = 'release',
 }

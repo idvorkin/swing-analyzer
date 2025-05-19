@@ -67,9 +67,9 @@ export class SwingRepProcessor implements RepProcessor {
             spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Top)?.spineAngle,
             armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Top)?.armToSpineAngle
           },
-          hinge: {
-            spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Hinge)?.spineAngle,
-            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Hinge)?.armToSpineAngle
+          connect: {
+            spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Connect)?.spineAngle,
+            armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Connect)?.armToSpineAngle
           },
           bottom: {
             spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Bottom)?.spineAngle,
@@ -130,7 +130,7 @@ export class SwingRepProcessor implements RepProcessor {
   private hasCompletedFullCycle(): boolean {
     return (
       this.detectedPositions.has(SwingPositionName.Top) &&
-      this.detectedPositions.has(SwingPositionName.Hinge) &&
+      this.detectedPositions.has(SwingPositionName.Connect) &&
       this.detectedPositions.has(SwingPositionName.Bottom) &&
       this.detectedPositions.has(SwingPositionName.Release)
     );
@@ -185,6 +185,30 @@ export class SwingRepProcessor implements RepProcessor {
     this.currentRep = {
       repNumber: this.repCount + 1, // Next rep
       checkpoints: new Map(),
+    };
+  }
+
+  calculateRepMetrics(): Record<string, any> {
+    if (!this.currentRep) return {};
+
+    // Get angles at each position
+    return {
+      top: {
+        spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Top)?.spineAngle,
+        armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Top)?.armToSpineAngle
+      },
+      connect: {
+        spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Connect)?.spineAngle,
+        armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Connect)?.armToSpineAngle
+      },
+      bottom: {
+        spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Bottom)?.spineAngle,
+        armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Bottom)?.armToSpineAngle
+      },
+      release: {
+        spineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Release)?.spineAngle,
+        armToSpineAngle: this.currentRep?.checkpoints.get(SwingPositionName.Release)?.armToSpineAngle
+      }
     };
   }
 }

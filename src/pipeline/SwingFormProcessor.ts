@@ -29,7 +29,7 @@ export class SwingFormProcessor implements FormProcessor {
   // Ideal target angles for each position
   private readonly IDEAL_ANGLES = {
     [SwingPositionName.Top]: 0,      // Most vertical
-    [SwingPositionName.Hinge]: 45,   // Mid-point down
+    [SwingPositionName.Connect]: 45,   // Mid-point down
     [SwingPositionName.Bottom]: 85,  // Most horizontal
     [SwingPositionName.Release]: 35, // Mid-point up
   };
@@ -44,11 +44,17 @@ export class SwingFormProcessor implements FormProcessor {
   private isDownswing = true;
   private prevSpineAngle = 0;
   
+  // Track previous arm-to-vertical angle for release detection
+  private prevArmToVerticalAngle = 0;
+  
   // Track maximum angle in the current cycle
   private maxSpineAngleInCycle = 0;
 
   // Track last logged spine angle to reduce console noise
   private lastLoggedAngle = 0;
+  
+  // Threshold for significant arm angle change during release (in degrees)
+  private readonly ARM_ANGLE_CHANGE_THRESHOLD = 15;
 
   constructor(
     private videoElement: HTMLVideoElement,
@@ -105,7 +111,7 @@ export class SwingFormProcessor implements FormProcessor {
       const formEvents: FormEvent[] = [];
       
       // Process positions in the correct sequence
-      const sequence = [SwingPositionName.Top, SwingPositionName.Hinge, SwingPositionName.Bottom, SwingPositionName.Release];
+      const sequence = [SwingPositionName.Top, SwingPositionName.Connect, SwingPositionName.Bottom, SwingPositionName.Release];
       
       for (const position of sequence) {
         const candidate = this.bestPositionCandidates.get(position);
@@ -157,9 +163,9 @@ export class SwingFormProcessor implements FormProcessor {
     // Update best candidates for each position based on how close we are to the ideal angle
     this.updatePositionCandidate(SwingPositionName.Top, skeleton, timestamp, spineAngle, armToSpineAngle, armToVerticalAngle);
     
-    // Only consider Hinge in the downswing
+    // Only consider Connect in the downswing
     if (this.isDownswing) {
-      this.updatePositionCandidate(SwingPositionName.Hinge, skeleton, timestamp, spineAngle, armToSpineAngle, armToVerticalAngle);
+      this.updatePositionCandidate(SwingPositionName.Connect, skeleton, timestamp, spineAngle, armToSpineAngle, armToVerticalAngle);
     }
     
     // Consider Bottom position at any time (will be constrained by angle)
@@ -169,6 +175,9 @@ export class SwingFormProcessor implements FormProcessor {
     if (!this.isDownswing) {
       this.updatePositionCandidate(SwingPositionName.Release, skeleton, timestamp, spineAngle, armToSpineAngle, armToVerticalAngle);
     }
+
+    // Store the current arm-to-vertical angle for next frame comparison
+    this.prevArmToVerticalAngle = armToVerticalAngle;
 
     // No new checkpoint detected, return empty observable
     return EMPTY;
@@ -202,6 +211,42 @@ export class SwingFormProcessor implements FormProcessor {
       // Lower value is better (0 would be perfect)
       // Weight spine angle and arm angle equally (50% each)
       angleDelta = (normalizedSpineDelta * 0.5) - (normalizedArmAngle * 0.5);
+    }
+    // Special case for Connect position: focus on arm angle change during downswing
+    else if (position === SwingPositionName.Connect && this.isDownswing) {
+      // Calculate how much the arm angle has changed since the last frame
+      const armAngleChange = Math.abs(armToVerticalAngle - this.prevArmToVerticalAngle);
+      
+      // We want to capture the moment with the most significant arm angle change
+      // during the early to mid downswing phase
+      if (armAngleChange > this.ARM_ANGLE_CHANGE_THRESHOLD && spineAngle > 20) {
+        // Use inverse of angle change as our metric (smaller is better)
+        angleDelta = 100 / (armAngleChange + 1);
+        
+        // Log significant arm angle changes
+        console.log(`Connect candidate: arm angle change=${armAngleChange.toFixed(1)}°, arm-vertical=${armToVerticalAngle.toFixed(1)}°, spine=${spineAngle.toFixed(1)}°, metric=${angleDelta.toFixed(3)}`);
+      } else {
+        // For insignificant changes, make this a poor candidate
+        angleDelta = 1000;
+      }
+    }
+    // Special case for Release position: focus on arm angle change during upswing
+    else if (position === SwingPositionName.Release && !this.isDownswing) {
+      // Calculate how much the arm angle has changed since the last frame
+      const armAngleChange = Math.abs(armToVerticalAngle - this.prevArmToVerticalAngle);
+      
+      // We want to capture the moment with the most significant arm angle change
+      // Invert the metric so that a larger change gets a smaller delta (better score)
+      if (armAngleChange > this.ARM_ANGLE_CHANGE_THRESHOLD) {
+        // Use inverse of angle change as our metric (smaller is better)
+        angleDelta = 100 / (armAngleChange + 1);
+        
+        // Log significant arm angle changes
+        console.log(`Release candidate: arm angle change=${armAngleChange.toFixed(1)}°, arm-vertical=${armToVerticalAngle.toFixed(1)}°, metric=${angleDelta.toFixed(3)}`);
+      } else {
+        // For insignificant changes, make this a poor candidate
+        angleDelta = 1000;
+      }
     }
     
     const currentBest = this.bestPositionCandidates.get(position);
@@ -297,6 +342,7 @@ export class SwingFormProcessor implements FormProcessor {
     this.bestPositionCandidates.clear();
     this.maxSpineAngleInCycle = 0;
     this.prevSpineAngle = 0;
+    this.prevArmToVerticalAngle = 0;
     this.isDownswing = true;
   }
 

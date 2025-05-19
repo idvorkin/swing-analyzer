@@ -28,19 +28,19 @@ const AnalysisSection: React.FC = () => {
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<SelectedCheckpoint | null>(null);
 
   // Position order for navigation
-  const positionOrder = [
+  const defaultPositionOrder = [
     SwingPositionName.Top,
-    SwingPositionName.Hinge,
+    SwingPositionName.Connect,
     SwingPositionName.Bottom,
-    SwingPositionName.Release
+    SwingPositionName.Release,
   ];
 
-  // Position labels for display
-  const positionLabels = {
+  // Position name mapping for display
+  const positionNameMap: Record<SwingPositionName, string> = {
     [SwingPositionName.Top]: 'Top',
-    [SwingPositionName.Hinge]: 'Hinge',
+    [SwingPositionName.Connect]: 'Connect',
     [SwingPositionName.Bottom]: 'Bottom',
-    [SwingPositionName.Release]: 'Release'
+    [SwingPositionName.Release]: 'Release',
   };
 
   // Effect to render checkpoints when rep index changes
@@ -63,7 +63,7 @@ const AnalysisSection: React.FC = () => {
     
     // Log all angles for the current rep
     console.log('Current rep checkpoint angles:');
-    positionOrder.forEach(position => {
+    defaultPositionOrder.forEach(position => {
       const checkpoint = currentRep.checkpoints.get(position);
       if (checkpoint) {
         console.log(`${position} - spine: ${checkpoint.spineAngle.toFixed(2)}°, arm-vertical: ${checkpoint.armToVerticalAngle.toFixed(2)}°`);
@@ -106,7 +106,7 @@ const AnalysisSection: React.FC = () => {
     gridLayout.className = 'checkpoint-grid';
 
     // Add each position to the grid
-    positionOrder.forEach((position) => {
+    defaultPositionOrder.forEach((position) => {
       const checkpoint = currentRep.checkpoints.get(position);
       const cell = document.createElement('div');
       cell.className = 'checkpoint-cell';
@@ -130,7 +130,7 @@ const AnalysisSection: React.FC = () => {
         // Add position label
         const label = document.createElement('div');
         label.className = 'position-label';
-        label.textContent = positionLabels[position];
+        label.textContent = positionNameMap[position];
         
         // Add angle info
         const angleLabel = document.createElement('div');
@@ -156,7 +156,7 @@ const AnalysisSection: React.FC = () => {
         });
       } else {
         // Empty cell with position name
-        cell.textContent = `${positionLabels[position]} - Not detected`;
+        cell.textContent = `${positionNameMap[position]} - Not detected`;
         cell.style.display = 'flex';
         cell.style.alignItems = 'center';
         cell.style.justifyContent = 'center';
@@ -182,21 +182,21 @@ const AnalysisSection: React.FC = () => {
     if (completedReps.length === 0) return;
     
     const { repIndex, position } = selectedCheckpoint;
-    const currentPosIndex = positionOrder.indexOf(position);
+    const currentPosIndex = defaultPositionOrder.indexOf(position);
     
     let newPosIndex = currentPosIndex;
     let newRepIndex = repIndex;
     
     if (direction === 'next') {
       newPosIndex++;
-      if (newPosIndex >= positionOrder.length) {
+      if (newPosIndex >= defaultPositionOrder.length) {
         newPosIndex = 0;
         newRepIndex = Math.min(repIndex + 1, completedReps.length - 1);
       }
     } else {
       newPosIndex--;
       if (newPosIndex < 0) {
-        newPosIndex = positionOrder.length - 1;
+        newPosIndex = defaultPositionOrder.length - 1;
         newRepIndex = Math.max(repIndex - 1, 0);
       }
     }
@@ -212,7 +212,7 @@ const AnalysisSection: React.FC = () => {
     
     setSelectedCheckpoint({
       repIndex: newRepIndex,
-      position: positionOrder[newPosIndex]
+      position: defaultPositionOrder[newPosIndex]
     });
   };
 
@@ -246,7 +246,7 @@ const AnalysisSection: React.FC = () => {
       <div className="fullscreen-checkpoint">
         <div className="fullscreen-header">
           <div className="fullscreen-title">
-            Rep {currentRep.repNumber} - {positionLabels[selectedCheckpoint.position]} Position
+            Rep {currentRep.repNumber} - {positionNameMap[selectedCheckpoint.position]} Position
           </div>
           <div className="fullscreen-angles">
             <div className="fullscreen-spine-angle">

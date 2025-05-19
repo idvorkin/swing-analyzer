@@ -17,9 +17,9 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     isProcessing: false,
     repCounter: {
       count: 0,
-      isHinge: false,
-      lastHingeState: false,
-      hingeThreshold: 45,
+      isConnect: false,
+      lastConnectState: false,
+      connectThreshold: 45,
     },
     showBodyParts: true,
     bodyPartDisplayTime: 0.5,
@@ -211,8 +211,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       repCounter: {
         ...prev.repCounter,
         count: 0, 
-        isHinge: false,
-        lastHingeState: false
+        isConnect: false,
+        lastConnectState: false
       },
       currentRepIndex: 0
     }));
