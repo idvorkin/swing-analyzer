@@ -32,14 +32,14 @@
     "@tensorflow/tfjs-backend-webgl": "^4.4.0",
     "@tensorflow/tfjs-converter": "^4.4.0",
     "@tensorflow/tfjs-core": "^4.4.0",
-    "playwright": "^1.52.0",
+    "playwright": "^1.56.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.6.0",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@playwright/test": "^1.39.0",
+    "@playwright/test": "^1.56.1",
     "@types/node": "^20.8.6",
     "@types/react": "^18.2.47",
     "@types/react-dom": "^18.2.18",
