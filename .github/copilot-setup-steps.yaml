@@ -1,0 +1,44 @@
+name: Swing Analyzer Setup
+description: Environment setup for the Swing Analyzer coding agent
+
+steps:
+  - name: Install Node.js dependencies
+    run: npm install
+    description: Install all required packages including TensorFlow.js, React, Parcel, and testing tools
+
+  - name: Verify build configuration
+    run: npm run build
+    description: Ensure the application builds successfully with Parcel bundler
+
+  - name: Run end-to-end tests
+    run: npm test
+    description: Execute Playwright tests to verify application functionality
+
+environment:
+  - name: NODE_ENV
+    value: development
+    description: Set Node environment to development for local testing
+
+tools:
+  - node
+  - npm
+  - git
+
+notes: |
+  This setup ensures the coding agent environment matches the development environment:
+  - Node.js (v16+ recommended)
+  - npm package manager
+  - Parcel bundler for development and builds
+  - Playwright for testing
+  - TypeScript compiler
+  - Biome for linting and formatting
+  
+  The application runs entirely in the browser and requires no backend server.
+  Development server runs on http://localhost:1234 via Parcel.
+  
+  Key commands:
+  - npm start: Start development server
+  - npm run build: Build for production
+  - npm test: Run Playwright tests
+  
+  The build output goes to dist/ directory and is ready for static hosting.
