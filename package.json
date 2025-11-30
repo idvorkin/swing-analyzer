@@ -37,6 +37,7 @@
     "@types/node": "^20.8.6",
     "@types/react": "^18.2.47",
     "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",

@@ -8,28 +8,28 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 ### Reference Repositories
 
-- **magic-monitor**: `~/gits/magic-monitor` - Reference implementation
-- **chop-conventions**: `~/gits/chop-conventions` - Specs and patterns
+- **magic-monitor**: [idvorkin/magic-monitor](https://github.com/idvorkin/magic-monitor) - Reference implementation
+- **chop-conventions**: [idvorkin/chop-conventions](https://github.com/idvorkin/chop-conventions) - Specs and patterns
 
 ### Key Reference Files
 
-| Purpose                   | Location                                                      |
-| ------------------------- | ------------------------------------------------------------- |
-| Vite + PWA Config         | `~/gits/magic-monitor/vite.config.ts`                         |
-| PWA Spec                  | `~/gits/chop-conventions/pwa/PWA_ENABLEMENT_SPEC.md`          |
-| GitHub Integration Spec   | `~/gits/chop-conventions/pwa/github_integration.md`           |
-| Tailscale Dev Server      | `~/gits/chop-conventions/dev-setup/tailscale-dev-server.md`   |
-| DeviceService             | `~/gits/magic-monitor/src/services/DeviceService.ts`          |
-| useVersionCheck           | `~/gits/magic-monitor/src/hooks/useVersionCheck.ts`           |
-| VersionNotification       | `~/gits/magic-monitor/src/components/VersionNotification.tsx` |
-| useShakeDetector          | `~/gits/magic-monitor/src/hooks/useShakeDetector.ts`          |
-| useBugReporter            | `~/gits/magic-monitor/src/hooks/useBugReporter.ts`            |
-| BugReportModal            | `~/gits/magic-monitor/src/components/BugReportModal.tsx`      |
-| CrashFallback             | `~/gits/magic-monitor/src/components/CrashFallback.tsx`       |
-| SettingsModal             | `~/gits/magic-monitor/src/components/SettingsModal.tsx`       |
-| shakeDetection utils      | `~/gits/magic-monitor/src/utils/shakeDetection.ts`            |
-| bugReportFormatters       | `~/gits/magic-monitor/src/utils/bugReportFormatters.ts`       |
-| Version generation script | `~/gits/magic-monitor/scripts/generate-version.sh`            |
+| Purpose                   | Location                                                                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vite + PWA Config         | [magic-monitor/vite.config.ts](https://github.com/idvorkin/magic-monitor/blob/main/vite.config.ts)                                                 |
+| PWA Spec                  | [chop-conventions/pwa/PWA_ENABLEMENT_SPEC.md](https://github.com/idvorkin/chop-conventions/blob/main/pwa/PWA_ENABLEMENT_SPEC.md)                   |
+| GitHub Integration Spec   | [chop-conventions/pwa/github_integration.md](https://github.com/idvorkin/chop-conventions/blob/main/pwa/github_integration.md)                     |
+| Tailscale Dev Server      | [chop-conventions/dev-setup/tailscale-dev-server.md](https://github.com/idvorkin/chop-conventions/blob/main/dev-setup/tailscale-dev-server.md)     |
+| DeviceService             | [magic-monitor/src/services/DeviceService.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/services/DeviceService.ts)                   |
+| useVersionCheck           | [magic-monitor/src/hooks/useVersionCheck.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/hooks/useVersionCheck.ts)                     |
+| VersionNotification       | [magic-monitor/src/components/VersionNotification.tsx](https://github.com/idvorkin/magic-monitor/blob/main/src/components/VersionNotification.tsx) |
+| useShakeDetector          | [magic-monitor/src/hooks/useShakeDetector.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/hooks/useShakeDetector.ts)                   |
+| useBugReporter            | [magic-monitor/src/hooks/useBugReporter.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/hooks/useBugReporter.ts)                       |
+| BugReportModal            | [magic-monitor/src/components/BugReportModal.tsx](https://github.com/idvorkin/magic-monitor/blob/main/src/components/BugReportModal.tsx)           |
+| CrashFallback             | [magic-monitor/src/components/CrashFallback.tsx](https://github.com/idvorkin/magic-monitor/blob/main/src/components/CrashFallback.tsx)             |
+| SettingsModal             | [magic-monitor/src/components/SettingsModal.tsx](https://github.com/idvorkin/magic-monitor/blob/main/src/components/SettingsModal.tsx)             |
+| shakeDetection utils      | [magic-monitor/src/utils/shakeDetection.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/utils/shakeDetection.ts)                       |
+| bugReportFormatters       | [magic-monitor/src/utils/bugReportFormatters.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/utils/bugReportFormatters.ts)             |
+| Version generation script | [magic-monitor/scripts/generate-version.sh](https://github.com/idvorkin/magic-monitor/blob/main/scripts/generate-version.sh)                       |
 
 ---
 
@@ -39,8 +39,8 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Reference:**
 
-- `~/gits/magic-monitor/vite.config.ts`
-- `~/gits/chop-conventions/dev-setup/tailscale-dev-server.md`
+- [magic-monitor/vite.config.ts](https://github.com/idvorkin/magic-monitor/blob/main/vite.config.ts)
+- [chop-conventions/dev-setup/tailscale-dev-server.md](https://github.com/idvorkin/chop-conventions/blob/main/dev-setup/tailscale-dev-server.md)
 
 **Files to Create:**
 
@@ -80,8 +80,8 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Reference:**
 
-- `~/gits/chop-conventions/pwa/PWA_ENABLEMENT_SPEC.md`
-- `~/gits/magic-monitor/vite.config.ts` (VitePWA section)
+- [chop-conventions/pwa/PWA_ENABLEMENT_SPEC.md](https://github.com/idvorkin/chop-conventions/blob/main/pwa/PWA_ENABLEMENT_SPEC.md)
+- [magic-monitor/vite.config.ts](https://github.com/idvorkin/magic-monitor/blob/main/vite.config.ts) (VitePWA section)
 
 **Dependencies:** Requires Change 1 (Vite Migration)
 
@@ -128,8 +128,8 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Reference:**
 
-- `~/gits/magic-monitor/src/services/DeviceService.ts`
-- `~/gits/chop-conventions/pwa/PWA_ENABLEMENT_SPEC.md` (Humble Object section)
+- [magic-monitor/src/services/DeviceService.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/services/DeviceService.ts)
+- [chop-conventions/pwa/PWA_ENABLEMENT_SPEC.md](https://github.com/idvorkin/chop-conventions/blob/main/pwa/PWA_ENABLEMENT_SPEC.md) (Humble Object section)
 
 **Files to Create:**
 
@@ -160,9 +160,9 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Reference:**
 
-- `~/gits/magic-monitor/src/hooks/useVersionCheck.ts`
-- `~/gits/magic-monitor/src/components/VersionNotification.tsx`
-- `~/gits/chop-conventions/pwa/PWA_ENABLEMENT_SPEC.md`
+- [magic-monitor/src/hooks/useVersionCheck.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/hooks/useVersionCheck.ts)
+- [magic-monitor/src/components/VersionNotification.tsx](https://github.com/idvorkin/magic-monitor/blob/main/src/components/VersionNotification.tsx)
+- [chop-conventions/pwa/PWA_ENABLEMENT_SPEC.md](https://github.com/idvorkin/chop-conventions/blob/main/pwa/PWA_ENABLEMENT_SPEC.md)
 
 **Dependencies:** Requires Change 2 (PWA) and Change 3 (DeviceService)
 
@@ -197,8 +197,8 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Reference:**
 
-- `~/gits/chop-conventions/pwa/github_integration.md` (Build-Time Version Generation section)
-- `~/gits/magic-monitor/scripts/generate-version.sh`
+- [chop-conventions/pwa/github_integration.md](https://github.com/idvorkin/chop-conventions/blob/main/pwa/github_integration.md) (Build-Time Version Generation section)
+- [magic-monitor/scripts/generate-version.sh](https://github.com/idvorkin/magic-monitor/blob/main/scripts/generate-version.sh)
 
 **Files to Create:**
 
@@ -237,8 +237,8 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Reference:**
 
-- `~/gits/magic-monitor/src/components/SettingsModal.tsx`
-- `~/gits/chop-conventions/pwa/github_integration.md` (GitHub Repo Link section)
+- [magic-monitor/src/components/SettingsModal.tsx](https://github.com/idvorkin/magic-monitor/blob/main/src/components/SettingsModal.tsx)
+- [chop-conventions/pwa/github_integration.md](https://github.com/idvorkin/chop-conventions/blob/main/pwa/github_integration.md) (GitHub Repo Link section)
 
 **Dependencies:** Requires Change 5 (Version Generation)
 
@@ -269,12 +269,12 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Reference:**
 
-- `~/gits/chop-conventions/pwa/github_integration.md` (Bug Reporting section)
-- `~/gits/magic-monitor/src/hooks/useShakeDetector.ts`
-- `~/gits/magic-monitor/src/hooks/useBugReporter.ts`
-- `~/gits/magic-monitor/src/components/BugReportModal.tsx`
-- `~/gits/magic-monitor/src/utils/shakeDetection.ts`
-- `~/gits/magic-monitor/src/utils/bugReportFormatters.ts`
+- [chop-conventions/pwa/github_integration.md](https://github.com/idvorkin/chop-conventions/blob/main/pwa/github_integration.md) (Bug Reporting section)
+- [magic-monitor/src/hooks/useShakeDetector.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/hooks/useShakeDetector.ts)
+- [magic-monitor/src/hooks/useBugReporter.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/hooks/useBugReporter.ts)
+- [magic-monitor/src/components/BugReportModal.tsx](https://github.com/idvorkin/magic-monitor/blob/main/src/components/BugReportModal.tsx)
+- [magic-monitor/src/utils/shakeDetection.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/utils/shakeDetection.ts)
+- [magic-monitor/src/utils/bugReportFormatters.ts](https://github.com/idvorkin/magic-monitor/blob/main/src/utils/bugReportFormatters.ts)
 
 **Dependencies:** Requires Change 5 (Version Generation) and Change 3 (DeviceService)
 
@@ -320,8 +320,8 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Reference:**
 
-- `~/gits/chop-conventions/pwa/github_integration.md` (Error Boundary section)
-- `~/gits/magic-monitor/src/components/CrashFallback.tsx`
+- [chop-conventions/pwa/github_integration.md](https://github.com/idvorkin/chop-conventions/blob/main/pwa/github_integration.md) (Error Boundary section)
+- [magic-monitor/src/components/CrashFallback.tsx](https://github.com/idvorkin/magic-monitor/blob/main/src/components/CrashFallback.tsx)
 
 **Dependencies:** Requires Change 5 (Version Generation) and Change 7 (bugReportFormatters)
 
@@ -359,8 +359,8 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Reference:**
 
-- `~/gits/magic-monitor/vite.config.ts` (test section)
-- `~/gits/magic-monitor/src/hooks/*.test.ts`
+- [magic-monitor/vite.config.ts](https://github.com/idvorkin/magic-monitor/blob/main/vite.config.ts) (test section)
+- [magic-monitor/src/hooks/](https://github.com/idvorkin/magic-monitor/tree/main/src/hooks) (\*.test.ts files)
 
 **Dependencies:** Requires Change 1 (Vite Migration)
 
@@ -393,7 +393,7 @@ This document outlines the changes needed to bring swing-analyzer up to par with
 
 **Recommended sequence (dependencies shown):**
 
-```
+```text
 Change 1: Vite Migration
     ↓
 Change 9: Unit Testing Infrastructure
@@ -424,7 +424,7 @@ Change 8: Error Boundary
 
 For each change, use:
 
-```
+```text
 Implement Change N: [Title] for swing-analyzer.
 
 Reference files:
