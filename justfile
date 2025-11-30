@@ -31,6 +31,6 @@ test-headed:
 install-browsers:
     npx playwright install
 
-# Deploy to Vercel
+# Deploy to Surge
 deploy: build
-    npx vercel --prod
+    npx surge ./dist swing-analyzer.surge.sh
