@@ -1,8 +1,8 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { defineConfig } from 'vitest/config';
 
 // Container and Tailscale detection for dev server configuration
 function isRunningInContainer(): boolean {
@@ -123,5 +123,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    exclude: ['e2e-tests/**', 'node_modules/**'],
   },
 });

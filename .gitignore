@@ -58,3 +58,6 @@ node_modules/.vite/
 .vercel
 .SpecStory
 .specstory/.what-is-this.md
+
+# Generated at build time
+src/generated_version.ts

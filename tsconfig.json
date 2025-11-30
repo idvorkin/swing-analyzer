@@ -4,6 +4,7 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "lib": ["dom", "dom.iterable", "ESNext"],
+    "types": ["vite-plugin-pwa/react", "vite-plugin-pwa/client"],
     "skipLibCheck": true,
 
     /* Bundler mode */
