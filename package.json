@@ -37,15 +37,16 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "@testing-library/react": "^16.2.0",
     "@types/node": "^20.8.6",
     "@types/react": "^18.2.47",
     "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^26.1.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^3.1.4",
-    "jsdom": "^26.1.0",
-    "@testing-library/react": "^16.2.0"
+    "vitest": "^3.1.4"
   }
 }
