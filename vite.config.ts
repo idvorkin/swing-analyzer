@@ -54,6 +54,8 @@ export default defineConfig({
         short_name: 'SwingAI',
         description:
           'AI-powered kettlebell swing form analysis and rep counting',
+        start_url: '/',
+        scope: '/',
         theme_color: '#000000',
         background_color: '#f5f5f7',
         display: 'standalone',
@@ -73,13 +75,15 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'maskable',
           },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm,bin,json}'],
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15MB for TF.js models
+        navigateFallback: '/index.html',
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
