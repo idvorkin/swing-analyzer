@@ -7,6 +7,34 @@ import {
 } from '../generated_version';
 import { DeviceService } from '../services/DeviceService';
 
+// Tab configuration - extracted to avoid recreation on each render
+const TABS = [
+  { id: 'bug' as const, label: 'Bug Report', icon: '🐛' },
+  { id: 'updates' as const, label: 'Updates', icon: '🚀' },
+  { id: 'about' as const, label: 'About', icon: '💡' },
+] as const;
+
+type TabId = (typeof TABS)[number]['id'];
+
+// Safe date formatting with fallback
+function formatBuildDate(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return 'Unknown';
+    }
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return 'Unknown';
+  }
+}
+
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -40,9 +68,7 @@ export function SettingsModal({
   updateAvailable,
   onReload,
 }: SettingsModalProps) {
-  const [activeSection, setActiveSection] = useState<
-    'bug' | 'updates' | 'about'
-  >('bug');
+  const [activeSection, setActiveSection] = useState<TabId>('bug');
 
   const handleShakeToggle = useCallback(async () => {
     if (!shakeEnabled) {
@@ -63,13 +89,7 @@ export function SettingsModal({
   if (!isOpen) return null;
 
   const isMobile = DeviceService.isMobileDevice();
-  const buildDate = new Date(BUILD_TIMESTAMP).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const buildDate = formatBuildDate(BUILD_TIMESTAMP);
 
   return (
     <div
@@ -82,7 +102,7 @@ export function SettingsModal({
         justifyContent: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
         backdropFilter: 'blur(8px)',
-        animation: 'fadeIn 0.2s ease-out',
+        animation: 'settings-fade-in 0.2s ease-out',
       }}
       onClick={onClose}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
@@ -90,22 +110,6 @@ export function SettingsModal({
       aria-modal="true"
       aria-labelledby="settings-title"
     >
-      <style>
-        {`
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-          @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-          }
-          @keyframes pulse-subtle {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-            50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
-          }
-        `}
-      </style>
       <div
         style={{
           background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
@@ -117,7 +121,7 @@ export function SettingsModal({
             '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
           maxHeight: '90vh',
           overflowY: 'auto',
-          animation: 'slideUp 0.3s ease-out',
+          animation: 'settings-slide-up 0.3s ease-out',
           margin: '1rem',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -219,11 +223,7 @@ export function SettingsModal({
             background: 'rgba(0, 0, 0, 0.2)',
           }}
         >
-          {[
-            { id: 'bug' as const, label: 'Bug Report', icon: '🐛' },
-            { id: 'updates' as const, label: 'Updates', icon: '🚀' },
-            { id: 'about' as const, label: 'About', icon: '💡' },
-          ].map((tab) => (
+          {TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -476,7 +476,7 @@ export function SettingsModal({
                       'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%)',
                     borderRadius: '0.75rem',
                     border: '1px solid rgba(34, 197, 94, 0.3)',
-                    animation: 'pulse-subtle 2s infinite',
+                    animation: 'settings-pulse-subtle 2s infinite',
                   }}
                 >
                   <div
@@ -624,7 +624,7 @@ export function SettingsModal({
                     <span
                       style={{
                         display: 'inline-block',
-                        animation: 'spin 1s linear infinite',
+                        animation: 'settings-spin 1s linear infinite',
                       }}
                     >
                       ⟳
@@ -635,9 +635,6 @@ export function SettingsModal({
                   <>🔄 Check for Updates</>
                 )}
               </button>
-              <style>
-                {`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}
-              </style>
             </div>
           )}
 
