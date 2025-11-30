@@ -46,8 +46,11 @@ yarn-error.log*
 # Optional eslint cache
 .eslintcache
 
-# Parcel cache
+# Parcel cache (legacy)
 .parcel-cache/
+
+# Vite cache
+node_modules/.vite/
 
 # Misc
 *.gz

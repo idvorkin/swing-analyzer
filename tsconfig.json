@@ -2,12 +2,12 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "module": "ES2020",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "ESNext",
+    "lib": ["dom", "dom.iterable", "ESNext"],
     "skipLibCheck": true,
 
     /* Bundler mode */
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -21,7 +21,7 @@
 
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "jsx": "react"
+    "jsx": "react-jsx"
   },
   "include": ["src/**/*"]
 }

@@ -1,38 +1,32 @@
 {
   "name": "swing-analyzer",
   "version": "1.0.0",
+  "type": "module",
   "description": "Web-based swing analyzer using MediaPipe",
   "scripts": {
-    "start": "parcel public/index.html",
-    "build": "parcel build public/index.html --dist-dir dist",
-    "vercel-build": "parcel build public/index.html --dist-dir dist",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug"
   },
-  "browserslist": [
-    "last 3 chrome versions",
-    "last 3 firefox versions",
-    "last 3 safari versions"
+  "keywords": [
+    "pose",
+    "detection",
+    "swing",
+    "analysis",
+    "mediapipe"
   ],
-  "alias": {
-    "process": {
-      "global": "process"
-    },
-    "react-router/dom": "./node_modules/react-router-dom/dist/index.mjs"
-  },
-  "keywords": ["pose", "detection", "swing", "analysis", "mediapipe"],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@mediapipe/pose": "^0.5.1675469404",
-    "@parcel/transformer-typescript-tsc": "^2.14.4",
     "@tensorflow-models/pose-detection": "^2.1.0",
     "@tensorflow/tfjs-backend-webgl": "^4.4.0",
     "@tensorflow/tfjs-converter": "^4.4.0",
     "@tensorflow/tfjs-core": "^4.4.0",
-    "playwright": "^1.56.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.6.0",
@@ -43,9 +37,8 @@
     "@types/node": "^20.8.6",
     "@types/react": "^18.2.47",
     "@types/react-dom": "^18.2.18",
-    "buffer": "^6.0.3",
-    "parcel": "^2.9.3",
-    "process": "^0.11.10",
-    "typescript": "^5.0.4"
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
   }
 }
