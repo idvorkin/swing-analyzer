@@ -1,14 +1,16 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   DeviceService,
   type DeviceServiceType,
 } from '../services/DeviceService';
 
 const LAST_UPDATE_CHECK_KEY = 'swing-analyzer-last-update-check';
+const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
 export function useVersionCheck(service: DeviceServiceType = DeviceService) {
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [lastCheckTime, setLastCheckTime] = useState<Date | null>(() => {
     const stored = service.getStorageItem(LAST_UPDATE_CHECK_KEY);
@@ -21,24 +23,32 @@ export function useVersionCheck(service: DeviceServiceType = DeviceService) {
   } = useRegisterSW({
     onRegisteredSW(swUrl, registration) {
       registrationRef.current = registration ?? null;
-      // Check for updates periodically (every 30 minutes)
-      if (registration) {
-        setInterval(
-          () => {
-            registration.update();
-            const now = new Date();
-            setLastCheckTime(now);
-            service.setStorageItem(LAST_UPDATE_CHECK_KEY, now.toISOString());
-          },
-          30 * 60 * 1000
-        );
-      }
       console.log(`Service worker registered: ${swUrl}`);
     },
     onRegisterError(error) {
       console.error('Service worker registration error:', error);
     },
   });
+
+  // Set up periodic update checks with proper cleanup
+  useEffect(() => {
+    const registration = registrationRef.current;
+    if (!registration) return;
+
+    intervalIdRef.current = setInterval(() => {
+      registration.update();
+      const now = new Date();
+      setLastCheckTime(now);
+      service.setStorageItem(LAST_UPDATE_CHECK_KEY, now.toISOString());
+    }, UPDATE_CHECK_INTERVAL_MS);
+
+    return () => {
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
+      }
+    };
+  }, [service]);
 
   const reload = () => {
     updateServiceWorker(true);
