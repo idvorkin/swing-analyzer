@@ -120,6 +120,11 @@ export const DeviceService = {
 
       const video = document.createElement('video');
       video.srcObject = stream;
+
+      // Wait for video dimensions to be available
+      await new Promise<void>((resolve) => {
+        video.onloadedmetadata = () => resolve();
+      });
       await video.play();
 
       const canvas = document.createElement('canvas');
