@@ -40,7 +40,7 @@ npm install
 npm start
 ```
 
-4. Open your browser to http://localhost:1234
+4. Open your browser to http://localhost:5173
 
 ### Building for Production
 

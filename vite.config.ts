@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -46,6 +47,7 @@ if (useSsl) {
 export default defineConfig({
   plugins: [
     react(),
+    ...(useSsl ? [basicSsl()] : []),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['pwa-192x192.png', 'pwa-512x512.png'],
@@ -119,6 +121,7 @@ export default defineConfig({
   ],
   server: {
     host: devHost,
+    https: useSsl,
     allowedHosts: tailscaleHosts.length > 0 ? tailscaleHosts : undefined,
   },
   build: {
