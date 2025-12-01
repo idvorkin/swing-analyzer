@@ -4,7 +4,11 @@ import * as tf from '@tensorflow/tfjs-core';
 import { from, type Observable, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Skeleton } from '../models/Skeleton';
-import { CocoBodyParts, type PoseKeypoint, type PoseResult } from '../types';
+import {
+  MediaPipeBodyParts,
+  type PoseKeypoint,
+  type PoseResult,
+} from '../types';
 import type {
   FrameEvent,
   SkeletonEvent,
@@ -24,22 +28,22 @@ export interface PoseEvent {
  */
 export const SKELETON_CONNECTIONS = [
   // Torso
-  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.RIGHT_SHOULDER],
-  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_HIP],
-  [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_HIP],
-  [CocoBodyParts.LEFT_HIP, CocoBodyParts.RIGHT_HIP],
+  [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.RIGHT_SHOULDER],
+  [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.LEFT_HIP],
+  [MediaPipeBodyParts.RIGHT_SHOULDER, MediaPipeBodyParts.RIGHT_HIP],
+  [MediaPipeBodyParts.LEFT_HIP, MediaPipeBodyParts.RIGHT_HIP],
 
   // Arms
-  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_ELBOW],
-  [CocoBodyParts.LEFT_ELBOW, CocoBodyParts.LEFT_WRIST],
-  [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_ELBOW],
-  [CocoBodyParts.RIGHT_ELBOW, CocoBodyParts.RIGHT_WRIST],
+  [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.LEFT_ELBOW],
+  [MediaPipeBodyParts.LEFT_ELBOW, MediaPipeBodyParts.LEFT_WRIST],
+  [MediaPipeBodyParts.RIGHT_SHOULDER, MediaPipeBodyParts.RIGHT_ELBOW],
+  [MediaPipeBodyParts.RIGHT_ELBOW, MediaPipeBodyParts.RIGHT_WRIST],
 
   // Legs
-  [CocoBodyParts.LEFT_HIP, CocoBodyParts.LEFT_KNEE],
-  [CocoBodyParts.LEFT_KNEE, CocoBodyParts.LEFT_ANKLE],
-  [CocoBodyParts.RIGHT_HIP, CocoBodyParts.RIGHT_KNEE],
-  [CocoBodyParts.RIGHT_KNEE, CocoBodyParts.RIGHT_ANKLE],
+  [MediaPipeBodyParts.LEFT_HIP, MediaPipeBodyParts.LEFT_KNEE],
+  [MediaPipeBodyParts.LEFT_KNEE, MediaPipeBodyParts.LEFT_ANKLE],
+  [MediaPipeBodyParts.RIGHT_HIP, MediaPipeBodyParts.RIGHT_KNEE],
+  [MediaPipeBodyParts.RIGHT_KNEE, MediaPipeBodyParts.RIGHT_ANKLE],
 ];
 
 /**
@@ -62,15 +66,15 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       tf.env().set('WEBGL_CPU_FORWARD', false);
       tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
 
-      // Use MoveNet Thunder - better accuracy than Lightning
-      const detectorConfig = {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+      // Use BlazePose - 33 keypoints, better full body tracking
+      const detectorConfig: poseDetection.BlazePoseTfjsModelConfig = {
+        runtime: 'tfjs',
+        modelType: 'lite',
         enableSmoothing: true,
-        // No modelUrl - use default from tfhub.dev
       };
 
       this.detector = await poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
+        poseDetection.SupportedModels.BlazePose,
         detectorConfig
       );
 
@@ -177,10 +181,10 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
    */
   private calculateSpineVertical(keypoints: PoseKeypoint[]): number {
     // 1. First approach: Use shoulders and hips if available (best)
-    const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
-    const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
-    const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
-    const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+    const leftShoulder = keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
+    const rightShoulder = keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
+    const leftHip = keypoints[MediaPipeBodyParts.LEFT_HIP];
+    const rightHip = keypoints[MediaPipeBodyParts.RIGHT_HIP];
 
     // Safe array of points that exist and are visible
     const safeShoulders = [];
@@ -214,9 +218,9 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
     }
 
     // 2. Second approach: Use face orientation as fallback
-    const nose = keypoints[CocoBodyParts.NOSE];
-    const leftEye = keypoints[CocoBodyParts.LEFT_EYE];
-    const rightEye = keypoints[CocoBodyParts.RIGHT_EYE];
+    const nose = keypoints[MediaPipeBodyParts.NOSE];
+    const leftEye = keypoints[MediaPipeBodyParts.LEFT_EYE];
+    const rightEye = keypoints[MediaPipeBodyParts.RIGHT_EYE];
 
     if (nose && (leftEye || rightEye) && this.isPointVisible(nose)) {
       // Use visible eye, or average of both if available
@@ -266,10 +270,10 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
   private hasRequiredKeypoints(keypoints: PoseKeypoint[]): boolean {
     // Required keypoints for spine angle calculation
     const requiredParts = [
-      CocoBodyParts.LEFT_SHOULDER,
-      CocoBodyParts.RIGHT_SHOULDER,
-      CocoBodyParts.LEFT_HIP,
-      CocoBodyParts.RIGHT_HIP,
+      MediaPipeBodyParts.LEFT_SHOULDER,
+      MediaPipeBodyParts.RIGHT_SHOULDER,
+      MediaPipeBodyParts.LEFT_HIP,
+      MediaPipeBodyParts.RIGHT_HIP,
     ];
 
     // Check if all required keypoints are visible

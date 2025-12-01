@@ -1,4 +1,4 @@
-import { type PoseKeypoint, MediaPipeBodyParts, CocoBodyParts } from '../types';
+import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
 
 /**
  * Represents a skeleton constructed from keypoints
@@ -7,10 +7,10 @@ import { type PoseKeypoint, MediaPipeBodyParts, CocoBodyParts } from '../types';
 export class Skeleton {
   // Mapping for keypoint lookup by name
   private keypointMapping: Record<string, number> = {};
-  
+
   // Arm-to-spine angle cache (computed lazily)
   private _armToSpineAngle: number | null = null;
-  
+
   // Arm-to-vertical angle cache (computed lazily)
   private _armToVerticalAngle: number | null = null;
 
@@ -27,25 +27,18 @@ export class Skeleton {
   }
 
   /**
-   * Initialize keypoint name -> index mapping
+   * Initialize keypoint name -> index mapping (MediaPipe format for BlazePose)
    */
   private initKeypointMapping(): void {
-    // Create a mapping from all body part names to their indices
+    // Create a mapping from MediaPipe body part names to their indices
+    // BlazePose uses MediaPipe format with 33 keypoints
     Object.entries(MediaPipeBodyParts).forEach(([name, index]) => {
       const lowerName = name.toLowerCase();
       this.keypointMapping[lowerName] = index;
       // Add without prefix for easier lookup
-      const withoutPrefix = lowerName.replace('left_', '').replace('right_', '');
-      if (withoutPrefix !== lowerName) {
-        this.keypointMapping[withoutPrefix] = index;
-      }
-    });
-
-    Object.entries(CocoBodyParts).forEach(([name, index]) => {
-      const lowerName = name.toLowerCase();
-      this.keypointMapping[lowerName] = index;
-      // Add without prefix for easier lookup
-      const withoutPrefix = lowerName.replace('left_', '').replace('right_', '');
+      const withoutPrefix = lowerName
+        .replace('left_', '')
+        .replace('right_', '');
       if (withoutPrefix !== lowerName) {
         this.keypointMapping[withoutPrefix] = index;
       }
@@ -79,40 +72,53 @@ export class Skeleton {
 
     try {
       // Get spine vector (from hip to shoulder)
-      const hip = this.getKeypointByName('rightHip') || this.getKeypointByName('leftHip');
-      const shoulder = this.getKeypointByName('rightShoulder') || this.getKeypointByName('leftShoulder');
-      
+      const hip =
+        this.getKeypointByName('rightHip') || this.getKeypointByName('leftHip');
+      const shoulder =
+        this.getKeypointByName('rightShoulder') ||
+        this.getKeypointByName('leftShoulder');
+
       // Get arm vector (from shoulder to elbow)
-      const elbow = this.getKeypointByName('rightElbow') || this.getKeypointByName('leftElbow');
-      
+      const elbow =
+        this.getKeypointByName('rightElbow') ||
+        this.getKeypointByName('leftElbow');
+
       if (hip && shoulder && elbow) {
         // Calculate vectors
         const spineVector = {
           x: shoulder.x - hip.x,
-          y: shoulder.y - hip.y
+          y: shoulder.y - hip.y,
         };
-        
+
         const armVector = {
           x: elbow.x - shoulder.x,
-          y: elbow.y - shoulder.y
+          y: elbow.y - shoulder.y,
         };
-        
+
         // Calculate dot product
-        const dotProduct = spineVector.x * armVector.x + spineVector.y * armVector.y;
-        
+        const dotProduct =
+          spineVector.x * armVector.x + spineVector.y * armVector.y;
+
         // Calculate magnitudes
-        const spineMag = Math.sqrt(spineVector.x * spineVector.x + spineVector.y * spineVector.y);
-        const armMag = Math.sqrt(armVector.x * armVector.x + armVector.y * armVector.y);
-        
+        const spineMag = Math.sqrt(
+          spineVector.x * spineVector.x + spineVector.y * spineVector.y
+        );
+        const armMag = Math.sqrt(
+          armVector.x * armVector.x + armVector.y * armVector.y
+        );
+
         // Calculate angle in radians and convert to degrees
-        const cosAngle = Math.min(Math.max(dotProduct / (spineMag * armMag), -1), 1); // Clamp to [-1, 1]
+        const cosAngle = Math.min(
+          Math.max(dotProduct / (spineMag * armMag), -1),
+          1
+        ); // Clamp to [-1, 1]
         const angleRad = Math.acos(cosAngle);
         const angleDeg = angleRad * (180 / Math.PI);
-        
+
         // Use exterior angle instead of interior angle for more intuitive visual representation
         // When vectors are almost aligned, this will give a small angle
         const exteriorAngleDeg = 180 - angleDeg;
-        
+
         this._armToSpineAngle = exteriorAngleDeg;
         return exteriorAngleDeg;
       } else {
@@ -140,39 +146,52 @@ export class Skeleton {
 
     try {
       // Get shoulder and elbow keypoints
-      const shoulder = this.getKeypointByName('rightShoulder') || this.getKeypointByName('leftShoulder');
-      const elbow = this.getKeypointByName('rightElbow') || this.getKeypointByName('leftElbow');
-      
+      const shoulder =
+        this.getKeypointByName('rightShoulder') ||
+        this.getKeypointByName('leftShoulder');
+      const elbow =
+        this.getKeypointByName('rightElbow') ||
+        this.getKeypointByName('leftElbow');
+
       if (shoulder && elbow) {
         // Calculate arm vector (from shoulder to elbow)
         const armVector = {
           x: elbow.x - shoulder.x,
-          y: elbow.y - shoulder.y
+          y: elbow.y - shoulder.y,
         };
-        
+
         // Vertical vector pointing downward
         const verticalVector = {
           x: 0,
-          y: 1 // Pointing down (Y increases downward in image coordinates)
+          y: 1, // Pointing down (Y increases downward in image coordinates)
         };
-        
+
         // Calculate dot product
-        const dotProduct = armVector.x * verticalVector.x + armVector.y * verticalVector.y;
-        
+        const dotProduct =
+          armVector.x * verticalVector.x + armVector.y * verticalVector.y;
+
         // Calculate magnitudes
-        const armMag = Math.sqrt(armVector.x * armVector.x + armVector.y * armVector.y);
-        const verticalMag = Math.sqrt(verticalVector.x * verticalVector.x + verticalVector.y * verticalVector.y); // Will be 1
-        
+        const armMag = Math.sqrt(
+          armVector.x * armVector.x + armVector.y * armVector.y
+        );
+        const verticalMag = Math.sqrt(
+          verticalVector.x * verticalVector.x +
+            verticalVector.y * verticalVector.y
+        ); // Will be 1
+
         // Calculate angle in radians and convert to degrees
-        const cosAngle = Math.min(Math.max(dotProduct / (armMag * verticalMag), -1), 1); // Clamp to [-1, 1]
+        const cosAngle = Math.min(
+          Math.max(dotProduct / (armMag * verticalMag), -1),
+          1
+        ); // Clamp to [-1, 1]
         const angleRad = Math.acos(cosAngle);
         let angleDeg = angleRad * (180 / Math.PI);
-        
+
         // Make the angle signed: negative if arm is pointing left (x < 0), positive if pointing right
         if (armVector.x < 0) {
           angleDeg = -angleDeg;
         }
-        
+
         this._armToVerticalAngle = angleDeg;
         return angleDeg;
       } else {
@@ -212,63 +231,58 @@ export class Skeleton {
       name,
       name.toUpperCase(),
       // Convert camelCase to SNAKE_CASE
-      name.replace(/([A-Z])/g, '_$1').toUpperCase(),
+      name
+        .replace(/([A-Z])/g, '_$1')
+        .toUpperCase(),
       // Convert camelCase to snake_case
-      name.replace(/([A-Z])/g, '_$1').toLowerCase()
+      name
+        .replace(/([A-Z])/g, '_$1')
+        .toLowerCase(),
     ];
-    
-    // Try each variant
+
+    // Try each variant (MediaPipe format for BlazePose)
     for (const variant of variants) {
       // Check direct mapping
       const index = this.keypointMapping[variant];
       if (index !== undefined && this.keypoints[index]) {
         return this.keypoints[index];
       }
-      
-      // Check if it's a key in CocoBodyParts
-      if (variant in CocoBodyParts) {
-        // @ts-ignore - We're checking if the key exists
-        const cocoIndex = CocoBodyParts[variant];
-        if (this.keypoints[cocoIndex]) {
-          return this.keypoints[cocoIndex];
-        }
-      }
-      
-      // Check if it's a key in MediaPipeBodyParts
+
+      // Check if it's a key in MediaPipeBodyParts (BlazePose uses MediaPipe format)
       if (variant in MediaPipeBodyParts) {
-        // @ts-ignore - We're checking if the key exists
+        // @ts-expect-error - We're checking if the key exists
         const mediaPipeIndex = MediaPipeBodyParts[variant];
         if (this.keypoints[mediaPipeIndex]) {
           return this.keypoints[mediaPipeIndex];
         }
       }
     }
-    
-    // Direct access for common points by their standard names
+
+    // Direct access for common points by their standard names (MediaPipe format for BlazePose)
     if (name === 'rightShoulder' || name === 'RIGHT_SHOULDER') {
-      return this.keypoints[CocoBodyParts.RIGHT_SHOULDER] || this.keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
     }
-    
+
     if (name === 'leftShoulder' || name === 'LEFT_SHOULDER') {
-      return this.keypoints[CocoBodyParts.LEFT_SHOULDER] || this.keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
+      return this.keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
     }
-    
+
     if (name === 'rightElbow' || name === 'RIGHT_ELBOW') {
-      return this.keypoints[CocoBodyParts.RIGHT_ELBOW] || this.keypoints[MediaPipeBodyParts.RIGHT_ELBOW];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_ELBOW];
     }
-    
+
     if (name === 'leftElbow' || name === 'LEFT_ELBOW') {
-      return this.keypoints[CocoBodyParts.LEFT_ELBOW] || this.keypoints[MediaPipeBodyParts.LEFT_ELBOW];
+      return this.keypoints[MediaPipeBodyParts.LEFT_ELBOW];
     }
-    
+
     if (name === 'rightHip' || name === 'RIGHT_HIP') {
-      return this.keypoints[CocoBodyParts.RIGHT_HIP] || this.keypoints[MediaPipeBodyParts.RIGHT_HIP];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_HIP];
     }
-    
+
     if (name === 'leftHip' || name === 'LEFT_HIP') {
-      return this.keypoints[CocoBodyParts.LEFT_HIP] || this.keypoints[MediaPipeBodyParts.LEFT_HIP];
+      return this.keypoints[MediaPipeBodyParts.LEFT_HIP];
     }
-    
+
     console.warn(`Keypoint not found by name: ${name}`);
     return undefined;
   }
