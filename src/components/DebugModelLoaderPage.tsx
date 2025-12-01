@@ -1,213 +1,359 @@
 import * as tf from '@tensorflow/tfjs-core';
-import React from 'react';
-import { useEffect, useState } from 'react';
+import type React from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import '@tensorflow/tfjs-backend-webgl'; // Ensures WebGL backend is registered
+import '@tensorflow/tfjs-backend-webgl';
 import * as poseDetection from '@tensorflow-models/pose-detection';
 
+interface LogEntry {
+  timestamp: string;
+  level: 'log' | 'warn' | 'error' | 'info';
+  message: string;
+}
+
 const DebugModelLoaderPage: React.FC = () => {
-  console.log('DebugModelLoaderPage: Component rendering started.');
   const [status, setStatus] = useState<string>(
     'Idle. Click a button to load the model.'
   );
   const [tfReady, setTfReady] = useState<boolean>(false);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const logContainerRef = useRef<HTMLDivElement>(null);
 
+  // Add a log entry
+  const addLog = useCallback((level: LogEntry['level'], ...args: unknown[]) => {
+    const message = args
+      .map((arg) =>
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      )
+      .join(' ');
+    const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
+    setLogs((prev) => [...prev, { timestamp, level, message }]);
+  }, []);
+
+  // Intercept console methods
+  useEffect(() => {
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    const originalInfo = console.info;
+
+    console.log = (...args) => {
+      originalLog(...args);
+      addLog('log', ...args);
+    };
+    console.warn = (...args) => {
+      originalWarn(...args);
+      addLog('warn', ...args);
+    };
+    console.error = (...args) => {
+      originalError(...args);
+      addLog('error', ...args);
+    };
+    console.info = (...args) => {
+      originalInfo(...args);
+      addLog('info', ...args);
+    };
+
+    return () => {
+      console.log = originalLog;
+      console.warn = originalWarn;
+      console.error = originalError;
+      console.info = originalInfo;
+    };
+  }, [addLog]);
+
+  // Auto-scroll logs when new entries are added
+  const logsLength = logs.length;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: logsLength is intentionally used to trigger scroll on new logs
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [logsLength]);
+
+  // Initialize TensorFlow
   useEffect(() => {
     async function initializeTf() {
       if (tfReady) return;
       try {
         setStatus('Initializing TensorFlow.js...');
         console.log('DebugPage: Initializing TensorFlow.js...');
-        // Ensure backend is set. This might be redundant if src/index.ts handles it robustly,
-        // but it's good for an isolated test page.
         if (tf.getBackend() !== 'webgl') {
           await tf.setBackend('webgl');
         }
         await tf.ready();
         setTfReady(true);
-        setStatus('TensorFlow.js ready. Backend: ' + tf.getBackend());
+        setStatus(`TensorFlow.js ready. Backend: ${tf.getBackend()}`);
         console.log(
-          'DebugPage: TensorFlow.js ready. Backend: ' + tf.getBackend()
+          `DebugPage: TensorFlow.js ready. Backend: ${tf.getBackend()}`
         );
       } catch (error) {
         console.error('DebugPage: TensorFlow.js initialization error:', error);
         setStatus(
-          'Error initializing TensorFlow.js: ' + (error as Error).message
+          `Error initializing TensorFlow.js: ${(error as Error).message}`
         );
       }
     }
     initializeTf();
   }, [tfReady]);
 
-  const loadModelWithDefaultUrl = async () => {
+  const loadBlazePose = async () => {
     if (!tfReady) {
       setStatus('TensorFlow.js not ready yet. Please wait.');
       return;
     }
-    setStatus('Attempting to load model with default URL...');
-    console.log('DebugPage: Attempting to load model with default URL...');
+    setStatus('Attempting to load BlazePose model...');
+    console.log('DebugPage: Attempting to load BlazePose model...');
     try {
-      const detectorConfig: poseDetection.MoveNetModelConfig = {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-        enableSmoothing: true,
-        // No modelUrl initially, to test default tfhub.dev behavior
-      };
-      const detector = await poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
-        detectorConfig
-      );
-      console.log(
-        'DebugPage: SUCCESS: MoveNet detector created successfully using default URL!',
-        detector
-      );
-      setStatus(
-        'SUCCESS: MoveNet detector created successfully using default URL!'
-      );
-    } catch (error) {
-      console.error(
-        'DebugPage: FAILED to load MoveNet with default URL:',
-        error
-      );
-      setStatus(
-        'FAILED to load MoveNet with default URL: ' + (error as Error).message
-      );
-    }
-  };
-
-  const loadModelWithLocalUrl = async () => {
-    if (!tfReady) {
-      setStatus('TensorFlow.js not ready yet. Please wait.');
-      return;
-    }
-    setStatus(
-      'Attempting to load model with LOCAL URL... (Ensure files are in public/tfjs-models/movenet-lightning/)'
-    );
-    console.log('DebugPage: Attempting to load model with LOCAL URL...');
-    try {
-      const detectorConfig: poseDetection.MoveNetModelConfig = {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-        enableSmoothing: true,
-        modelUrl: '/models/movenet-lightning/model.json', // Path for self-hosted model
-      };
-      const detector = await poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
-        detectorConfig
-      );
-      console.log(
-        'DebugPage: SUCCESS: MoveNet detector created successfully using LOCAL URL!',
-        detector
-      );
-      setStatus(
-        'SUCCESS: MoveNet detector created successfully using LOCAL URL!'
-      );
-    } catch (error) {
-      console.error('DebugPage: FAILED to load MoveNet with LOCAL URL:', error);
-      setStatus(
-        'FAILED to load MoveNet with LOCAL URL: ' + (error as Error).message
-      );
-    }
-  };
-
-  const loadModelWithPipelineLogic = async () => {
-    if (!tfReady) {
-      setStatus('TensorFlow.js not ready yet. Please wait.');
-      console.log(
-        'DebugPage: TensorFlow.js not ready for Pipeline Logic test.'
-      );
-      return;
-    }
-    setStatus('Attempting to load model with Pipeline Logic...');
-    console.log('DebugPage: Attempting to load model with Pipeline Logic...');
-    try {
-      // Ensure backend is set (though initTf should handle this)
-      if (tf.getBackend() !== 'webgl') {
-        await tf.setBackend('webgl');
-      }
-      await tf.ready();
-      console.log(
-        `DebugPage: Using TensorFlow.js backend: ${tf.getBackend()} for Pipeline Logic test.`
-      );
-
-      // Configure TensorFlow.js for better performance (same as in PoseSkeletonTransformer)
+      // Configure TensorFlow.js for better performance
       tf.env().set('WEBGL_CPU_FORWARD', false);
       tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
-      console.log(
-        'DebugPage: TF env flags set for Pipeline Logic: WEBGL_CPU_FORWARD=false, WEBGL_FORCE_F16_TEXTURES=true'
-      );
+      console.log('DebugPage: TF env flags set for BlazePose');
 
-      const detectorConfig: poseDetection.MoveNetModelConfig = {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+      const detectorConfig: poseDetection.BlazePoseTfjsModelConfig = {
+        runtime: 'tfjs',
+        modelType: 'lite',
         enableSmoothing: true,
-        // No modelUrl - use default from tfhub.dev
       };
-      console.log(
-        'DebugPage: Using detectorConfig for Pipeline Logic:',
+      console.log('DebugPage: BlazePose config:', detectorConfig);
+
+      const detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.BlazePose,
         detectorConfig
       );
+      console.log('DebugPage: SUCCESS: BlazePose detector created!', detector);
+      setStatus('SUCCESS: BlazePose detector created!');
+    } catch (error) {
+      console.error('DebugPage: FAILED to load BlazePose:', error);
+      setStatus(`FAILED to load BlazePose: ${(error as Error).message}`);
+    }
+  };
+
+  const loadMoveNet = async () => {
+    if (!tfReady) {
+      setStatus('TensorFlow.js not ready yet. Please wait.');
+      return;
+    }
+    setStatus('Attempting to load MoveNet Thunder model...');
+    console.log('DebugPage: Attempting to load MoveNet Thunder model...');
+    try {
+      const detectorConfig: poseDetection.MoveNetModelConfig = {
+        modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+        enableSmoothing: true,
+      };
+      console.log('DebugPage: MoveNet config:', detectorConfig);
 
       const detector = await poseDetection.createDetector(
         poseDetection.SupportedModels.MoveNet,
         detectorConfig
       );
-
-      console.log(
-        'DebugPage: SUCCESS: MoveNet detector created successfully using Pipeline Logic!',
-        detector
-      );
-      setStatus(
-        'SUCCESS: MoveNet detector created successfully using Pipeline Logic!'
-      );
+      console.log('DebugPage: SUCCESS: MoveNet detector created!', detector);
+      setStatus('SUCCESS: MoveNet Thunder detector created!');
     } catch (error) {
-      console.error(
-        'DebugPage: FAILED to load MoveNet with Pipeline Logic:',
-        error
+      console.error('DebugPage: FAILED to load MoveNet:', error);
+      setStatus(`FAILED to load MoveNet: ${(error as Error).message}`);
+    }
+  };
+
+  const loadPoseNet = async () => {
+    if (!tfReady) {
+      setStatus('TensorFlow.js not ready yet. Please wait.');
+      return;
+    }
+    setStatus('Attempting to load PoseNet model...');
+    console.log('DebugPage: Attempting to load PoseNet model...');
+    try {
+      const detectorConfig: poseDetection.PosenetModelConfig = {
+        architecture: 'MobileNetV1',
+        outputStride: 16,
+        inputResolution: { width: 640, height: 480 },
+        multiplier: 0.75,
+      };
+      console.log('DebugPage: PoseNet config:', detectorConfig);
+
+      const detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.PoseNet,
+        detectorConfig
       );
-      setStatus(
-        'FAILED to load MoveNet with Pipeline Logic: ' +
-          (error as Error).message
-      );
+      console.log('DebugPage: SUCCESS: PoseNet detector created!', detector);
+      setStatus('SUCCESS: PoseNet detector created!');
+    } catch (error) {
+      console.error('DebugPage: FAILED to load PoseNet:', error);
+      setStatus(`FAILED to load PoseNet: ${(error as Error).message}`);
+    }
+  };
+
+  const copyLogs = () => {
+    const logText = logs
+      .map(
+        (log) =>
+          `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`
+      )
+      .join('\n');
+    navigator.clipboard.writeText(logText).then(() => {
+      setStatus('Logs copied to clipboard!');
+    });
+  };
+
+  const clearLogs = () => {
+    setLogs([]);
+    setStatus('Logs cleared.');
+  };
+
+  const getLogColor = (level: LogEntry['level']) => {
+    switch (level) {
+      case 'error':
+        return '#ff6b6b';
+      case 'warn':
+        return '#ffd93d';
+      case 'info':
+        return '#6bcfff';
+      default:
+        return '#ffffff';
     }
   };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Debug MoveNet Loader (React Component)</h1>
+    <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif' }}>
+      <h1>Debug Model Loader</h1>
       <p>
         <Link to="/">Back to Main App</Link>
       </p>
       <hr />
-      <div>
+
+      <div style={{ marginBottom: '20px' }}>
         <p>
           <strong>Status:</strong> {status}
         </p>
+        <p>
+          <strong>TensorFlow.js:</strong>{' '}
+          {tfReady ? `Ready (${tf.getBackend()})` : 'Not Ready'}
+        </p>
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <h3>Load Models</h3>
         <button
-          onClick={loadModelWithDefaultUrl}
+          type="button"
+          onClick={loadBlazePose}
           disabled={!tfReady}
-          style={{ marginRight: '10px' }}
+          style={{
+            marginRight: '10px',
+            padding: '10px 15px',
+            backgroundColor: '#4CAF50',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: tfReady ? 'pointer' : 'not-allowed',
+          }}
         >
-          Load Model (Default TFHub URL)
+          Load BlazePose (33 keypoints)
         </button>
         <button
-          onClick={loadModelWithLocalUrl}
+          type="button"
+          onClick={loadMoveNet}
           disabled={!tfReady}
-          style={{ marginRight: '10px' }}
+          style={{
+            marginRight: '10px',
+            padding: '10px 15px',
+            backgroundColor: '#2196F3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: tfReady ? 'pointer' : 'not-allowed',
+          }}
         >
-          Load Model (Local /models/ URL)
+          Load MoveNet Thunder
         </button>
-        <button onClick={loadModelWithPipelineLogic} disabled={!tfReady}>
-          Load Model (Pipeline Logic)
+        <button
+          type="button"
+          onClick={loadPoseNet}
+          disabled={!tfReady}
+          style={{
+            padding: '10px 15px',
+            backgroundColor: '#9C27B0',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: tfReady ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Load PoseNet (fallback)
         </button>
       </div>
+
       <hr />
-      <p>
-        <em>Check the browser console for detailed logs.</em>
-      </p>
-      <p>
-        <em>
-          Ensure TensorFlow.js is initialized before attempting to load models.
-          Current TF Status: {tfReady ? 'Ready' : 'Not Ready'}
-        </em>
-      </p>
+
+      <div style={{ marginBottom: '10px' }}>
+        <h3>Console Logs</h3>
+        <button
+          type="button"
+          onClick={copyLogs}
+          style={{
+            marginRight: '10px',
+            padding: '8px 12px',
+            backgroundColor: '#607D8B',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Copy Logs
+        </button>
+        <button
+          type="button"
+          onClick={clearLogs}
+          style={{
+            padding: '8px 12px',
+            backgroundColor: '#f44336',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Clear Logs
+        </button>
+      </div>
+
+      <div
+        ref={logContainerRef}
+        style={{
+          backgroundColor: '#1e1e1e',
+          color: '#ffffff',
+          padding: '15px',
+          borderRadius: '8px',
+          height: '400px',
+          overflowY: 'auto',
+          fontFamily: 'Monaco, Consolas, monospace',
+          fontSize: '12px',
+          lineHeight: '1.5',
+        }}
+      >
+        {logs.length === 0 ? (
+          <div style={{ color: '#666' }}>
+            No logs yet. Click a button above to start.
+          </div>
+        ) : (
+          logs.map((log, index) => (
+            <div
+              key={`${log.timestamp}-${index}`}
+              style={{ marginBottom: '4px' }}
+            >
+              <span style={{ color: '#888' }}>[{log.timestamp}]</span>{' '}
+              <span
+                style={{ color: getLogColor(log.level), fontWeight: 'bold' }}
+              >
+                [{log.level.toUpperCase()}]
+              </span>{' '}
+              <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {log.message}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 };
