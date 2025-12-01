@@ -1,6 +1,79 @@
-/* Settings Modal Styles */
+/* ==========================================================================
+   Settings Modal - Premium Sports Tech Design System
+   ========================================================================== */
 
-/* Modal Overlay */
+/* Design Tokens */
+:root {
+  /* Colors */
+  --settings-bg-primary: #0a0f1a;
+  --settings-bg-secondary: #111827;
+  --settings-bg-tertiary: #1a2332;
+  --settings-bg-elevated: rgba(255, 255, 255, 0.04);
+  --settings-bg-hover: rgba(255, 255, 255, 0.08);
+
+  --settings-border: rgba(255, 255, 255, 0.08);
+  --settings-border-focus: rgba(99, 179, 237, 0.5);
+
+  --settings-text-primary: #ffffff;
+  --settings-text-secondary: rgba(255, 255, 255, 0.6);
+  --settings-text-tertiary: rgba(255, 255, 255, 0.4);
+
+  --settings-accent: #3b82f6;
+  --settings-accent-light: #60a5fa;
+  --settings-accent-dark: #2563eb;
+
+  --settings-success: #10b981;
+  --settings-success-dark: #059669;
+  --settings-danger: #ef4444;
+  --settings-danger-dark: #dc2626;
+  --settings-warning: #f59e0b;
+
+  /* Spacing */
+  --settings-space-xs: 0.25rem;
+  --settings-space-sm: 0.5rem;
+  --settings-space-md: 0.75rem;
+  --settings-space-lg: 1rem;
+  --settings-space-xl: 1.25rem;
+  --settings-space-2xl: 1.5rem;
+  --settings-space-3xl: 2rem;
+
+  /* Typography */
+  --settings-font-sans:
+    "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  --settings-font-mono: "SF Mono", "Fira Code", "JetBrains Mono", monospace;
+
+  --settings-text-xs: 0.75rem;
+  --settings-text-sm: 0.8125rem;
+  --settings-text-base: 0.9375rem;
+  --settings-text-lg: 1.0625rem;
+  --settings-text-xl: 1.25rem;
+  --settings-text-2xl: 1.5rem;
+
+  /* Borders */
+  --settings-radius-sm: 0.5rem;
+  --settings-radius-md: 0.75rem;
+  --settings-radius-lg: 1rem;
+  --settings-radius-xl: 1.25rem;
+  --settings-radius-full: 9999px;
+
+  /* Shadows */
+  --settings-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --settings-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --settings-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.35);
+  --settings-shadow-glow: 0 0 20px rgba(59, 130, 246, 0.3);
+
+  /* Transitions */
+  --settings-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --settings-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --settings-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --settings-transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ==========================================================================
+   Modal Overlay
+   ========================================================================== */
+
 .settings-overlay {
   position: fixed;
   inset: 0;
@@ -8,152 +81,285 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  animation: settings-fade-in 0.2s ease-out;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: settings-overlay-fade 0.2s ease-out;
 }
 
-/* Modal Container */
+/* ==========================================================================
+   Modal Container
+   ========================================================================== */
+
 .settings-modal {
-  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.25rem;
+  background: linear-gradient(
+    180deg,
+    var(--settings-bg-secondary) 0%,
+    var(--settings-bg-primary) 100%
+  );
+  border: 1px solid var(--settings-border);
   width: 100%;
   max-width: 28rem;
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: settings-slide-up 0.3s ease-out;
-  margin: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--settings-radius-xl);
+  box-shadow: var(--settings-shadow-lg);
+  animation: settings-scale-in 0.25s ease-out;
 }
 
-/* Header */
+/* Drag Handle - Hidden (was for bottom sheet) */
+.settings-drag-handle {
+  display: none;
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+
 .settings-header {
-  background: linear-gradient(135deg, #1a2a6c 0%, #2a4858 100%);
-  padding: 1.25rem 1.5rem;
-  border-radius: 1.25rem 1.25rem 0 0;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.15) 0%,
+    rgba(16, 185, 129, 0.08) 100%
+  );
+  padding: var(--settings-space-lg) var(--settings-space-xl);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid var(--settings-border);
+}
+
+@media (min-width: 640px) {
+  .settings-header {
+    padding: var(--settings-space-xl) var(--settings-space-2xl);
+    border-radius: var(--settings-radius-xl) var(--settings-radius-xl) 0 0;
+  }
 }
 
 .settings-header-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--settings-space-md);
 }
 
 .settings-header-icon {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--settings-radius-md);
+  background: linear-gradient(
+    135deg,
+    var(--settings-accent) 0%,
+    var(--settings-accent-dark) 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  box-shadow: var(--settings-shadow-glow);
+}
+
+.settings-header-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: white;
 }
 
 .settings-title {
-  font-size: 1.25rem;
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-xl);
   font-weight: 700;
-  color: white;
+  color: var(--settings-text-primary);
   margin: 0;
   letter-spacing: -0.02em;
 }
 
 .settings-close-btn {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--settings-radius-md);
+  background: var(--settings-bg-elevated);
+  border: 1px solid var(--settings-border);
+  color: var(--settings-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all var(--settings-transition-fast);
 }
 
 .settings-close-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: var(--settings-bg-hover);
+  color: var(--settings-text-primary);
+  border-color: var(--settings-border-focus);
 }
 
-/* Tab Navigation */
+.settings-close-btn:active {
+  transform: scale(0.95);
+}
+
+.settings-close-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* ==========================================================================
+   Tab Navigation - Pill Style
+   ========================================================================== */
+
 .settings-tabs {
   display: flex;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 0 1rem;
-  background: rgba(0, 0, 0, 0.2);
+  gap: var(--settings-space-xs);
+  padding: var(--settings-space-md) var(--settings-space-lg);
+  background: var(--settings-bg-primary);
+  border-bottom: 1px solid var(--settings-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.settings-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .settings-tab {
   flex: 1;
-  padding: 0.875rem 0.5rem;
-  background: none;
+  min-width: 0;
+  padding: var(--settings-space-md) var(--settings-space-sm);
+  background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  border-radius: var(--settings-radius-md);
+  color: var(--settings-text-tertiary);
   cursor: pointer;
-  font-size: 0.8125rem;
-  font-weight: 400;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-sm);
+  font-weight: 500;
+  transition: all var(--settings-transition-base);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
+  gap: var(--settings-space-sm);
+  white-space: nowrap;
+  min-height: 2.75rem;
 }
 
-.settings-tab:hover {
-  color: rgba(255, 255, 255, 0.7);
+.settings-tab:hover:not(.settings-tab--active) {
+  color: var(--settings-text-secondary);
+  background: var(--settings-bg-elevated);
 }
 
 .settings-tab--active {
+  background: linear-gradient(
+    135deg,
+    var(--settings-accent) 0%,
+    var(--settings-accent-dark) 100%
+  );
   color: white;
   font-weight: 600;
-  border-bottom-color: #4285f4;
+  box-shadow: var(--settings-shadow-sm), var(--settings-shadow-glow);
 }
 
-/* Content Area */
+.settings-tab svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+
+/* Mobile: Icon-only tabs */
+@media (max-width: 480px) {
+  .settings-tab {
+    padding: var(--settings-space-md);
+  }
+
+  .settings-tab-label {
+    display: none;
+  }
+
+  .settings-tab svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+/* ==========================================================================
+   Content Area
+   ========================================================================== */
+
 .settings-content {
-  padding: 1.25rem;
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--settings-space-xl);
+  -webkit-overflow-scrolling: touch;
 }
 
 .settings-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--settings-space-lg);
 }
 
-/* Settings Row - reusable component */
+/* Section Headers */
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--settings-space-sm);
+  margin-bottom: var(--settings-space-xs);
+}
+
+.settings-section-title {
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-xs);
+  font-weight: 600;
+  color: var(--settings-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ==========================================================================
+   Settings Row - Refined
+   ========================================================================== */
+
 .settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  gap: var(--settings-space-lg);
+  padding: var(--settings-space-lg);
+  background: var(--settings-bg-elevated);
+  border-radius: var(--settings-radius-lg);
+  border: 1px solid var(--settings-border);
+  transition: all var(--settings-transition-fast);
+  min-height: 4rem;
+}
+
+.settings-row:hover {
+  background: var(--settings-bg-hover);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .settings-row-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--settings-space-md);
+  min-width: 0;
+  flex: 1;
 }
 
 .settings-row-icon {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.625rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--settings-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.settings-row-icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: white;
 }
 
 .settings-row-icon--orange {
@@ -161,317 +367,543 @@
 }
 
 .settings-row-icon--purple {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
 }
 
 .settings-row-icon--blue {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  background: linear-gradient(
+    135deg,
+    var(--settings-accent-light) 0%,
+    var(--settings-accent) 100%
+  );
+}
+
+.settings-row-icon--green {
+  background: linear-gradient(
+    135deg,
+    var(--settings-success) 0%,
+    var(--settings-success-dark) 100%
+  );
 }
 
 .settings-row-icon--gradient {
-  background: linear-gradient(135deg, #1a2a6c 0%, #2a4858 100%);
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
 }
 
 .settings-row-text {
   display: flex;
   flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
 }
 
 .settings-row-title {
-  color: white;
+  font-family: var(--settings-font-sans);
+  color: var(--settings-text-primary);
   font-weight: 500;
-  font-size: 0.9375rem;
+  font-size: var(--settings-text-base);
+  line-height: 1.3;
 }
 
 .settings-row-subtitle {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.8125rem;
+  font-family: var(--settings-font-sans);
+  color: var(--settings-text-secondary);
+  font-size: var(--settings-text-sm);
+  line-height: 1.4;
 }
 
-/* Toggle Switch */
+/* ==========================================================================
+   Toggle Switch - Refined
+   ========================================================================== */
+
 .settings-toggle {
-  width: 3rem;
-  height: 1.75rem;
-  border-radius: 1rem;
+  width: 3.25rem;
+  height: 2rem;
+  border-radius: var(--settings-radius-full);
   background: rgba(255, 255, 255, 0.1);
   border: none;
   cursor: pointer;
   position: relative;
-  transition: all 0.2s;
+  transition: all var(--settings-transition-base);
+  flex-shrink: 0;
+}
+
+.settings-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .settings-toggle--active {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(
+    135deg,
+    var(--settings-success) 0%,
+    var(--settings-success-dark) 100%
+  );
 }
 
 .settings-toggle-knob {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: 50%;
   background: white;
   position: absolute;
   top: 0.25rem;
   left: 0.25rem;
-  transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all var(--settings-transition-spring);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .settings-toggle--active .settings-toggle-knob {
-  left: calc(100% - 1.5rem);
+  left: calc(100% - 1.75rem);
 }
 
-/* Keyboard Shortcut Badge */
+/* ==========================================================================
+   Keyboard Shortcut Badge
+   ========================================================================== */
+
 .settings-kbd {
-  padding: 0.375rem 0.75rem;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 0.375rem;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.8125rem;
-  font-family: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: var(--settings-space-sm) var(--settings-space-md);
+  background: var(--settings-bg-tertiary);
+  border-radius: var(--settings-radius-sm);
+  color: var(--settings-text-secondary);
+  font-family: var(--settings-font-mono);
+  font-size: var(--settings-text-sm);
+  border: 1px solid var(--settings-border);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
 }
 
-/* Action Buttons */
+/* ==========================================================================
+   Action Buttons
+   ========================================================================== */
+
 .settings-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.875rem 1rem;
+  gap: var(--settings-space-sm);
+  padding: var(--settings-space-lg) var(--settings-space-xl);
   border: none;
-  border-radius: 0.75rem;
+  border-radius: var(--settings-radius-md);
   color: white;
+  font-family: var(--settings-font-sans);
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: var(--settings-text-base);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--settings-transition-fast);
+  min-height: 3rem;
+}
+
+.settings-btn:active {
+  transform: scale(0.98);
+}
+
+.settings-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 .settings-btn--red {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  background: linear-gradient(
+    135deg,
+    var(--settings-danger) 0%,
+    var(--settings-danger-dark) 100%
+  );
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .settings-btn--red:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
 }
 
 .settings-btn--blue {
-  background: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
-  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+  background: linear-gradient(
+    135deg,
+    var(--settings-accent-light) 0%,
+    var(--settings-accent) 100%
+  );
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .settings-btn--blue:hover {
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(66, 133, 244, 0.4);
 }
 
 .settings-btn--green {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(
+    135deg,
+    var(--settings-success) 0%,
+    var(--settings-success-dark) 100%
+  );
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.settings-btn--green:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
 }
 
 .settings-btn:disabled {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--settings-bg-tertiary);
   box-shadow: none;
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.6;
+  transform: none;
 }
 
-/* Update Available Banner */
+/* ==========================================================================
+   Update Available Banner
+   ========================================================================== */
+
 .settings-update-banner {
-  padding: 1rem;
+  padding: var(--settings-space-lg);
   background: linear-gradient(
     135deg,
-    rgba(34, 197, 94, 0.15) 0%,
-    rgba(22, 163, 74, 0.15) 100%
+    rgba(16, 185, 129, 0.12) 0%,
+    rgba(5, 150, 105, 0.08) 100%
   );
-  border-radius: 0.75rem;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  animation: settings-pulse-subtle 2s infinite;
+  border-radius: var(--settings-radius-lg);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  animation: settings-pulse-subtle 2.5s ease-in-out infinite;
 }
 
 .settings-update-banner-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: var(--settings-space-md);
+  margin-bottom: var(--settings-space-md);
 }
 
 .settings-update-banner-icon {
-  font-size: 1.25rem;
+  width: 2rem;
+  height: 2rem;
+  background: linear-gradient(
+    135deg,
+    var(--settings-success) 0%,
+    var(--settings-success-dark) 100%
+  );
+  border-radius: var(--settings-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-update-banner-icon svg {
+  width: 1rem;
+  height: 1rem;
+  color: white;
 }
 
 .settings-update-banner-title {
-  color: #22c55e;
+  color: var(--settings-success);
+  font-family: var(--settings-font-sans);
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: var(--settings-text-base);
 }
 
 .settings-update-banner-btn {
   width: 100%;
-  padding: 0.75rem;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  padding: var(--settings-space-md);
+  background: linear-gradient(
+    135deg,
+    var(--settings-success) 0%,
+    var(--settings-success-dark) 100%
+  );
   border: none;
-  border-radius: 0.5rem;
+  border-radius: var(--settings-radius-md);
   color: white;
+  font-family: var(--settings-font-sans);
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--settings-text-sm);
   cursor: pointer;
+  transition: all var(--settings-transition-fast);
 }
 
-/* About Section */
+.settings-update-banner-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+
+/* ==========================================================================
+   About Section
+   ========================================================================== */
+
 .settings-about-card {
   text-align: center;
-  padding: 1.5rem 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: var(--settings-space-2xl) var(--settings-space-xl);
+  background: var(--settings-bg-elevated);
+  border-radius: var(--settings-radius-lg);
+  border: 1px solid var(--settings-border);
 }
 
 .settings-about-icon {
-  width: 4rem;
-  height: 4rem;
-  border-radius: 1rem;
-  background: linear-gradient(135deg, #1a2a6c 0%, #2a4858 100%);
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: var(--settings-radius-lg);
+  background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
-  margin: 0 auto 1rem;
-  box-shadow: 0 8px 24px rgba(26, 42, 108, 0.4);
+  margin: 0 auto var(--settings-space-lg);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+}
+
+.settings-about-icon svg {
+  width: 2rem;
+  height: 2rem;
+  color: white;
 }
 
 .settings-about-title {
-  color: white;
+  font-family: var(--settings-font-sans);
+  color: var(--settings-text-primary);
   font-weight: 700;
-  font-size: 1.25rem;
-  margin-bottom: 0.25rem;
+  font-size: var(--settings-text-xl);
+  margin-bottom: var(--settings-space-xs);
+  letter-spacing: -0.02em;
 }
 
 .settings-about-subtitle {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.8125rem;
+  font-family: var(--settings-font-sans);
+  color: var(--settings-text-secondary);
+  font-size: var(--settings-text-sm);
 }
 
-/* Version Info */
+/* ==========================================================================
+   Version Info Card
+   ========================================================================== */
+
 .settings-version-card {
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: var(--settings-space-lg);
+  background: var(--settings-bg-elevated);
+  border-radius: var(--settings-radius-lg);
+  border: 1px solid var(--settings-border);
 }
 
 .settings-version-rows {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--settings-space-md);
 }
 
 .settings-version-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: var(--settings-space-sm) 0;
+}
+
+.settings-version-row:not(:last-child) {
+  border-bottom: 1px solid var(--settings-border);
+  padding-bottom: var(--settings-space-md);
 }
 
 .settings-version-label {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.8125rem;
+  font-family: var(--settings-font-sans);
+  color: var(--settings-text-secondary);
+  font-size: var(--settings-text-sm);
 }
 
 .settings-version-value {
-  color: white;
-  font-size: 0.8125rem;
+  font-family: var(--settings-font-mono);
+  color: var(--settings-text-primary);
+  font-size: var(--settings-text-sm);
 }
 
 .settings-version-link {
-  color: #60a5fa;
-  font-size: 0.8125rem;
-  font-family: monospace;
+  font-family: var(--settings-font-mono);
+  color: var(--settings-accent-light);
+  font-size: var(--settings-text-sm);
   text-decoration: none;
+  transition: color var(--settings-transition-fast);
 }
 
 .settings-version-link:hover {
+  color: var(--settings-accent);
   text-decoration: underline;
 }
 
-/* Link Buttons */
+/* ==========================================================================
+   Link Buttons
+   ========================================================================== */
+
 .settings-links {
-  display: flex;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--settings-space-md);
 }
 
 .settings-link {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.875rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.75rem;
-  color: white;
+  gap: var(--settings-space-sm);
+  padding: var(--settings-space-lg);
+  background: var(--settings-bg-elevated);
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-md);
+  color: var(--settings-text-primary);
   text-decoration: none;
-  font-size: 0.875rem;
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-sm);
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all var(--settings-transition-fast);
+  min-height: 3rem;
 }
 
 .settings-link:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--settings-bg-hover);
+  border-color: var(--settings-accent);
+  color: var(--settings-accent-light);
 }
 
-/* Spinner */
-.settings-spinner {
-  display: inline-block;
-  animation: settings-spin 1s linear infinite;
+.settings-link svg {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
-/* Radio Group for Debug Options */
+/* ==========================================================================
+   Radio Group
+   ========================================================================== */
+
 .settings-radio-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--settings-space-sm);
 }
 
 .settings-radio-option {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  gap: var(--settings-space-md);
+  padding: var(--settings-space-lg);
+  background: var(--settings-bg-elevated);
+  border-radius: var(--settings-radius-md);
+  border: 1px solid var(--settings-border);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--settings-transition-fast);
+  min-height: 3.5rem;
 }
 
 .settings-radio-option:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--settings-bg-hover);
 }
 
 .settings-radio-option:has(input:checked) {
-  background: rgba(66, 133, 244, 0.15);
-  border-color: rgba(66, 133, 244, 0.3);
+  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--settings-accent);
 }
 
 .settings-radio-option input[type="radio"] {
   width: 1.25rem;
   height: 1.25rem;
-  accent-color: #4285f4;
+  accent-color: var(--settings-accent);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .settings-radio-label {
-  color: white;
+  font-family: var(--settings-font-sans);
+  color: var(--settings-text-primary);
   font-weight: 500;
-  font-size: 0.9375rem;
+  font-size: var(--settings-text-base);
 }
 
 .settings-radio-desc {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.8125rem;
+  font-family: var(--settings-font-sans);
+  color: var(--settings-text-secondary);
+  font-size: var(--settings-text-sm);
   margin-left: auto;
+}
+
+/* ==========================================================================
+   Spinner
+   ========================================================================== */
+
+.settings-spinner {
+  display: inline-block;
+  animation: settings-spin 0.8s linear infinite;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes settings-overlay-fade {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes settings-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes settings-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes settings-pulse-subtle {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+  }
+}
+
+@keyframes settings-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-overlay,
+  .settings-modal,
+  .settings-toggle-knob,
+  .settings-btn,
+  .settings-tab,
+  .settings-row,
+  .settings-link,
+  .settings-update-banner {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Focus Styles */
+.settings-close-btn:focus-visible,
+.settings-tab:focus-visible,
+.settings-toggle:focus-visible,
+.settings-btn:focus-visible,
+.settings-link:focus-visible,
+.settings-radio-option:focus-visible {
+  outline: 2px solid var(--settings-accent);
+  outline-offset: 2px;
 }

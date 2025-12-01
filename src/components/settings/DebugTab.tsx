@@ -1,7 +1,29 @@
+import { Link } from 'react-router-dom';
 import { useSwingAnalyzerContext } from '../../contexts/SwingAnalyzerContext';
 import { SettingsRow } from './SettingsRow';
 
-export function DebugTab() {
+// Wrench icon for debug tools
+const WrenchIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+  </svg>
+);
+
+interface DebugTabProps {
+  onClose?: () => void;
+}
+
+export function DebugTab({ onClose }: DebugTabProps) {
   const { appState, setDisplayMode } = useSwingAnalyzerContext();
 
   return (
@@ -49,6 +71,19 @@ export function DebugTab() {
           <span className="settings-radio-label">Overlay Only</span>
           <span className="settings-radio-desc">Show only skeleton</span>
         </label>
+      </div>
+
+      {/* Debug Tools Link */}
+      <div style={{ marginTop: '0.5rem' }}>
+        <Link
+          to="/debug"
+          className="settings-link"
+          onClick={onClose}
+          style={{ width: '100%' }}
+        >
+          <WrenchIcon />
+          Debug Model Loader
+        </Link>
       </div>
     </div>
   );

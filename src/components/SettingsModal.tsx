@@ -2,15 +2,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { AboutTab } from './settings/AboutTab';
 import { BugReportTab } from './settings/BugReportTab';
 import { DebugTab } from './settings/DebugTab';
-import { CloseIcon, SettingsIcon } from './settings/Icons';
+import {
+  BugIcon,
+  CloseIcon,
+  InfoIcon,
+  MonitorIcon,
+  RocketIcon,
+  SettingsIcon,
+} from './settings/Icons';
 import './settings/Settings.css';
 import { UpdatesTab } from './settings/UpdatesTab';
 
 const TABS = [
-  { id: 'debug' as const, label: 'Display', icon: '🖥️' },
-  { id: 'bug' as const, label: 'Bug Report', icon: '🐛' },
-  { id: 'updates' as const, label: 'Updates', icon: '🚀' },
-  { id: 'about' as const, label: 'About', icon: '💡' },
+  { id: 'debug' as const, label: 'Display', Icon: MonitorIcon },
+  { id: 'bug' as const, label: 'Bug Report', Icon: BugIcon },
+  { id: 'updates' as const, label: 'Updates', Icon: RocketIcon },
+  { id: 'about' as const, label: 'About', Icon: InfoIcon },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -48,7 +55,7 @@ export function SettingsModal({
   updateAvailable,
   onReload,
 }: SettingsModalProps) {
-  const [activeSection, setActiveSection] = useState<TabId>('debug');
+  const [activeSection, setActiveSection] = useState<TabId>('about');
 
   const handleShakeToggle = useCallback(async () => {
     if (!shakeEnabled) {
@@ -95,6 +102,9 @@ export function SettingsModal({
         onKeyDown={(e) => e.stopPropagation()}
         role="document"
       >
+        {/* Drag Handle - Mobile Only */}
+        <div className="settings-drag-handle" aria-hidden="true" />
+
         {/* Header */}
         <div className="settings-header">
           <div className="settings-header-left">
@@ -124,15 +134,15 @@ export function SettingsModal({
               onClick={() => setActiveSection(tab.id)}
               className={`settings-tab ${activeSection === tab.id ? 'settings-tab--active' : ''}`}
             >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
+              <tab.Icon />
+              <span className="settings-tab-label">{tab.label}</span>
             </button>
           ))}
         </div>
 
         {/* Content */}
         <div className="settings-content">
-          {activeSection === 'debug' && <DebugTab />}
+          {activeSection === 'debug' && <DebugTab onClose={onClose} />}
 
           {activeSection === 'bug' && (
             <BugReportTab
