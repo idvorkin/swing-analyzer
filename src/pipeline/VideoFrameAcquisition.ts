@@ -1,5 +1,12 @@
-import { NEVER, type Observable, Subject, fromEvent, interval, merge } from 'rxjs';
-import { map, switchMap, takeUntil, startWith } from 'rxjs/operators';
+import {
+  fromEvent,
+  interval,
+  merge,
+  NEVER,
+  type Observable,
+  Subject,
+} from 'rxjs';
+import { map, startWith, switchMap, takeUntil } from 'rxjs/operators';
 import type { FrameAcquisition, FrameEvent } from './PipelineInterfaces';
 
 /**
@@ -203,6 +210,8 @@ export class VideoFrameAcquisition implements FrameAcquisition {
       console.log(
         `[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Setting video.src to ${url}`
       );
+      // Set crossOrigin to allow WebGL to read pixels from the video
+      this.videoElement.crossOrigin = 'anonymous';
       this.videoElement.src = url;
     });
   }
