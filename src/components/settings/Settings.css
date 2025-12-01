@@ -1,0 +1,430 @@
+/* Settings Modal Styles */
+
+/* Modal Overlay */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  animation: settings-fade-in 0.2s ease-out;
+}
+
+/* Modal Container */
+.settings-modal {
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  width: 100%;
+  max-width: 28rem;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: settings-slide-up 0.3s ease-out;
+  margin: 1rem;
+}
+
+/* Header */
+.settings-header {
+  background: linear-gradient(135deg, #1a2a6c 0%, #2a4858 100%);
+  padding: 1.25rem 1.5rem;
+  border-radius: 1.25rem 1.25rem 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-header-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.settings-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.settings-close-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.settings-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Tab Navigation */
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0 1rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.settings-tab {
+  flex: 1;
+  padding: 0.875rem 0.5rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+.settings-tab:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.settings-tab--active {
+  color: white;
+  font-weight: 600;
+  border-bottom-color: #4285f4;
+}
+
+/* Content Area */
+.settings-content {
+  padding: 1.25rem;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Settings Row - reusable component */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-row-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-row-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.settings-row-icon--orange {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.settings-row-icon--purple {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+}
+
+.settings-row-icon--blue {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+.settings-row-icon--gradient {
+  background: linear-gradient(135deg, #1a2a6c 0%, #2a4858 100%);
+}
+
+.settings-row-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-row-title {
+  color: white;
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+.settings-row-subtitle {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8125rem;
+}
+
+/* Toggle Switch */
+.settings-toggle {
+  width: 3rem;
+  height: 1.75rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.settings-toggle--active {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.settings-toggle-knob {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.settings-toggle--active .settings-toggle-knob {
+  left: calc(100% - 1.5rem);
+}
+
+/* Keyboard Shortcut Badge */
+.settings-kbd {
+  padding: 0.375rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0.375rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Action Buttons */
+.settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border: none;
+  border-radius: 0.75rem;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-btn--red {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.settings-btn--red:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+.settings-btn--blue {
+  background: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.settings-btn--blue:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(66, 133, 244, 0.4);
+}
+
+.settings-btn--green {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.settings-btn:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Update Available Banner */
+.settings-update-banner {
+  padding: 1rem;
+  background: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, 0.15) 0%,
+    rgba(22, 163, 74, 0.15) 100%
+  );
+  border-radius: 0.75rem;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  animation: settings-pulse-subtle 2s infinite;
+}
+
+.settings-update-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.settings-update-banner-icon {
+  font-size: 1.25rem;
+}
+
+.settings-update-banner-title {
+  color: #22c55e;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.settings-update-banner-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: none;
+  border-radius: 0.5rem;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+/* About Section */
+.settings-about-card {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-about-icon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #1a2a6c 0%, #2a4858 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin: 0 auto 1rem;
+  box-shadow: 0 8px 24px rgba(26, 42, 108, 0.4);
+}
+
+.settings-about-title {
+  color: white;
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.settings-about-subtitle {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8125rem;
+}
+
+/* Version Info */
+.settings-version-card {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-version-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settings-version-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-version-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8125rem;
+}
+
+.settings-version-value {
+  color: white;
+  font-size: 0.8125rem;
+}
+
+.settings-version-link {
+  color: #60a5fa;
+  font-size: 0.8125rem;
+  font-family: monospace;
+  text-decoration: none;
+}
+
+.settings-version-link:hover {
+  text-decoration: underline;
+}
+
+/* Link Buttons */
+.settings-links {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.settings-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  color: white;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.settings-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Spinner */
+.settings-spinner {
+  display: inline-block;
+  animation: settings-spin 1s linear infinite;
+}
