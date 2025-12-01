@@ -1,6 +1,12 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SettingsModal } from '../SettingsModal';
+
+// Helper to wrap component with Router for Link support
+const renderWithRouter = (ui: React.ReactElement) => {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+};
 
 // Mock the generated_version module
 vi.mock('../../generated_version', () => ({
@@ -15,6 +21,14 @@ vi.mock('../../services/DeviceService', () => ({
   DeviceService: {
     isMobileDevice: vi.fn(() => false),
   },
+}));
+
+// Mock the SwingAnalyzerContext for DebugTab
+vi.mock('../../contexts/SwingAnalyzerContext', () => ({
+  useSwingAnalyzerContext: vi.fn(() => ({
+    appState: { displayMode: 'both' },
+    setDisplayMode: vi.fn(),
+  })),
 }));
 
 const defaultProps = {
@@ -40,19 +54,19 @@ describe('SettingsModal', () => {
   });
 
   it('renders when isOpen is true', () => {
-    render(<SettingsModal {...defaultProps} />);
+    renderWithRouter(<SettingsModal {...defaultProps} />);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
   it('does not render when isOpen is false', () => {
-    render(<SettingsModal {...defaultProps} isOpen={false} />);
+    renderWithRouter(<SettingsModal {...defaultProps} isOpen={false} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', () => {
     const onClose = vi.fn();
-    render(<SettingsModal {...defaultProps} onClose={onClose} />);
+    renderWithRouter(<SettingsModal {...defaultProps} onClose={onClose} />);
 
     fireEvent.click(screen.getByLabelText('Close settings'));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -60,7 +74,7 @@ describe('SettingsModal', () => {
 
   it('calls onClose when overlay is clicked', () => {
     const onClose = vi.fn();
-    render(<SettingsModal {...defaultProps} onClose={onClose} />);
+    renderWithRouter(<SettingsModal {...defaultProps} onClose={onClose} />);
 
     fireEvent.click(screen.getByRole('dialog'));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -68,7 +82,7 @@ describe('SettingsModal', () => {
 
   it('does not call onClose when modal content is clicked', () => {
     const onClose = vi.fn();
-    render(<SettingsModal {...defaultProps} onClose={onClose} />);
+    renderWithRouter(<SettingsModal {...defaultProps} onClose={onClose} />);
 
     fireEvent.click(screen.getByRole('document'));
     expect(onClose).not.toHaveBeenCalled();
@@ -76,27 +90,27 @@ describe('SettingsModal', () => {
 
   it('calls onClose when Escape key is pressed', () => {
     const onClose = vi.fn();
-    render(<SettingsModal {...defaultProps} onClose={onClose} />);
+    renderWithRouter(<SettingsModal {...defaultProps} onClose={onClose} />);
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   describe('Tab Navigation', () => {
-    it('shows Bug Report tab by default', () => {
-      render(<SettingsModal {...defaultProps} />);
-      expect(screen.getByText(/Report a Bug/)).toBeInTheDocument();
+    it('shows About tab by default', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+      expect(screen.getByText('Swing Analyzer')).toBeInTheDocument();
     });
 
     it('switches to Updates tab when clicked', () => {
-      render(<SettingsModal {...defaultProps} />);
+      renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('Updates'));
       expect(screen.getByText(/Check for Updates/)).toBeInTheDocument();
     });
 
     it('switches to About tab when clicked', () => {
-      render(<SettingsModal {...defaultProps} />);
+      renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('About'));
       expect(screen.getByText('Swing Analyzer')).toBeInTheDocument();
@@ -105,14 +119,15 @@ describe('SettingsModal', () => {
 
   describe('Bug Report Tab', () => {
     it('displays keyboard shortcut', () => {
-      render(<SettingsModal {...defaultProps} />);
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+      fireEvent.click(screen.getByText('Bug Report'));
       expect(screen.getByText('Cmd+I')).toBeInTheDocument();
     });
 
     it('calls onOpenBugReporter and onClose when Report a Bug is clicked', () => {
       const onClose = vi.fn();
       const onOpenBugReporter = vi.fn();
-      render(
+      renderWithRouter(
         <SettingsModal
           {...defaultProps}
           onClose={onClose}
@@ -120,6 +135,7 @@ describe('SettingsModal', () => {
         />
       );
 
+      fireEvent.click(screen.getByText('Bug Report'));
       fireEvent.click(screen.getByText(/Report a Bug/));
       expect(onClose).toHaveBeenCalledTimes(1);
       expect(onOpenBugReporter).toHaveBeenCalledTimes(1);
@@ -128,7 +144,7 @@ describe('SettingsModal', () => {
 
   describe('Updates Tab', () => {
     it('shows "Never" when lastCheckTime is null', () => {
-      render(<SettingsModal {...defaultProps} />);
+      renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('Updates'));
       expect(screen.getByText('Never')).toBeInTheDocument();
@@ -136,7 +152,9 @@ describe('SettingsModal', () => {
 
     it('shows formatted date when lastCheckTime is set', () => {
       const lastCheckTime = new Date('2024-01-15T14:30:00');
-      render(<SettingsModal {...defaultProps} lastCheckTime={lastCheckTime} />);
+      renderWithRouter(
+        <SettingsModal {...defaultProps} lastCheckTime={lastCheckTime} />
+      );
 
       fireEvent.click(screen.getByText('Updates'));
       // The formatted date should contain "Jan 15"
@@ -144,7 +162,9 @@ describe('SettingsModal', () => {
     });
 
     it('shows update available banner when updateAvailable is true', () => {
-      render(<SettingsModal {...defaultProps} updateAvailable={true} />);
+      renderWithRouter(
+        <SettingsModal {...defaultProps} updateAvailable={true} />
+      );
 
       fireEvent.click(screen.getByText('Updates'));
       expect(screen.getByText('New Version Available!')).toBeInTheDocument();
@@ -152,7 +172,7 @@ describe('SettingsModal', () => {
 
     it('calls onReload when Reload to Update is clicked', () => {
       const onReload = vi.fn();
-      render(
+      renderWithRouter(
         <SettingsModal
           {...defaultProps}
           updateAvailable={true}
@@ -167,7 +187,7 @@ describe('SettingsModal', () => {
 
     it('calls onCheckForUpdate when Check for Updates is clicked', async () => {
       const onCheckForUpdate = vi.fn().mockResolvedValue(undefined);
-      render(
+      renderWithRouter(
         <SettingsModal {...defaultProps} onCheckForUpdate={onCheckForUpdate} />
       );
 
@@ -177,7 +197,9 @@ describe('SettingsModal', () => {
     });
 
     it('shows Checking... when isCheckingUpdate is true', () => {
-      render(<SettingsModal {...defaultProps} isCheckingUpdate={true} />);
+      renderWithRouter(
+        <SettingsModal {...defaultProps} isCheckingUpdate={true} />
+      );
 
       fireEvent.click(screen.getByText('Updates'));
       expect(screen.getByText('Checking...')).toBeInTheDocument();
@@ -186,7 +208,7 @@ describe('SettingsModal', () => {
 
   describe('About Tab', () => {
     it('displays version information', () => {
-      render(<SettingsModal {...defaultProps} />);
+      renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('About'));
       expect(screen.getByText('abc123')).toBeInTheDocument();
@@ -194,7 +216,7 @@ describe('SettingsModal', () => {
     });
 
     it('displays external links', () => {
-      render(<SettingsModal {...defaultProps} />);
+      renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('About'));
       expect(screen.getByText('GitHub')).toBeInTheDocument();

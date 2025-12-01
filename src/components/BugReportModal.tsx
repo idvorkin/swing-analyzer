@@ -9,14 +9,6 @@ interface BugReportModalProps {
   onSubmit: (data: BugReportData) => Promise<{ success: boolean }>;
   isSubmitting: boolean;
   defaultData: BugReportData;
-  // Shake detection
-  shakeEnabled: boolean;
-  onShakeEnabledChange: (enabled: boolean) => void;
-  isShakeSupported: boolean;
-  onRequestShakePermission: () => Promise<boolean>;
-  isFirstTime: boolean;
-  onFirstTimeShown: () => void;
-  shortcut: string; // e.g., "Cmd+I" or "Ctrl+I"
 }
 
 export function BugReportModal({
@@ -26,13 +18,6 @@ export function BugReportModal({
   onSubmit,
   isSubmitting,
   defaultData,
-  shakeEnabled,
-  onShakeEnabledChange,
-  isShakeSupported,
-  onRequestShakePermission,
-  isFirstTime,
-  onFirstTimeShown,
-  shortcut,
 }: BugReportModalProps) {
   const [title, setTitle] = useState(defaultData.title);
   const [description, setDescription] = useState(defaultData.description);
@@ -44,7 +29,6 @@ export function BugReportModal({
   const [submitted, setSubmitted] = useState(false);
   const [hasScreenshotOnClipboard, setHasScreenshotOnClipboard] =
     useState(false);
-  const [showShakePrompt, setShowShakePrompt] = useState(false);
   const [wasOpen, setWasOpen] = useState(false);
   const isCapturingRef = useRef(false);
 
@@ -58,14 +42,6 @@ export function BugReportModal({
       setIncludeMetadata(defaultData.includeMetadata);
       setScreenshot(null);
       setSubmitted(false);
-
-      // Show shake prompt on first time if supported and not enabled
-      if (isFirstTime && isShakeSupported && !shakeEnabled) {
-        setShowShakePrompt(true);
-        onFirstTimeShown();
-      } else {
-        setShowShakePrompt(false);
-      }
     }
     isCapturingRef.current = false;
   } else if (!isOpen && wasOpen) {
@@ -101,14 +77,6 @@ export function BugReportModal({
     // Reopen modal - isCapturingRef will prevent form reset
     onOpen();
   }, [onClose, onOpen]);
-
-  const handleEnableShake = useCallback(async () => {
-    const granted = await onRequestShakePermission();
-    if (granted) {
-      onShakeEnabledChange(true);
-    }
-    setShowShakePrompt(false);
-  }, [onRequestShakePermission, onShakeEnabledChange]);
 
   if (!isOpen) return null;
 
@@ -219,78 +187,6 @@ export function BugReportModal({
             &times;
           </button>
         </div>
-
-        {/* Shake Detection Prompt (first time) */}
-        {showShakePrompt && (
-          <div
-            style={{
-              marginBottom: '1rem',
-              padding: '1rem',
-              backgroundColor: 'rgba(37, 99, 235, 0.2)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              borderRadius: '0.5rem',
-            }}
-          >
-            <div
-              style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}
-            >
-              <span style={{ fontSize: '1.25rem' }}>📱</span>
-              <div style={{ flex: 1 }}>
-                <div
-                  style={{
-                    color: '#bfdbfe',
-                    fontWeight: 500,
-                    marginBottom: '0.25rem',
-                  }}
-                >
-                  Enable Shake to Report?
-                </div>
-                <div
-                  style={{
-                    color: 'rgba(191, 219, 254, 0.7)',
-                    fontSize: '0.875rem',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  Shake your device anytime to quickly report a bug.
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={handleEnableShake}
-                    style={{
-                      padding: '0.375rem 0.75rem',
-                      backgroundColor: '#2563eb',
-                      color: 'white',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Enable
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowShakePrompt(false)}
-                    style={{
-                      padding: '0.375rem 0.75rem',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.875rem',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Not Now
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {submitted ? (
           /* Success State */
@@ -586,28 +482,6 @@ export function BugReportModal({
                   <>📋 Copy & Open GitHub ↗</>
                 )}
               </button>
-            </div>
-
-            {/* Keyboard shortcut hint */}
-            <div
-              style={{
-                marginTop: '1rem',
-                textAlign: 'center',
-                fontSize: '0.75rem',
-                color: '#6b7280',
-              }}
-            >
-              Tip: Press{' '}
-              <kbd
-                style={{
-                  padding: '0.125rem 0.375rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '0.25rem',
-                }}
-              >
-                {shortcut}
-              </kbd>{' '}
-              anytime to report a bug
             </div>
           </>
         )}
