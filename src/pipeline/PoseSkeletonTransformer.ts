@@ -53,6 +53,8 @@ export const SKELETON_CONNECTIONS = [
 export class PoseSkeletonTransformer implements SkeletonTransformer {
   // Store the pose detector instance
   private detector: poseDetection.PoseDetector | null = null;
+  // Throttle debug logging to once per second
+  private lastDebugLogTime = 0;
 
   /**
    * Initialize the pose detection model
@@ -119,10 +121,35 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       });
     }
 
+    // Debug: Log frame info before pose detection (throttled to 1/sec)
+    const now = performance.now();
+    const shouldLog = now - this.lastDebugLogTime > 1000;
+    if (shouldLog) {
+      this.lastDebugLogTime = now;
+      const frame = frameEvent.frame;
+      if (frame instanceof HTMLVideoElement) {
+        console.log('[PoseDetection] Video frame info:', {
+          videoWidth: frame.videoWidth,
+          videoHeight: frame.videoHeight,
+          clientWidth: frame.clientWidth,
+          clientHeight: frame.clientHeight,
+          readyState: frame.readyState,
+          paused: frame.paused,
+          currentTime: frame.currentTime,
+        });
+      } else if (frame instanceof HTMLCanvasElement) {
+        console.log('[PoseDetection] Canvas frame info:', {
+          width: frame.width,
+          height: frame.height,
+        });
+      }
+    }
+
     // Convert the Promise-based detection to an Observable
     return from(this.detector.estimatePoses(frameEvent.frame)).pipe(
       map((poses) => {
         if (poses.length === 0) {
+          console.log('[PoseDetection] No poses detected');
           return {
             pose: null,
             frameEvent,
@@ -131,6 +158,20 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
 
         // Use the first detected pose (we're focused on single person)
         const pose = poses[0];
+
+        // Debug: Log keypoint structure (throttled)
+        if (shouldLog && pose.keypoints.length > 0) {
+          const sample = pose.keypoints[11]; // LEFT_SHOULDER
+          console.log('[PoseDetection] Sample keypoint (LEFT_SHOULDER):', {
+            x: sample?.x,
+            y: sample?.y,
+            score: sample?.score,
+            visibility: (sample as unknown as Record<string, unknown>)
+              ?.visibility,
+            name: sample?.name,
+            totalKeypoints: pose.keypoints.length,
+          });
+        }
 
         return {
           pose: {

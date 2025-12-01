@@ -14,6 +14,22 @@ export class Skeleton {
   // Arm-to-vertical angle cache (computed lazily)
   private _armToVerticalAngle: number | null = null;
 
+  // Static throttle for debug logging (shared across all instances)
+  private static lastDebugLogTime = 0;
+  private static debuggedNames: Set<string> = new Set();
+
+  /**
+   * Check if we should log (throttled to 1/sec)
+   */
+  private static shouldLog(): boolean {
+    const now = performance.now();
+    if (now - Skeleton.lastDebugLogTime > 1000) {
+      Skeleton.lastDebugLogTime = now;
+      return true;
+    }
+    return false;
+  }
+
   constructor(
     // Raw keypoints from the pose detection
     private readonly keypoints: PoseKeypoint[],
@@ -146,12 +162,52 @@ export class Skeleton {
 
     try {
       // Get shoulder and elbow keypoints
-      const shoulder =
-        this.getKeypointByName('rightShoulder') ||
-        this.getKeypointByName('leftShoulder');
-      const elbow =
-        this.getKeypointByName('rightElbow') ||
-        this.getKeypointByName('leftElbow');
+      const rightShoulder = this.getKeypointByName('rightShoulder');
+      const leftShoulder = this.getKeypointByName('leftShoulder');
+      const rightElbow = this.getKeypointByName('rightElbow');
+      const leftElbow = this.getKeypointByName('leftElbow');
+
+      // Debug logging (throttled)
+      if (Skeleton.shouldLog()) {
+        console.log('[Skeleton] Arm-vertical keypoints:', {
+          rightShoulder: rightShoulder
+            ? {
+                x: rightShoulder.x,
+                y: rightShoulder.y,
+                score: rightShoulder.score,
+                vis: rightShoulder.visibility,
+              }
+            : null,
+          leftShoulder: leftShoulder
+            ? {
+                x: leftShoulder.x,
+                y: leftShoulder.y,
+                score: leftShoulder.score,
+                vis: leftShoulder.visibility,
+              }
+            : null,
+          rightElbow: rightElbow
+            ? {
+                x: rightElbow.x,
+                y: rightElbow.y,
+                score: rightElbow.score,
+                vis: rightElbow.visibility,
+              }
+            : null,
+          leftElbow: leftElbow
+            ? {
+                x: leftElbow.x,
+                y: leftElbow.y,
+                score: leftElbow.score,
+                vis: leftElbow.visibility,
+              }
+            : null,
+          keypointsLength: this.keypoints.length,
+        });
+      }
+
+      const shoulder = rightShoulder || leftShoulder;
+      const elbow = rightElbow || leftElbow;
 
       if (shoulder && elbow) {
         // Calculate arm vector (from shoulder to elbow)
@@ -239,6 +295,19 @@ export class Skeleton {
         .replace(/([A-Z])/g, '_$1')
         .toLowerCase(),
     ];
+
+    // Debug: log what we're looking for (only first call per name, throttled)
+    if (Skeleton.shouldLog() && !Skeleton.debuggedNames.has(name)) {
+      console.log(
+        `[Skeleton] Looking up keypoint: "${name}", variants:`,
+        variants
+      );
+      console.log(
+        `[Skeleton] keypointMapping keys:`,
+        Object.keys(this.keypointMapping)
+      );
+      Skeleton.debuggedNames.add(name);
+    }
 
     // Try each variant (MediaPipe format for BlazePose)
     for (const variant of variants) {

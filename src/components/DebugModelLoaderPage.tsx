@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '@tensorflow/tfjs-backend-webgl';
 import * as poseDetection from '@tensorflow-models/pose-detection';
+import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 
 interface LogEntry {
   timestamp: string;
@@ -19,13 +20,31 @@ const DebugModelLoaderPage: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
+  // Get video/processing context from main app
+  const {
+    videoRef,
+    canvasRef,
+    appState,
+    isPlaying,
+    loadHardcodedVideo,
+    togglePlayPause,
+    stopVideo,
+  } = useSwingAnalyzerContext();
+
   // Add a log entry
   const addLog = useCallback((level: LogEntry['level'], ...args: unknown[]) => {
-    const message = args
-      .map((arg) =>
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      )
-      .join(' ');
+    const safeStringify = (obj: unknown): string => {
+      if (typeof obj !== 'object' || obj === null) {
+        return String(obj);
+      }
+      try {
+        return JSON.stringify(obj, null, 2);
+      } catch {
+        // Handle circular references
+        return `[Object: ${obj.constructor?.name || 'unknown'}]`;
+      }
+    };
+    const message = args.map(safeStringify).join(' ');
     const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
     setLogs((prev) => [...prev, { timestamp, level, message }]);
   }, []);
@@ -124,8 +143,13 @@ const DebugModelLoaderPage: React.FC = () => {
       console.log('DebugPage: SUCCESS: BlazePose detector created!', detector);
       setStatus('SUCCESS: BlazePose detector created!');
     } catch (error) {
-      console.error('DebugPage: FAILED to load BlazePose:', error);
-      setStatus(`FAILED to load BlazePose: ${(error as Error).message}`);
+      const errorMsg =
+        error instanceof Error ? error.message : JSON.stringify(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+      console.error('DebugPage: FAILED to load BlazePose:', errorMsg);
+      console.error('DebugPage: BlazePose error stack:', errorStack);
+      console.error('DebugPage: BlazePose raw error:', error);
+      setStatus(`FAILED to load BlazePose: ${errorMsg}`);
     }
   };
 
@@ -150,8 +174,13 @@ const DebugModelLoaderPage: React.FC = () => {
       console.log('DebugPage: SUCCESS: MoveNet detector created!', detector);
       setStatus('SUCCESS: MoveNet Thunder detector created!');
     } catch (error) {
-      console.error('DebugPage: FAILED to load MoveNet:', error);
-      setStatus(`FAILED to load MoveNet: ${(error as Error).message}`);
+      const errorMsg =
+        error instanceof Error ? error.message : JSON.stringify(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+      console.error('DebugPage: FAILED to load MoveNet:', errorMsg);
+      console.error('DebugPage: MoveNet error stack:', errorStack);
+      console.error('DebugPage: MoveNet raw error:', error);
+      setStatus(`FAILED to load MoveNet: ${errorMsg}`);
     }
   };
 
@@ -178,8 +207,13 @@ const DebugModelLoaderPage: React.FC = () => {
       console.log('DebugPage: SUCCESS: PoseNet detector created!', detector);
       setStatus('SUCCESS: PoseNet detector created!');
     } catch (error) {
-      console.error('DebugPage: FAILED to load PoseNet:', error);
-      setStatus(`FAILED to load PoseNet: ${(error as Error).message}`);
+      const errorMsg =
+        error instanceof Error ? error.message : JSON.stringify(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+      console.error('DebugPage: FAILED to load PoseNet:', errorMsg);
+      console.error('DebugPage: PoseNet error stack:', errorStack);
+      console.error('DebugPage: PoseNet raw error:', error);
+      setStatus(`FAILED to load PoseNet: ${errorMsg}`);
     }
   };
 
@@ -216,6 +250,10 @@ const DebugModelLoaderPage: React.FC = () => {
   return (
     <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif' }}>
       <h1>Debug Model Loader</h1>
+      <p style={{ color: '#888', fontSize: '12px' }}>
+        Last updated: {new Date().toISOString()} (Build:
+        2025-12-01-v6-throttled-logs)
+      </p>
       <p>
         <Link to="/">Back to Main App</Link>
       </p>
@@ -280,6 +318,89 @@ const DebugModelLoaderPage: React.FC = () => {
         >
           Load PoseNet (fallback)
         </button>
+      </div>
+
+      <hr />
+
+      <div style={{ marginBottom: '20px' }}>
+        <h3>Video Processing Test</h3>
+        <p style={{ color: '#666', fontSize: '12px', marginBottom: '10px' }}>
+          Model loaded: {appState.isModelLoaded ? 'Yes' : 'No'} | Processing:{' '}
+          {appState.isProcessing ? 'Yes' : 'No'}
+        </p>
+        <div style={{ marginBottom: '10px' }}>
+          <button
+            type="button"
+            onClick={loadHardcodedVideo}
+            style={{
+              marginRight: '10px',
+              padding: '10px 15px',
+              backgroundColor: '#FF9800',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Load Sample Video
+          </button>
+          <button
+            type="button"
+            onClick={togglePlayPause}
+            disabled={!appState.isModelLoaded}
+            style={{
+              marginRight: '10px',
+              padding: '10px 15px',
+              backgroundColor: isPlaying ? '#f44336' : '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: appState.isModelLoaded ? 'pointer' : 'not-allowed',
+            }}
+          >
+            {isPlaying ? 'Pause' : 'Play'}
+          </button>
+          <button
+            type="button"
+            onClick={stopVideo}
+            disabled={!appState.isModelLoaded}
+            style={{
+              padding: '10px 15px',
+              backgroundColor: '#607D8B',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: appState.isModelLoaded ? 'pointer' : 'not-allowed',
+            }}
+          >
+            Stop
+          </button>
+        </div>
+        <div
+          style={{
+            position: 'relative',
+            width: '400px',
+            height: '300px',
+            backgroundColor: '#000',
+          }}
+        >
+          <video
+            ref={videoRef}
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            playsInline
+            muted
+          />
+          <canvas
+            ref={canvasRef}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+            }}
+          />
+        </div>
       </div>
 
       <hr />
