@@ -1,7 +1,7 @@
 import * as poseDetection from '@tensorflow-models/pose-detection';
 import '@tensorflow/tfjs-backend-webgl';
 import * as tf from '@tensorflow/tfjs-core';
-import { type Observable, from, of } from 'rxjs';
+import { from, type Observable, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Skeleton } from '../models/Skeleton';
 import { CocoBodyParts, type PoseKeypoint, type PoseResult } from '../types';
@@ -62,9 +62,9 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       tf.env().set('WEBGL_CPU_FORWARD', false);
       tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
 
-      // Use MoveNet - better performance on mobile
+      // Use MoveNet Thunder - better accuracy than Lightning
       const detectorConfig = {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+        modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
         enableSmoothing: true,
         // No modelUrl - use default from tfhub.dev
       };
