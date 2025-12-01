@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
@@ -46,6 +47,7 @@ if (useSsl) {
 export default defineConfig({
   plugins: [
     react(),
+    ...(useSsl ? [basicSsl()] : []),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['pwa-192x192.png', 'pwa-512x512.png'],
@@ -128,5 +130,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     exclude: ['e2e-tests/**', 'node_modules/**'],
+    setupFiles: ['./src/test/setup.ts'],
   },
 });
