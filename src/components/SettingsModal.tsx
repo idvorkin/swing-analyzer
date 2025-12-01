@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AboutTab } from './settings/AboutTab';
 import { BugReportTab } from './settings/BugReportTab';
+import { DebugTab } from './settings/DebugTab';
 import { CloseIcon, SettingsIcon } from './settings/Icons';
 import './settings/Settings.css';
 import { UpdatesTab } from './settings/UpdatesTab';
 
 const TABS = [
+  { id: 'debug' as const, label: 'Display', icon: '🖥️' },
   { id: 'bug' as const, label: 'Bug Report', icon: '🐛' },
   { id: 'updates' as const, label: 'Updates', icon: '🚀' },
   { id: 'about' as const, label: 'About', icon: '💡' },
@@ -46,7 +48,7 @@ export function SettingsModal({
   updateAvailable,
   onReload,
 }: SettingsModalProps) {
-  const [activeSection, setActiveSection] = useState<TabId>('bug');
+  const [activeSection, setActiveSection] = useState<TabId>('debug');
 
   const handleShakeToggle = useCallback(async () => {
     if (!shakeEnabled) {
@@ -130,6 +132,8 @@ export function SettingsModal({
 
         {/* Content */}
         <div className="settings-content">
+          {activeSection === 'debug' && <DebugTab />}
+
           {activeSection === 'bug' && (
             <BugReportTab
               shakeEnabled={shakeEnabled}

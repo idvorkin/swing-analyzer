@@ -17,6 +17,14 @@ vi.mock('../../services/DeviceService', () => ({
   },
 }));
 
+// Mock the SwingAnalyzerContext for DebugTab
+vi.mock('../../contexts/SwingAnalyzerContext', () => ({
+  useSwingAnalyzerContext: vi.fn(() => ({
+    appState: { displayMode: 'both' },
+    setDisplayMode: vi.fn(),
+  })),
+}));
+
 const defaultProps = {
   isOpen: true,
   onClose: vi.fn(),
@@ -83,9 +91,9 @@ describe('SettingsModal', () => {
   });
 
   describe('Tab Navigation', () => {
-    it('shows Bug Report tab by default', () => {
+    it('shows Display tab by default', () => {
       render(<SettingsModal {...defaultProps} />);
-      expect(screen.getByText(/Report a Bug/)).toBeInTheDocument();
+      expect(screen.getByText('Display Mode')).toBeInTheDocument();
     });
 
     it('switches to Updates tab when clicked', () => {
@@ -106,6 +114,7 @@ describe('SettingsModal', () => {
   describe('Bug Report Tab', () => {
     it('displays keyboard shortcut', () => {
       render(<SettingsModal {...defaultProps} />);
+      fireEvent.click(screen.getByText('Bug Report'));
       expect(screen.getByText('Cmd+I')).toBeInTheDocument();
     });
 
@@ -120,6 +129,7 @@ describe('SettingsModal', () => {
         />
       );
 
+      fireEvent.click(screen.getByText('Bug Report'));
       fireEvent.click(screen.getByText(/Report a Bug/));
       expect(onClose).toHaveBeenCalledTimes(1);
       expect(onOpenBugReporter).toHaveBeenCalledTimes(1);

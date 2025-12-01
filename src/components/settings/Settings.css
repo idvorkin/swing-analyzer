@@ -428,3 +428,50 @@
   display: inline-block;
   animation: settings-spin 1s linear infinite;
 }
+
+/* Radio Group for Debug Options */
+.settings-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-radio-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.settings-radio-option:has(input:checked) {
+  background: rgba(66, 133, 244, 0.15);
+  border-color: rgba(66, 133, 244, 0.3);
+}
+
+.settings-radio-option input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: #4285f4;
+  cursor: pointer;
+}
+
+.settings-radio-label {
+  color: white;
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+.settings-radio-desc {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8125rem;
+  margin-left: auto;
+}

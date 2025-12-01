@@ -109,23 +109,6 @@ const AppContent: React.FC = () => {
             Settings
           </button>
         </nav>
-        <div className="external-links">
-          <a
-            href="https://github.com/idvorkin/swing-analyzer"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Source Code on GitHub
-          </a>{' '}
-          |
-          <a
-            href="https://idvork.in/kettlebell"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            What are Swings?
-          </a>
-        </div>
       </footer>
       <VersionNotification />
       <BugReportModal
@@ -135,13 +118,6 @@ const AppContent: React.FC = () => {
         onSubmit={bugReporter.submit}
         isSubmitting={bugReporter.isSubmitting}
         defaultData={bugReporter.getDefaultData()}
-        shakeEnabled={bugReporter.shakeEnabled}
-        onShakeEnabledChange={bugReporter.setShakeEnabled}
-        isShakeSupported={isShakeSupported}
-        onRequestShakePermission={requestPermission}
-        isFirstTime={bugReporter.isFirstTime}
-        onFirstTimeShown={bugReporter.markFirstTimeShown}
-        shortcut={bugReportShortcut}
       />
       <SettingsModal
         isOpen={settingsOpen}
