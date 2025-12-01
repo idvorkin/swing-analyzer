@@ -12,6 +12,7 @@ export function useVersionCheck(service: DeviceServiceType = DeviceService) {
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
   const [lastCheckTime, setLastCheckTime] = useState<Date | null>(() => {
     const stored = service.getStorageItem(LAST_UPDATE_CHECK_KEY);
     return stored ? new Date(stored) : null;
@@ -23,6 +24,7 @@ export function useVersionCheck(service: DeviceServiceType = DeviceService) {
   } = useRegisterSW({
     onRegisteredSW(swUrl, registration) {
       registrationRef.current = registration ?? null;
+      setIsRegistered(true);
       console.log(`Service worker registered: ${swUrl}`);
     },
     onRegisterError(error) {
@@ -31,9 +33,10 @@ export function useVersionCheck(service: DeviceServiceType = DeviceService) {
   });
 
   // Set up periodic update checks with proper cleanup
+  // Uses isRegistered state to ensure effect runs after SW registration completes
   useEffect(() => {
     const registration = registrationRef.current;
-    if (!registration) return;
+    if (!registration || !isRegistered) return;
 
     intervalIdRef.current = setInterval(() => {
       registration.update();
@@ -48,7 +51,7 @@ export function useVersionCheck(service: DeviceServiceType = DeviceService) {
         intervalIdRef.current = null;
       }
     };
-  }, [service]);
+  }, [service, isRegistered]);
 
   const reload = () => {
     updateServiceWorker(true);

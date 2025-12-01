@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   BUILD_TIMESTAMP,
   GIT_BRANCH,
@@ -86,6 +86,18 @@ export function SettingsModal({
     onOpenBugReporter();
   }, [onClose, onOpenBugReporter]);
 
+  // Global Escape key handler - divs aren't focusable by default
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const isMobile = DeviceService.isMobileDevice();
@@ -105,7 +117,7 @@ export function SettingsModal({
         animation: 'settings-fade-in 0.2s ease-out',
       }}
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => e.key === 'Enter' && onClose()}
       role="dialog"
       aria-modal="true"
       aria-labelledby="settings-title"
