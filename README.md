@@ -14,15 +14,15 @@ A web-based swing motion analyzer that runs completely in the browser. This appl
 
 ## Live Demo
 
-- **Production Site**: [https://swing-analyzer.vercel.app](https://swing-analyzer.vercel.app)
-- **Debug Site**: [https://swing-analyzer-bh0csa0tu-idvorkins-projects.vercel.app](https://swing-analyzer-bh0csa0tu-idvorkins-projects.vercel.app)
+- **Production Site**: [https://swing-analyzer.surge.sh](https://swing-analyzer.surge.sh)
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
-- npm or yarn
+- Node.js (v20 or higher)
+- npm
+- [just](https://github.com/casey/just) command runner (optional but recommended)
 
 ### Installation
 
@@ -30,24 +30,37 @@ A web-based swing motion analyzer that runs completely in the browser. This appl
 2. Install dependencies:
 
 ```bash
-cd swing-analyzer
 npm install
 ```
 
-3. Start the development server:
+### Development
+
+Start the development server:
 
 ```bash
-npm start
+just dev
+# or
+npm run dev
 ```
 
-4. Open your browser to http://localhost:1234
+Then open your browser to http://localhost:5173
 
-### Building for Production
-
-To build the application for production:
+### Other Common Commands
 
 ```bash
-npm run build
+just build          # Build for production
+just preview        # Preview production build
+just test           # Run E2E tests
+just test-ui        # Run tests with UI
+just deploy         # Build and deploy to Surge
+```
+
+Or use npm directly:
+
+```bash
+npm run build       # Build for production
+npm run preview     # Preview production build
+npm test            # Run E2E tests
 ```
 
 The built files will be available in the `dist` directory.
@@ -70,40 +83,23 @@ The built files will be available in the `dist` directory.
 
 ## Deployment
 
-### Vercel (Recommended)
+### Surge (Current Deployment)
 
-This project is configured for easy deployment to Vercel:
+This project is configured for automatic deployment to Surge:
 
-1. Push your code to GitHub
-2. Import your repository in the Vercel dashboard
-3. Vercel will automatically detect and configure the build settings
-4. Click "Deploy"
+1. When you push to the `main` branch, a GitHub Actions workflow will automatically:
+   - Build the application
+   - Deploy it to [swing-analyzer.surge.sh](https://swing-analyzer.surge.sh)
 
-For detailed instructions, see [VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md)
-
-Alternatively, use our deployment script:
+2. For manual deployment, use:
 
 ```bash
-./deploy-to-vercel.sh
+just deploy
+# or
+npm run build && npx surge ./dist swing-analyzer.surge.sh
 ```
 
-### GitHub Pages
-
-This project is also set up for automatic deployment to GitHub Pages:
-
-1. When you push to the `main` branch, a GitHub Actions workflow will:
-
-   - Build the application
-   - Deploy it to the `gh-pages` branch
-   - Make it available on GitHub Pages
-
-2. The deployed application will be available at:
-
-   ```
-   https://<username>.github.io/<repository-name>/
-   ```
-
-3. For detailed deployment instructions, see [DEPLOY.md](./DEPLOY.md)
+For detailed deployment instructions, see [DEPLOY.md](./DEPLOY.md)
 
 ## How It Works
 
