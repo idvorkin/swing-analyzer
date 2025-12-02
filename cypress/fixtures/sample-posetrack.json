@@ -1,0 +1,227 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "model": "movenet-lightning",
+    "modelVersion": "4.0.0",
+    "sourceVideoHash": "a1b2c3d4e5f6789012345678901234567890123456789012345678901234abcd",
+    "sourceVideoName": "swing-sample.mp4",
+    "sourceVideoDuration": 10.0,
+    "extractedAt": "2024-01-15T12:00:00Z",
+    "frameCount": 30,
+    "fps": 30,
+    "videoWidth": 1920,
+    "videoHeight": 1080
+  },
+  "frames": [
+    {
+      "frameIndex": 0,
+      "timestamp": 0,
+      "videoTime": 0,
+      "keypoints": [
+        { "x": 960, "y": 100, "score": 0.9, "name": "nose" },
+        { "x": 970, "y": 90, "score": 0.85, "name": "left_eye" },
+        { "x": 950, "y": 90, "score": 0.85, "name": "right_eye" },
+        { "x": 980, "y": 95, "score": 0.82, "name": "left_ear" },
+        { "x": 940, "y": 95, "score": 0.82, "name": "right_ear" },
+        { "x": 1020, "y": 200, "score": 0.95, "name": "left_shoulder" },
+        { "x": 900, "y": 200, "score": 0.95, "name": "right_shoulder" },
+        { "x": 1080, "y": 350, "score": 0.9, "name": "left_elbow" },
+        { "x": 840, "y": 350, "score": 0.9, "name": "right_elbow" },
+        { "x": 1100, "y": 500, "score": 0.88, "name": "left_wrist" },
+        { "x": 820, "y": 500, "score": 0.88, "name": "right_wrist" },
+        { "x": 1000, "y": 450, "score": 0.97, "name": "left_hip" },
+        { "x": 920, "y": 450, "score": 0.97, "name": "right_hip" },
+        { "x": 1010, "y": 650, "score": 0.94, "name": "left_knee" },
+        { "x": 910, "y": 650, "score": 0.94, "name": "right_knee" },
+        { "x": 1015, "y": 850, "score": 0.92, "name": "left_ankle" },
+        { "x": 905, "y": 850, "score": 0.92, "name": "right_ankle" }
+      ],
+      "score": 0.9,
+      "angles": {
+        "spineAngle": 5,
+        "armToSpineAngle": 15,
+        "armToVerticalAngle": 170
+      }
+    },
+    {
+      "frameIndex": 5,
+      "timestamp": 166,
+      "videoTime": 0.166,
+      "keypoints": [
+        { "x": 960, "y": 105, "score": 0.91, "name": "nose" },
+        { "x": 970, "y": 95, "score": 0.86, "name": "left_eye" },
+        { "x": 950, "y": 95, "score": 0.86, "name": "right_eye" },
+        { "x": 980, "y": 100, "score": 0.83, "name": "left_ear" },
+        { "x": 940, "y": 100, "score": 0.83, "name": "right_ear" },
+        { "x": 1025, "y": 210, "score": 0.94, "name": "left_shoulder" },
+        { "x": 895, "y": 210, "score": 0.94, "name": "right_shoulder" },
+        { "x": 1090, "y": 320, "score": 0.91, "name": "left_elbow" },
+        { "x": 830, "y": 320, "score": 0.91, "name": "right_elbow" },
+        { "x": 1120, "y": 450, "score": 0.87, "name": "left_wrist" },
+        { "x": 800, "y": 450, "score": 0.87, "name": "right_wrist" },
+        { "x": 1005, "y": 455, "score": 0.96, "name": "left_hip" },
+        { "x": 915, "y": 455, "score": 0.96, "name": "right_hip" },
+        { "x": 1015, "y": 655, "score": 0.93, "name": "left_knee" },
+        { "x": 905, "y": 655, "score": 0.93, "name": "right_knee" },
+        { "x": 1020, "y": 855, "score": 0.91, "name": "left_ankle" },
+        { "x": 900, "y": 855, "score": 0.91, "name": "right_ankle" }
+      ],
+      "score": 0.91,
+      "angles": {
+        "spineAngle": 8,
+        "armToSpineAngle": 20,
+        "armToVerticalAngle": 165
+      }
+    },
+    {
+      "frameIndex": 10,
+      "timestamp": 333,
+      "videoTime": 0.333,
+      "keypoints": [
+        { "x": 965, "y": 110, "score": 0.92, "name": "nose" },
+        { "x": 975, "y": 100, "score": 0.87, "name": "left_eye" },
+        { "x": 955, "y": 100, "score": 0.87, "name": "right_eye" },
+        { "x": 985, "y": 105, "score": 0.84, "name": "left_ear" },
+        { "x": 945, "y": 105, "score": 0.84, "name": "right_ear" },
+        { "x": 1030, "y": 220, "score": 0.93, "name": "left_shoulder" },
+        { "x": 890, "y": 220, "score": 0.93, "name": "right_shoulder" },
+        { "x": 1100, "y": 290, "score": 0.92, "name": "left_elbow" },
+        { "x": 820, "y": 290, "score": 0.92, "name": "right_elbow" },
+        { "x": 1150, "y": 380, "score": 0.86, "name": "left_wrist" },
+        { "x": 770, "y": 380, "score": 0.86, "name": "right_wrist" },
+        { "x": 1010, "y": 460, "score": 0.95, "name": "left_hip" },
+        { "x": 910, "y": 460, "score": 0.95, "name": "right_hip" },
+        { "x": 1020, "y": 660, "score": 0.92, "name": "left_knee" },
+        { "x": 900, "y": 660, "score": 0.92, "name": "right_knee" },
+        { "x": 1025, "y": 860, "score": 0.9, "name": "left_ankle" },
+        { "x": 895, "y": 860, "score": 0.9, "name": "right_ankle" }
+      ],
+      "score": 0.92,
+      "angles": {
+        "spineAngle": 12,
+        "armToSpineAngle": 35,
+        "armToVerticalAngle": 150
+      }
+    },
+    {
+      "frameIndex": 15,
+      "timestamp": 500,
+      "videoTime": 0.5,
+      "keypoints": [
+        { "x": 970, "y": 115, "score": 0.93, "name": "nose" },
+        { "x": 980, "y": 105, "score": 0.88, "name": "left_eye" },
+        { "x": 960, "y": 105, "score": 0.88, "name": "right_eye" },
+        { "x": 990, "y": 110, "score": 0.85, "name": "left_ear" },
+        { "x": 950, "y": 110, "score": 0.85, "name": "right_ear" },
+        { "x": 1035, "y": 230, "score": 0.92, "name": "left_shoulder" },
+        { "x": 885, "y": 230, "score": 0.92, "name": "right_shoulder" },
+        { "x": 1110, "y": 260, "score": 0.93, "name": "left_elbow" },
+        { "x": 810, "y": 260, "score": 0.93, "name": "right_elbow" },
+        { "x": 1180, "y": 300, "score": 0.85, "name": "left_wrist" },
+        { "x": 740, "y": 300, "score": 0.85, "name": "right_wrist" },
+        { "x": 1015, "y": 465, "score": 0.94, "name": "left_hip" },
+        { "x": 905, "y": 465, "score": 0.94, "name": "right_hip" },
+        { "x": 1025, "y": 665, "score": 0.91, "name": "left_knee" },
+        { "x": 895, "y": 665, "score": 0.91, "name": "right_knee" },
+        { "x": 1030, "y": 865, "score": 0.89, "name": "left_ankle" },
+        { "x": 890, "y": 865, "score": 0.89, "name": "right_ankle" }
+      ],
+      "score": 0.93,
+      "angles": {
+        "spineAngle": 18,
+        "armToSpineAngle": 55,
+        "armToVerticalAngle": 130
+      }
+    },
+    {
+      "frameIndex": 20,
+      "timestamp": 666,
+      "videoTime": 0.666,
+      "keypoints": [
+        { "x": 968, "y": 112, "score": 0.92, "name": "nose" },
+        { "x": 978, "y": 102, "score": 0.87, "name": "left_eye" },
+        { "x": 958, "y": 102, "score": 0.87, "name": "right_eye" },
+        { "x": 988, "y": 107, "score": 0.84, "name": "left_ear" },
+        { "x": 948, "y": 107, "score": 0.84, "name": "right_ear" },
+        { "x": 1032, "y": 225, "score": 0.93, "name": "left_shoulder" },
+        { "x": 888, "y": 225, "score": 0.93, "name": "right_shoulder" },
+        { "x": 1095, "y": 310, "score": 0.91, "name": "left_elbow" },
+        { "x": 825, "y": 310, "score": 0.91, "name": "right_elbow" },
+        { "x": 1140, "y": 420, "score": 0.87, "name": "left_wrist" },
+        { "x": 780, "y": 420, "score": 0.87, "name": "right_wrist" },
+        { "x": 1008, "y": 458, "score": 0.95, "name": "left_hip" },
+        { "x": 912, "y": 458, "score": 0.95, "name": "right_hip" },
+        { "x": 1018, "y": 658, "score": 0.93, "name": "left_knee" },
+        { "x": 902, "y": 658, "score": 0.93, "name": "right_knee" },
+        { "x": 1022, "y": 858, "score": 0.91, "name": "left_ankle" },
+        { "x": 898, "y": 858, "score": 0.91, "name": "right_ankle" }
+      ],
+      "score": 0.91,
+      "angles": {
+        "spineAngle": 10,
+        "armToSpineAngle": 30,
+        "armToVerticalAngle": 155
+      }
+    },
+    {
+      "frameIndex": 25,
+      "timestamp": 833,
+      "videoTime": 0.833,
+      "keypoints": [
+        { "x": 962, "y": 102, "score": 0.91, "name": "nose" },
+        { "x": 972, "y": 92, "score": 0.86, "name": "left_eye" },
+        { "x": 952, "y": 92, "score": 0.86, "name": "right_eye" },
+        { "x": 982, "y": 97, "score": 0.83, "name": "left_ear" },
+        { "x": 942, "y": 97, "score": 0.83, "name": "right_ear" },
+        { "x": 1022, "y": 205, "score": 0.94, "name": "left_shoulder" },
+        { "x": 898, "y": 205, "score": 0.94, "name": "right_shoulder" },
+        { "x": 1085, "y": 345, "score": 0.9, "name": "left_elbow" },
+        { "x": 835, "y": 345, "score": 0.9, "name": "right_elbow" },
+        { "x": 1105, "y": 495, "score": 0.88, "name": "left_wrist" },
+        { "x": 815, "y": 495, "score": 0.88, "name": "right_wrist" },
+        { "x": 1002, "y": 452, "score": 0.96, "name": "left_hip" },
+        { "x": 918, "y": 452, "score": 0.96, "name": "right_hip" },
+        { "x": 1012, "y": 652, "score": 0.94, "name": "left_knee" },
+        { "x": 908, "y": 652, "score": 0.94, "name": "right_knee" },
+        { "x": 1017, "y": 852, "score": 0.92, "name": "left_ankle" },
+        { "x": 903, "y": 852, "score": 0.92, "name": "right_ankle" }
+      ],
+      "score": 0.9,
+      "angles": {
+        "spineAngle": 6,
+        "armToSpineAngle": 18,
+        "armToVerticalAngle": 168
+      }
+    },
+    {
+      "frameIndex": 29,
+      "timestamp": 966,
+      "videoTime": 0.966,
+      "keypoints": [
+        { "x": 960, "y": 100, "score": 0.9, "name": "nose" },
+        { "x": 970, "y": 90, "score": 0.85, "name": "left_eye" },
+        { "x": 950, "y": 90, "score": 0.85, "name": "right_eye" },
+        { "x": 980, "y": 95, "score": 0.82, "name": "left_ear" },
+        { "x": 940, "y": 95, "score": 0.82, "name": "right_ear" },
+        { "x": 1020, "y": 200, "score": 0.95, "name": "left_shoulder" },
+        { "x": 900, "y": 200, "score": 0.95, "name": "right_shoulder" },
+        { "x": 1080, "y": 350, "score": 0.9, "name": "left_elbow" },
+        { "x": 840, "y": 350, "score": 0.9, "name": "right_elbow" },
+        { "x": 1100, "y": 500, "score": 0.88, "name": "left_wrist" },
+        { "x": 820, "y": 500, "score": 0.88, "name": "right_wrist" },
+        { "x": 1000, "y": 450, "score": 0.97, "name": "left_hip" },
+        { "x": 920, "y": 450, "score": 0.97, "name": "right_hip" },
+        { "x": 1010, "y": 650, "score": 0.94, "name": "left_knee" },
+        { "x": 910, "y": 650, "score": 0.94, "name": "right_knee" },
+        { "x": 1015, "y": 850, "score": 0.92, "name": "left_ankle" },
+        { "x": 905, "y": 850, "score": 0.92, "name": "right_ankle" }
+      ],
+      "score": 0.9,
+      "angles": {
+        "spineAngle": 5,
+        "armToSpineAngle": 15,
+        "armToVerticalAngle": 170
+      }
+    }
+  ]
+}
