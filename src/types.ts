@@ -1,4 +1,4 @@
-import { Skeleton } from './models/Skeleton';
+import type { Skeleton } from './models/Skeleton';
 
 export interface Point {
   x: number;
@@ -43,6 +43,27 @@ export interface FormCheckpoint {
   armToSpineAngle: number;
   armToVerticalAngle: number; // Angle between arm and vertical (0° is down, 180° is up)
   skeleton: Skeleton;
+  // Enhanced biomechanics (optional for backwards compatibility)
+  hipAngle?: number; // Knee-Hip-Shoulder angle (~180° standing, ~100° bottom)
+  kneeAngle?: number; // Hip-Knee-Ankle angle (~180° straight, ~90° squat)
+  hingeScore?: number; // -1 (squat) to +1 (hinge) movement pattern
+  angularVelocity?: {
+    // Degrees per second at this frame
+    spine: number;
+    hip: number;
+  };
+}
+
+/**
+ * Form quality assessment for a rep or session
+ */
+export interface FormQualityMetrics {
+  hingeScore: number; // -1 (squat pattern) to +1 (hinge pattern)
+  powerScore: number; // 0-100, based on hip extension velocity
+  consistencyScore: number; // 0-100, rep-to-rep variation
+  lockoutScore: number; // 0-100, quality of top position
+  depthScore: number; // 0-100, quality of bottom position
+  overallScore: number; // 0-100, weighted composite
 }
 
 export interface RepData {
