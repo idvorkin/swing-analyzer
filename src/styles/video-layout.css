@@ -1,0 +1,282 @@
+/* Video Section Layout - Minimal CSS for video/canvas positioning */
+
+.video-section {
+  margin-bottom: 30px;
+}
+
+.video-container {
+  position: relative;
+  margin-bottom: 25px;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #212529;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  min-height: 300px;
+}
+
+#video,
+#output-canvas {
+  width: 100%;
+  max-height: 70vh;
+  background-color: #212529;
+  object-fit: contain;
+}
+
+#output-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background-color: transparent;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* For portrait videos */
+.video-portrait #video,
+.video-portrait #output-canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* For landscape videos */
+.video-landscape #video,
+.video-landscape #output-canvas {
+  width: 100%;
+  height: auto;
+}
+
+/* Video Controls - Overlay */
+.video-controls {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 0 20px;
+  box-sizing: border-box;
+  z-index: 10;
+  gap: 15px;
+}
+
+.video-controls button {
+  background: rgba(26, 115, 232, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  #output-canvas {
+    max-height: 50vh;
+  }
+
+  .video-controls {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .video-controls .button-text {
+    display: none;
+  }
+}
+
+/* Checkpoint Grid */
+.checkpoint-grid-container {
+  position: relative;
+  width: 100%;
+  background-color: #212529;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.checkpoint-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+}
+
+.checkpoint-cell {
+  position: relative;
+  overflow: hidden;
+  background-color: #1e1e1e;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.checkpoint-cell:hover {
+  transform: scale(1.02);
+}
+
+.position-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.angle-label {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.angle-label.arm-angle {
+  top: 25px;
+  background-color: rgba(76, 175, 80, 0.7);
+}
+
+.no-checkpoints {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #888;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Fullscreen Checkpoint Styles */
+.fullscreen-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.fullscreen-checkpoint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.fullscreen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.fullscreen-title {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.fullscreen-spine-angle,
+.fullscreen-arm-angle,
+.fullscreen-timestamp {
+  font-size: 18px;
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+.fullscreen-spine-angle {
+  background-color: rgba(26, 115, 232, 0.3);
+}
+
+.fullscreen-arm-angle {
+  background-color: rgba(76, 175, 80, 0.3);
+  margin-left: 10px;
+}
+
+.fullscreen-timestamp {
+  background-color: rgba(255, 193, 7, 0.3);
+  margin-left: 10px;
+}
+
+.fullscreen-angles {
+  display: flex;
+  align-items: center;
+}
+
+.fullscreen-image {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.fullscreen-controls {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.fullscreen-message {
+  color: white;
+  font-size: 18px;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* Mobile fullscreen */
+@media (max-width: 768px) {
+  .fullscreen-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .fullscreen-title {
+    font-size: 18px;
+  }
+
+  .fullscreen-angles {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .fullscreen-spine-angle,
+  .fullscreen-arm-angle,
+  .fullscreen-timestamp {
+    font-size: 14px;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .fullscreen-controls {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .fullscreen-controls .button-text {
+    display: none;
+  }
+}

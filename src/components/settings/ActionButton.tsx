@@ -1,3 +1,4 @@
+import { Button } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 interface ActionButtonProps {
@@ -7,6 +8,12 @@ interface ActionButtonProps {
   children: ReactNode;
 }
 
+const colorMap = {
+  red: 'red',
+  blue: 'blue',
+  green: 'teal',
+} as const;
+
 export function ActionButton({
   variant,
   onClick,
@@ -14,13 +21,14 @@ export function ActionButton({
   children,
 }: ActionButtonProps) {
   return (
-    <button
-      type="button"
-      className={`settings-btn settings-btn--${variant}`}
+    <Button
+      color={colorMap[variant]}
       onClick={onClick}
       disabled={disabled}
+      fullWidth
+      size="md"
     >
       {children}
-    </button>
+    </Button>
   );
 }

@@ -1,3 +1,4 @@
+import { Badge, Box, Button, Group, Stack, Text, Title } from '@mantine/core';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
@@ -348,94 +349,145 @@ const AnalysisSection: React.FC = () => {
   };
 
   return (
-    <section className="analysis-section">
-      <div className="metrics">
-        <div className="metrics-header">
-          <h2>Analysis Results</h2>
-          <div className="status-indicator">{status}</div>
-        </div>
+    <Box className="analysis-section">
+      <Box
+        p="xl"
+        style={{
+          backgroundColor: 'var(--mantine-color-dark-7)',
+          borderRadius: 'var(--mantine-radius-md)',
+          boxShadow: '0 6px 18px rgba(0, 0, 0, 0.08)',
+        }}
+      >
+        <Group justify="space-between" mb="lg">
+          <Title order={2} size="h3">
+            Analysis Results
+          </Title>
+          <Badge variant="light" size="lg">
+            {status}
+          </Badge>
+        </Group>
 
-        <div className="metrics-inline">
-          <span className="metric-pill">
-            <span className="metric-label">Reps</span>
-            <span className="metric-value" id="rep-counter">
-              {repCount}
-            </span>
-          </span>
-          <span className="metric-pill">
-            <span className="metric-label">Spine</span>
-            <span className="metric-value" id="spine-angle">
-              {spineAngle}°
-            </span>
-          </span>
-          <span className="metric-pill">
-            <span className="metric-label">Arm</span>
-            <span className="metric-value" id="arm-angle">
-              {armToSpineAngle}°
-            </span>
-          </span>
-        </div>
+        <Group gap="md" mb="xl">
+          <Badge
+            size="xl"
+            variant="gradient"
+            gradient={{ from: 'blue', to: 'cyan' }}
+            style={{ padding: '12px 20px' }}
+          >
+            <Group gap="xs">
+              <Text size="xs" tt="uppercase" fw={500}>
+                Reps
+              </Text>
+              <Text size="lg" fw={700} id="rep-counter">
+                {repCount}
+              </Text>
+            </Group>
+          </Badge>
+          <Badge
+            size="xl"
+            variant="gradient"
+            gradient={{ from: 'blue', to: 'cyan' }}
+            style={{ padding: '12px 20px' }}
+          >
+            <Group gap="xs">
+              <Text size="xs" tt="uppercase" fw={500}>
+                Spine
+              </Text>
+              <Text size="lg" fw={700} id="spine-angle">
+                {spineAngle}°
+              </Text>
+            </Group>
+          </Badge>
+          <Badge
+            size="xl"
+            variant="gradient"
+            gradient={{ from: 'blue', to: 'cyan' }}
+            style={{ padding: '12px 20px' }}
+          >
+            <Group gap="xs">
+              <Text size="xs" tt="uppercase" fw={500}>
+                Arm
+              </Text>
+              <Text size="lg" fw={700} id="arm-angle">
+                {armToSpineAngle}°
+              </Text>
+            </Group>
+          </Badge>
+        </Group>
 
-        <div className="form-checkpoints">
-          <div className="checkpoint-header">
-            <h3>Checkpoints</h3>
-            <div className="rep-navigation">
-              <button
-                id="prev-rep-btn"
-                className="nav-btn"
+        <Stack
+          gap="md"
+          mt="xl"
+          style={{
+            paddingTop: '20px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          <Group justify="space-between" align="center">
+            <Title order={3} size="h4">
+              Checkpoints
+            </Title>
+            <Group gap="sm">
+              <Button
+                variant="default"
+                size="sm"
                 disabled={appState.currentRepIndex <= 0}
                 onClick={navigateToPreviousRep}
-                type="button"
+                leftSection={
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                  </svg>
+                }
               >
-                <svg
-                  className="icon"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                </svg>
                 <span className="button-text">Prev</span>
-              </button>
-              <span id="current-rep">
+              </Button>
+              <Badge
+                size="lg"
+                variant="light"
+                style={{ minWidth: '60px', textAlign: 'center' }}
+              >
                 {appState.currentRepIndex + 1}/{repCount || 0}
-              </span>
-              <button
-                id="next-rep-btn"
-                className="nav-btn"
+              </Badge>
+              <Button
+                variant="default"
+                size="sm"
                 disabled={appState.currentRepIndex >= repCount - 1}
                 onClick={navigateToNextRep}
-                type="button"
+                rightSection={
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                  </svg>
+                }
               >
                 <span className="button-text">Next</span>
-                <svg
-                  className="icon icon-right"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-                </svg>
-              </button>
-            </div>
-          </div>
+              </Button>
+            </Group>
+          </Group>
           <div
             id="checkpoint-grid-container"
             className="checkpoint-grid-container"
             ref={checkpointGridRef}
           />
-        </div>
-      </div>
+        </Stack>
+      </Box>
 
       {/* Fullscreen checkpoint modal */}
       {isFullscreen && (
         <div className="fullscreen-modal">{renderFullscreenCheckpoint()}</div>
       )}
-    </section>
+    </Box>
   );
 };
 

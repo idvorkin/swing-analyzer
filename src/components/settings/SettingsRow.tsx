@@ -1,3 +1,4 @@
+import { Group, Stack, Text, ThemeIcon } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 interface SettingsRowProps {
@@ -8,6 +9,13 @@ interface SettingsRowProps {
   action?: ReactNode;
 }
 
+const colorMap = {
+  orange: 'orange',
+  purple: 'grape',
+  blue: 'blue',
+  gradient: 'blue',
+} as const;
+
 export function SettingsRow({
   icon,
   iconVariant = 'blue',
@@ -16,17 +24,36 @@ export function SettingsRow({
   action,
 }: SettingsRowProps) {
   return (
-    <div className="settings-row">
-      <div className="settings-row-left">
-        <div className={`settings-row-icon settings-row-icon--${iconVariant}`}>
+    <Group
+      justify="space-between"
+      align="flex-start"
+      p="md"
+      wrap="nowrap"
+      style={{
+        background: 'rgba(255, 255, 255, 0.04)',
+        borderRadius: '12px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+      }}
+    >
+      <Group gap="md" wrap="nowrap">
+        <ThemeIcon
+          size="lg"
+          color={colorMap[iconVariant]}
+          radius="md"
+          variant="gradient"
+        >
           {icon}
-        </div>
-        <div className="settings-row-text">
-          <div className="settings-row-title">{title}</div>
-          <div className="settings-row-subtitle">{subtitle}</div>
-        </div>
-      </div>
+        </ThemeIcon>
+        <Stack gap={2}>
+          <Text size="sm" fw={500}>
+            {title}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {subtitle}
+          </Text>
+        </Stack>
+      </Group>
       {action}
-    </div>
+    </Group>
   );
 }

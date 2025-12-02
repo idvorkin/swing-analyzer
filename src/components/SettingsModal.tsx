@@ -1,16 +1,9 @@
+import { Modal, Tabs } from '@mantine/core';
 import { useCallback, useEffect, useState } from 'react';
 import { AboutTab } from './settings/AboutTab';
 import { BugReportTab } from './settings/BugReportTab';
 import { DebugTab } from './settings/DebugTab';
-import {
-  BugIcon,
-  CloseIcon,
-  InfoIcon,
-  MonitorIcon,
-  RocketIcon,
-  SettingsIcon,
-} from './settings/Icons';
-import './settings/Settings.css';
+import { BugIcon, InfoIcon, MonitorIcon, RocketIcon } from './settings/Icons';
 import { UpdatesTab } from './settings/UpdatesTab';
 
 const TABS = [
@@ -85,88 +78,54 @@ export function SettingsModal({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="settings-overlay"
-      onClick={onClose}
-      onKeyDown={(e) => e.key === 'Enter' && onClose()}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="settings-title"
+    <Modal
+      opened={isOpen}
+      onClose={onClose}
+      title="Settings"
+      size="lg"
+      centered
     >
-      <div
-        className="settings-modal"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-        role="document"
+      <Tabs
+        value={activeSection}
+        onChange={(value) => setActiveSection(value as TabId)}
       >
-        {/* Drag Handle - Mobile Only */}
-        <div className="settings-drag-handle" aria-hidden="true" />
-
-        {/* Header */}
-        <div className="settings-header">
-          <div className="settings-header-left">
-            <div className="settings-header-icon">
-              <SettingsIcon />
-            </div>
-            <h2 id="settings-title" className="settings-title">
-              Settings
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="settings-close-btn"
-            aria-label="Close settings"
-          >
-            <CloseIcon />
-          </button>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="settings-tabs">
+        <Tabs.List>
           {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveSection(tab.id)}
-              className={`settings-tab ${activeSection === tab.id ? 'settings-tab--active' : ''}`}
-            >
-              <tab.Icon />
-              <span className="settings-tab-label">{tab.label}</span>
-            </button>
+            <Tabs.Tab key={tab.id} value={tab.id} leftSection={<tab.Icon />}>
+              {tab.label}
+            </Tabs.Tab>
           ))}
-        </div>
+        </Tabs.List>
 
-        {/* Content */}
-        <div className="settings-content">
-          {activeSection === 'debug' && <DebugTab onClose={onClose} />}
+        <Tabs.Panel value="debug" pt="md">
+          <DebugTab onClose={onClose} />
+        </Tabs.Panel>
 
-          {activeSection === 'bug' && (
-            <BugReportTab
-              shakeEnabled={shakeEnabled}
-              onShakeToggle={handleShakeToggle}
-              isShakeSupported={isShakeSupported}
-              shortcut={shortcut}
-              onReportBug={handleReportBug}
-            />
-          )}
+        <Tabs.Panel value="bug" pt="md">
+          <BugReportTab
+            shakeEnabled={shakeEnabled}
+            onShakeToggle={handleShakeToggle}
+            isShakeSupported={isShakeSupported}
+            shortcut={shortcut}
+            onReportBug={handleReportBug}
+          />
+        </Tabs.Panel>
 
-          {activeSection === 'updates' && (
-            <UpdatesTab
-              updateAvailable={updateAvailable}
-              lastCheckTime={lastCheckTime}
-              isCheckingUpdate={isCheckingUpdate}
-              onCheckForUpdate={onCheckForUpdate}
-              onReload={onReload}
-            />
-          )}
+        <Tabs.Panel value="updates" pt="md">
+          <UpdatesTab
+            updateAvailable={updateAvailable}
+            lastCheckTime={lastCheckTime}
+            isCheckingUpdate={isCheckingUpdate}
+            onCheckForUpdate={onCheckForUpdate}
+            onReload={onReload}
+          />
+        </Tabs.Panel>
 
-          {activeSection === 'about' && <AboutTab />}
-        </div>
-      </div>
-    </div>
+        <Tabs.Panel value="about" pt="md">
+          <AboutTab />
+        </Tabs.Panel>
+      </Tabs>
+    </Modal>
   );
 }

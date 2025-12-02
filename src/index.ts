@@ -3,11 +3,15 @@ import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 import '@tensorflow/tfjs-converter';
 
+import '@mantine/core/styles.css';
+
+import { MantineProvider } from '@mantine/core';
 import React from 'react';
 // React imports
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './components/App';
+import { theme } from './theme';
 
 // Initialize TensorFlow backend
 async function initialize() {
@@ -38,7 +42,11 @@ async function initialize() {
     if (rootElement) {
       const root = createRoot(rootElement);
       root.render(
-        React.createElement(BrowserRouter, null, React.createElement(App))
+        React.createElement(
+          MantineProvider,
+          { theme, defaultColorScheme: 'dark' },
+          React.createElement(BrowserRouter, null, React.createElement(App))
+        )
       );
     } else {
       console.error('Root element not found');
@@ -57,7 +65,11 @@ async function initialize() {
       if (rootElement) {
         const root = createRoot(rootElement);
         root.render(
-          React.createElement(BrowserRouter, null, React.createElement(App))
+          React.createElement(
+            MantineProvider,
+            { theme, defaultColorScheme: 'dark' },
+            React.createElement(BrowserRouter, null, React.createElement(App))
+          )
         );
       }
     } catch (cpuErr) {

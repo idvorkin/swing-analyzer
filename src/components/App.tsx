@@ -1,3 +1,4 @@
+import { AppShell, Button, Group, Title } from '@mantine/core';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -5,7 +6,7 @@ import { Route, Routes } from 'react-router-dom';
 import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
 import AnalysisSection from './AnalysisSection';
 import VideoSection from './VideoSection';
-import './App.css';
+import '../styles/video-layout.css';
 import { useBugReporter } from '../hooks/useBugReporter';
 import { useShakeDetector } from '../hooks/useShakeDetector';
 import { useVersionCheck } from '../hooks/useVersionCheck';
@@ -54,19 +55,40 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
   return (
-    <header>
-      <h1>Swing Analyzer</h1>
-      <nav>
-        <button
-          type="button"
+    <AppShell.Header
+      p="md"
+      style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+      }}
+    >
+      <Group justify="space-between" h="100%">
+        <Title
+          order={1}
+          size="h3"
+          c="white"
+          style={{ letterSpacing: '-0.02em' }}
+        >
+          Swing Analyzer
+        </Title>
+        <Button
+          variant="subtle"
+          color="gray"
+          leftSection={<SettingsIconSmall />}
           onClick={onOpenSettings}
           aria-label="Open settings"
+          styles={{
+            root: {
+              color: 'rgba(255, 255, 255, 0.85)',
+            },
+            section: {
+              marginRight: 8,
+            },
+          }}
         >
-          <SettingsIconSmall />
           <span>Settings</span>
-        </button>
-      </nav>
-    </header>
+        </Button>
+      </Group>
+    </AppShell.Header>
   );
 };
 
@@ -97,11 +119,15 @@ const AppContent: React.FC = () => {
 
   return (
     <SwingAnalyzerProvider>
-      <Header onOpenSettings={() => setSettingsOpen(true)} />
-      <Routes>
-        <Route path="/" element={<MainApplication />} />
-        <Route path="/debug" element={<DebugModelLoaderPage />} />
-      </Routes>
+      <AppShell header={{ height: 60 }}>
+        <Header onOpenSettings={() => setSettingsOpen(true)} />
+        <AppShell.Main>
+          <Routes>
+            <Route path="/" element={<MainApplication />} />
+            <Route path="/debug" element={<DebugModelLoaderPage />} />
+          </Routes>
+        </AppShell.Main>
+      </AppShell>
       <VersionNotification />
       <BugReportModal
         isOpen={bugReporter.isOpen}

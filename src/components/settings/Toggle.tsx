@@ -1,3 +1,5 @@
+import { Switch } from '@mantine/core';
+
 interface ToggleProps {
   checked: boolean;
   onChange: () => void;
@@ -10,14 +12,12 @@ export function Toggle({
   'aria-label': ariaLabel,
 }: ToggleProps) {
   return (
-    <button
-      type="button"
-      className={`settings-toggle ${checked ? 'settings-toggle--active' : ''}`}
-      onClick={onChange}
-      aria-pressed={checked}
+    <Switch
+      checked={checked}
+      onChange={onChange}
       aria-label={ariaLabel}
-    >
-      <div className="settings-toggle-knob" />
-    </button>
+      size="md"
+      color="teal"
+    />
   );
 }
