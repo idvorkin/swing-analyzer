@@ -17,6 +17,7 @@ import type {
 interface PositionCandidate {
   skeleton: Skeleton;
   timestamp: number;
+  videoTime?: number; // video.currentTime in seconds (for seeking)
   spineAngle: number;
   armToSpineAngle: number;
   armToVerticalAngle: number;
@@ -118,6 +119,7 @@ export class SwingFormProcessor implements FormProcessor {
     const skeleton = skeletonEvent.skeleton;
     const spineAngle = Math.abs(skeleton.getSpineAngle());
     const timestamp = skeletonEvent.poseEvent.frameEvent.timestamp;
+    const videoTime = skeletonEvent.poseEvent.frameEvent.videoTime;
 
     // Add frame to biomechanics analyzer for temporal analysis
     this.biomechanicsAnalyzer.addFrame(skeleton, timestamp);
@@ -196,6 +198,7 @@ export class SwingFormProcessor implements FormProcessor {
             position,
             candidate.skeleton,
             candidate.timestamp,
+            candidate.videoTime,
             candidate.spineAngle,
             candidate.armToSpineAngle,
             candidate.armToVerticalAngle,
@@ -245,6 +248,7 @@ export class SwingFormProcessor implements FormProcessor {
       SwingPositionName.Top,
       skeleton,
       timestamp,
+      videoTime,
       spineAngle,
       armToSpineAngle,
       armToVerticalAngle,
@@ -260,6 +264,7 @@ export class SwingFormProcessor implements FormProcessor {
         SwingPositionName.Connect,
         skeleton,
         timestamp,
+        videoTime,
         spineAngle,
         armToSpineAngle,
         armToVerticalAngle,
@@ -275,6 +280,7 @@ export class SwingFormProcessor implements FormProcessor {
       SwingPositionName.Bottom,
       skeleton,
       timestamp,
+      videoTime,
       spineAngle,
       armToSpineAngle,
       armToVerticalAngle,
@@ -290,6 +296,7 @@ export class SwingFormProcessor implements FormProcessor {
         SwingPositionName.Release,
         skeleton,
         timestamp,
+        videoTime,
         spineAngle,
         armToSpineAngle,
         armToVerticalAngle,
@@ -319,6 +326,7 @@ export class SwingFormProcessor implements FormProcessor {
     position: SwingPositionName,
     skeleton: Skeleton,
     timestamp: number,
+    videoTime: number | undefined,
     spineAngle: number,
     armToSpineAngle: number,
     armToVerticalAngle: number,
@@ -422,6 +430,7 @@ export class SwingFormProcessor implements FormProcessor {
         this.bestPositionCandidates.set(position, {
           skeleton,
           timestamp,
+          videoTime,
           spineAngle,
           armToSpineAngle,
           armToVerticalAngle,
@@ -447,6 +456,7 @@ export class SwingFormProcessor implements FormProcessor {
         this.bestPositionCandidates.set(position, {
           skeleton,
           timestamp,
+          videoTime,
           spineAngle,
           armToSpineAngle,
           armToVerticalAngle,
@@ -532,6 +542,7 @@ export class SwingFormProcessor implements FormProcessor {
     position: SwingPositionName,
     skeleton: Skeleton,
     timestamp: number,
+    videoTime: number | undefined,
     spineAngle: number,
     armToSpineAngle: number,
     armToVerticalAngle: number,
@@ -545,6 +556,7 @@ export class SwingFormProcessor implements FormProcessor {
     return {
       position,
       timestamp,
+      videoTime, // Absolute video time for seeking
       image,
       spineAngle,
       armToSpineAngle,

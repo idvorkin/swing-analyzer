@@ -1,5 +1,12 @@
-import { NEVER, type Observable, Subject, fromEvent, interval, merge } from 'rxjs';
-import { map, switchMap, takeUntil, startWith } from 'rxjs/operators';
+import {
+  fromEvent,
+  interval,
+  merge,
+  NEVER,
+  type Observable,
+  Subject,
+} from 'rxjs';
+import { map, startWith, switchMap, takeUntil } from 'rxjs/operators';
 import type { FrameAcquisition, FrameEvent } from './PipelineInterfaces';
 
 /**
@@ -226,6 +233,7 @@ export class VideoFrameAcquisition implements FrameAcquisition {
               map(() => ({
                 frame: this.videoElement,
                 timestamp: performance.now(),
+                videoTime: this.videoElement.currentTime,
               }))
             )
       ),
