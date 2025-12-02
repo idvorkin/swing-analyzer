@@ -2,6 +2,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Route, Routes } from 'react-router-dom';
+import { MantineProvider } from '@mantine/core';
 import { GIT_BRANCH } from '../generated_version';
 import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
 import AnalysisSection from './AnalysisSection';
@@ -13,6 +14,7 @@ import { useVersionCheck } from '../hooks/useVersionCheck';
 import { BugReportModal } from './BugReportModal';
 import { CrashFallback } from './CrashFallback';
 import DebugModelLoaderPage from './DebugModelLoaderPage';
+import { DebugPage } from './DebugPage';
 import { SettingsModal } from './SettingsModal';
 import { VersionNotification } from './VersionNotification';
 
@@ -123,6 +125,7 @@ const AppContent: React.FC = () => {
       <Routes>
         <Route path="/" element={<MainApplication />} />
         <Route path="/debug" element={<DebugModelLoaderPage />} />
+        <Route path="/debug-models" element={<DebugPage />} />
       </Routes>
       <VersionNotification />
       <BugReportModal
@@ -157,9 +160,11 @@ export const App: React.FC = () => {
   console.log('App: Component rendering started, setting up routes.');
 
   return (
-    <ErrorBoundary FallbackComponent={CrashFallback}>
-      <AppContent />
-    </ErrorBoundary>
+    <MantineProvider>
+      <ErrorBoundary FallbackComponent={CrashFallback}>
+        <AppContent />
+      </ErrorBoundary>
+    </MantineProvider>
   );
 };
 
