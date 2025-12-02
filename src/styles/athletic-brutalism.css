@@ -1,5 +1,5 @@
 /* Clean Modern Design System */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap");
 
 :root {
   /* Refined Color Palette */
@@ -22,8 +22,8 @@
   --color-danger: #ff6b6b;
 
   /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'Roboto Mono', monospace;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Roboto Mono", monospace;
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -125,7 +125,11 @@ main {
 
 /* Video Controls */
 .video-controls {
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent) !important;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.6),
+    transparent
+  ) !important;
   backdrop-filter: blur(8px);
   padding: 16px !important;
 }
@@ -225,7 +229,11 @@ main {
 }
 
 .position-label {
-  background: linear-gradient(to top, var(--color-bg-primary), transparent) !important;
+  background: linear-gradient(
+    to top,
+    var(--color-bg-primary),
+    transparent
+  ) !important;
   font-family: var(--font-sans) !important;
   font-weight: 600 !important;
   font-size: 12px !important;
@@ -397,7 +405,8 @@ main {
 
 /* Smooth Transitions */
 * {
-  transition-property: background-color, border-color, color, transform, box-shadow;
+  transition-property:
+    background-color, border-color, color, transform, box-shadow;
   transition-duration: 0.15s;
   transition-timing-function: ease;
 }

@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs-core';
-import React from 'react';
+import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '@tensorflow/tfjs-backend-webgl'; // Ensures WebGL backend is registered

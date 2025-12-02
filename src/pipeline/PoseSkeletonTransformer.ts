@@ -154,7 +154,9 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       config
     );
     activeModelType = 'BlazePose';
-    console.log('BlazePose detector initialized successfully (33 keypoints with 3D coordinates)');
+    console.log(
+      'BlazePose detector initialized successfully (33 keypoints with 3D coordinates)'
+    );
   }
 
   private async createMoveNetFallback(): Promise<void> {

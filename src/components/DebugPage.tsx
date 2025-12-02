@@ -1,16 +1,32 @@
+import {
+  Button,
+  Code,
+  Group,
+  Paper,
+  ScrollArea,
+  Stack,
+  Text,
+} from '@mantine/core';
 import { useEffect, useRef, useState } from 'react';
-import { Button, Stack, Text, Paper, Group, Code, ScrollArea } from '@mantine/core';
-import { createPipeline } from '../pipeline/PipelineFactory';
 import type { Pipeline } from '../pipeline/Pipeline';
-import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
+import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
+import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 
 interface DebugLog {
   timestamp: number;
   modelType: string;
   keypointsDetected: number;
   visibleKeypoints: number;
-  sampleKeypoints: Array<{ index: number; name: string; x: number; y: number; z?: number; score?: number; visibility?: number }>;
+  sampleKeypoints: Array<{
+    index: number;
+    name: string;
+    x: number;
+    y: number;
+    z?: number;
+    score?: number;
+    visibility?: number;
+  }>;
   spineAngle: number;
   armAngle: number;
   hasRequiredKeypoints: boolean;
@@ -22,7 +38,9 @@ export function DebugPage() {
   const pipelineRef = useRef<Pipeline | null>(null);
   const skeletonRendererRef = useRef<SkeletonRenderer | null>(null);
   const [logs, setLogs] = useState<DebugLog[]>([]);
-  const [currentModel, setCurrentModel] = useState<'BlazePose' | 'MoveNet'>('BlazePose');
+  const [currentModel, setCurrentModel] = useState<'BlazePose' | 'MoveNet'>(
+    'BlazePose'
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [status, setStatus] = useState('Initializing...');
@@ -43,7 +61,9 @@ export function DebugPage() {
 
         // Set initial model type
         const modelType = pipeline.getModelType();
-        const modelName = modelType.includes('BlazePose') ? 'BlazePose' : 'MoveNet';
+        const modelName = modelType.includes('BlazePose')
+          ? 'BlazePose'
+          : 'MoveNet';
         renderer.setModelType(modelName);
         setCurrentModel(modelName);
         setIsInitialized(true);
@@ -69,22 +89,29 @@ export function DebugPage() {
         const keypoints = skeleton.getKeypoints();
 
         // Count visible keypoints
-        const visibleKeypoints = keypoints.filter(kp => {
+        const visibleKeypoints = keypoints.filter((kp) => {
           if (!kp) return false;
-          const score = kp.score !== undefined ? kp.score : kp.visibility !== undefined ? kp.visibility : 0;
+          const score =
+            kp.score !== undefined
+              ? kp.score
+              : kp.visibility !== undefined
+                ? kp.visibility
+                : 0;
           return score > 0.2;
         });
 
         // Sample important keypoints for debugging
         const importantIndices = [0, 5, 6, 11, 12]; // COCO indices for nose, shoulders, hips
-        const sampleKeypoints = importantIndices.map(index => ({
+        const sampleKeypoints = importantIndices.map((index) => ({
           index,
           name: getKeypointName(index, currentModel),
           x: Math.round(keypoints[index]?.x || 0),
           y: Math.round(keypoints[index]?.y || 0),
-          z: keypoints[index]?.z ? Math.round(keypoints[index].z * 1000) / 1000 : undefined,
+          z: keypoints[index]?.z
+            ? Math.round(keypoints[index].z * 1000) / 1000
+            : undefined,
           score: keypoints[index]?.score,
-          visibility: keypoints[index]?.visibility
+          visibility: keypoints[index]?.visibility,
         }));
 
         const log: DebugLog = {
@@ -95,16 +122,19 @@ export function DebugPage() {
           sampleKeypoints,
           spineAngle: Math.round(skeleton.getSpineAngle() * 10) / 10,
           armAngle: Math.round(skeleton.getArmToVerticalAngle() * 10) / 10,
-          hasRequiredKeypoints: skeleton.hasRequiredKeypoints()
+          hasRequiredKeypoints: skeleton.hasRequiredKeypoints(),
         };
 
-        setLogs(prev => [...prev.slice(-49), log]); // Keep last 50 logs
+        setLogs((prev) => [...prev.slice(-49), log]); // Keep last 50 logs
 
         // Render skeleton
         if (skeletonRendererRef.current) {
-          skeletonRendererRef.current.renderSkeleton(skeleton, performance.now());
+          skeletonRendererRef.current.renderSkeleton(
+            skeleton,
+            performance.now()
+          );
         }
-      }
+      },
     });
 
     pipelineRef.current.start();
@@ -160,12 +190,22 @@ export function DebugPage() {
   return (
     <div style={{ padding: '20px' }}>
       <Stack gap="md">
-        <Text size="xl" fw={700}>Debug Page - Model Testing</Text>
-        <Text size="sm" c={status.includes('Error') ? 'red' : 'dimmed'}>{status}</Text>
-        {!isInitialized && <Text size="sm" c="orange">Waiting for pipeline to initialize...</Text>}
+        <Text size="xl" fw={700}>
+          Debug Page - Model Testing
+        </Text>
+        <Text size="sm" c={status.includes('Error') ? 'red' : 'dimmed'}>
+          {status}
+        </Text>
+        {!isInitialized && (
+          <Text size="sm" c="orange">
+            Waiting for pipeline to initialize...
+          </Text>
+        )}
 
         <Group>
-          <Button onClick={loadVideo} disabled={!isInitialized}>Load Sample Video</Button>
+          <Button onClick={loadVideo} disabled={!isInitialized}>
+            Load Sample Video
+          </Button>
           <Button
             onClick={() => switchModel('BlazePose')}
             color={currentModel === 'BlazePose' ? 'green' : 'gray'}
@@ -185,7 +225,9 @@ export function DebugPage() {
 
         <Group align="start" gap="md">
           <Paper p="md" withBorder style={{ flex: 1 }}>
-            <Text fw={700} mb="sm">Video & Canvas</Text>
+            <Text fw={700} mb="sm">
+              Video & Canvas
+            </Text>
             <div style={{ position: 'relative' }}>
               <video
                 ref={videoRef}
@@ -201,27 +243,52 @@ export function DebugPage() {
                   left: 0,
                   width: '100%',
                   maxWidth: '400px',
-                  pointerEvents: 'none'
+                  pointerEvents: 'none',
                 }}
               />
             </div>
           </Paper>
 
           <Paper p="md" withBorder style={{ flex: 1 }}>
-            <Text fw={700} mb="sm">Latest Debug Info</Text>
+            <Text fw={700} mb="sm">
+              Latest Debug Info
+            </Text>
             {logs.length > 0 && (
               <Stack gap="xs">
-                <Text size="sm">Model: <Code>{logs[logs.length - 1].modelType}</Code></Text>
-                <Text size="sm">Keypoints Detected: <Code>{logs[logs.length - 1].keypointsDetected}</Code></Text>
-                <Text size="sm">Visible Keypoints: <Code>{logs[logs.length - 1].visibleKeypoints}</Code></Text>
-                <Text size="sm">Spine Angle: <Code>{logs[logs.length - 1].spineAngle}°</Code></Text>
-                <Text size="sm">Arm Angle: <Code>{logs[logs.length - 1].armAngle}°</Code></Text>
-                <Text size="sm">Has Required: <Code>{logs[logs.length - 1].hasRequiredKeypoints ? 'Yes' : 'No'}</Code></Text>
+                <Text size="sm">
+                  Model: <Code>{logs[logs.length - 1].modelType}</Code>
+                </Text>
+                <Text size="sm">
+                  Keypoints Detected:{' '}
+                  <Code>{logs[logs.length - 1].keypointsDetected}</Code>
+                </Text>
+                <Text size="sm">
+                  Visible Keypoints:{' '}
+                  <Code>{logs[logs.length - 1].visibleKeypoints}</Code>
+                </Text>
+                <Text size="sm">
+                  Spine Angle: <Code>{logs[logs.length - 1].spineAngle}°</Code>
+                </Text>
+                <Text size="sm">
+                  Arm Angle: <Code>{logs[logs.length - 1].armAngle}°</Code>
+                </Text>
+                <Text size="sm">
+                  Has Required:{' '}
+                  <Code>
+                    {logs[logs.length - 1].hasRequiredKeypoints ? 'Yes' : 'No'}
+                  </Code>
+                </Text>
 
-                <Text size="sm" fw={700} mt="md">Sample Keypoints:</Text>
+                <Text size="sm" fw={700} mt="md">
+                  Sample Keypoints:
+                </Text>
                 <ScrollArea h={200}>
                   <Code block>
-                    {JSON.stringify(logs[logs.length - 1].sampleKeypoints, null, 2)}
+                    {JSON.stringify(
+                      logs[logs.length - 1].sampleKeypoints,
+                      null,
+                      2
+                    )}
                   </Code>
                 </ScrollArea>
               </Stack>
@@ -230,11 +297,11 @@ export function DebugPage() {
         </Group>
 
         <Paper p="md" withBorder>
-          <Text fw={700} mb="sm">Recent Logs (last 10)</Text>
+          <Text fw={700} mb="sm">
+            Recent Logs (last 10)
+          </Text>
           <ScrollArea h={300}>
-            <Code block>
-              {JSON.stringify(logs.slice(-10), null, 2)}
-            </Code>
+            <Code block>{JSON.stringify(logs.slice(-10), null, 2)}</Code>
           </ScrollArea>
         </Paper>
       </Stack>
@@ -242,23 +309,67 @@ export function DebugPage() {
   );
 }
 
-function getKeypointName(index: number, model: 'BlazePose' | 'MoveNet'): string {
+function getKeypointName(
+  index: number,
+  model: 'BlazePose' | 'MoveNet'
+): string {
   if (model === 'MoveNet') {
-    const cocoNames = ['nose', 'leftEye', 'rightEye', 'leftEar', 'rightEar',
-                       'leftShoulder', 'rightShoulder', 'leftElbow', 'rightElbow',
-                       'leftWrist', 'rightWrist', 'leftHip', 'rightHip',
-                       'leftKnee', 'rightKnee', 'leftAnkle', 'rightAnkle'];
+    const cocoNames = [
+      'nose',
+      'leftEye',
+      'rightEye',
+      'leftEar',
+      'rightEar',
+      'leftShoulder',
+      'rightShoulder',
+      'leftElbow',
+      'rightElbow',
+      'leftWrist',
+      'rightWrist',
+      'leftHip',
+      'rightHip',
+      'leftKnee',
+      'rightKnee',
+      'leftAnkle',
+      'rightAnkle',
+    ];
     return cocoNames[index] || `unknown-${index}`;
   } else {
-    const mediaPipeNames = ['nose', 'leftEyeInner', 'leftEye', 'leftEyeOuter',
-                            'rightEyeInner', 'rightEye', 'rightEyeOuter',
-                            'leftEar', 'rightEar', 'mouthLeft', 'mouthRight',
-                            'leftShoulder', 'rightShoulder', 'leftElbow', 'rightElbow',
-                            'leftWrist', 'rightWrist', 'leftPinky', 'rightPinky',
-                            'leftIndex', 'rightIndex', 'leftThumb', 'rightThumb',
-                            'leftHip', 'rightHip', 'leftKnee', 'rightKnee',
-                            'leftAnkle', 'rightAnkle', 'leftHeel', 'rightHeel',
-                            'leftFootIndex', 'rightFootIndex'];
+    const mediaPipeNames = [
+      'nose',
+      'leftEyeInner',
+      'leftEye',
+      'leftEyeOuter',
+      'rightEyeInner',
+      'rightEye',
+      'rightEyeOuter',
+      'leftEar',
+      'rightEar',
+      'mouthLeft',
+      'mouthRight',
+      'leftShoulder',
+      'rightShoulder',
+      'leftElbow',
+      'rightElbow',
+      'leftWrist',
+      'rightWrist',
+      'leftPinky',
+      'rightPinky',
+      'leftIndex',
+      'rightIndex',
+      'leftThumb',
+      'rightThumb',
+      'leftHip',
+      'rightHip',
+      'leftKnee',
+      'rightKnee',
+      'leftAnkle',
+      'rightAnkle',
+      'leftHeel',
+      'rightHeel',
+      'leftFootIndex',
+      'rightFootIndex',
+    ];
     return mediaPipeNames[index] || `unknown-${index}`;
   }
 }

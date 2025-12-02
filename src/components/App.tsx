@@ -1,10 +1,10 @@
+import { MantineProvider } from '@mantine/core';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Route, Routes } from 'react-router-dom';
-import { MantineProvider } from '@mantine/core';
-import { GIT_BRANCH } from '../generated_version';
 import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
+import { GIT_BRANCH } from '../generated_version';
 import AnalysisSection from './AnalysisSection';
 import VideoSection from './VideoSection';
 import './App.css';
@@ -52,7 +52,9 @@ const bugReportShortcut = isMac ? 'Cmd+I' : 'Ctrl+I';
 
 // Show branch name in title if not on main/master
 const isFeatureBranch = GIT_BRANCH && !['main', 'master'].includes(GIT_BRANCH);
-const branchDisplayName = isFeatureBranch ? GIT_BRANCH.replace(/^feature\//, '') : null;
+const branchDisplayName = isFeatureBranch
+  ? GIT_BRANCH.replace(/^feature\//, '')
+  : null;
 
 // Header with navigation
 interface HeaderProps {
