@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Skeleton } from '../models/Skeleton';
 import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
-import { type AppState } from '../types';
-import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
-import { createFrameAcquisition, createPipeline } from '../pipeline/PipelineFactory';
+import {
+  createFrameAcquisition,
+  createPipeline,
+} from '../pipeline/PipelineFactory';
+import type {
+  SkeletonEvent,
+  SkeletonTransformer,
+} from '../pipeline/PipelineInterfaces';
 import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
-import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
+import type { AppState } from '../types';
+import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 
 export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   // State
@@ -46,7 +52,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const frameAcquisitionRef = useRef<VideoFrameAcquisition | null>(null);
   const skeletonRendererRef = useRef<SkeletonRenderer | null>(null);
 
-  // Initialize pipeline and models
+  // Initialize pipeline and models - runs once on mount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only once on mount
   useEffect(() => {
     const initializePipeline = async () => {
       try {
@@ -88,7 +95,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         stopProcessing();
         pipelineRef.current = null;
       }
-      
+
       if (frameAcquisitionRef.current) {
         try {
           frameAcquisitionRef.current.stopCamera();
@@ -101,25 +108,30 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   }, []);
 
   // Setup persistent subscriptions to pipeline events and start it once
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only once on mount
   useEffect(() => {
     if (!pipelineRef.current) return;
-    
+
     const pipeline = pipelineRef.current;
-    
+
     // Subscribe to skeleton events to render every detected skeleton
     const skeletonSubscription = pipeline.getSkeletonEvents().subscribe({
       next: (skeletonEvent: SkeletonEvent) => {
         if (skeletonEvent.skeleton) {
-          setSpineAngle(Math.round(skeletonEvent.skeleton.getSpineAngle() || 0));
-          setArmToSpineAngle(Math.round(skeletonEvent.skeleton.getArmToVerticalAngle() || 0));
+          setSpineAngle(
+            Math.round(skeletonEvent.skeleton.getSpineAngle() || 0)
+          );
+          setArmToSpineAngle(
+            Math.round(skeletonEvent.skeleton.getArmToVerticalAngle() || 0)
+          );
           renderSkeleton(skeletonEvent.skeleton);
         }
       },
       error: (err) => {
         console.error('Skeleton event error:', err);
-      }
+      },
     });
-    
+
     // Subscribe to pipeline results for rep counting and other state
     const pipelineObservable = pipeline.start();
     const pipelineSubscription = pipelineObservable.subscribe({
@@ -134,12 +146,12 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       complete: () => {
         console.log('Pipeline processing completed');
         setAppState((prev) => ({ ...prev, isProcessing: false }));
-      }
+      },
     });
 
     // Mark pipeline as processing now - it will automatically respond to video play/pause
     setAppState((prev) => ({ ...prev, isProcessing: true }));
-    
+
     // Clean up subscriptions on unmount
     return () => {
       // Make sure pipeline is stopped before unsubscribing
@@ -153,28 +165,30 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    
+
     const handlePlay = () => {
       setIsPlaying(true);
-      setVideoStartTime(performance.now());
+      // Only set videoStartTime on first play, not on resume after pause
+      // This ensures checkpoint timestamps remain valid for seeking
+      setVideoStartTime((prev) => prev ?? performance.now());
       // Don't manage pipeline here - VideoFrameAcquisition handles this internally
     };
-    
+
     const handlePause = () => {
       setIsPlaying(false);
       // Don't manage pipeline here - VideoFrameAcquisition handles this internally
     };
-    
+
     const handleEnded = () => {
       setIsPlaying(false);
       // Don't reset rep count when video ends - just stop processing
       // Pipeline will automatically pause with video
     };
-    
+
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
     video.addEventListener('ended', handleEnded);
-    
+
     return () => {
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
@@ -185,7 +199,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   // Manual control of pipeline - rarely needed now
   const startProcessing = useCallback(() => {
     if (!pipelineRef.current) return;
-    
+
     // Pipeline will automatically respond to video play/pause
     pipelineRef.current.start();
     setAppState((prev) => ({ ...prev, isProcessing: true }));
@@ -194,7 +208,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   // Manual control of pipeline - rarely needed now
   const stopProcessing = useCallback(() => {
     if (!pipelineRef.current) return;
-    
+
     pipelineRef.current.stop();
     setAppState((prev) => ({ ...prev, isProcessing: false }));
   }, []);
@@ -210,13 +224,13 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       ...prev,
       repCounter: {
         ...prev.repCounter,
-        count: 0, 
+        count: 0,
         isConnect: false,
-        lastConnectState: false
+        lastConnectState: false,
       },
-      currentRepIndex: 0
+      currentRepIndex: 0,
     }));
-    
+
     setRepCount(0);
     setSpineAngle(0);
   }, []);
@@ -240,17 +254,20 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   }, []);
 
   // Set body part display options
-  const setBodyPartDisplay = useCallback((show: boolean, displaySeconds: number) => {
-    if (skeletonRendererRef.current) {
-      skeletonRendererRef.current.setBodyPartDisplay(show, displaySeconds);
-    }
-    
-    setAppState((prev) => ({
-      ...prev, 
-      showBodyParts: show, 
-      bodyPartDisplayTime: displaySeconds
-    }));
-  }, []);
+  const setBodyPartDisplay = useCallback(
+    (show: boolean, displaySeconds: number) => {
+      if (skeletonRendererRef.current) {
+        skeletonRendererRef.current.setBodyPartDisplay(show, displaySeconds);
+      }
+
+      setAppState((prev) => ({
+        ...prev,
+        showBodyParts: show,
+        bodyPartDisplayTime: displaySeconds,
+      }));
+    },
+    []
+  );
 
   // Set debug mode
   const setDebugMode = useCallback((enabled: boolean) => {
@@ -301,30 +318,35 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   }, []);
 
   // Frame-by-frame controls
-  const frameStep = 1/30; // Assuming 30fps video
-  
+  const frameStep = 1 / 30; // Assuming 30fps video
+
   // Create a separate skeleton transformer for direct frame processing
-  const directSkeletonTransformerRef = useRef<any>(null);
-  
+  const directSkeletonTransformerRef = useRef<SkeletonTransformer | null>(null);
+
   // Initialize the direct skeleton transformer
   useEffect(() => {
     // Import required modules dynamically to prevent bundle bloat
     const initDirectTransformer = async () => {
       try {
         // Import the skeleton transformer factory
-        const { createSkeletonTransformer } = await import('../pipeline/PipelineFactory');
+        const { createSkeletonTransformer } = await import(
+          '../pipeline/PipelineFactory'
+        );
         directSkeletonTransformerRef.current = createSkeletonTransformer();
-        
+
         // Initialize it
         await directSkeletonTransformerRef.current.initialize();
         console.log('Direct skeleton transformer initialized');
       } catch (error) {
-        console.error('Failed to initialize direct skeleton transformer:', error);
+        console.error(
+          'Failed to initialize direct skeleton transformer:',
+          error
+        );
       }
     };
-    
+
     initDirectTransformer();
-    
+
     // Cleanup
     return () => {
       directSkeletonTransformerRef.current = null;
@@ -333,83 +355,97 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
   // Process current frame directly - bypassing the pipeline
   const processCurrentFrame = useCallback(() => {
-    if (!videoRef.current || !skeletonRendererRef.current || !directSkeletonTransformerRef.current) return;
-    
+    if (
+      !videoRef.current ||
+      !skeletonRendererRef.current ||
+      !directSkeletonTransformerRef.current
+    )
+      return;
+
     // Create a frame event directly
     const frameEvent = {
       frame: videoRef.current,
-      timestamp: performance.now()
+      timestamp: performance.now(),
     };
-    
+
     // Use the direct transformer to process the frame
-    directSkeletonTransformerRef.current.transformToSkeleton(frameEvent).subscribe({
-      next: (skeletonEvent: any) => {
-        if (skeletonEvent && skeletonEvent.skeleton) {
-          // Update UI with angles
-          setSpineAngle(Math.round(skeletonEvent.skeleton.getSpineAngle() || 0));
-          setArmToSpineAngle(Math.round(skeletonEvent.skeleton.getArmToVerticalAngle() || 0));
-          
-          // Render the skeleton directly
-          if (skeletonRendererRef.current) {
-            skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, performance.now());
+    directSkeletonTransformerRef.current
+      .transformToSkeleton(frameEvent)
+      .subscribe({
+        next: (skeletonEvent: SkeletonEvent) => {
+          if (skeletonEvent?.skeleton) {
+            // Update UI with angles
+            setSpineAngle(
+              Math.round(skeletonEvent.skeleton.getSpineAngle() || 0)
+            );
+            setArmToSpineAngle(
+              Math.round(skeletonEvent.skeleton.getArmToVerticalAngle() || 0)
+            );
+
+            // Render the skeleton directly
+            if (skeletonRendererRef.current) {
+              skeletonRendererRef.current.renderSkeleton(
+                skeletonEvent.skeleton,
+                performance.now()
+              );
+            }
           }
-        }
-      },
-      error: (err: any) => {
-        console.error('Error in direct frame processing:', err);
-      }
-    });
+        },
+        error: (err: unknown) => {
+          console.error('Error in direct frame processing:', err);
+        },
+      });
   }, []);
-  
+
   // Move forward one frame with direct frame processing
   const nextFrame = useCallback(() => {
     if (!videoRef.current) return;
-    
+
     // Ensure video is paused
     videoRef.current.pause();
     setIsPlaying(false);
-    
+
     // Move forward by one frame duration
     videoRef.current.currentTime = Math.min(
       videoRef.current.duration,
       videoRef.current.currentTime + frameStep
     );
-    
+
     // Wait for the video to update to the new time using the seeked event
     const handleSeeked = () => {
       // Process the frame directly without pipeline
       processCurrentFrame();
     };
-    
+
     // Add event listener for when seeking is complete
     // Use { once: true } to automatically remove the listener after it's called
     videoRef.current.addEventListener('seeked', handleSeeked, { once: true });
-  }, [frameStep, processCurrentFrame]);
-  
+  }, [processCurrentFrame]);
+
   // Move backward one frame with direct frame processing
   const previousFrame = useCallback(() => {
     if (!videoRef.current) return;
-    
+
     // Ensure video is paused
     videoRef.current.pause();
     setIsPlaying(false);
-    
+
     // Move backward by one frame duration
     videoRef.current.currentTime = Math.max(
       0,
       videoRef.current.currentTime - frameStep
     );
-    
+
     // Wait for the video to update to the new time using the seeked event
     const handleSeeked = () => {
       // Process the frame directly without pipeline
       processCurrentFrame();
     };
-    
+
     // Add event listener for when seeking is complete
     // Use { once: true } to automatically remove the listener after it's called
     videoRef.current.addEventListener('seeked', handleSeeked, { once: true });
-  }, [frameStep, processCurrentFrame]);
+  }, [processCurrentFrame]);
 
   // Start camera
   const startCamera = useCallback(async () => {
@@ -426,7 +462,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       if (videoRef.current) {
         videoRef.current.onloadedmetadata = () => {
           // Video play event will start the pipeline
-          videoRef.current?.play().catch(err => {
+          videoRef.current?.play().catch((err) => {
             console.error('Error starting camera video playback:', err);
           });
         };
@@ -443,52 +479,58 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const switchCamera = useCallback(async () => {
     if (!frameAcquisitionRef.current || !appState.usingCamera) return;
 
-    const newMode = appState.cameraMode === 'environment' ? 'user' : 'environment';
+    const newMode =
+      appState.cameraMode === 'environment' ? 'user' : 'environment';
 
     try {
       // Stop pipeline while switching cameras
       if (pipelineRef.current && appState.isProcessing) {
         stopProcessing();
       }
-      
+
       await frameAcquisitionRef.current.stopCamera();
       await frameAcquisitionRef.current.startCamera(newMode);
-      
+
       // Video play event will restart the pipeline
       if (videoRef.current) {
-        videoRef.current.play().catch(err => {
+        videoRef.current.play().catch((err) => {
           console.error('Error restarting video after camera switch:', err);
         });
       }
-      
+
       setAppState((prev) => ({ ...prev, cameraMode: newMode }));
     } catch (error) {
       console.error('Error switching camera:', error);
       setStatus('Error: Could not switch camera.');
     }
-  }, [appState.cameraMode, appState.usingCamera, appState.isProcessing, stopProcessing]);
+  }, [
+    appState.cameraMode,
+    appState.usingCamera,
+    appState.isProcessing,
+    stopProcessing,
+  ]);
 
   // Stop video and reset state while preserving rep count
   const resetVideoAndState = useCallback(() => {
     if (!videoRef.current || !pipelineRef.current) return;
-    
+
     // Stop current video playback
     videoRef.current.pause();
     videoRef.current.currentTime = 0;
-    
+
     // Reset pipeline state without stopping it
     if (pipelineRef.current) {
       pipelineRef.current.reset();
     }
-    
+
     // Reset video state but preserve rep count
     setVideoStartTime(null);
     // Do NOT reset rep count: setRepCount(0);
     setSpineAngle(0);
-    
+
     // Reset display mode to ensure overlay is visible
     setDisplayMode(appState.displayMode);
-  }, [appState.displayMode]);
+  }, [appState.displayMode, setDisplayMode]);
 
   // Load hardcoded video
   const loadHardcodedVideo = useCallback(async () => {
@@ -499,7 +541,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     try {
       // Reset state and stop current video
       resetVideoAndState();
-      
+
       const videoURL = '/videos/swing-sample.mp4';
 
       if (!videoURL) {
@@ -514,7 +556,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       if (canvasRef.current) {
         canvasRef.current.style.display = 'block';
       }
-      
+
       // Force pipeline reset before playing
       if (pipelineRef.current) {
         pipelineRef.current.reset();
@@ -522,81 +564,101 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
       // Video element event handlers will handle pipeline start
       if (videoRef.current && videoRef.current.readyState >= 2) {
-        videoRef.current.play().catch(err => {
+        videoRef.current.play().catch((err) => {
           console.error('Error playing hardcoded video:', err);
         });
       } else if (videoRef.current) {
-        videoRef.current.addEventListener('loadeddata', () => {
-          // Reset display mode again just to be safe
-          setDisplayMode(appState.displayMode);
-          
-          videoRef.current?.play().catch(err => {
-            console.error('Error playing hardcoded video after load:', err);
-          });
-        }, { once: true });
+        videoRef.current.addEventListener(
+          'loadeddata',
+          () => {
+            // Reset display mode again just to be safe
+            setDisplayMode(appState.displayMode);
+
+            videoRef.current?.play().catch((err) => {
+              console.error('Error playing hardcoded video after load:', err);
+            });
+          },
+          { once: true }
+        );
       }
     } catch (error) {
       console.error('[DEBUG] loadHardcodedVideo: Error loading video:', error);
       setStatus('Error: Could not load hardcoded video.');
     }
-  }, [resetVideoAndState]);
+  }, [resetVideoAndState, appState.displayMode, setDisplayMode]);
 
   // Handle video upload
-  const handleVideoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || !event.target.files[0] || !frameAcquisitionRef.current || !videoRef.current) return;
+  const handleVideoUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (
+        !event.target.files ||
+        !event.target.files[0] ||
+        !frameAcquisitionRef.current ||
+        !videoRef.current
+      )
+        return;
 
-    // Reset state and stop current video
-    resetVideoAndState();
-    
-    const file = event.target.files[0];
-    const fileURL = URL.createObjectURL(file);
+      // Reset state and stop current video
+      resetVideoAndState();
 
-    frameAcquisitionRef.current
-      .loadVideoFromURL(fileURL)
-      .then(() => {
-        setStatus(`Loaded video: ${file.name}`);
-        setAppState((prev) => ({ ...prev, usingCamera: false }));
+      const file = event.target.files[0];
+      const fileURL = URL.createObjectURL(file);
 
-        // Video element event handlers will handle pipeline start
-        if (videoRef.current && videoRef.current.readyState >= 2) {
-          videoRef.current.play().catch(err => {
-            console.error('Error playing uploaded video:', err);
-          });
-        } else if (videoRef.current) {
-          videoRef.current.addEventListener('loadeddata', () => {
-            videoRef.current?.play().catch(err => {
-              console.error('Error playing uploaded video after load:', err);
+      frameAcquisitionRef.current
+        .loadVideoFromURL(fileURL)
+        .then(() => {
+          setStatus(`Loaded video: ${file.name}`);
+          setAppState((prev) => ({ ...prev, usingCamera: false }));
+
+          // Video element event handlers will handle pipeline start
+          if (videoRef.current && videoRef.current.readyState >= 2) {
+            videoRef.current.play().catch((err) => {
+              console.error('Error playing uploaded video:', err);
             });
-          }, { once: true });
-        }
-      })
-      .catch((error) => {
-        console.error('Error loading video:', error);
-        setStatus('Error: Could not load video.');
-      });
-  }, [resetVideoAndState]);
+          } else if (videoRef.current) {
+            videoRef.current.addEventListener(
+              'loadeddata',
+              () => {
+                videoRef.current?.play().catch((err) => {
+                  console.error(
+                    'Error playing uploaded video after load:',
+                    err
+                  );
+                });
+              },
+              { once: true }
+            );
+          }
+        })
+        .catch((error) => {
+          console.error('Error loading video:', error);
+          setStatus('Error: Could not load video.');
+        });
+    },
+    [resetVideoAndState]
+  );
 
-  // Stop video but preserve rep count
+  // Stop video but preserve rep count and videoStartTime (for filmstrip seeking)
   const stopVideo = useCallback(() => {
     if (!videoRef.current) return;
-    
+
     // Pause video and rewind
     videoRef.current.pause();
     videoRef.current.currentTime = 0;
-    
-    // Reset video start time but preserve rep count
-    setVideoStartTime(null);
+
+    // Preserve videoStartTime so filmstrip thumbnails can still seek to checkpoints
+    // videoStartTime will be reset when a new video is loaded via resetVideoAndState
     setIsPlaying(false);
-    
+
     // Reset just the pipeline state, not the rep count
     if (pipelineRef.current) {
       // Don't fully reset - just prepare for next video without losing rep count
       // pipelineRef.current.reset();
     }
-    
+
     // Reset display mode to ensure overlay is visible
     setDisplayMode(appState.displayMode);
-  }, [appState.displayMode]);
+  }, [appState.displayMode, setDisplayMode]);
 
   // Rep navigation
   const navigateToPreviousRep = useCallback(() => {
@@ -616,16 +678,16 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       }));
     }
   }, [appState.currentRepIndex, repCount]);
-  
+
   // Track fullscreen state
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  
+
   // Setup fullscreen detection and keyboard navigation
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
-    
+
     const handleKeyDown = (event: KeyboardEvent) => {
       // Fullscreen mode only controls
       if (document.fullscreenElement) {
@@ -635,7 +697,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
           navigateToNextRep();
         }
       }
-      
+
       // Global video controls (work in any view)
       if (event.key === ' ' || event.key === 'Space') {
         // Space bar toggles play/pause
@@ -651,17 +713,23 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         previousFrame();
       }
     };
-    
+
     // Add event listeners
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    
+
     // Clean up event listeners on unmount
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, [navigateToPreviousRep, navigateToNextRep, togglePlayPause, nextFrame, previousFrame]);
+  }, [
+    navigateToPreviousRep,
+    navigateToNextRep,
+    togglePlayPause,
+    nextFrame,
+    previousFrame,
+  ]);
 
   // Helper for video container class
   const getVideoContainerClass = useCallback(() => {
@@ -681,14 +749,14 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     isPlaying,
     videoStartTime,
     isFullscreen,
-    
+
     // Refs
     videoRef,
     canvasRef,
     fileInputRef,
     checkpointGridRef,
     pipelineRef,
-    
+
     // Actions
     startCamera,
     switchCamera,
@@ -698,15 +766,15 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     stopVideo,
     startProcessing,
     stopProcessing,
-    reset,                  // Full reset including rep count
-    resetPipelineOnly,      // Reset pipeline without rep count
-    nextFrame,              // Move forward one frame
-    previousFrame,          // Move backward one frame
+    reset, // Full reset including rep count
+    resetPipelineOnly, // Reset pipeline without rep count
+    nextFrame, // Move forward one frame
+    previousFrame, // Move backward one frame
     setBodyPartDisplay,
     setDisplayMode,
     setDebugMode,
     navigateToPreviousRep,
     navigateToNextRep,
-    getVideoContainerClass
+    getVideoContainerClass,
   };
-} 
+}
