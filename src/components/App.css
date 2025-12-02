@@ -617,6 +617,29 @@ main {
   ); /* Green background to distinguish */
 }
 
+.angle-label.hip-angle {
+  top: 50px; /* Position below the arm angle */
+  background-color: rgba(156, 39, 176, 0.7); /* Purple for hip */
+}
+
+.angle-label.hinge-score {
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: auto;
+  border-radius: 0 4px 0 0;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.angle-label.hinge-score.good {
+  background-color: rgba(76, 175, 80, 0.9); /* Green for good hinge */
+}
+
+.angle-label.hinge-score.bad {
+  background-color: rgba(244, 67, 54, 0.9); /* Red for squat pattern */
+}
+
 .no-checkpoints {
   display: flex;
   align-items: center;
@@ -693,9 +716,43 @@ main {
   margin-left: 10px;
 }
 
+.fullscreen-hip-angle {
+  font-size: 18px;
+  background-color: rgba(156, 39, 176, 0.3); /* Purple for hip */
+  padding: 6px 12px;
+  border-radius: 20px;
+  margin-left: 10px;
+}
+
+.fullscreen-knee-angle {
+  font-size: 18px;
+  background-color: rgba(255, 152, 0, 0.3); /* Orange for knee */
+  padding: 6px 12px;
+  border-radius: 20px;
+  margin-left: 10px;
+}
+
+.fullscreen-hinge-score {
+  font-size: 18px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  margin-left: 10px;
+  font-weight: bold;
+}
+
+.fullscreen-hinge-score.good {
+  background-color: rgba(76, 175, 80, 0.4); /* Green for good hinge */
+}
+
+.fullscreen-hinge-score.bad {
+  background-color: rgba(244, 67, 54, 0.4); /* Red for squat pattern */
+}
+
 .fullscreen-angles {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .fullscreen-image {

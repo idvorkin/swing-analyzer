@@ -148,6 +148,24 @@ const AnalysisSection: React.FC = () => {
         armAngleLabel.className = 'angle-label arm-angle';
         armAngleLabel.textContent = `Arm: ${Math.round(checkpoint.armToVerticalAngle)}°`;
 
+        // Add hip angle (if available)
+        if (checkpoint.hipAngle !== undefined) {
+          const hipAngleLabel = document.createElement('div');
+          hipAngleLabel.className = 'angle-label hip-angle';
+          hipAngleLabel.textContent = `Hip: ${Math.round(checkpoint.hipAngle)}°`;
+          cell.appendChild(hipAngleLabel);
+        }
+
+        // Add hinge score indicator (if available)
+        if (checkpoint.hingeScore !== undefined) {
+          const hingeLabel = document.createElement('div');
+          const score = checkpoint.hingeScore;
+          const isGoodHinge = score > 0.2;
+          hingeLabel.className = `angle-label hinge-score ${isGoodHinge ? 'good' : 'bad'}`;
+          hingeLabel.textContent = isGoodHinge ? '✓ Hinge' : '⚠ Squat';
+          cell.appendChild(hingeLabel);
+        }
+
         cell.appendChild(label);
         cell.appendChild(angleLabel);
         cell.appendChild(armAngleLabel);
@@ -258,12 +276,29 @@ const AnalysisSection: React.FC = () => {
           </div>
           <div className="fullscreen-angles">
             <div className="fullscreen-spine-angle">
-              Spine Angle: {Math.round(checkpoint.spineAngle)}°
+              Spine: {Math.round(checkpoint.spineAngle)}°
             </div>
             <div className="fullscreen-arm-angle">
-              Arm-to-Vertical Angle: {Math.round(checkpoint.armToVerticalAngle)}
-              °
+              Arm: {Math.round(checkpoint.armToVerticalAngle)}°
             </div>
+            {checkpoint.hipAngle !== undefined && (
+              <div className="fullscreen-hip-angle">
+                Hip: {Math.round(checkpoint.hipAngle)}°
+              </div>
+            )}
+            {checkpoint.kneeAngle !== undefined && (
+              <div className="fullscreen-knee-angle">
+                Knee: {Math.round(checkpoint.kneeAngle)}°
+              </div>
+            )}
+            {checkpoint.hingeScore !== undefined && (
+              <div
+                className={`fullscreen-hinge-score ${checkpoint.hingeScore > 0.2 ? 'good' : 'bad'}`}
+              >
+                {checkpoint.hingeScore > 0.2 ? '✓ Hinge' : '⚠ Squat'} (
+                {(checkpoint.hingeScore * 100).toFixed(0)}%)
+              </div>
+            )}
             <div className="fullscreen-timestamp">
               {videoStartTime
                 ? (() => {
