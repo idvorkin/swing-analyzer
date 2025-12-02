@@ -293,9 +293,9 @@ export function createRepSequence(
     for (let i = 0; i < framesPerPhase; i++) {
       const t = i / (framesPerPhase - 1);
       const keypoints = interpolateKeypoints(phase.from, phase.to, t);
-      frames.push(
-        createFrame(frameIndex, fps, keypoints, 0.88 + Math.random() * 0.1)
-      );
+      // Use deterministic score based on frame index for reproducibility
+      const deterministicScore = 0.88 + (frameIndex % 10) * 0.01;
+      frames.push(createFrame(frameIndex, fps, keypoints, deterministicScore));
       frameIndex++;
     }
   }
@@ -400,18 +400,18 @@ export function createPoorDetectionPoseTrack(
   const frames: PoseTrackFrame[] = [];
 
   for (let i = 0; i < frameCount; i++) {
-    // Random low confidence scores
-    const score = 0.3 + Math.random() * 0.3;
-    const kp = createBaseKeypoints().map((k) => ({
+    // Deterministic low confidence scores based on frame index
+    const score = 0.3 + (i % 10) * 0.03;
+    const kp = createBaseKeypoints().map((k, idx) => ({
       ...k,
-      score: 0.2 + Math.random() * 0.4,
-      // Add some noise to positions
-      x: k.x + (Math.random() - 0.5) * 50,
-      y: k.y + (Math.random() - 0.5) * 50,
+      score: 0.2 + ((i + idx) % 10) * 0.04,
+      // Deterministic noise based on frame and keypoint index
+      x: k.x + ((i % 5) - 2) * 10,
+      y: k.y + ((idx % 5) - 2) * 10,
     }));
 
-    // Some frames have no detection at all
-    const keypoints = Math.random() > 0.2 ? kp : [];
+    // Every 5th frame has no detection (deterministic)
+    const keypoints = i % 5 !== 0 ? kp : [];
 
     frames.push({
       frameIndex: i,

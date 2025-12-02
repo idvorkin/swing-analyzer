@@ -34,8 +34,20 @@ const __dirname = path.dirname(__filename);
  */
 function loadJsonFile(filename: string): PoseTrackFile {
   const filePath = path.join(__dirname, 'poses', filename);
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(content) as PoseTrackFile;
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(content);
+    // Basic validation to ensure required fields exist
+    if (!parsed.metadata || !parsed.frames) {
+      throw new Error('Invalid fixture format: missing metadata or frames');
+    }
+    return parsed as PoseTrackFile;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to load fixture "${filename}" from ${filePath}: ${message}`
+    );
+  }
 }
 
 /**

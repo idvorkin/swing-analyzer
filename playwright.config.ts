@@ -21,7 +21,7 @@ export default defineConfig({
 
   use: {
     baseURL: `${protocol}://localhost:5173`,
-    trace: 'on-first-retry',
+    trace: 'on', // Always record traces for debugging
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
     // Useful for debugging

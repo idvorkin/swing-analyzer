@@ -217,7 +217,8 @@ test.describe('Pose Track Fixtures', () => {
       await seedPoseTrackFixture(page, 'swing-sample');
       await page.click('#load-hardcoded-btn');
 
-      await page.waitForTimeout(2000);
+      // Wait for video element to appear instead of arbitrary timeout
+      await page.waitForSelector('video', { timeout: 5000 });
 
       // UI should still be responsive
       await expect(page.locator('#rep-counter')).toBeVisible();
@@ -241,7 +242,9 @@ test.describe('Pose Studio Page', () => {
 
     // Navigate to poses page
     await page.goto('/poses');
-    await page.waitForTimeout(1000);
+
+    // Wait for page to be fully loaded instead of arbitrary timeout
+    await page.waitForLoadState('networkidle');
 
     // Page content should exist (specific UI depends on implementation)
     const pageContent = await page.textContent('body');
