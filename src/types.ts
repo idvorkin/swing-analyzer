@@ -38,6 +38,7 @@ export enum SwingPositionName {
 export interface FormCheckpoint {
   position: SwingPositionName;
   timestamp: number;
+  videoTime?: number; // Video currentTime in seconds when checkpoint was captured
   image: ImageData;
   spineAngle: number;
   armToSpineAngle: number;

@@ -1,10 +1,6 @@
 import type { Observable } from 'rxjs';
 import type { Skeleton } from '../models/Skeleton';
-import {
-  type FormCheckpoint,
-  type SwingPositionName,
-  type RepData,
-} from '../types';
+import type { FormCheckpoint, RepData, SwingPositionName } from '../types';
 import type { PoseEvent } from './PoseSkeletonTransformer';
 
 /**
@@ -33,6 +29,7 @@ export interface FrameAcquisition {
 export interface FrameEvent {
   frame: HTMLCanvasElement | HTMLVideoElement;
   timestamp: number;
+  videoTime?: number; // video.currentTime in seconds (for seeking)
 }
 
 /**
@@ -69,9 +66,7 @@ export interface FormProcessor {
    * Process a skeleton to identify checkpoints
    * Returns an Observable that emits checkpoint events
    */
-  processFrame(
-    skeletonEvent: SkeletonEvent
-  ): Observable<FormEvent>;
+  processFrame(skeletonEvent: SkeletonEvent): Observable<FormEvent>;
 
   /**
    * Reset the form processor state
