@@ -424,8 +424,8 @@ export class SwingFormProcessor implements FormProcessor {
       // For Top position, we want to minimize our combined metric
       // Only update if this is the first candidate or better than existing
       if (!currentBest || angleDelta < currentBest.angleDelta) {
-        // Capture the image right away to ensure it matches the angles
-        const image = this.captureCurrentFrame();
+        // Capture the image right away, cropped around the person
+        const image = this.captureCurrentFrame(skeleton);
 
         this.bestPositionCandidates.set(position, {
           skeleton,
@@ -450,8 +450,8 @@ export class SwingFormProcessor implements FormProcessor {
     } else {
       // For other positions, use the enhanced composite scoring
       if (!currentBest || angleDelta < currentBest.angleDelta) {
-        // Capture the image right away to ensure it matches the angles
-        const image = this.captureCurrentFrame();
+        // Capture the image right away, cropped around the person
+        const image = this.captureCurrentFrame(skeleton);
 
         this.bestPositionCandidates.set(position, {
           skeleton,
@@ -479,9 +479,14 @@ export class SwingFormProcessor implements FormProcessor {
   }
 
   /**
-   * Capture the current frame with skeleton overlay
+   * Capture the current frame with skeleton overlay, cropped around the person
+   *
+   * The crop is a square region centered on the detected person's bounding box.
+   * If no bounding box is available, falls back to center crop.
+   *
+   * @param skeleton - The skeleton to use for person-centered cropping
    */
-  private captureCurrentFrame(): ImageData {
+  private captureCurrentFrame(skeleton?: Skeleton): ImageData {
     // Create a temporary canvas to blend video and skeleton
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = this.canvasElement.width;
@@ -509,16 +514,80 @@ export class SwingFormProcessor implements FormProcessor {
         tempCanvas.height
       );
 
-      // Get the combined image data
-      imageData = tempCtx.getImageData(
-        0,
-        0,
+      // Calculate crop region centered on the person
+      const cropSize = this.calculatePersonCenteredCrop(
+        skeleton,
         tempCanvas.width,
         tempCanvas.height
+      );
+
+      // Get the cropped image data
+      imageData = tempCtx.getImageData(
+        cropSize.x,
+        cropSize.y,
+        cropSize.size,
+        cropSize.size
       );
     }
 
     return imageData;
+  }
+
+  /**
+   * Calculate a square crop region centered on the person
+   *
+   * @param skeleton - The skeleton with keypoints for bounding box calculation
+   * @param frameWidth - Width of the full frame
+   * @param frameHeight - Height of the full frame
+   * @returns Crop coordinates and size
+   */
+  private calculatePersonCenteredCrop(
+    skeleton: Skeleton | undefined,
+    frameWidth: number,
+    frameHeight: number
+  ): { x: number; y: number; size: number } {
+    // Default to center crop if no skeleton
+    const defaultCenterX = frameWidth / 2;
+    const defaultCenterY = frameHeight / 2;
+
+    // Get bounding box from skeleton (with 30% padding for some breathing room)
+    const bbox = skeleton?.getBoundingBox(0.2, 0.3);
+
+    // Use person's center if available, otherwise frame center
+    const personCenterX = bbox?.centerX ?? defaultCenterX;
+    const personCenterY = bbox?.centerY ?? defaultCenterY;
+
+    // Calculate crop size based on person's bounding box or a default
+    // Use the larger of width/height to ensure person fits in square
+    let cropSize: number;
+    if (bbox) {
+      // Use person's bounding box size with extra margin
+      cropSize = Math.max(bbox.width, bbox.height) * 1.2;
+    } else {
+      // Default: use smaller frame dimension
+      cropSize = Math.min(frameWidth, frameHeight) * 0.8;
+    }
+
+    // Ensure crop size is at least a reasonable minimum (200px) and not larger than frame
+    cropSize = Math.max(
+      200,
+      Math.min(cropSize, Math.min(frameWidth, frameHeight))
+    );
+
+    // Calculate top-left corner of crop, centered on person
+    let cropX = personCenterX - cropSize / 2;
+    let cropY = personCenterY - cropSize / 2;
+
+    // Clamp to frame boundaries
+    cropX = Math.max(0, Math.min(cropX, frameWidth - cropSize));
+    cropY = Math.max(0, Math.min(cropY, frameHeight - cropSize));
+
+    // Ensure integer values for getImageData
+    return {
+      x: Math.round(cropX),
+      y: Math.round(cropY),
+      size: Math.round(cropSize),
+    };
   }
 
   /**
