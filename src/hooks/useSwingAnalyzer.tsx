@@ -117,6 +117,21 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         frameAcquisitionRef.current = null;
       }
     };
+  }, [appState.bodyPartDisplayTime, appState.showBodyParts]);
+
+  // Render skeleton on canvas
+  const renderSkeleton = useCallback((skeleton: Skeleton) => {
+    if (skeleton && skeletonRendererRef.current) {
+      skeletonRendererRef.current.renderSkeleton(skeleton, performance.now());
+    }
+  }, []);
+
+  // Manual control of pipeline - rarely needed now
+  const stopProcessing = useCallback(() => {
+    if (!pipelineRef.current) return;
+
+    pipelineRef.current.stop();
+    setAppState((prev) => ({ ...prev, isProcessing: false }));
   }, []);
 
   // Setup persistent subscriptions to pipeline events and start it once
@@ -208,7 +223,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       skeletonSubscription.unsubscribe();
       pipelineSubscription.unsubscribe();
     };
-  }, []);
+  }, [renderSkeleton]);
 
   // Add video event listeners to manage UI state only (not pipeline)
   useEffect(() => {
@@ -252,14 +267,6 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     setAppState((prev) => ({ ...prev, isProcessing: true }));
   }, []);
 
-  // Manual control of pipeline - rarely needed now
-  const stopProcessing = useCallback(() => {
-    if (!pipelineRef.current) return;
-
-    pipelineRef.current.stop();
-    setAppState((prev) => ({ ...prev, isProcessing: false }));
-  }, []);
-
   // Reset state and rep count - explicit action
   const reset = useCallback(() => {
     if (pipelineRef.current) {
@@ -291,13 +298,6 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
     // Reset spine angle but keep rep count
     setSpineAngle(0);
-  }, []);
-
-  // Render skeleton on canvas
-  const renderSkeleton = useCallback((skeleton: Skeleton) => {
-    if (skeleton && skeletonRendererRef.current) {
-      skeletonRendererRef.current.renderSkeleton(skeleton, performance.now());
-    }
   }, []);
 
   // Set body part display options
@@ -444,7 +444,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       .transformToSkeleton(frameEvent)
       .subscribe({
         next: (skeletonEvent: any) => {
-          if (skeletonEvent && skeletonEvent.skeleton) {
+          if (skeletonEvent?.skeleton) {
             // Update UI with angles
             setSpineAngle(
               Math.round(skeletonEvent.skeleton.getSpineAngle() || 0)
@@ -491,7 +491,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     // Add event listener for when seeking is complete
     // Use { once: true } to automatically remove the listener after it's called
     videoRef.current.addEventListener('seeked', handleSeeked, { once: true });
-  }, [frameStep, processCurrentFrame]);
+  }, [processCurrentFrame]);
 
   // Move backward one frame with direct frame processing
   const previousFrame = useCallback(() => {
@@ -516,7 +516,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     // Add event listener for when seeking is complete
     // Use { once: true } to automatically remove the listener after it's called
     videoRef.current.addEventListener('seeked', handleSeeked, { once: true });
-  }, [frameStep, processCurrentFrame]);
+  }, [processCurrentFrame]);
 
   // Start camera
   const startCamera = useCallback(async () => {
@@ -601,7 +601,10 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
     // Reset display mode to ensure overlay is visible
     setDisplayMode(appState.displayMode);
-  }, [appState.displayMode]);
+  }, [
+    appState.displayMode, // Reset display mode to ensure overlay is visible
+    setDisplayMode,
+  ]);
 
   // Load hardcoded video
   const loadHardcodedVideo = useCallback(async () => {
@@ -656,7 +659,11 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       console.error('[DEBUG] loadHardcodedVideo: Error loading video:', error);
       setStatus('Error: Could not load hardcoded video.');
     }
-  }, [resetVideoAndState]);
+  }, [
+    resetVideoAndState,
+    appState.displayMode, // Reset display mode again just to be safe
+    setDisplayMode,
+  ]);
 
   // Handle video upload
   const handleVideoUpload = useCallback(
@@ -729,7 +736,10 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
     // Reset display mode to ensure overlay is visible
     setDisplayMode(appState.displayMode);
-  }, [appState.displayMode]);
+  }, [
+    appState.displayMode, // Reset display mode to ensure overlay is visible
+    setDisplayMode,
+  ]);
 
   // Rep navigation
   const navigateToPreviousRep = useCallback(() => {

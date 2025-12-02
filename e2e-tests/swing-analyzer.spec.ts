@@ -169,7 +169,7 @@ test.describe('Swing Analyzer', () => {
     // In some test environments, pose detection might not work reliably
     // so we'll make this check conditional
     const spineAngle = await page.$eval('#spine-angle', (span) =>
-      Number.parseInt(span.textContent || '0')
+      Number.parseInt(span.textContent || '0', 10)
     );
 
     if (spineAngle === 0) {
@@ -210,7 +210,7 @@ test.describe('Swing Analyzer', () => {
 
     // Check if rep counter has been incremented
     const repCount = await page.$eval('#rep-counter', (el) =>
-      Number.parseInt(el.textContent || '0')
+      Number.parseInt(el.textContent || '0', 10)
     );
 
     console.log('Detected rep count:', repCount);

@@ -189,7 +189,7 @@ export class SkeletonRenderer {
     ctx.strokeStyle = this.connectionColor;
     ctx.lineWidth = 2;
 
-    let connectionsDrawn = 0;
+    let _connectionsDrawn = 0;
     // Draw all connections
     for (const [i, j] of connections) {
       const pointA = keypoints[i];
@@ -198,7 +198,7 @@ export class SkeletonRenderer {
       if (this.isPointVisible(pointA) && this.isPointVisible(pointB)) {
         ctx.moveTo(pointA.x, pointA.y);
         ctx.lineTo(pointB.x, pointB.y);
-        connectionsDrawn++;
+        _connectionsDrawn++;
       }
     }
 

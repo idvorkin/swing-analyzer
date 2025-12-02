@@ -25,14 +25,14 @@ const DebugModelLoaderPage: React.FC = () => {
         }
         await tf.ready();
         setTfReady(true);
-        setStatus('TensorFlow.js ready. Backend: ' + tf.getBackend());
+        setStatus(`TensorFlow.js ready. Backend: ${tf.getBackend()}`);
         console.log(
-          'DebugPage: TensorFlow.js ready. Backend: ' + tf.getBackend()
+          `DebugPage: TensorFlow.js ready. Backend: ${tf.getBackend()}`
         );
       } catch (error) {
         console.error('DebugPage: TensorFlow.js initialization error:', error);
         setStatus(
-          'Error initializing TensorFlow.js: ' + (error as Error).message
+          `Error initializing TensorFlow.js: ${(error as Error).message}`
         );
       }
     }
@@ -69,7 +69,7 @@ const DebugModelLoaderPage: React.FC = () => {
         error
       );
       setStatus(
-        'FAILED to load MoveNet with default URL: ' + (error as Error).message
+        `FAILED to load MoveNet with default URL: ${(error as Error).message}`
       );
     }
   };
@@ -103,7 +103,7 @@ const DebugModelLoaderPage: React.FC = () => {
     } catch (error) {
       console.error('DebugPage: FAILED to load MoveNet with LOCAL URL:', error);
       setStatus(
-        'FAILED to load MoveNet with LOCAL URL: ' + (error as Error).message
+        `FAILED to load MoveNet with LOCAL URL: ${(error as Error).message}`
       );
     }
   };
