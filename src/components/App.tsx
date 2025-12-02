@@ -2,6 +2,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Route, Routes } from 'react-router-dom';
+import { GIT_BRANCH } from '../generated_version';
 import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
 import AnalysisSection from './AnalysisSection';
 import VideoSection from './VideoSection';
@@ -47,6 +48,10 @@ const isMac =
   navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 const bugReportShortcut = isMac ? 'Cmd+I' : 'Ctrl+I';
 
+// Show branch name in title if not on main/master
+const isFeatureBranch = GIT_BRANCH && !['main', 'master'].includes(GIT_BRANCH);
+const branchDisplayName = isFeatureBranch ? GIT_BRANCH.replace(/^feature\//, '') : null;
+
 // Header with navigation
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -55,7 +60,15 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
   return (
     <header>
-      <h1>Swing Analyzer</h1>
+      <h1>
+        Swing Analyzer
+        {branchDisplayName && (
+          <span className="branch-indicator" title={`Branch: ${GIT_BRANCH}`}>
+            {' '}
+            [{branchDisplayName}]
+          </span>
+        )}
+      </h1>
       <nav>
         <button
           type="button"
@@ -82,6 +95,15 @@ const AppContent: React.FC = () => {
       onShake: bugReporter.open,
     }
   );
+
+  // Set document title with branch name if on feature branch
+  useEffect(() => {
+    if (branchDisplayName) {
+      document.title = `Swing Analyzer [${branchDisplayName}]`;
+    } else {
+      document.title = 'Swing Analyzer';
+    }
+  }, []);
 
   // Keyboard shortcut: Ctrl+I or Cmd+I to open bug reporter
   useEffect(() => {

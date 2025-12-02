@@ -46,6 +46,14 @@ header h1 {
   min-width: 0;
 }
 
+/* Branch indicator for non-main branches */
+.branch-indicator {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #fbbf24;
+  opacity: 0.9;
+}
+
 header nav {
   display: flex;
   align-items: center;
