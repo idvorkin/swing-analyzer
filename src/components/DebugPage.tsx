@@ -10,7 +10,7 @@ interface DebugLog {
   modelType: string;
   keypointsDetected: number;
   visibleKeypoints: number;
-  sampleKeypoints: Array<{ index: number; name: string; x: number; y: number; score?: number; visibility?: number }>;
+  sampleKeypoints: Array<{ index: number; name: string; x: number; y: number; z?: number; score?: number; visibility?: number }>;
   spineAngle: number;
   armAngle: number;
   hasRequiredKeypoints: boolean;
@@ -82,6 +82,7 @@ export function DebugPage() {
           name: getKeypointName(index, currentModel),
           x: Math.round(keypoints[index]?.x || 0),
           y: Math.round(keypoints[index]?.y || 0),
+          z: keypoints[index]?.z ? Math.round(keypoints[index].z * 1000) / 1000 : undefined,
           score: keypoints[index]?.score,
           visibility: keypoints[index]?.visibility
         }));
@@ -131,7 +132,7 @@ export function DebugPage() {
     if (!videoRef.current) return;
     const video = videoRef.current;
     video.src = '/videos/swing-sample.mp4';
-    video.loop = true;
+    video.loop = false; // Play once, not forever
     video.muted = true;
 
     // Wait for video to be ready

@@ -143,7 +143,7 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
     console.log('Starting BlazePose initialization...');
     const config: poseDetection.BlazePoseMediaPipeModelConfig = {
       runtime: 'mediapipe',
-      modelType: 'lite',
+      modelType: 'full', // 'full' provides 3D coordinates (x, y, z), 'lite' only gives 2D
       enableSmoothing: true,
       solutionPath:
         'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404',
@@ -154,7 +154,7 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       config
     );
     activeModelType = 'BlazePose';
-    console.log('BlazePose detector initialized successfully (33 keypoints)');
+    console.log('BlazePose detector initialized successfully (33 keypoints with 3D coordinates)');
   }
 
   private async createMoveNetFallback(): Promise<void> {
@@ -183,8 +183,8 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
   getModelType(): string {
     if (!activeModelType) return 'Loading...';
     return activeModelType === 'BlazePose'
-      ? 'BlazePose Lite (33 points)'
-      : 'MoveNet Lightning (17 points)';
+      ? 'BlazePose Full (33 points, 3D)'
+      : 'MoveNet Lightning (17 points, 2D)';
   }
 
   /**
