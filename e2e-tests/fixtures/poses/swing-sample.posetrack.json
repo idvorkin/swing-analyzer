@@ -1,0 +1,1097 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "model": "movenet-lightning",
+    "modelVersion": "4.0.0",
+    "sourceVideoHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sourceVideoName": "swing-sample.mp4",
+    "sourceVideoDuration": 5.0,
+    "extractedAt": "2024-01-15T10:30:00.000Z",
+    "frameCount": 150,
+    "fps": 30,
+    "videoWidth": 640,
+    "videoHeight": 480
+  },
+  "frames": [
+    {
+      "frameIndex": 0,
+      "timestamp": 0,
+      "videoTime": 0,
+      "keypoints": [
+        { "x": 320, "y": 50, "score": 0.95 },
+        { "x": 310, "y": 40, "score": 0.92 },
+        { "x": 330, "y": 40, "score": 0.92 },
+        { "x": 295, "y": 45, "score": 0.88 },
+        { "x": 345, "y": 45, "score": 0.88 },
+        { "x": 280, "y": 110, "score": 0.95 },
+        { "x": 360, "y": 110, "score": 0.95 },
+        { "x": 275, "y": 180, "score": 0.92 },
+        { "x": 365, "y": 180, "score": 0.92 },
+        { "x": 270, "y": 250, "score": 0.9 },
+        { "x": 370, "y": 250, "score": 0.9 },
+        { "x": 290, "y": 270, "score": 0.95 },
+        { "x": 350, "y": 270, "score": 0.95 },
+        { "x": 285, "y": 370, "score": 0.93 },
+        { "x": 355, "y": 370, "score": 0.93 },
+        { "x": 280, "y": 460, "score": 0.91 },
+        { "x": 360, "y": 460, "score": 0.91 }
+      ],
+      "score": 0.92,
+      "angles": {
+        "spineAngle": 15,
+        "armToSpineAngle": 45,
+        "armToVerticalAngle": 160
+      }
+    },
+    {
+      "frameIndex": 1,
+      "timestamp": 33,
+      "videoTime": 0.033,
+      "keypoints": [
+        { "x": 320, "y": 50, "score": 0.95 },
+        { "x": 310, "y": 40, "score": 0.92 },
+        { "x": 330, "y": 40, "score": 0.92 },
+        { "x": 295, "y": 45, "score": 0.88 },
+        { "x": 345, "y": 45, "score": 0.88 },
+        { "x": 280, "y": 110, "score": 0.95 },
+        { "x": 360, "y": 110, "score": 0.95 },
+        { "x": 275, "y": 180, "score": 0.92 },
+        { "x": 365, "y": 180, "score": 0.92 },
+        { "x": 270, "y": 250, "score": 0.9 },
+        { "x": 370, "y": 250, "score": 0.9 },
+        { "x": 290, "y": 270, "score": 0.95 },
+        { "x": 350, "y": 270, "score": 0.95 },
+        { "x": 285, "y": 370, "score": 0.93 },
+        { "x": 355, "y": 370, "score": 0.93 },
+        { "x": 280, "y": 460, "score": 0.91 },
+        { "x": 360, "y": 460, "score": 0.91 }
+      ],
+      "score": 0.92,
+      "angles": {
+        "spineAngle": 15,
+        "armToSpineAngle": 45,
+        "armToVerticalAngle": 160
+      }
+    },
+    {
+      "frameIndex": 2,
+      "timestamp": 67,
+      "videoTime": 0.067,
+      "keypoints": [
+        { "x": 320, "y": 50, "score": 0.95 },
+        { "x": 310, "y": 40, "score": 0.92 },
+        { "x": 330, "y": 40, "score": 0.92 },
+        { "x": 295, "y": 45, "score": 0.88 },
+        { "x": 345, "y": 45, "score": 0.88 },
+        { "x": 280, "y": 110, "score": 0.95 },
+        { "x": 360, "y": 110, "score": 0.95 },
+        { "x": 277, "y": 178, "score": 0.92 },
+        { "x": 363, "y": 178, "score": 0.92 },
+        { "x": 273, "y": 248, "score": 0.9 },
+        { "x": 367, "y": 248, "score": 0.9 },
+        { "x": 290, "y": 270, "score": 0.95 },
+        { "x": 350, "y": 270, "score": 0.95 },
+        { "x": 285, "y": 370, "score": 0.93 },
+        { "x": 355, "y": 370, "score": 0.93 },
+        { "x": 280, "y": 460, "score": 0.91 },
+        { "x": 360, "y": 460, "score": 0.91 }
+      ],
+      "score": 0.92,
+      "angles": {
+        "spineAngle": 16,
+        "armToSpineAngle": 44,
+        "armToVerticalAngle": 158
+      }
+    },
+    {
+      "frameIndex": 3,
+      "timestamp": 100,
+      "videoTime": 0.1,
+      "keypoints": [
+        { "x": 321, "y": 52, "score": 0.95 },
+        { "x": 311, "y": 42, "score": 0.92 },
+        { "x": 331, "y": 42, "score": 0.92 },
+        { "x": 296, "y": 47, "score": 0.88 },
+        { "x": 346, "y": 47, "score": 0.88 },
+        { "x": 281, "y": 113, "score": 0.95 },
+        { "x": 361, "y": 113, "score": 0.95 },
+        { "x": 280, "y": 177, "score": 0.92 },
+        { "x": 360, "y": 177, "score": 0.92 },
+        { "x": 278, "y": 245, "score": 0.9 },
+        { "x": 362, "y": 245, "score": 0.9 },
+        { "x": 290, "y": 271, "score": 0.95 },
+        { "x": 350, "y": 271, "score": 0.95 },
+        { "x": 285, "y": 371, "score": 0.93 },
+        { "x": 355, "y": 371, "score": 0.93 },
+        { "x": 280, "y": 461, "score": 0.91 },
+        { "x": 360, "y": 461, "score": 0.91 }
+      ],
+      "score": 0.91,
+      "angles": {
+        "spineAngle": 18,
+        "armToSpineAngle": 42,
+        "armToVerticalAngle": 150
+      }
+    },
+    {
+      "frameIndex": 4,
+      "timestamp": 133,
+      "videoTime": 0.133,
+      "keypoints": [
+        { "x": 322, "y": 55, "score": 0.94 },
+        { "x": 312, "y": 45, "score": 0.91 },
+        { "x": 332, "y": 45, "score": 0.91 },
+        { "x": 297, "y": 50, "score": 0.87 },
+        { "x": 347, "y": 50, "score": 0.87 },
+        { "x": 282, "y": 117, "score": 0.94 },
+        { "x": 362, "y": 117, "score": 0.94 },
+        { "x": 285, "y": 175, "score": 0.91 },
+        { "x": 355, "y": 175, "score": 0.91 },
+        { "x": 285, "y": 240, "score": 0.89 },
+        { "x": 355, "y": 240, "score": 0.89 },
+        { "x": 289, "y": 272, "score": 0.94 },
+        { "x": 349, "y": 272, "score": 0.94 },
+        { "x": 284, "y": 372, "score": 0.92 },
+        { "x": 354, "y": 372, "score": 0.92 },
+        { "x": 279, "y": 462, "score": 0.9 },
+        { "x": 359, "y": 462, "score": 0.9 }
+      ],
+      "score": 0.9,
+      "angles": {
+        "spineAngle": 22,
+        "armToSpineAngle": 38,
+        "armToVerticalAngle": 140
+      }
+    },
+    {
+      "frameIndex": 5,
+      "timestamp": 167,
+      "videoTime": 0.167,
+      "keypoints": [
+        { "x": 323, "y": 60, "score": 0.94 },
+        { "x": 313, "y": 50, "score": 0.91 },
+        { "x": 333, "y": 50, "score": 0.91 },
+        { "x": 298, "y": 55, "score": 0.87 },
+        { "x": 348, "y": 55, "score": 0.87 },
+        { "x": 283, "y": 122, "score": 0.94 },
+        { "x": 363, "y": 122, "score": 0.94 },
+        { "x": 292, "y": 172, "score": 0.91 },
+        { "x": 348, "y": 172, "score": 0.91 },
+        { "x": 295, "y": 232, "score": 0.89 },
+        { "x": 345, "y": 232, "score": 0.89 },
+        { "x": 288, "y": 273, "score": 0.94 },
+        { "x": 348, "y": 273, "score": 0.94 },
+        { "x": 283, "y": 373, "score": 0.92 },
+        { "x": 353, "y": 373, "score": 0.92 },
+        { "x": 278, "y": 463, "score": 0.9 },
+        { "x": 358, "y": 463, "score": 0.9 }
+      ],
+      "score": 0.89,
+      "angles": {
+        "spineAngle": 28,
+        "armToSpineAngle": 32,
+        "armToVerticalAngle": 120
+      }
+    },
+    {
+      "frameIndex": 6,
+      "timestamp": 200,
+      "videoTime": 0.2,
+      "keypoints": [
+        { "x": 324, "y": 65, "score": 0.93 },
+        { "x": 314, "y": 55, "score": 0.9 },
+        { "x": 334, "y": 55, "score": 0.9 },
+        { "x": 299, "y": 60, "score": 0.86 },
+        { "x": 349, "y": 60, "score": 0.86 },
+        { "x": 284, "y": 127, "score": 0.93 },
+        { "x": 364, "y": 127, "score": 0.93 },
+        { "x": 298, "y": 175, "score": 0.9 },
+        { "x": 352, "y": 175, "score": 0.9 },
+        { "x": 305, "y": 225, "score": 0.88 },
+        { "x": 345, "y": 225, "score": 0.88 },
+        { "x": 286, "y": 274, "score": 0.93 },
+        { "x": 346, "y": 274, "score": 0.93 },
+        { "x": 281, "y": 374, "score": 0.91 },
+        { "x": 351, "y": 374, "score": 0.91 },
+        { "x": 276, "y": 464, "score": 0.89 },
+        { "x": 356, "y": 464, "score": 0.89 }
+      ],
+      "score": 0.88,
+      "angles": {
+        "spineAngle": 33,
+        "armToSpineAngle": 28,
+        "armToVerticalAngle": 95
+      }
+    },
+    {
+      "frameIndex": 7,
+      "timestamp": 233,
+      "videoTime": 0.233,
+      "keypoints": [
+        { "x": 325, "y": 70, "score": 0.93 },
+        { "x": 315, "y": 60, "score": 0.9 },
+        { "x": 335, "y": 60, "score": 0.9 },
+        { "x": 300, "y": 65, "score": 0.86 },
+        { "x": 350, "y": 65, "score": 0.86 },
+        { "x": 285, "y": 130, "score": 0.93 },
+        { "x": 365, "y": 130, "score": 0.93 },
+        { "x": 300, "y": 180, "score": 0.9 },
+        { "x": 350, "y": 180, "score": 0.9 },
+        { "x": 310, "y": 230, "score": 0.88 },
+        { "x": 340, "y": 230, "score": 0.88 },
+        { "x": 285, "y": 275, "score": 0.93 },
+        { "x": 345, "y": 275, "score": 0.93 },
+        { "x": 280, "y": 375, "score": 0.91 },
+        { "x": 350, "y": 375, "score": 0.91 },
+        { "x": 275, "y": 465, "score": 0.89 },
+        { "x": 355, "y": 465, "score": 0.89 }
+      ],
+      "score": 0.88,
+      "angles": {
+        "spineAngle": 35,
+        "armToSpineAngle": 25,
+        "armToVerticalAngle": 80
+      }
+    },
+    {
+      "frameIndex": 8,
+      "timestamp": 267,
+      "videoTime": 0.267,
+      "keypoints": [
+        { "x": 330, "y": 85, "score": 0.92 },
+        { "x": 320, "y": 75, "score": 0.89 },
+        { "x": 340, "y": 75, "score": 0.89 },
+        { "x": 305, "y": 80, "score": 0.85 },
+        { "x": 355, "y": 80, "score": 0.85 },
+        { "x": 290, "y": 145, "score": 0.92 },
+        { "x": 370, "y": 145, "score": 0.92 },
+        { "x": 302, "y": 200, "score": 0.89 },
+        { "x": 358, "y": 200, "score": 0.89 },
+        { "x": 312, "y": 260, "score": 0.87 },
+        { "x": 348, "y": 260, "score": 0.87 },
+        { "x": 280, "y": 276, "score": 0.92 },
+        { "x": 340, "y": 276, "score": 0.92 },
+        { "x": 278, "y": 372, "score": 0.9 },
+        { "x": 348, "y": 372, "score": 0.9 },
+        { "x": 276, "y": 464, "score": 0.88 },
+        { "x": 356, "y": 464, "score": 0.88 }
+      ],
+      "score": 0.87,
+      "angles": {
+        "spineAngle": 40,
+        "armToSpineAngle": 22,
+        "armToVerticalAngle": 60
+      }
+    },
+    {
+      "frameIndex": 9,
+      "timestamp": 300,
+      "videoTime": 0.3,
+      "keypoints": [
+        { "x": 335, "y": 100, "score": 0.91 },
+        { "x": 325, "y": 90, "score": 0.88 },
+        { "x": 345, "y": 90, "score": 0.88 },
+        { "x": 310, "y": 95, "score": 0.84 },
+        { "x": 360, "y": 95, "score": 0.84 },
+        { "x": 295, "y": 160, "score": 0.91 },
+        { "x": 375, "y": 160, "score": 0.91 },
+        { "x": 305, "y": 220, "score": 0.88 },
+        { "x": 365, "y": 220, "score": 0.88 },
+        { "x": 315, "y": 285, "score": 0.86 },
+        { "x": 355, "y": 285, "score": 0.86 },
+        { "x": 275, "y": 278, "score": 0.91 },
+        { "x": 335, "y": 278, "score": 0.91 },
+        { "x": 276, "y": 373, "score": 0.89 },
+        { "x": 346, "y": 373, "score": 0.89 },
+        { "x": 277, "y": 463, "score": 0.87 },
+        { "x": 357, "y": 463, "score": 0.87 }
+      ],
+      "score": 0.86,
+      "angles": {
+        "spineAngle": 45,
+        "armToSpineAngle": 18,
+        "armToVerticalAngle": 45
+      }
+    },
+    {
+      "frameIndex": 10,
+      "timestamp": 333,
+      "videoTime": 0.333,
+      "keypoints": [
+        { "x": 340, "y": 120, "score": 0.9 },
+        { "x": 330, "y": 110, "score": 0.87 },
+        { "x": 350, "y": 110, "score": 0.87 },
+        { "x": 315, "y": 115, "score": 0.83 },
+        { "x": 365, "y": 115, "score": 0.83 },
+        { "x": 298, "y": 170, "score": 0.9 },
+        { "x": 378, "y": 170, "score": 0.9 },
+        { "x": 308, "y": 240, "score": 0.87 },
+        { "x": 368, "y": 240, "score": 0.87 },
+        { "x": 318, "y": 310, "score": 0.85 },
+        { "x": 358, "y": 310, "score": 0.85 },
+        { "x": 272, "y": 279, "score": 0.9 },
+        { "x": 332, "y": 279, "score": 0.9 },
+        { "x": 275, "y": 374, "score": 0.88 },
+        { "x": 345, "y": 374, "score": 0.88 },
+        { "x": 278, "y": 462, "score": 0.86 },
+        { "x": 358, "y": 462, "score": 0.86 }
+      ],
+      "score": 0.85,
+      "angles": {
+        "spineAngle": 50,
+        "armToSpineAngle": 15,
+        "armToVerticalAngle": 35
+      }
+    },
+    {
+      "frameIndex": 11,
+      "timestamp": 367,
+      "videoTime": 0.367,
+      "keypoints": [
+        { "x": 350, "y": 150, "score": 0.89 },
+        { "x": 340, "y": 140, "score": 0.86 },
+        { "x": 360, "y": 140, "score": 0.86 },
+        { "x": 325, "y": 145, "score": 0.82 },
+        { "x": 375, "y": 145, "score": 0.82 },
+        { "x": 300, "y": 180, "score": 0.89 },
+        { "x": 380, "y": 180, "score": 0.89 },
+        { "x": 310, "y": 260, "score": 0.86 },
+        { "x": 370, "y": 260, "score": 0.86 },
+        { "x": 320, "y": 330, "score": 0.84 },
+        { "x": 360, "y": 330, "score": 0.84 },
+        { "x": 270, "y": 280, "score": 0.89 },
+        { "x": 330, "y": 280, "score": 0.89 },
+        { "x": 275, "y": 370, "score": 0.87 },
+        { "x": 345, "y": 370, "score": 0.87 },
+        { "x": 280, "y": 460, "score": 0.85 },
+        { "x": 360, "y": 460, "score": 0.85 }
+      ],
+      "score": 0.84,
+      "angles": {
+        "spineAngle": 55,
+        "armToSpineAngle": 12,
+        "armToVerticalAngle": 25
+      }
+    },
+    {
+      "frameIndex": 12,
+      "timestamp": 400,
+      "videoTime": 0.4,
+      "keypoints": [
+        { "x": 345, "y": 135, "score": 0.89 },
+        { "x": 335, "y": 125, "score": 0.86 },
+        { "x": 355, "y": 125, "score": 0.86 },
+        { "x": 320, "y": 130, "score": 0.82 },
+        { "x": 370, "y": 130, "score": 0.82 },
+        { "x": 298, "y": 175, "score": 0.89 },
+        { "x": 378, "y": 175, "score": 0.89 },
+        { "x": 305, "y": 245, "score": 0.86 },
+        { "x": 365, "y": 245, "score": 0.86 },
+        { "x": 312, "y": 310, "score": 0.84 },
+        { "x": 358, "y": 310, "score": 0.84 },
+        { "x": 272, "y": 279, "score": 0.89 },
+        { "x": 332, "y": 279, "score": 0.89 },
+        { "x": 276, "y": 372, "score": 0.87 },
+        { "x": 346, "y": 372, "score": 0.87 },
+        { "x": 280, "y": 462, "score": 0.85 },
+        { "x": 360, "y": 462, "score": 0.85 }
+      ],
+      "score": 0.85,
+      "angles": {
+        "spineAngle": 52,
+        "armToSpineAngle": 14,
+        "armToVerticalAngle": 30
+      }
+    },
+    {
+      "frameIndex": 13,
+      "timestamp": 433,
+      "videoTime": 0.433,
+      "keypoints": [
+        { "x": 338, "y": 115, "score": 0.9 },
+        { "x": 328, "y": 105, "score": 0.87 },
+        { "x": 348, "y": 105, "score": 0.87 },
+        { "x": 313, "y": 110, "score": 0.83 },
+        { "x": 363, "y": 110, "score": 0.83 },
+        { "x": 294, "y": 165, "score": 0.9 },
+        { "x": 374, "y": 165, "score": 0.9 },
+        { "x": 290, "y": 215, "score": 0.87 },
+        { "x": 360, "y": 215, "score": 0.87 },
+        { "x": 285, "y": 270, "score": 0.85 },
+        { "x": 365, "y": 270, "score": 0.85 },
+        { "x": 278, "y": 277, "score": 0.9 },
+        { "x": 338, "y": 277, "score": 0.9 },
+        { "x": 279, "y": 373, "score": 0.88 },
+        { "x": 349, "y": 373, "score": 0.88 },
+        { "x": 280, "y": 463, "score": 0.86 },
+        { "x": 360, "y": 463, "score": 0.86 }
+      ],
+      "score": 0.87,
+      "angles": {
+        "spineAngle": 45,
+        "armToSpineAngle": 22,
+        "armToVerticalAngle": 55
+      }
+    },
+    {
+      "frameIndex": 14,
+      "timestamp": 467,
+      "videoTime": 0.467,
+      "keypoints": [
+        { "x": 335, "y": 95, "score": 0.91 },
+        { "x": 325, "y": 85, "score": 0.88 },
+        { "x": 345, "y": 85, "score": 0.88 },
+        { "x": 310, "y": 90, "score": 0.84 },
+        { "x": 360, "y": 90, "score": 0.84 },
+        { "x": 290, "y": 150, "score": 0.91 },
+        { "x": 370, "y": 150, "score": 0.91 },
+        { "x": 275, "y": 185, "score": 0.88 },
+        { "x": 365, "y": 185, "score": 0.88 },
+        { "x": 260, "y": 210, "score": 0.86 },
+        { "x": 380, "y": 210, "score": 0.86 },
+        { "x": 283, "y": 275, "score": 0.91 },
+        { "x": 343, "y": 275, "score": 0.91 },
+        { "x": 281, "y": 374, "score": 0.89 },
+        { "x": 351, "y": 374, "score": 0.89 },
+        { "x": 279, "y": 464, "score": 0.87 },
+        { "x": 359, "y": 464, "score": 0.87 }
+      ],
+      "score": 0.88,
+      "angles": {
+        "spineAngle": 38,
+        "armToSpineAngle": 35,
+        "armToVerticalAngle": 90
+      }
+    },
+    {
+      "frameIndex": 15,
+      "timestamp": 500,
+      "videoTime": 0.5,
+      "keypoints": [
+        { "x": 330, "y": 80, "score": 0.92 },
+        { "x": 320, "y": 70, "score": 0.89 },
+        { "x": 340, "y": 70, "score": 0.89 },
+        { "x": 305, "y": 75, "score": 0.85 },
+        { "x": 355, "y": 75, "score": 0.85 },
+        { "x": 285, "y": 125, "score": 0.92 },
+        { "x": 365, "y": 125, "score": 0.92 },
+        { "x": 240, "y": 150, "score": 0.89 },
+        { "x": 400, "y": 150, "score": 0.89 },
+        { "x": 200, "y": 130, "score": 0.87 },
+        { "x": 440, "y": 130, "score": 0.87 },
+        { "x": 288, "y": 272, "score": 0.92 },
+        { "x": 348, "y": 272, "score": 0.92 },
+        { "x": 283, "y": 375, "score": 0.9 },
+        { "x": 353, "y": 375, "score": 0.9 },
+        { "x": 278, "y": 465, "score": 0.88 },
+        { "x": 358, "y": 465, "score": 0.88 }
+      ],
+      "score": 0.89,
+      "angles": {
+        "spineAngle": 28,
+        "armToSpineAngle": 55,
+        "armToVerticalAngle": 135
+      }
+    },
+    {
+      "frameIndex": 16,
+      "timestamp": 533,
+      "videoTime": 0.533,
+      "keypoints": [
+        { "x": 325, "y": 65, "score": 0.93 },
+        { "x": 315, "y": 55, "score": 0.9 },
+        { "x": 335, "y": 55, "score": 0.9 },
+        { "x": 300, "y": 60, "score": 0.86 },
+        { "x": 350, "y": 60, "score": 0.86 },
+        { "x": 282, "y": 118, "score": 0.93 },
+        { "x": 362, "y": 118, "score": 0.93 },
+        { "x": 255, "y": 155, "score": 0.9 },
+        { "x": 385, "y": 155, "score": 0.9 },
+        { "x": 220, "y": 140, "score": 0.88 },
+        { "x": 420, "y": 140, "score": 0.88 },
+        { "x": 289, "y": 271, "score": 0.93 },
+        { "x": 349, "y": 271, "score": 0.93 },
+        { "x": 284, "y": 374, "score": 0.91 },
+        { "x": 354, "y": 374, "score": 0.91 },
+        { "x": 279, "y": 464, "score": 0.89 },
+        { "x": 359, "y": 464, "score": 0.89 }
+      ],
+      "score": 0.9,
+      "angles": {
+        "spineAngle": 22,
+        "armToSpineAngle": 60,
+        "armToVerticalAngle": 145
+      }
+    },
+    {
+      "frameIndex": 17,
+      "timestamp": 567,
+      "videoTime": 0.567,
+      "keypoints": [
+        { "x": 322, "y": 55, "score": 0.94 },
+        { "x": 312, "y": 45, "score": 0.91 },
+        { "x": 332, "y": 45, "score": 0.91 },
+        { "x": 297, "y": 50, "score": 0.87 },
+        { "x": 347, "y": 50, "score": 0.87 },
+        { "x": 281, "y": 113, "score": 0.94 },
+        { "x": 361, "y": 113, "score": 0.94 },
+        { "x": 270, "y": 165, "score": 0.91 },
+        { "x": 370, "y": 165, "score": 0.91 },
+        { "x": 255, "y": 195, "score": 0.89 },
+        { "x": 385, "y": 195, "score": 0.89 },
+        { "x": 290, "y": 270, "score": 0.94 },
+        { "x": 350, "y": 270, "score": 0.94 },
+        { "x": 285, "y": 373, "score": 0.92 },
+        { "x": 355, "y": 373, "score": 0.92 },
+        { "x": 280, "y": 463, "score": 0.9 },
+        { "x": 360, "y": 463, "score": 0.9 }
+      ],
+      "score": 0.91,
+      "angles": {
+        "spineAngle": 18,
+        "armToSpineAngle": 52,
+        "armToVerticalAngle": 155
+      }
+    },
+    {
+      "frameIndex": 18,
+      "timestamp": 600,
+      "videoTime": 0.6,
+      "keypoints": [
+        { "x": 320, "y": 50, "score": 0.95 },
+        { "x": 310, "y": 40, "score": 0.92 },
+        { "x": 330, "y": 40, "score": 0.92 },
+        { "x": 295, "y": 45, "score": 0.88 },
+        { "x": 345, "y": 45, "score": 0.88 },
+        { "x": 280, "y": 110, "score": 0.95 },
+        { "x": 360, "y": 110, "score": 0.95 },
+        { "x": 275, "y": 180, "score": 0.92 },
+        { "x": 365, "y": 180, "score": 0.92 },
+        { "x": 270, "y": 250, "score": 0.9 },
+        { "x": 370, "y": 250, "score": 0.9 },
+        { "x": 290, "y": 270, "score": 0.95 },
+        { "x": 350, "y": 270, "score": 0.95 },
+        { "x": 285, "y": 370, "score": 0.93 },
+        { "x": 355, "y": 370, "score": 0.93 },
+        { "x": 280, "y": 460, "score": 0.91 },
+        { "x": 360, "y": 460, "score": 0.91 }
+      ],
+      "score": 0.92,
+      "angles": {
+        "spineAngle": 15,
+        "armToSpineAngle": 45,
+        "armToVerticalAngle": 160
+      }
+    },
+    {
+      "frameIndex": 19,
+      "timestamp": 633,
+      "videoTime": 0.633,
+      "keypoints": [
+        { "x": 320, "y": 50, "score": 0.95 },
+        { "x": 310, "y": 40, "score": 0.92 },
+        { "x": 330, "y": 40, "score": 0.92 },
+        { "x": 295, "y": 45, "score": 0.88 },
+        { "x": 345, "y": 45, "score": 0.88 },
+        { "x": 280, "y": 110, "score": 0.95 },
+        { "x": 360, "y": 110, "score": 0.95 },
+        { "x": 277, "y": 178, "score": 0.92 },
+        { "x": 363, "y": 178, "score": 0.92 },
+        { "x": 273, "y": 248, "score": 0.9 },
+        { "x": 367, "y": 248, "score": 0.9 },
+        { "x": 290, "y": 270, "score": 0.95 },
+        { "x": 350, "y": 270, "score": 0.95 },
+        { "x": 285, "y": 370, "score": 0.93 },
+        { "x": 355, "y": 370, "score": 0.93 },
+        { "x": 280, "y": 460, "score": 0.91 },
+        { "x": 360, "y": 460, "score": 0.91 }
+      ],
+      "score": 0.92,
+      "angles": {
+        "spineAngle": 16,
+        "armToSpineAngle": 44,
+        "armToVerticalAngle": 158
+      }
+    },
+    {
+      "frameIndex": 20,
+      "timestamp": 667,
+      "videoTime": 0.667,
+      "keypoints": [
+        { "x": 321, "y": 52, "score": 0.95 },
+        { "x": 311, "y": 42, "score": 0.92 },
+        { "x": 331, "y": 42, "score": 0.92 },
+        { "x": 296, "y": 47, "score": 0.88 },
+        { "x": 346, "y": 47, "score": 0.88 },
+        { "x": 281, "y": 113, "score": 0.95 },
+        { "x": 361, "y": 113, "score": 0.95 },
+        { "x": 280, "y": 177, "score": 0.92 },
+        { "x": 360, "y": 177, "score": 0.92 },
+        { "x": 278, "y": 245, "score": 0.9 },
+        { "x": 362, "y": 245, "score": 0.9 },
+        { "x": 290, "y": 271, "score": 0.95 },
+        { "x": 350, "y": 271, "score": 0.95 },
+        { "x": 285, "y": 371, "score": 0.93 },
+        { "x": 355, "y": 371, "score": 0.93 },
+        { "x": 280, "y": 461, "score": 0.91 },
+        { "x": 360, "y": 461, "score": 0.91 }
+      ],
+      "score": 0.91,
+      "angles": {
+        "spineAngle": 18,
+        "armToSpineAngle": 42,
+        "armToVerticalAngle": 150
+      }
+    },
+    {
+      "frameIndex": 21,
+      "timestamp": 700,
+      "videoTime": 0.7,
+      "keypoints": [
+        { "x": 322, "y": 55, "score": 0.94 },
+        { "x": 312, "y": 45, "score": 0.91 },
+        { "x": 332, "y": 45, "score": 0.91 },
+        { "x": 297, "y": 50, "score": 0.87 },
+        { "x": 347, "y": 50, "score": 0.87 },
+        { "x": 282, "y": 117, "score": 0.94 },
+        { "x": 362, "y": 117, "score": 0.94 },
+        { "x": 285, "y": 175, "score": 0.91 },
+        { "x": 355, "y": 175, "score": 0.91 },
+        { "x": 285, "y": 240, "score": 0.89 },
+        { "x": 355, "y": 240, "score": 0.89 },
+        { "x": 289, "y": 272, "score": 0.94 },
+        { "x": 349, "y": 272, "score": 0.94 },
+        { "x": 284, "y": 372, "score": 0.92 },
+        { "x": 354, "y": 372, "score": 0.92 },
+        { "x": 279, "y": 462, "score": 0.9 },
+        { "x": 359, "y": 462, "score": 0.9 }
+      ],
+      "score": 0.9,
+      "angles": {
+        "spineAngle": 22,
+        "armToSpineAngle": 38,
+        "armToVerticalAngle": 140
+      }
+    },
+    {
+      "frameIndex": 22,
+      "timestamp": 733,
+      "videoTime": 0.733,
+      "keypoints": [
+        { "x": 323, "y": 60, "score": 0.94 },
+        { "x": 313, "y": 50, "score": 0.91 },
+        { "x": 333, "y": 50, "score": 0.91 },
+        { "x": 298, "y": 55, "score": 0.87 },
+        { "x": 348, "y": 55, "score": 0.87 },
+        { "x": 283, "y": 122, "score": 0.94 },
+        { "x": 363, "y": 122, "score": 0.94 },
+        { "x": 292, "y": 172, "score": 0.91 },
+        { "x": 348, "y": 172, "score": 0.91 },
+        { "x": 295, "y": 232, "score": 0.89 },
+        { "x": 345, "y": 232, "score": 0.89 },
+        { "x": 288, "y": 273, "score": 0.94 },
+        { "x": 348, "y": 273, "score": 0.94 },
+        { "x": 283, "y": 373, "score": 0.92 },
+        { "x": 353, "y": 373, "score": 0.92 },
+        { "x": 278, "y": 463, "score": 0.9 },
+        { "x": 358, "y": 463, "score": 0.9 }
+      ],
+      "score": 0.89,
+      "angles": {
+        "spineAngle": 28,
+        "armToSpineAngle": 32,
+        "armToVerticalAngle": 120
+      }
+    },
+    {
+      "frameIndex": 23,
+      "timestamp": 767,
+      "videoTime": 0.767,
+      "keypoints": [
+        { "x": 324, "y": 65, "score": 0.93 },
+        { "x": 314, "y": 55, "score": 0.9 },
+        { "x": 334, "y": 55, "score": 0.9 },
+        { "x": 299, "y": 60, "score": 0.86 },
+        { "x": 349, "y": 60, "score": 0.86 },
+        { "x": 284, "y": 127, "score": 0.93 },
+        { "x": 364, "y": 127, "score": 0.93 },
+        { "x": 298, "y": 175, "score": 0.9 },
+        { "x": 352, "y": 175, "score": 0.9 },
+        { "x": 305, "y": 225, "score": 0.88 },
+        { "x": 345, "y": 225, "score": 0.88 },
+        { "x": 286, "y": 274, "score": 0.93 },
+        { "x": 346, "y": 274, "score": 0.93 },
+        { "x": 281, "y": 374, "score": 0.91 },
+        { "x": 351, "y": 374, "score": 0.91 },
+        { "x": 276, "y": 464, "score": 0.89 },
+        { "x": 356, "y": 464, "score": 0.89 }
+      ],
+      "score": 0.88,
+      "angles": {
+        "spineAngle": 33,
+        "armToSpineAngle": 28,
+        "armToVerticalAngle": 95
+      }
+    },
+    {
+      "frameIndex": 24,
+      "timestamp": 800,
+      "videoTime": 0.8,
+      "keypoints": [
+        { "x": 325, "y": 70, "score": 0.93 },
+        { "x": 315, "y": 60, "score": 0.9 },
+        { "x": 335, "y": 60, "score": 0.9 },
+        { "x": 300, "y": 65, "score": 0.86 },
+        { "x": 350, "y": 65, "score": 0.86 },
+        { "x": 285, "y": 130, "score": 0.93 },
+        { "x": 365, "y": 130, "score": 0.93 },
+        { "x": 300, "y": 180, "score": 0.9 },
+        { "x": 350, "y": 180, "score": 0.9 },
+        { "x": 310, "y": 230, "score": 0.88 },
+        { "x": 340, "y": 230, "score": 0.88 },
+        { "x": 285, "y": 275, "score": 0.93 },
+        { "x": 345, "y": 275, "score": 0.93 },
+        { "x": 280, "y": 375, "score": 0.91 },
+        { "x": 350, "y": 375, "score": 0.91 },
+        { "x": 275, "y": 465, "score": 0.89 },
+        { "x": 355, "y": 465, "score": 0.89 }
+      ],
+      "score": 0.88,
+      "angles": {
+        "spineAngle": 35,
+        "armToSpineAngle": 25,
+        "armToVerticalAngle": 80
+      }
+    },
+    {
+      "frameIndex": 25,
+      "timestamp": 833,
+      "videoTime": 0.833,
+      "keypoints": [
+        { "x": 330, "y": 85, "score": 0.92 },
+        { "x": 320, "y": 75, "score": 0.89 },
+        { "x": 340, "y": 75, "score": 0.89 },
+        { "x": 305, "y": 80, "score": 0.85 },
+        { "x": 355, "y": 80, "score": 0.85 },
+        { "x": 290, "y": 145, "score": 0.92 },
+        { "x": 370, "y": 145, "score": 0.92 },
+        { "x": 302, "y": 200, "score": 0.89 },
+        { "x": 358, "y": 200, "score": 0.89 },
+        { "x": 312, "y": 260, "score": 0.87 },
+        { "x": 348, "y": 260, "score": 0.87 },
+        { "x": 280, "y": 276, "score": 0.92 },
+        { "x": 340, "y": 276, "score": 0.92 },
+        { "x": 278, "y": 372, "score": 0.9 },
+        { "x": 348, "y": 372, "score": 0.9 },
+        { "x": 276, "y": 464, "score": 0.88 },
+        { "x": 356, "y": 464, "score": 0.88 }
+      ],
+      "score": 0.87,
+      "angles": {
+        "spineAngle": 40,
+        "armToSpineAngle": 22,
+        "armToVerticalAngle": 60
+      }
+    },
+    {
+      "frameIndex": 26,
+      "timestamp": 867,
+      "videoTime": 0.867,
+      "keypoints": [
+        { "x": 335, "y": 100, "score": 0.91 },
+        { "x": 325, "y": 90, "score": 0.88 },
+        { "x": 345, "y": 90, "score": 0.88 },
+        { "x": 310, "y": 95, "score": 0.84 },
+        { "x": 360, "y": 95, "score": 0.84 },
+        { "x": 295, "y": 160, "score": 0.91 },
+        { "x": 375, "y": 160, "score": 0.91 },
+        { "x": 305, "y": 220, "score": 0.88 },
+        { "x": 365, "y": 220, "score": 0.88 },
+        { "x": 315, "y": 285, "score": 0.86 },
+        { "x": 355, "y": 285, "score": 0.86 },
+        { "x": 275, "y": 278, "score": 0.91 },
+        { "x": 335, "y": 278, "score": 0.91 },
+        { "x": 276, "y": 373, "score": 0.89 },
+        { "x": 346, "y": 373, "score": 0.89 },
+        { "x": 277, "y": 463, "score": 0.87 },
+        { "x": 357, "y": 463, "score": 0.87 }
+      ],
+      "score": 0.86,
+      "angles": {
+        "spineAngle": 45,
+        "armToSpineAngle": 18,
+        "armToVerticalAngle": 45
+      }
+    },
+    {
+      "frameIndex": 27,
+      "timestamp": 900,
+      "videoTime": 0.9,
+      "keypoints": [
+        { "x": 340, "y": 120, "score": 0.9 },
+        { "x": 330, "y": 110, "score": 0.87 },
+        { "x": 350, "y": 110, "score": 0.87 },
+        { "x": 315, "y": 115, "score": 0.83 },
+        { "x": 365, "y": 115, "score": 0.83 },
+        { "x": 298, "y": 170, "score": 0.9 },
+        { "x": 378, "y": 170, "score": 0.9 },
+        { "x": 308, "y": 240, "score": 0.87 },
+        { "x": 368, "y": 240, "score": 0.87 },
+        { "x": 318, "y": 310, "score": 0.85 },
+        { "x": 358, "y": 310, "score": 0.85 },
+        { "x": 272, "y": 279, "score": 0.9 },
+        { "x": 332, "y": 279, "score": 0.9 },
+        { "x": 275, "y": 374, "score": 0.88 },
+        { "x": 345, "y": 374, "score": 0.88 },
+        { "x": 278, "y": 462, "score": 0.86 },
+        { "x": 358, "y": 462, "score": 0.86 }
+      ],
+      "score": 0.85,
+      "angles": {
+        "spineAngle": 50,
+        "armToSpineAngle": 15,
+        "armToVerticalAngle": 35
+      }
+    },
+    {
+      "frameIndex": 28,
+      "timestamp": 933,
+      "videoTime": 0.933,
+      "keypoints": [
+        { "x": 350, "y": 150, "score": 0.89 },
+        { "x": 340, "y": 140, "score": 0.86 },
+        { "x": 360, "y": 140, "score": 0.86 },
+        { "x": 325, "y": 145, "score": 0.82 },
+        { "x": 375, "y": 145, "score": 0.82 },
+        { "x": 300, "y": 180, "score": 0.89 },
+        { "x": 380, "y": 180, "score": 0.89 },
+        { "x": 310, "y": 260, "score": 0.86 },
+        { "x": 370, "y": 260, "score": 0.86 },
+        { "x": 320, "y": 330, "score": 0.84 },
+        { "x": 360, "y": 330, "score": 0.84 },
+        { "x": 270, "y": 280, "score": 0.89 },
+        { "x": 330, "y": 280, "score": 0.89 },
+        { "x": 275, "y": 370, "score": 0.87 },
+        { "x": 345, "y": 370, "score": 0.87 },
+        { "x": 280, "y": 460, "score": 0.85 },
+        { "x": 360, "y": 460, "score": 0.85 }
+      ],
+      "score": 0.84,
+      "angles": {
+        "spineAngle": 55,
+        "armToSpineAngle": 12,
+        "armToVerticalAngle": 25
+      }
+    },
+    {
+      "frameIndex": 29,
+      "timestamp": 967,
+      "videoTime": 0.967,
+      "keypoints": [
+        { "x": 345, "y": 135, "score": 0.89 },
+        { "x": 335, "y": 125, "score": 0.86 },
+        { "x": 355, "y": 125, "score": 0.86 },
+        { "x": 320, "y": 130, "score": 0.82 },
+        { "x": 370, "y": 130, "score": 0.82 },
+        { "x": 298, "y": 175, "score": 0.89 },
+        { "x": 378, "y": 175, "score": 0.89 },
+        { "x": 305, "y": 245, "score": 0.86 },
+        { "x": 365, "y": 245, "score": 0.86 },
+        { "x": 312, "y": 310, "score": 0.84 },
+        { "x": 358, "y": 310, "score": 0.84 },
+        { "x": 272, "y": 279, "score": 0.89 },
+        { "x": 332, "y": 279, "score": 0.89 },
+        { "x": 276, "y": 372, "score": 0.87 },
+        { "x": 346, "y": 372, "score": 0.87 },
+        { "x": 280, "y": 462, "score": 0.85 },
+        { "x": 360, "y": 462, "score": 0.85 }
+      ],
+      "score": 0.85,
+      "angles": {
+        "spineAngle": 52,
+        "armToSpineAngle": 14,
+        "armToVerticalAngle": 30
+      }
+    },
+    {
+      "frameIndex": 30,
+      "timestamp": 1000,
+      "videoTime": 1.0,
+      "keypoints": [
+        { "x": 338, "y": 115, "score": 0.9 },
+        { "x": 328, "y": 105, "score": 0.87 },
+        { "x": 348, "y": 105, "score": 0.87 },
+        { "x": 313, "y": 110, "score": 0.83 },
+        { "x": 363, "y": 110, "score": 0.83 },
+        { "x": 294, "y": 165, "score": 0.9 },
+        { "x": 374, "y": 165, "score": 0.9 },
+        { "x": 290, "y": 215, "score": 0.87 },
+        { "x": 360, "y": 215, "score": 0.87 },
+        { "x": 285, "y": 270, "score": 0.85 },
+        { "x": 365, "y": 270, "score": 0.85 },
+        { "x": 278, "y": 277, "score": 0.9 },
+        { "x": 338, "y": 277, "score": 0.9 },
+        { "x": 279, "y": 373, "score": 0.88 },
+        { "x": 349, "y": 373, "score": 0.88 },
+        { "x": 280, "y": 463, "score": 0.86 },
+        { "x": 360, "y": 463, "score": 0.86 }
+      ],
+      "score": 0.87,
+      "angles": {
+        "spineAngle": 45,
+        "armToSpineAngle": 22,
+        "armToVerticalAngle": 55
+      }
+    },
+    {
+      "frameIndex": 31,
+      "timestamp": 1033,
+      "videoTime": 1.033,
+      "keypoints": [
+        { "x": 335, "y": 95, "score": 0.91 },
+        { "x": 325, "y": 85, "score": 0.88 },
+        { "x": 345, "y": 85, "score": 0.88 },
+        { "x": 310, "y": 90, "score": 0.84 },
+        { "x": 360, "y": 90, "score": 0.84 },
+        { "x": 290, "y": 150, "score": 0.91 },
+        { "x": 370, "y": 150, "score": 0.91 },
+        { "x": 275, "y": 185, "score": 0.88 },
+        { "x": 365, "y": 185, "score": 0.88 },
+        { "x": 260, "y": 210, "score": 0.86 },
+        { "x": 380, "y": 210, "score": 0.86 },
+        { "x": 283, "y": 275, "score": 0.91 },
+        { "x": 343, "y": 275, "score": 0.91 },
+        { "x": 281, "y": 374, "score": 0.89 },
+        { "x": 351, "y": 374, "score": 0.89 },
+        { "x": 279, "y": 464, "score": 0.87 },
+        { "x": 359, "y": 464, "score": 0.87 }
+      ],
+      "score": 0.88,
+      "angles": {
+        "spineAngle": 38,
+        "armToSpineAngle": 35,
+        "armToVerticalAngle": 90
+      }
+    },
+    {
+      "frameIndex": 32,
+      "timestamp": 1067,
+      "videoTime": 1.067,
+      "keypoints": [
+        { "x": 330, "y": 80, "score": 0.92 },
+        { "x": 320, "y": 70, "score": 0.89 },
+        { "x": 340, "y": 70, "score": 0.89 },
+        { "x": 305, "y": 75, "score": 0.85 },
+        { "x": 355, "y": 75, "score": 0.85 },
+        { "x": 285, "y": 125, "score": 0.92 },
+        { "x": 365, "y": 125, "score": 0.92 },
+        { "x": 240, "y": 150, "score": 0.89 },
+        { "x": 400, "y": 150, "score": 0.89 },
+        { "x": 200, "y": 130, "score": 0.87 },
+        { "x": 440, "y": 130, "score": 0.87 },
+        { "x": 288, "y": 272, "score": 0.92 },
+        { "x": 348, "y": 272, "score": 0.92 },
+        { "x": 283, "y": 375, "score": 0.9 },
+        { "x": 353, "y": 375, "score": 0.9 },
+        { "x": 278, "y": 465, "score": 0.88 },
+        { "x": 358, "y": 465, "score": 0.88 }
+      ],
+      "score": 0.89,
+      "angles": {
+        "spineAngle": 28,
+        "armToSpineAngle": 55,
+        "armToVerticalAngle": 135
+      }
+    },
+    {
+      "frameIndex": 33,
+      "timestamp": 1100,
+      "videoTime": 1.1,
+      "keypoints": [
+        { "x": 325, "y": 65, "score": 0.93 },
+        { "x": 315, "y": 55, "score": 0.9 },
+        { "x": 335, "y": 55, "score": 0.9 },
+        { "x": 300, "y": 60, "score": 0.86 },
+        { "x": 350, "y": 60, "score": 0.86 },
+        { "x": 282, "y": 118, "score": 0.93 },
+        { "x": 362, "y": 118, "score": 0.93 },
+        { "x": 255, "y": 155, "score": 0.9 },
+        { "x": 385, "y": 155, "score": 0.9 },
+        { "x": 220, "y": 140, "score": 0.88 },
+        { "x": 420, "y": 140, "score": 0.88 },
+        { "x": 289, "y": 271, "score": 0.93 },
+        { "x": 349, "y": 271, "score": 0.93 },
+        { "x": 284, "y": 374, "score": 0.91 },
+        { "x": 354, "y": 374, "score": 0.91 },
+        { "x": 279, "y": 464, "score": 0.89 },
+        { "x": 359, "y": 464, "score": 0.89 }
+      ],
+      "score": 0.9,
+      "angles": {
+        "spineAngle": 22,
+        "armToSpineAngle": 60,
+        "armToVerticalAngle": 145
+      }
+    },
+    {
+      "frameIndex": 34,
+      "timestamp": 1133,
+      "videoTime": 1.133,
+      "keypoints": [
+        { "x": 322, "y": 55, "score": 0.94 },
+        { "x": 312, "y": 45, "score": 0.91 },
+        { "x": 332, "y": 45, "score": 0.91 },
+        { "x": 297, "y": 50, "score": 0.87 },
+        { "x": 347, "y": 50, "score": 0.87 },
+        { "x": 281, "y": 113, "score": 0.94 },
+        { "x": 361, "y": 113, "score": 0.94 },
+        { "x": 270, "y": 165, "score": 0.91 },
+        { "x": 370, "y": 165, "score": 0.91 },
+        { "x": 255, "y": 195, "score": 0.89 },
+        { "x": 385, "y": 195, "score": 0.89 },
+        { "x": 290, "y": 270, "score": 0.94 },
+        { "x": 350, "y": 270, "score": 0.94 },
+        { "x": 285, "y": 373, "score": 0.92 },
+        { "x": 355, "y": 373, "score": 0.92 },
+        { "x": 280, "y": 463, "score": 0.9 },
+        { "x": 360, "y": 463, "score": 0.9 }
+      ],
+      "score": 0.91,
+      "angles": {
+        "spineAngle": 18,
+        "armToSpineAngle": 52,
+        "armToVerticalAngle": 155
+      }
+    },
+    {
+      "frameIndex": 35,
+      "timestamp": 1167,
+      "videoTime": 1.167,
+      "keypoints": [
+        { "x": 320, "y": 50, "score": 0.95 },
+        { "x": 310, "y": 40, "score": 0.92 },
+        { "x": 330, "y": 40, "score": 0.92 },
+        { "x": 295, "y": 45, "score": 0.88 },
+        { "x": 345, "y": 45, "score": 0.88 },
+        { "x": 280, "y": 110, "score": 0.95 },
+        { "x": 360, "y": 110, "score": 0.95 },
+        { "x": 275, "y": 180, "score": 0.92 },
+        { "x": 365, "y": 180, "score": 0.92 },
+        { "x": 270, "y": 250, "score": 0.9 },
+        { "x": 370, "y": 250, "score": 0.9 },
+        { "x": 290, "y": 270, "score": 0.95 },
+        { "x": 350, "y": 270, "score": 0.95 },
+        { "x": 285, "y": 370, "score": 0.93 },
+        { "x": 355, "y": 370, "score": 0.93 },
+        { "x": 280, "y": 460, "score": 0.91 },
+        { "x": 360, "y": 460, "score": 0.91 }
+      ],
+      "score": 0.92,
+      "angles": {
+        "spineAngle": 15,
+        "armToSpineAngle": 45,
+        "armToVerticalAngle": 160
+      }
+    }
+  ]
+}
