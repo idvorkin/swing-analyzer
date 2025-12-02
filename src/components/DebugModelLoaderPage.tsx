@@ -389,6 +389,7 @@ const DebugModelLoaderPage: React.FC = () => {
             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             playsInline
             muted
+            crossOrigin="anonymous"
           />
           <canvas
             ref={canvasRef}
