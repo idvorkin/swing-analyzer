@@ -89,7 +89,18 @@ export async function extractPosesFromVideo(
       video.onerror = () => {
         if (!settled) {
           cleanup();
-          reject(new Error('Failed to load video'));
+          const errorCode = video.error?.code;
+          const errorMessages: Record<number, string> = {
+            1: 'Video loading aborted',
+            2: 'Network error while loading video',
+            3: 'Video decoding error - unsupported codec or corrupted file',
+            4: 'Video format not supported by this browser',
+          };
+          const errorMessage = errorCode
+            ? errorMessages[errorCode] ||
+              `Unknown video error (code ${errorCode})`
+            : 'Failed to load video';
+          reject(new Error(errorMessage));
         }
       };
 
@@ -278,18 +289,49 @@ async function createPoseDetector(
  * Seek video to a specific time and wait for it to be ready
  */
 function seekToTime(video: HTMLVideoElement, time: number): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (Math.abs(video.currentTime - time) < 0.001) {
       resolve();
       return;
     }
 
-    const onSeeked = () => {
+    const SEEK_TIMEOUT_MS = 5000;
+    let settled = false;
+
+    const cleanup = () => {
+      settled = true;
+      clearTimeout(timeoutId);
       video.removeEventListener('seeked', onSeeked);
-      resolve();
+      video.removeEventListener('error', onError);
+    };
+
+    const timeoutId = setTimeout(() => {
+      if (!settled) {
+        cleanup();
+        reject(
+          new Error(
+            `Video seek timed out at ${time.toFixed(2)}s - possible video corruption`
+          )
+        );
+      }
+    }, SEEK_TIMEOUT_MS);
+
+    const onSeeked = () => {
+      if (!settled) {
+        cleanup();
+        resolve();
+      }
+    };
+
+    const onError = () => {
+      if (!settled) {
+        cleanup();
+        reject(new Error(`Video error while seeking to ${time.toFixed(2)}s`));
+      }
     };
 
     video.addEventListener('seeked', onSeeked);
+    video.addEventListener('error', onError);
     video.currentTime = time;
   });
 }
@@ -353,7 +395,8 @@ export async function isModelSupported(model: PoseModel): Promise<boolean> {
       return gl !== null;
     }
     return true;
-  } catch {
+  } catch (error) {
+    console.error(`Model support check failed for ${model}:`, error);
     return false;
   }
 }

@@ -241,8 +241,13 @@ export function usePoseTrack(
    */
   const checkForExisting = useCallback(
     async (videoFile: File): Promise<boolean> => {
-      const hash = await computeQuickVideoHash(videoFile);
-      return hasPoseTrackForVideo(hash);
+      try {
+        const hash = await computeQuickVideoHash(videoFile);
+        return hasPoseTrackForVideo(hash);
+      } catch (error) {
+        console.error('Failed to check for existing pose track:', error);
+        return false;
+      }
     },
     []
   );
@@ -251,15 +256,27 @@ export function usePoseTrack(
    * Load existing pose track by video hash
    */
   const loadExisting = useCallback(async (hash: string): Promise<boolean> => {
-    const poseTrack = await loadPoseTrackFromStorage(hash);
-    if (poseTrack) {
-      currentPoseTrackRef.current = poseTrack;
-      pipelineRef.current = new PoseTrackPipeline(poseTrack);
-      setVideoHash(hash);
-      setStatus({ type: 'ready', poseTrack, fromCache: true });
-      return true;
+    try {
+      const poseTrack = await loadPoseTrackFromStorage(hash);
+      if (poseTrack) {
+        currentPoseTrackRef.current = poseTrack;
+        pipelineRef.current = new PoseTrackPipeline(poseTrack);
+        setVideoHash(hash);
+        setStatus({ type: 'ready', poseTrack, fromCache: true });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to load existing pose track:', error);
+      setStatus({
+        type: 'error',
+        error:
+          error instanceof Error
+            ? `Failed to load saved data: ${error.message}`
+            : 'Failed to load saved pose track from storage',
+      });
+      return false;
     }
-    return false;
   }, []);
 
   /**

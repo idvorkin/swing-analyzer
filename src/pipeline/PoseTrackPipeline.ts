@@ -514,6 +514,8 @@ export function analyzePoseTrack(poseTrack: PoseTrackFile): {
     }
   }
 
+  // Get repCount before disposing pipeline
+  const repCount = pipeline.getRepCount();
   pipeline.dispose();
 
   return {
@@ -522,7 +524,7 @@ export function analyzePoseTrack(poseTrack: PoseTrackFile): {
     detectionRate: totalFrames > 0 ? framesWithPose / totalFrames : 0,
     averageConfidence:
       confidenceCount > 0 ? totalConfidence / confidenceCount : 0,
-    repCount: pipeline.getRepCount(),
+    repCount,
     duration: poseTrack.metadata.sourceVideoDuration,
   };
 }

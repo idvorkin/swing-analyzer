@@ -200,6 +200,23 @@ export async function savePoseTrackToStorage(
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([POSETRACK_STORE_NAME], 'readwrite');
+
+    transaction.onerror = () => {
+      reject(
+        new Error(
+          `Transaction failed: ${transaction.error?.message || 'Unknown error'}`
+        )
+      );
+    };
+
+    transaction.onabort = () => {
+      reject(
+        new Error(
+          'Transaction aborted. This may be due to storage quota limits.'
+        )
+      );
+    };
+
     const store = transaction.objectStore(POSETRACK_STORE_NAME);
 
     const record = {
@@ -235,6 +252,19 @@ export async function loadPoseTrackFromStorage(
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([POSETRACK_STORE_NAME], 'readonly');
+
+    transaction.onerror = () => {
+      reject(
+        new Error(
+          `Transaction failed: ${transaction.error?.message || 'Unknown error'}`
+        )
+      );
+    };
+
+    transaction.onabort = () => {
+      reject(new Error('Transaction aborted while loading pose track.'));
+    };
+
     const store = transaction.objectStore(POSETRACK_STORE_NAME);
 
     const request = store.get(videoHash);
@@ -268,6 +298,19 @@ export async function deletePoseTrackFromStorage(
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([POSETRACK_STORE_NAME], 'readwrite');
+
+    transaction.onerror = () => {
+      reject(
+        new Error(
+          `Transaction failed: ${transaction.error?.message || 'Unknown error'}`
+        )
+      );
+    };
+
+    transaction.onabort = () => {
+      reject(new Error('Transaction aborted while deleting pose track.'));
+    };
+
     const store = transaction.objectStore(POSETRACK_STORE_NAME);
 
     const request = store.delete(videoHash);
@@ -294,6 +337,19 @@ export async function listSavedPoseTracks(): Promise<SavedPoseTrackInfo[]> {
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([POSETRACK_STORE_NAME], 'readonly');
+
+    transaction.onerror = () => {
+      reject(
+        new Error(
+          `Transaction failed: ${transaction.error?.message || 'Unknown error'}`
+        )
+      );
+    };
+
+    transaction.onabort = () => {
+      reject(new Error('Transaction aborted while listing pose tracks.'));
+    };
+
     const store = transaction.objectStore(POSETRACK_STORE_NAME);
 
     const request = store.getAll();
