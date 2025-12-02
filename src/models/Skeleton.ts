@@ -493,6 +493,66 @@ export class Skeleton {
   }
 
   /**
+   * Get the bounding box of the person based on visible keypoints
+   * Returns the min/max coordinates and center point for cropping
+   *
+   * @param minConfidence - Minimum confidence score to include a keypoint (default 0.2)
+   * @param padding - Padding factor to add around the bounding box (default 0.2 = 20%)
+   */
+  getBoundingBox(
+    minConfidence: number = 0.2,
+    padding: number = 0.2
+  ): {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+    width: number;
+    height: number;
+    centerX: number;
+    centerY: number;
+  } | null {
+    // Filter keypoints with sufficient confidence
+    const visibleKeypoints = this.keypoints.filter((kp) => {
+      const confidence = kp.score ?? kp.visibility ?? 0;
+      return confidence >= minConfidence && kp.x !== 0 && kp.y !== 0;
+    });
+
+    if (visibleKeypoints.length < 3) {
+      // Not enough keypoints to calculate meaningful bounding box
+      return null;
+    }
+
+    // Calculate raw bounding box
+    const xs = visibleKeypoints.map((kp) => kp.x);
+    const ys = visibleKeypoints.map((kp) => kp.y);
+
+    const rawMinX = Math.min(...xs);
+    const rawMaxX = Math.max(...xs);
+    const rawMinY = Math.min(...ys);
+    const rawMaxY = Math.max(...ys);
+
+    const rawWidth = rawMaxX - rawMinX;
+    const rawHeight = rawMaxY - rawMinY;
+
+    // Add padding
+    const padX = rawWidth * padding;
+    const padY = rawHeight * padding;
+
+    const minX = rawMinX - padX;
+    const maxX = rawMaxX + padX;
+    const minY = rawMinY - padY;
+    const maxY = rawMaxY + padY;
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    return { minX, minY, maxX, maxY, width, height, centerX, centerY };
+  }
+
+  /**
    * Detect if the movement pattern is a HINGE or SQUAT
    *
    * Returns a score from -1 (squat) to +1 (hinge):
