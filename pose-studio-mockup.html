@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pose Studio - Swing Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Core palette - technical/dashboard feel */
+        --bg-primary: #0c1017;
+        --bg-secondary: #131a24;
+        --bg-tertiary: #1a2332;
+        --bg-elevated: #212d3b;
+
+        /* Accent - electric cyan for "data/technical" feel */
+        --accent-primary: #00d4ff;
+        --accent-primary-dim: rgba(0, 212, 255, 0.15);
+        --accent-secondary: #7c3aed;
+        --accent-success: #10b981;
+        --accent-warning: #f59e0b;
+        --accent-danger: #ef4444;
+
+        /* Text */
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --text-tertiary: #64748b;
+        --text-inverse: #0c1017;
+
+        /* Borders */
+        --border-subtle: rgba(148, 163, 184, 0.1);
+        --border-default: rgba(148, 163, 184, 0.2);
+        --border-accent: rgba(0, 212, 255, 0.3);
+
+        /* Shadows */
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+        --shadow-glow: 0 0 20px rgba(0, 212, 255, 0.2);
+
+        /* Typography */
+        --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+
+        /* Spacing */
+        --space-xs: 0.25rem;
+        --space-sm: 0.5rem;
+        --space-md: 1rem;
+        --space-lg: 1.5rem;
+        --space-xl: 2rem;
+        --space-2xl: 3rem;
+
+        /* Radius */
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 16px;
+        --radius-full: 9999px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        line-height: 1.5;
+      }
+
+      /* ===== HEADER ===== */
+      .header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: linear-gradient(180deg, var(--bg-secondary) 0%, rgba(19, 26, 36, 0.95) 100%);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border-subtle);
+        padding: var(--space-md) var(--space-xl);
+      }
+
+      .header-inner {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+      }
+
+      .logo-icon {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .logo-icon svg {
+        width: 20px;
+        height: 20px;
+        color: var(--text-inverse);
+      }
+
+      .logo-text {
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .logo-text span {
+        color: var(--accent-primary);
+      }
+
+      .nav {
+        display: flex;
+        gap: var(--space-sm);
+      }
+
+      .nav-link {
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-sm);
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+      }
+
+      .nav-link:hover {
+        color: var(--text-primary);
+        background: var(--bg-tertiary);
+      }
+
+      .nav-link.active {
+        color: var(--accent-primary);
+        background: var(--accent-primary-dim);
+      }
+
+      /* ===== MAIN LAYOUT ===== */
+      .main {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: var(--space-xl);
+      }
+
+      .page-header {
+        margin-bottom: var(--space-2xl);
+      }
+
+      .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin-bottom: var(--space-sm);
+      }
+
+      .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 1rem;
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: var(--space-xl);
+      }
+
+      @media (max-width: 1024px) {
+        .content-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ===== CARD COMPONENT ===== */
+      .card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+      }
+
+      .card-header {
+        padding: var(--space-lg);
+        border-bottom: 1px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .card-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+
+      .card-title svg {
+        width: 16px;
+        height: 16px;
+        color: var(--accent-primary);
+      }
+
+      .card-body {
+        padding: var(--space-lg);
+      }
+
+      /* ===== EXTRACTION PANEL ===== */
+      .extraction-panel {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-lg);
+      }
+
+      .drop-zone {
+        border: 2px dashed var(--border-default);
+        border-radius: var(--radius-md);
+        padding: var(--space-2xl) var(--space-lg);
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: var(--bg-tertiary);
+      }
+
+      .drop-zone:hover {
+        border-color: var(--accent-primary);
+        background: var(--accent-primary-dim);
+      }
+
+      .drop-zone.active {
+        border-color: var(--accent-primary);
+        border-style: solid;
+        background: var(--accent-primary-dim);
+        box-shadow: var(--shadow-glow);
+      }
+
+      .drop-zone-icon {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto var(--space-md);
+        color: var(--text-tertiary);
+      }
+
+      .drop-zone:hover .drop-zone-icon,
+      .drop-zone.active .drop-zone-icon {
+        color: var(--accent-primary);
+      }
+
+      .drop-zone-text {
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+      }
+
+      .drop-zone-text strong {
+        color: var(--accent-primary);
+      }
+
+      .drop-zone-hint {
+        margin-top: var(--space-xs);
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+      }
+
+      /* Video loaded state */
+      .video-loaded {
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-md);
+        padding: var(--space-md);
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+      }
+
+      .video-thumbnail {
+        width: 80px;
+        height: 60px;
+        background: var(--bg-elevated);
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-tertiary);
+        flex-shrink: 0;
+        overflow: hidden;
+      }
+
+      .video-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .video-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .video-name {
+        font-weight: 600;
+        font-size: 0.9375rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .video-meta {
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+      }
+
+      .video-remove {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        border: none;
+        background: transparent;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .video-remove:hover {
+        background: var(--accent-danger);
+        color: white;
+      }
+
+      /* Model selector */
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+      }
+
+      .form-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .select-wrapper {
+        position: relative;
+      }
+
+      .select-wrapper::after {
+        content: '';
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 5px solid transparent;
+        border-top-color: var(--text-tertiary);
+        pointer-events: none;
+      }
+
+      .form-select {
+        width: 100%;
+        padding: var(--space-md);
+        padding-right: var(--space-2xl);
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-sm);
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+        font-size: 0.9375rem;
+        cursor: pointer;
+        appearance: none;
+        transition: all 0.2s;
+      }
+
+      .form-select:hover {
+        border-color: var(--border-accent);
+      }
+
+      .form-select:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 3px var(--accent-primary-dim);
+      }
+
+      .model-hint {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+      }
+
+      .model-hint svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* Extract button */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-sm);
+        padding: var(--space-md) var(--space-lg);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-sans);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent-primary) 0%, #00a8cc 100%);
+        color: var(--text-inverse);
+        box-shadow:
+          var(--shadow-md),
+          0 0 20px rgba(0, 212, 255, 0.3);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow:
+          var(--shadow-lg),
+          0 0 30px rgba(0, 212, 255, 0.4);
+      }
+
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+
+      .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .btn-secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-default);
+      }
+
+      .btn-secondary:hover {
+        background: var(--bg-elevated);
+        border-color: var(--border-accent);
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--text-secondary);
+        padding: var(--space-sm) var(--space-md);
+      }
+
+      .btn-ghost:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+      }
+
+      .btn-sm {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 0.8125rem;
+      }
+
+      .btn-full {
+        width: 100%;
+      }
+
+      .btn svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* ===== PROGRESS PANEL ===== */
+      .progress-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .progress-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--space-lg);
+      }
+
+      .progress-stats {
+        display: flex;
+        gap: var(--space-lg);
+      }
+
+      .progress-stat {
+        text-align: center;
+      }
+
+      .progress-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        font-family: var(--font-mono);
+        color: var(--accent-primary);
+      }
+
+      .progress-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .progress-bar-container {
+        margin-bottom: var(--space-lg);
+      }
+
+      .progress-bar-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: var(--space-sm);
+        font-size: 0.8125rem;
+      }
+
+      .progress-bar-label {
+        color: var(--text-secondary);
+      }
+
+      .progress-bar-value {
+        font-family: var(--font-mono);
+        color: var(--accent-primary);
+      }
+
+      .progress-bar {
+        height: 8px;
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-full);
+        overflow: hidden;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+        border-radius: var(--radius-full);
+        transition: width 0.3s ease;
+        position: relative;
+      }
+
+      .progress-bar-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.3) 50%,
+          transparent 100%
+        );
+        animation: shimmer 1.5s infinite;
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+
+      /* Preview area */
+      .preview-container {
+        flex: 1;
+        background: var(--bg-primary);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        position: relative;
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .preview-canvas {
+        max-width: 100%;
+        max-height: 100%;
+      }
+
+      .preview-overlay {
+        position: absolute;
+        bottom: var(--space-md);
+        left: var(--space-md);
+        right: var(--space-md);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .preview-frame-info {
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+      }
+
+      .preview-controls {
+        display: flex;
+        gap: var(--space-sm);
+      }
+
+      .preview-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-sm);
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        border: none;
+        color: var(--text-primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .preview-btn:hover {
+        background: var(--accent-primary);
+        color: var(--text-inverse);
+      }
+
+      .preview-btn svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* Empty state */
+      .empty-state {
+        text-align: center;
+        padding: var(--space-2xl);
+        color: var(--text-tertiary);
+      }
+
+      .empty-state-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto var(--space-md);
+        opacity: 0.5;
+      }
+
+      .empty-state-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: var(--space-xs);
+      }
+
+      .empty-state-text {
+        font-size: 0.875rem;
+      }
+
+      /* ===== POSE FILES LIST ===== */
+      .files-section {
+        margin-top: var(--space-xl);
+      }
+
+      .files-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--space-lg);
+      }
+
+      .files-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+      }
+
+      .files-count {
+        background: var(--bg-tertiary);
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-full);
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+      }
+
+      .files-grid {
+        display: grid;
+        gap: var(--space-md);
+      }
+
+      .file-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: var(--space-lg);
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: var(--space-md);
+        align-items: center;
+        transition: all 0.2s;
+      }
+
+      .file-card:hover {
+        border-color: var(--border-accent);
+        box-shadow: var(--shadow-md);
+      }
+
+      .file-icon {
+        width: 48px;
+        height: 48px;
+        background: var(--accent-primary-dim);
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent-primary);
+      }
+
+      .file-icon svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      .file-info {
+        min-width: 0;
+      }
+
+      .file-name {
+        font-weight: 600;
+        font-size: 0.9375rem;
+        margin-bottom: var(--space-xs);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .file-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-sm);
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+      }
+
+      .file-meta-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+      }
+
+      .file-meta-item svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      .model-badge {
+        background: var(--accent-secondary);
+        color: white;
+        padding: 2px 8px;
+        border-radius: var(--radius-full);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .file-actions {
+        display: flex;
+        gap: var(--space-sm);
+      }
+
+      /* Status badges */
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-full);
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      .status-badge.extracting {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--accent-warning);
+      }
+
+      .status-badge.complete {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--accent-success);
+      }
+
+      .status-badge.error {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--accent-danger);
+      }
+
+      .status-badge svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      /* Spinner animation */
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .spin {
+        animation: spin 1s linear infinite;
+      }
+
+      /* ===== RESPONSIVE ===== */
+      @media (max-width: 768px) {
+        .main {
+          padding: var(--space-md);
+        }
+
+        .content-grid {
+          gap: var(--space-md);
+        }
+
+        .file-card {
+          grid-template-columns: 1fr;
+          text-align: center;
+        }
+
+        .file-icon {
+          margin: 0 auto;
+        }
+
+        .file-meta {
+          justify-content: center;
+        }
+
+        .file-actions {
+          justify-content: center;
+        }
+
+        .progress-stats {
+          gap: var(--space-md);
+        }
+      }
+
+      /* ===== DEMO ANIMATIONS ===== */
+      .demo-skeleton {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .skeleton-joint {
+        fill: var(--accent-primary);
+        filter: drop-shadow(0 0 6px var(--accent-primary));
+      }
+
+      .skeleton-bone {
+        stroke: var(--accent-primary);
+        stroke-width: 3;
+        stroke-linecap: round;
+        filter: drop-shadow(0 0 4px var(--accent-primary));
+      }
+
+      /* Pulse animation for joints */
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 0.8;
+        }
+      }
+
+      .skeleton-joint {
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      .skeleton-joint:nth-child(odd) {
+        animation-delay: 0.1s;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="5" r="2" />
+              <line x1="12" y1="7" x2="12" y2="14" />
+              <line x1="12" y1="10" x2="8" y2="7" />
+              <line x1="12" y1="10" x2="16" y2="7" />
+              <line x1="12" y1="14" x2="9" y2="20" />
+              <line x1="12" y1="14" x2="15" y2="20" />
+            </svg>
+          </div>
+          <div class="logo-text">Swing<span>Analyzer</span></div>
+        </div>
+        <nav class="nav">
+          <a href="/" class="nav-link">Analyzer</a>
+          <a href="/poses" class="nav-link active">Pose Studio</a>
+          <a href="/debug" class="nav-link">Debug</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <div class="page-header">
+        <h1 class="page-title">Pose Studio</h1>
+        <p class="page-subtitle">Extract, manage, and test pose data from your swing videos</p>
+      </div>
+
+      <div class="content-grid">
+        <!-- Left Panel: Extraction Controls -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Extract Poses
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="extraction-panel">
+              <!-- Drop Zone (shown when no video) -->
+              <!--
+            <div class="drop-zone" id="dropZone">
+              <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="2" y="2" width="20" height="20" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+              <p class="drop-zone-text">
+                Drop video here or <strong>browse</strong>
+              </p>
+              <p class="drop-zone-hint">MP4, MOV, WebM • Max 100MB</p>
+            </div>
+            -->
+
+              <!-- Video Loaded State (shown when video selected) -->
+              <div class="video-loaded">
+                <div class="video-thumbnail">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    width="24"
+                    height="24"
+                  >
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </div>
+                <div class="video-info">
+                  <div class="video-name">golf_swing_2024-01-15.mp4</div>
+                  <div class="video-meta">11.4s • 342 frames • 30fps</div>
+                </div>
+                <button class="video-remove" title="Remove video">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    width="16"
+                    height="16"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Model Selector -->
+              <div class="form-group">
+                <label class="form-label">Pose Model</label>
+                <div class="select-wrapper">
+                  <select class="form-select">
+                    <option value="movenet-lightning">MoveNet Lightning (Fast)</option>
+                    <option value="movenet-thunder" selected>MoveNet Thunder (Accurate)</option>
+                    <option value="blazepose" disabled>BlazePose (Coming Soon)</option>
+                  </select>
+                </div>
+                <p class="model-hint">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  Thunder recommended for golf swings
+                </p>
+              </div>
+
+              <!-- Extract Button -->
+              <button class="btn btn-primary btn-full">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                  <path d="M2 17l10 5 10-5" />
+                  <path d="M2 12l10 5 10-5" />
+                </svg>
+                Extract Poses
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Progress & Preview -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              Live Preview
+            </div>
+            <span class="status-badge extracting">
+              <svg
+                class="spin"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              Extracting...
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="progress-panel">
+              <!-- Progress Stats -->
+              <div class="progress-header">
+                <div class="progress-stats">
+                  <div class="progress-stat">
+                    <div class="progress-stat-value">201</div>
+                    <div class="progress-stat-label">Frames</div>
+                  </div>
+                  <div class="progress-stat">
+                    <div class="progress-stat-value">00:06.7</div>
+                    <div class="progress-stat-label">Time</div>
+                  </div>
+                  <div class="progress-stat">
+                    <div class="progress-stat-value">17</div>
+                    <div class="progress-stat-label">Keypoints</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Progress Bar -->
+              <div class="progress-bar-container">
+                <div class="progress-bar-header">
+                  <span class="progress-bar-label">Frame 201 of 342</span>
+                  <span class="progress-bar-value">58.8%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill" style="width: 58.8%"></div>
+                </div>
+              </div>
+
+              <!-- Preview Area -->
+              <div class="preview-container">
+                <!-- Skeleton visualization demo -->
+                <svg class="demo-skeleton" width="200" height="280" viewBox="0 0 200 280">
+                  <!-- Bones -->
+                  <line class="skeleton-bone" x1="100" y1="30" x2="100" y2="100" />
+                  <!-- spine upper -->
+                  <line class="skeleton-bone" x1="100" y1="100" x2="100" y2="160" />
+                  <!-- spine lower -->
+                  <line class="skeleton-bone" x1="100" y1="50" x2="60" y2="90" />
+                  <!-- left arm upper -->
+                  <line class="skeleton-bone" x1="60" y1="90" x2="40" y2="130" />
+                  <!-- left arm lower -->
+                  <line class="skeleton-bone" x1="100" y1="50" x2="140" y2="90" />
+                  <!-- right arm upper -->
+                  <line class="skeleton-bone" x1="140" y1="90" x2="160" y2="130" />
+                  <!-- right arm lower -->
+                  <line class="skeleton-bone" x1="100" y1="160" x2="70" y2="220" />
+                  <!-- left leg upper -->
+                  <line class="skeleton-bone" x1="70" y1="220" x2="60" y2="270" />
+                  <!-- left leg lower -->
+                  <line class="skeleton-bone" x1="100" y1="160" x2="130" y2="220" />
+                  <!-- right leg upper -->
+                  <line class="skeleton-bone" x1="130" y1="220" x2="140" y2="270" />
+                  <!-- right leg lower -->
+
+                  <!-- Joints -->
+                  <circle class="skeleton-joint" cx="100" cy="20" r="8" />
+                  <!-- head -->
+                  <circle class="skeleton-joint" cx="100" cy="50" r="5" />
+                  <!-- shoulders -->
+                  <circle class="skeleton-joint" cx="60" cy="90" r="4" />
+                  <!-- left elbow -->
+                  <circle class="skeleton-joint" cx="40" cy="130" r="4" />
+                  <!-- left wrist -->
+                  <circle class="skeleton-joint" cx="140" cy="90" r="4" />
+                  <!-- right elbow -->
+                  <circle class="skeleton-joint" cx="160" cy="130" r="4" />
+                  <!-- right wrist -->
+                  <circle class="skeleton-joint" cx="100" cy="100" r="5" />
+                  <!-- mid spine -->
+                  <circle class="skeleton-joint" cx="100" cy="160" r="5" />
+                  <!-- hips -->
+                  <circle class="skeleton-joint" cx="70" cy="220" r="4" />
+                  <!-- left knee -->
+                  <circle class="skeleton-joint" cx="60" cy="270" r="4" />
+                  <!-- left ankle -->
+                  <circle class="skeleton-joint" cx="130" cy="220" r="4" />
+                  <!-- right knee -->
+                  <circle class="skeleton-joint" cx="140" cy="270" r="4" />
+                  <!-- right ankle -->
+                </svg>
+
+                <!-- Overlay controls -->
+                <div class="preview-overlay">
+                  <div class="preview-frame-info">Frame 201 • 00:06.700</div>
+                  <div class="preview-controls">
+                    <button class="preview-btn" title="Pause">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="6" y="4" width="4" height="16" />
+                        <rect x="14" y="4" width="4" height="16" />
+                      </svg>
+                    </button>
+                    <button class="preview-btn" title="Cancel">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saved Pose Files Section -->
+      <section class="files-section">
+        <div class="files-header">
+          <h2 class="files-title">Saved Pose Files</h2>
+          <span class="files-count">3 files</span>
+        </div>
+
+        <div class="files-grid">
+          <!-- File Card 1 -->
+          <div class="file-card">
+            <div class="file-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </div>
+            <div class="file-info">
+              <div class="file-name">swing_2024-01-15.pose.json</div>
+              <div class="file-meta">
+                <span class="model-badge">Thunder</span>
+                <span class="file-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                  342 frames
+                </span>
+                <span class="file-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  11.4s
+                </span>
+                <span class="file-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  180KB
+                </span>
+              </div>
+            </div>
+            <div class="file-actions">
+              <button class="btn btn-secondary btn-sm">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                Test
+              </button>
+              <button class="btn btn-ghost btn-sm" title="Download">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+              <button class="btn btn-ghost btn-sm" title="Delete">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- File Card 2 -->
+          <div class="file-card">
+            <div class="file-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </div>
+            <div class="file-info">
+              <div class="file-name">practice_session.pose.json</div>
+              <div class="file-meta">
+                <span class="model-badge">Lightning</span>
+                <span class="file-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                  890 frames
+                </span>
+                <span class="file-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  29.6s
+                </span>
+                <span class="file-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  420KB
+                </span>
+              </div>
+            </div>
+            <div class="file-actions">
+              <button class="btn btn-secondary btn-sm">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                Test
+              </button>
+              <button class="btn btn-ghost btn-sm" title="Download">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+              <button class="btn btn-ghost btn-sm" title="Delete">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- File Card 3 - Currently extracting -->
+          <div
+            class="file-card"
+            style="border-color: var(--accent-warning); background: rgba(245, 158, 11, 0.05)"
+          >
+            <div
+              class="file-icon"
+              style="background: rgba(245, 158, 11, 0.15); color: var(--accent-warning)"
+            >
+              <svg
+                class="spin"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            </div>
+            <div class="file-info">
+              <div class="file-name">golf_swing_2024-01-15.pose.json</div>
+              <div class="file-meta">
+                <span class="status-badge extracting">
+                  <svg
+                    class="spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                  Extracting 58%
+                </span>
+                <span class="file-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                  201/342 frames
+                </span>
+              </div>
+            </div>
+            <div class="file-actions">
+              <button
+                class="btn btn-ghost btn-sm"
+                title="Cancel"
+                style="color: var(--accent-danger)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      // Demo: Drop zone interaction
+      const dropZone = document.getElementById('dropZone');
+      if (dropZone) {
+        dropZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropZone.classList.add('active');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+          dropZone.classList.remove('active');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('active');
+          // Handle file drop
+        });
+
+        dropZone.addEventListener('click', () => {
+          // Trigger file input
+        });
+      }
+
+      // Demo: Animate progress bar
+      let progress = 58.8;
+      const progressFill = document.querySelector('.progress-bar-fill');
+      const progressValue = document.querySelector('.progress-bar-value');
+      const progressLabel = document.querySelector('.progress-bar-label');
+      const frameValue = document.querySelector('.progress-stat-value');
+
+      setInterval(() => {
+        if (progress < 100) {
+          progress += 0.3;
+          const frame = Math.floor((progress / 100) * 342);
+          progressFill.style.width = `${progress}%`;
+          progressValue.textContent = `${progress.toFixed(1)}%`;
+          progressLabel.textContent = `Frame ${frame} of 342`;
+          frameValue.textContent = frame;
+        }
+      }, 100);
+    </script>
+  </body>
+</html>
