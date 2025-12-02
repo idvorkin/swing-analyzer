@@ -40,6 +40,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const [armToSpineAngle, setArmToSpineAngle] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [videoStartTime, setVideoStartTime] = useState<number | null>(null);
+  const [currentVideoFile, setCurrentVideoFile] = useState<File | null>(null);
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -527,6 +528,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     setVideoStartTime(null);
     // Do NOT reset rep count: setRepCount(0);
     setSpineAngle(0);
+    setCurrentVideoFile(null);
 
     // Reset display mode to ensure overlay is visible
     setDisplayMode(appState.displayMode);
@@ -547,6 +549,14 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       if (!videoURL) {
         throw new Error('Video URL is empty');
       }
+
+      // Fetch the video as a File for pose extraction
+      const response = await fetch(videoURL);
+      const blob = await response.blob();
+      const videoFile = new File([blob], 'swing-sample.mp4', {
+        type: 'video/mp4',
+      });
+      setCurrentVideoFile(videoFile);
 
       await frameAcquisitionRef.current.loadVideoFromURL(videoURL);
       setAppState((prev) => ({ ...prev, usingCamera: false }));
@@ -603,6 +613,9 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
       const file = event.target.files[0];
       const fileURL = URL.createObjectURL(file);
+
+      // Store the video file for pose extraction
+      setCurrentVideoFile(file);
 
       frameAcquisitionRef.current
         .loadVideoFromURL(fileURL)
@@ -749,6 +762,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     isPlaying,
     videoStartTime,
     isFullscreen,
+    currentVideoFile,
 
     // Refs
     videoRef,

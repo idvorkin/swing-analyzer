@@ -1,7 +1,9 @@
 import type React from 'react';
 import { useCallback, useEffect, useRef } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import { usePoseTrack } from '../hooks/usePoseTrack';
 import { SwingPositionName } from '../types';
+import { PoseTrackStatusBar } from './PoseTrackStatusBar';
 
 const VideoSection: React.FC = () => {
   const {
@@ -24,7 +26,24 @@ const VideoSection: React.FC = () => {
     videoStartTime,
     navigateToPreviousRep,
     navigateToNextRep,
+    currentVideoFile,
   } = useSwingAnalyzerContext();
+
+  // Pose track extraction
+  const {
+    status: poseTrackStatus,
+    startExtraction,
+    cancelExtraction,
+    savePoseTrack,
+    downloadPoseTrack: downloadPoseTrackFile,
+  } = usePoseTrack({ autoExtract: true });
+
+  // Start pose extraction when video file changes
+  useEffect(() => {
+    if (currentVideoFile) {
+      startExtraction(currentVideoFile);
+    }
+  }, [currentVideoFile, startExtraction]);
 
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);
@@ -310,6 +329,14 @@ const VideoSection: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Pose Track Status Bar */}
+      <PoseTrackStatusBar
+        status={poseTrackStatus}
+        onCancel={cancelExtraction}
+        onSave={savePoseTrack}
+        onDownload={downloadPoseTrackFile}
+      />
 
       {/* Checkpoint Filmstrip */}
       <div className="filmstrip-section">

@@ -47,27 +47,66 @@ export async function extractPosesFromVideo(
   const video = document.createElement('video');
   video.muted = true;
   video.playsInline = true;
+  video.style.display = 'none'; // Hidden but in DOM for proper loading
 
   // Load video
   const videoUrl = URL.createObjectURL(videoFile);
   video.src = videoUrl;
 
+  // Add to DOM - required for video to load in many browsers
+  document.body.appendChild(video);
+
   // Track detector for cleanup
   let detector: poseDetection.PoseDetector | null = null;
 
   try {
-    // Wait for video metadata to load
+    // Wait for video metadata to load with timeout
     await new Promise<void>((resolve, reject) => {
-      video.onloadedmetadata = () => resolve();
-      video.onerror = () => reject(new Error('Failed to load video'));
+      const METADATA_TIMEOUT_MS = 30000; // 30 second timeout
+      let settled = false;
+
+      const cleanup = () => {
+        settled = true;
+        clearTimeout(timeoutId);
+        video.onloadedmetadata = null;
+        video.onerror = null;
+      };
+
+      const timeoutId = setTimeout(() => {
+        if (!settled) {
+          cleanup();
+          reject(new Error('Timeout waiting for video metadata to load'));
+        }
+      }, METADATA_TIMEOUT_MS);
+
+      video.onloadedmetadata = () => {
+        if (!settled) {
+          cleanup();
+          resolve();
+        }
+      };
+
+      video.onerror = () => {
+        if (!settled) {
+          cleanup();
+          reject(new Error('Failed to load video'));
+        }
+      };
 
       // Handle abort
       if (options.signal?.aborted) {
+        cleanup();
         reject(new DOMException('Aborted', 'AbortError'));
+        return;
       }
-      options.signal?.addEventListener('abort', () => {
-        reject(new DOMException('Aborted', 'AbortError'));
-      });
+
+      const abortHandler = () => {
+        if (!settled) {
+          cleanup();
+          reject(new DOMException('Aborted', 'AbortError'));
+        }
+      };
+      options.signal?.addEventListener('abort', abortHandler, { once: true });
     });
 
     // Get video properties
