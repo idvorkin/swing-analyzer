@@ -47,6 +47,16 @@ export interface SkeletonTransformer {
    * Returns an Observable that emits the skeleton event
    */
   transformToSkeleton(frameEvent: FrameEvent): Observable<SkeletonEvent>;
+
+  /**
+   * Get the active model type
+   */
+  getModelType(): string;
+
+  /**
+   * Set which model to use (forces reinitialization)
+   */
+  setModelType(modelType: 'BlazePose' | 'MoveNet'): Promise<void>;
 }
 
 /**

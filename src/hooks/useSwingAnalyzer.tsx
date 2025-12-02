@@ -5,10 +5,7 @@ import {
   createFrameAcquisition,
   createPipeline,
 } from '../pipeline/PipelineFactory';
-import type {
-  SkeletonEvent,
-  SkeletonTransformer,
-} from '../pipeline/PipelineInterfaces';
+import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
 import type { AppState } from '../types';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
@@ -40,6 +37,9 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const [armToSpineAngle, setArmToSpineAngle] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [videoStartTime, setVideoStartTime] = useState<number | null>(null);
+  const [fps, setFps] = useState<number>(0);
+  const [modelType, setModelType] = useState<string>('Loading...');
+  const [analysisTime, setAnalysisTime] = useState<number>(0);
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -52,8 +52,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const frameAcquisitionRef = useRef<VideoFrameAcquisition | null>(null);
   const skeletonRendererRef = useRef<SkeletonRenderer | null>(null);
 
-  // Initialize pipeline and models - runs once on mount
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only once on mount
+  // Initialize pipeline and models
   useEffect(() => {
     const initializePipeline = async () => {
       try {
@@ -77,6 +76,19 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
           // Initialize the pipeline
           await pipeline.initialize();
+
+          // Set the model type
+          const initialModelType = pipeline.getModelType();
+          setModelType(initialModelType);
+
+          // Set initial model type on skeleton renderer
+          // Detect from model type string whether it's BlazePose or MoveNet
+          if (skeletonRendererRef.current) {
+            const modelName = initialModelType.includes('BlazePose')
+              ? 'BlazePose'
+              : 'MoveNet';
+            skeletonRendererRef.current.setModelType(modelName);
+          }
 
           setAppState((prev) => ({ ...prev, isModelLoaded: true }));
           setStatus('Ready. Upload a video or start camera.');
@@ -108,11 +120,18 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   }, []);
 
   // Setup persistent subscriptions to pipeline events and start it once
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only once on mount
   useEffect(() => {
     if (!pipelineRef.current) return;
 
     const pipeline = pipelineRef.current;
+
+    // FPS tracking
+    let frameCount = 0;
+    let lastFpsUpdate = performance.now();
+
+    // Analysis time tracking (smoothed over 3 seconds)
+    const analysisTimes: number[] = [];
+    let lastAnalysisUpdate = performance.now();
 
     // Subscribe to skeleton events to render every detected skeleton
     const skeletonSubscription = pipeline.getSkeletonEvents().subscribe({
@@ -125,6 +144,36 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
             Math.round(skeletonEvent.skeleton.getArmToVerticalAngle() || 0)
           );
           renderSkeleton(skeletonEvent.skeleton);
+
+          // Calculate FPS
+          frameCount++;
+          const now = performance.now();
+          const elapsed = now - lastFpsUpdate;
+          if (elapsed >= 1000) {
+            // Update FPS every second
+            const currentFps = Math.round((frameCount * 1000) / elapsed);
+            setFps(currentFps);
+            frameCount = 0;
+            lastFpsUpdate = now;
+          }
+
+          // Calculate analysis time (time from frame event to skeleton event)
+          const frameTimestamp = skeletonEvent.poseEvent.frameEvent.timestamp;
+          const analysisTimeMs = now - frameTimestamp;
+          analysisTimes.push(analysisTimeMs);
+
+          // Update analysis time every 3 seconds with smoothed average
+          const analysisElapsed = now - lastAnalysisUpdate;
+          if (analysisElapsed >= 3000) {
+            if (analysisTimes.length > 0) {
+              const avgTime =
+                analysisTimes.reduce((sum, t) => sum + t, 0) /
+                analysisTimes.length;
+              setAnalysisTime(Math.round(avgTime));
+              analysisTimes.length = 0; // Clear the array
+              lastAnalysisUpdate = now;
+            }
+          }
         }
       },
       error: (err) => {
@@ -168,9 +217,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
     const handlePlay = () => {
       setIsPlaying(true);
-      // Only set videoStartTime on first play, not on resume after pause
-      // This ensures checkpoint timestamps remain valid for seeking
-      setVideoStartTime((prev) => prev ?? performance.now());
+      setVideoStartTime(performance.now());
       // Don't manage pipeline here - VideoFrameAcquisition handles this internally
     };
 
@@ -276,6 +323,30 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     }
   }, []);
 
+  // Switch pose detection model
+  const switchModel = useCallback(
+    async (modelType: 'BlazePose' | 'MoveNet') => {
+      if (!pipelineRef.current) return;
+
+      setStatus(`Switching to ${modelType}...`);
+      try {
+        await pipelineRef.current.switchModel(modelType);
+        setModelType(pipelineRef.current.getModelType());
+
+        // Update skeleton renderer to use correct keypoint indices
+        if (skeletonRendererRef.current) {
+          skeletonRendererRef.current.setModelType(modelType);
+        }
+
+        setStatus('Ready. Upload a video or start camera.');
+      } catch (error) {
+        console.error('Failed to switch model:', error);
+        setStatus('Error: Failed to switch model.');
+      }
+    },
+    []
+  );
+
   // Set display mode
   const setDisplayMode = useCallback((mode: 'both' | 'video' | 'overlay') => {
     setAppState((prev) => ({ ...prev, displayMode: mode }));
@@ -321,7 +392,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const frameStep = 1 / 30; // Assuming 30fps video
 
   // Create a separate skeleton transformer for direct frame processing
-  const directSkeletonTransformerRef = useRef<SkeletonTransformer | null>(null);
+  const directSkeletonTransformerRef = useRef<any>(null);
 
   // Initialize the direct skeleton transformer
   useEffect(() => {
@@ -372,8 +443,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     directSkeletonTransformerRef.current
       .transformToSkeleton(frameEvent)
       .subscribe({
-        next: (skeletonEvent: SkeletonEvent) => {
-          if (skeletonEvent?.skeleton) {
+        next: (skeletonEvent: any) => {
+          if (skeletonEvent && skeletonEvent.skeleton) {
             // Update UI with angles
             setSpineAngle(
               Math.round(skeletonEvent.skeleton.getSpineAngle() || 0)
@@ -391,7 +462,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
             }
           }
         },
-        error: (err: unknown) => {
+        error: (err: any) => {
           console.error('Error in direct frame processing:', err);
         },
       });
@@ -420,7 +491,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     // Add event listener for when seeking is complete
     // Use { once: true } to automatically remove the listener after it's called
     videoRef.current.addEventListener('seeked', handleSeeked, { once: true });
-  }, [processCurrentFrame]);
+  }, [frameStep, processCurrentFrame]);
 
   // Move backward one frame with direct frame processing
   const previousFrame = useCallback(() => {
@@ -445,7 +516,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     // Add event listener for when seeking is complete
     // Use { once: true } to automatically remove the listener after it's called
     videoRef.current.addEventListener('seeked', handleSeeked, { once: true });
-  }, [processCurrentFrame]);
+  }, [frameStep, processCurrentFrame]);
 
   // Start camera
   const startCamera = useCallback(async () => {
@@ -530,7 +601,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
     // Reset display mode to ensure overlay is visible
     setDisplayMode(appState.displayMode);
-  }, [appState.displayMode, setDisplayMode]);
+  }, [appState.displayMode]);
 
   // Load hardcoded video
   const loadHardcodedVideo = useCallback(async () => {
@@ -585,7 +656,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       console.error('[DEBUG] loadHardcodedVideo: Error loading video:', error);
       setStatus('Error: Could not load hardcoded video.');
     }
-  }, [resetVideoAndState, appState.displayMode, setDisplayMode]);
+  }, [resetVideoAndState]);
 
   // Handle video upload
   const handleVideoUpload = useCallback(
@@ -638,7 +709,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     [resetVideoAndState]
   );
 
-  // Stop video but preserve rep count and videoStartTime (for filmstrip seeking)
+  // Stop video but preserve rep count
   const stopVideo = useCallback(() => {
     if (!videoRef.current) return;
 
@@ -646,8 +717,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     videoRef.current.pause();
     videoRef.current.currentTime = 0;
 
-    // Preserve videoStartTime so filmstrip thumbnails can still seek to checkpoints
-    // videoStartTime will be reset when a new video is loaded via resetVideoAndState
+    // Reset video start time but preserve rep count
+    setVideoStartTime(null);
     setIsPlaying(false);
 
     // Reset just the pipeline state, not the rep count
@@ -658,7 +729,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
     // Reset display mode to ensure overlay is visible
     setDisplayMode(appState.displayMode);
-  }, [appState.displayMode, setDisplayMode]);
+  }, [appState.displayMode]);
 
   // Rep navigation
   const navigateToPreviousRep = useCallback(() => {
@@ -749,6 +820,9 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     isPlaying,
     videoStartTime,
     isFullscreen,
+    fps,
+    modelType,
+    analysisTime,
 
     // Refs
     videoRef,
@@ -773,6 +847,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     setBodyPartDisplay,
     setDisplayMode,
     setDebugMode,
+    switchModel,
     navigateToPreviousRep,
     navigateToNextRep,
     getVideoContainerClass,

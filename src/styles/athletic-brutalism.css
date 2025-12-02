@@ -1,0 +1,409 @@
+/* Clean Modern Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Refined Color Palette */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-bg-elevated: #ffffff;
+  --color-border: #e9ecef;
+  --color-border-subtle: #f1f3f5;
+
+  /* Text Colors */
+  --color-text-primary: #212529;
+  --color-text-secondary: #495057;
+  --color-text-tertiary: #868e96;
+
+  /* Accent Colors */
+  --color-primary: #4c6ef5;
+  --color-primary-hover: #3b5bdb;
+  --color-success: #51cf66;
+  --color-warning: #ffd43b;
+  --color-danger: #ff6b6b;
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Roboto Mono', monospace;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-primary: #1a1b1e;
+    --color-bg-secondary: #25262b;
+    --color-bg-elevated: #2c2e33;
+    --color-border: #373a40;
+    --color-border-subtle: #2c2e33;
+
+    --color-text-primary: #f8f9fa;
+    --color-text-secondary: #ced4da;
+    --color-text-tertiary: #868e96;
+
+    --color-primary: #5c7cfa;
+    --color-primary-hover: #748ffc;
+  }
+}
+
+/* Global Overrides */
+body {
+  background: var(--color-bg-secondary) !important;
+  font-family: var(--font-sans) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Header - Clean & Simple */
+.mantine-AppShell-header {
+  background: var(--color-bg-elevated) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.mantine-AppShell-header .mantine-Title-root {
+  font-family: var(--font-sans) !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--color-text-primary) !important;
+  text-shadow: none !important;
+  text-transform: none !important;
+}
+
+/* Main Content */
+.mantine-AppShell-main {
+  background: var(--color-bg-secondary) !important;
+  padding: 32px 24px !important;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Video Section */
+.video-section {
+  margin-bottom: 32px;
+}
+
+.video-section > div:first-child {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-sm) !important;
+  padding: 16px !important;
+}
+
+/* Buttons - Modern & Clean */
+.mantine-Button-root {
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  transition: all 0.15s ease;
+}
+
+.mantine-Button-root:hover:not([data-disabled]) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.mantine-Button-root:active:not([data-disabled]) {
+  transform: translateY(0);
+}
+
+/* Video Container */
+.video-container {
+  background: var(--color-bg-primary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-md) !important;
+  overflow: hidden;
+}
+
+/* Video Controls */
+.video-controls {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent) !important;
+  backdrop-filter: blur(8px);
+  padding: 16px !important;
+}
+
+.video-controls button {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-border) !important;
+  backdrop-filter: blur(10px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .video-controls button {
+    background: rgba(44, 46, 51, 0.95) !important;
+  }
+}
+
+/* Analysis Section */
+.analysis-section > div {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-md) !important;
+  padding: 24px !important;
+}
+
+.analysis-section .mantine-Title-root {
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Badges - Modern Metrics */
+.mantine-Badge-root {
+  font-family: var(--font-sans) !important;
+  border-radius: 10px !important;
+  padding: 12px 20px !important;
+  border: 1px solid var(--color-border) !important;
+  background: var(--color-bg-secondary) !important;
+  transition: all 0.2s ease;
+}
+
+.mantine-Badge-root[data-variant="gradient"] {
+  background: linear-gradient(135deg, var(--color-primary), #4dabf7) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.mantine-Badge-root[data-variant="gradient"]:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md) !important;
+}
+
+.mantine-Badge-root .mantine-Text-root[data-size="xs"] {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.mantine-Badge-root .mantine-Text-root[data-size="lg"] {
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  font-family: var(--font-mono) !important;
+}
+
+/* Status Badge */
+.mantine-Badge-root[data-variant="light"] {
+  background: var(--color-bg-secondary) !important;
+  color: var(--color-text-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  font-weight: 500;
+}
+
+/* Checkpoint Grid */
+.checkpoint-grid-container {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--shadow-sm) !important;
+  overflow: hidden;
+}
+
+.checkpoint-cell {
+  background: var(--color-bg-primary) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease;
+}
+
+.checkpoint-cell:hover {
+  transform: scale(1.03);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary) !important;
+}
+
+.position-label {
+  background: linear-gradient(to top, var(--color-bg-primary), transparent) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: var(--color-text-primary) !important;
+  padding: 8px !important;
+  border-top: 1px solid var(--color-border);
+}
+
+.angle-label {
+  background: var(--color-bg-primary) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: var(--color-text-secondary) !important;
+  padding: 4px 8px !important;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+}
+
+.angle-label.arm-angle {
+  background: var(--color-bg-primary) !important;
+  color: var(--color-success) !important;
+  border-color: var(--color-success);
+  top: 30px !important;
+}
+
+.no-checkpoints {
+  font-family: var(--font-sans) !important;
+  color: var(--color-text-tertiary) !important;
+  font-size: 14px !important;
+}
+
+/* Fullscreen Modal */
+.fullscreen-modal {
+  background: rgba(0, 0, 0, 0.92) !important;
+  backdrop-filter: blur(12px);
+}
+
+.fullscreen-checkpoint {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.fullscreen-title {
+  font-family: var(--font-sans) !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: white !important;
+}
+
+.fullscreen-spine-angle,
+.fullscreen-arm-angle,
+.fullscreen-timestamp {
+  font-family: var(--font-mono) !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+}
+
+.fullscreen-spine-angle {
+  color: var(--color-primary) !important;
+  background: rgba(76, 110, 245, 0.15) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.fullscreen-arm-angle {
+  color: var(--color-success) !important;
+  background: rgba(81, 207, 102, 0.15) !important;
+  border-color: var(--color-success) !important;
+  margin-left: 12px !important;
+}
+
+.fullscreen-timestamp {
+  color: var(--color-warning) !important;
+  background: rgba(255, 212, 59, 0.15) !important;
+  border-color: var(--color-warning) !important;
+  margin-left: 12px !important;
+}
+
+.fullscreen-image canvas {
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Fullscreen Buttons */
+.fullscreen-nav-btn,
+.fullscreen-close-btn {
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
+  padding: 12px 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fullscreen-close-btn {
+  border-color: rgba(255, 107, 107, 0.4) !important;
+  background: rgba(255, 107, 107, 0.15) !important;
+}
+
+.fullscreen-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-1px);
+}
+
+.fullscreen-close-btn:hover {
+  background: rgba(255, 107, 107, 0.25) !important;
+  border-color: rgba(255, 107, 107, 0.6) !important;
+  transform: translateY(-1px);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .mantine-AppShell-header .mantine-Title-root {
+    font-size: 18px !important;
+  }
+
+  .mantine-AppShell-main {
+    padding: 20px 16px !important;
+  }
+
+  .analysis-section > div {
+    padding: 20px !important;
+  }
+
+  .mantine-Badge-root {
+    padding: 10px 16px !important;
+  }
+
+  .mantine-Badge-root .mantine-Text-root[data-size="lg"] {
+    font-size: 22px !important;
+  }
+
+  .fullscreen-title {
+    font-size: 18px !important;
+  }
+
+  .fullscreen-spine-angle,
+  .fullscreen-arm-angle,
+  .fullscreen-timestamp {
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+  }
+}
+
+/* Smooth Transitions */
+* {
+  transition-property: background-color, border-color, color, transform, box-shadow;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}
+
+button,
+.checkpoint-cell,
+.mantine-Badge-root {
+  transition-duration: 0.2s;
+}

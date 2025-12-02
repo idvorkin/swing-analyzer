@@ -6,10 +6,10 @@ import type {
   FormEvent,
   FormProcessor,
   FrameAcquisition,
+  RepEvent,
   RepProcessor,
   SkeletonEvent,
   SkeletonTransformer,
-  RepEvent,
 } from './PipelineInterfaces';
 
 /**
@@ -49,16 +49,16 @@ export class Pipeline {
    */
   start(): Observable<PipelineResult> {
     if (this.isActive) {
-      console.log("Pipeline already active, returning existing result subject");
+      console.log('Pipeline already active, returning existing result subject');
       return this.resultSubject.asObservable();
     }
 
-    console.log("Starting pipeline...");
+    console.log('Starting pipeline...');
     this.isActive = true;
 
     // Build the RxJS pipeline
     const frameStream = this.frameAcquisition.start();
-    console.log("Frame acquisition started");
+    console.log('Frame acquisition started');
 
     // Set up the reactive pipeline
     this.pipelineSubscription = frameStream
@@ -70,10 +70,9 @@ export class Pipeline {
 
         // Emit every skeleton event regardless of whether it results in a checkpoint
         tap((skeletonEvent) => {
-          
           // Emit the skeleton event to subscribers
           this.skeletonSubject.next(skeletonEvent);
-          
+
           // Store latest skeleton
           if (skeletonEvent.skeleton) {
             this.latestSkeleton = skeletonEvent.skeleton;
@@ -87,22 +86,26 @@ export class Pipeline {
 
         // Emit checkpoint events
         tap((checkpointEvent) => {
-          console.log(`Pipeline: Form processor emitted checkpoint for position ${checkpointEvent.position}`);
-          
+          console.log(
+            `Pipeline: Form processor emitted checkpoint for position ${checkpointEvent.position}`
+          );
+
           // Pass checkpoint event to subscribers
           this.checkpointSubject.next(checkpointEvent);
         }),
 
         // Stage 3: Rep Processing
         switchMap((checkpointEvent) => {
-          console.log("Pipeline: Passing checkpoint to rep processor");
+          console.log('Pipeline: Passing checkpoint to rep processor');
           return this.repProcessor.updateRepCount(checkpointEvent);
         }),
 
         // Update rep count and emit result
         tap((repEvent) => {
-          console.log(`Pipeline: Rep processor finished, rep count = ${repEvent.repCount}, incremented = ${repEvent.repIncremented || false}`);
-          
+          console.log(
+            `Pipeline: Rep processor finished, rep count = ${repEvent.repCount}, incremented = ${repEvent.repIncremented || false}`
+          );
+
           this.repCount = repEvent.repCount;
 
           // Pass result to observers
@@ -112,7 +115,9 @@ export class Pipeline {
               checkpoint: repEvent.checkpointEvent.checkpoint,
               repCount: repEvent.repCount,
             });
-            console.log(`Pipeline: Emitted result with rep count ${repEvent.repCount}`);
+            console.log(
+              `Pipeline: Emitted result with rep count ${repEvent.repCount}`
+            );
           }
         }),
 
@@ -121,7 +126,9 @@ export class Pipeline {
       )
       .subscribe({
         next: (_: RepEvent) => {
-          console.log(`Pipeline subscription: Processing complete for rep event`);
+          console.log(
+            `Pipeline subscription: Processing complete for rep event`
+          );
         },
         error: (error) => {
           console.error('Error in pipeline:', error);
@@ -135,10 +142,10 @@ export class Pipeline {
           this.checkpointSubject.complete();
           this.skeletonSubject.complete();
           this.isActive = false;
-        }
+        },
       });
 
-    console.log("Pipeline subscriptions set up and active");
+    console.log('Pipeline subscriptions set up and active');
     return this.resultSubject.asObservable();
   }
 
@@ -200,6 +207,20 @@ export class Pipeline {
    */
   getRepProcessor(): RepProcessor {
     return this.repProcessor;
+  }
+
+  /**
+   * Get the model type currently being used
+   */
+  getModelType(): string {
+    return this.skeletonTransformer.getModelType();
+  }
+
+  /**
+   * Switch to a different pose detection model
+   */
+  async switchModel(modelType: 'BlazePose' | 'MoveNet'): Promise<void> {
+    await this.skeletonTransformer.setModelType(modelType);
   }
 }
 

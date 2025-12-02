@@ -1,10 +1,15 @@
 import * as poseDetection from '@tensorflow-models/pose-detection';
 import '@tensorflow/tfjs-backend-webgl';
 import * as tf from '@tensorflow/tfjs-core';
-import { type Observable, from, of } from 'rxjs';
+import { from, type Observable, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Skeleton } from '../models/Skeleton';
-import { CocoBodyParts, type PoseKeypoint, type PoseResult } from '../types';
+import {
+  CocoBodyParts,
+  MediaPipeBodyParts,
+  type PoseKeypoint,
+  type PoseResult,
+} from '../types';
 import type {
   FrameEvent,
   SkeletonEvent,
@@ -20,75 +25,192 @@ export interface PoseEvent {
 }
 
 /**
- * Defines body part connections for the skeleton
+ * Get body part connections based on the active model type
  */
-export const SKELETON_CONNECTIONS = [
-  // Torso
-  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.RIGHT_SHOULDER],
-  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_HIP],
-  [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_HIP],
-  [CocoBodyParts.LEFT_HIP, CocoBodyParts.RIGHT_HIP],
+export function getSkeletonConnections(
+  modelType: 'BlazePose' | 'MoveNet' | null
+): [number, number][] {
+  if (modelType === 'BlazePose') {
+    return [
+      // Torso
+      [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.RIGHT_SHOULDER],
+      [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.LEFT_HIP],
+      [MediaPipeBodyParts.RIGHT_SHOULDER, MediaPipeBodyParts.RIGHT_HIP],
+      [MediaPipeBodyParts.LEFT_HIP, MediaPipeBodyParts.RIGHT_HIP],
 
-  // Arms
-  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_ELBOW],
-  [CocoBodyParts.LEFT_ELBOW, CocoBodyParts.LEFT_WRIST],
-  [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_ELBOW],
-  [CocoBodyParts.RIGHT_ELBOW, CocoBodyParts.RIGHT_WRIST],
+      // Arms
+      [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.LEFT_ELBOW],
+      [MediaPipeBodyParts.LEFT_ELBOW, MediaPipeBodyParts.LEFT_WRIST],
+      [MediaPipeBodyParts.RIGHT_SHOULDER, MediaPipeBodyParts.RIGHT_ELBOW],
+      [MediaPipeBodyParts.RIGHT_ELBOW, MediaPipeBodyParts.RIGHT_WRIST],
 
-  // Legs
-  [CocoBodyParts.LEFT_HIP, CocoBodyParts.LEFT_KNEE],
-  [CocoBodyParts.LEFT_KNEE, CocoBodyParts.LEFT_ANKLE],
-  [CocoBodyParts.RIGHT_HIP, CocoBodyParts.RIGHT_KNEE],
-  [CocoBodyParts.RIGHT_KNEE, CocoBodyParts.RIGHT_ANKLE],
-];
+      // Legs
+      [MediaPipeBodyParts.LEFT_HIP, MediaPipeBodyParts.LEFT_KNEE],
+      [MediaPipeBodyParts.LEFT_KNEE, MediaPipeBodyParts.LEFT_ANKLE],
+      [MediaPipeBodyParts.RIGHT_HIP, MediaPipeBodyParts.RIGHT_KNEE],
+      [MediaPipeBodyParts.RIGHT_KNEE, MediaPipeBodyParts.RIGHT_ANKLE],
+    ];
+  }
+
+  // MoveNet and fallback
+  return [
+    // Torso
+    [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.RIGHT_SHOULDER],
+    [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_HIP],
+    [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_HIP],
+    [CocoBodyParts.LEFT_HIP, CocoBodyParts.RIGHT_HIP],
+
+    // Arms
+    [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_ELBOW],
+    [CocoBodyParts.LEFT_ELBOW, CocoBodyParts.LEFT_WRIST],
+    [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_ELBOW],
+    [CocoBodyParts.RIGHT_ELBOW, CocoBodyParts.RIGHT_WRIST],
+
+    // Legs
+    [CocoBodyParts.LEFT_HIP, CocoBodyParts.LEFT_KNEE],
+    [CocoBodyParts.LEFT_KNEE, CocoBodyParts.LEFT_ANKLE],
+    [CocoBodyParts.RIGHT_HIP, CocoBodyParts.RIGHT_KNEE],
+    [CocoBodyParts.RIGHT_KNEE, CocoBodyParts.RIGHT_ANKLE],
+  ];
+}
+
+/**
+ * Singleton detector instance shared across all PoseSkeletonTransformer instances
+ * This prevents the "File exists" error when multiple instances try to initialize MediaPipe
+ */
+let sharedDetector: poseDetection.PoseDetector | null = null;
+let detectorInitPromise: Promise<void> | null = null;
+let activeModelType: 'BlazePose' | 'MoveNet' | null = null;
+let forcedModelType: 'BlazePose' | 'MoveNet' | null = null;
 
 /**
  * Skeleton transformer stage - transforms frames to skeletons using ML pose detection
  * This combines the functionality of pose detection and skeleton construction
  */
 export class PoseSkeletonTransformer implements SkeletonTransformer {
-  // Store the pose detector instance
-  private detector: poseDetection.PoseDetector | null = null;
-
   /**
-   * Initialize the pose detection model
+   * Initialize the pose detection model (uses singleton pattern)
    */
   async initialize(): Promise<void> {
-    try {
-      await tf.setBackend('webgl');
-      console.log(`Using TensorFlow.js backend: ${tf.getBackend()}`);
-
-      // Configure TensorFlow.js for better performance
-      tf.env().set('WEBGL_CPU_FORWARD', false);
-      tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
-
-      // Use MoveNet - better performance on mobile
-      const detectorConfig = {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-        enableSmoothing: true,
-        // No modelUrl - use default from tfhub.dev
-      };
-
-      this.detector = await poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
-        detectorConfig
-      );
-
-      console.log('Pose detector initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize primary model:', error);
-
-      // Try a fallback model
-      try {
-        this.detector = await poseDetection.createDetector(
-          poseDetection.SupportedModels.PoseNet
-        );
-        console.log('Fallback model initialized');
-      } catch (fallbackError) {
-        console.error('Failed to initialize fallback model:', fallbackError);
-        throw new Error('Could not initialize any pose detection model');
-      }
+    if (sharedDetector) {
+      console.log('Detector already initialized, reusing existing instance');
+      return;
     }
+
+    if (detectorInitPromise) {
+      console.log('Detector initialization in progress, waiting...');
+      return detectorInitPromise;
+    }
+
+    detectorInitPromise = this.initializeDetector();
+    return detectorInitPromise;
+  }
+
+  /**
+   * Initialize TensorFlow and create the pose detector
+   */
+  private async initializeDetector(): Promise<void> {
+    try {
+      await this.configureTensorFlow();
+
+      // If a specific model is forced, use that
+      if (forcedModelType === 'MoveNet') {
+        await this.createMoveNetFallback();
+      } else if (forcedModelType === 'BlazePose') {
+        await this.createBlazePoseDetector();
+      } else {
+        // Default: try BlazePose first, fallback to MoveNet
+        try {
+          await this.createBlazePoseDetector();
+        } catch (error) {
+          console.error('Failed to initialize BlazePose model:', error);
+          await this.createMoveNetFallback();
+        }
+      }
+    } finally {
+      detectorInitPromise = null;
+    }
+  }
+
+  private async configureTensorFlow(): Promise<void> {
+    await tf.setBackend('webgl');
+    console.log(`Using TensorFlow.js backend: ${tf.getBackend()}`);
+    tf.env().set('WEBGL_CPU_FORWARD', false);
+    tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
+  }
+
+  private async createBlazePoseDetector(): Promise<void> {
+    console.log('Starting BlazePose initialization...');
+    const config: poseDetection.BlazePoseMediaPipeModelConfig = {
+      runtime: 'mediapipe',
+      modelType: 'lite',
+      enableSmoothing: true,
+      solutionPath:
+        'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404',
+    };
+
+    sharedDetector = await poseDetection.createDetector(
+      poseDetection.SupportedModels.BlazePose,
+      config
+    );
+    activeModelType = 'BlazePose';
+    console.log('BlazePose detector initialized successfully (33 keypoints)');
+  }
+
+  private async createMoveNetFallback(): Promise<void> {
+    console.log('Attempting MoveNet fallback...');
+    const config = {
+      modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+      enableSmoothing: true,
+    };
+
+    try {
+      sharedDetector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.MoveNet,
+        config
+      );
+      activeModelType = 'MoveNet';
+      console.log('MoveNet fallback initialized (17 keypoints)');
+    } catch (fallbackError) {
+      console.error('Failed to initialize fallback model:', fallbackError);
+      throw new Error('Could not initialize any pose detection model');
+    }
+  }
+
+  /**
+   * Get the active model type
+   */
+  getModelType(): string {
+    if (!activeModelType) return 'Loading...';
+    return activeModelType === 'BlazePose'
+      ? 'BlazePose Lite (33 points)'
+      : 'MoveNet Lightning (17 points)';
+  }
+
+  /**
+   * Set which model to use (forces reinitialization)
+   */
+  async setModelType(modelType: 'BlazePose' | 'MoveNet'): Promise<void> {
+    forcedModelType = modelType;
+    await this.reinitialize();
+  }
+
+  /**
+   * Reinitialize the detector (useful for switching models)
+   */
+  async reinitialize(): Promise<void> {
+    // Dispose of current detector
+    if (sharedDetector) {
+      sharedDetector.dispose();
+      sharedDetector = null;
+      activeModelType = null;
+    }
+
+    // Reset initialization promise
+    detectorInitPromise = null;
+
+    // Reinitialize
+    await this.initialize();
   }
 
   /**
@@ -107,7 +229,7 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
    * Private method to detect pose from a frame event
    */
   private detectPose(frameEvent: FrameEvent): Observable<PoseEvent> {
-    if (!this.detector) {
+    if (!sharedDetector) {
       console.warn('Pose detector not initialized');
       return of({
         pose: null,
@@ -115,8 +237,7 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       });
     }
 
-    // Convert the Promise-based detection to an Observable
-    return from(this.detector.estimatePoses(frameEvent.frame)).pipe(
+    return from(sharedDetector.estimatePoses(frameEvent.frame)).pipe(
       map((poses) => {
         if (poses.length === 0) {
           return {
@@ -176,11 +297,15 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
    * Calculate the angle of the spine from vertical (0° is upright)
    */
   private calculateSpineVertical(keypoints: PoseKeypoint[]): number {
+    // Select correct body part indices based on active model
+    const BodyParts =
+      activeModelType === 'BlazePose' ? MediaPipeBodyParts : CocoBodyParts;
+
     // 1. First approach: Use shoulders and hips if available (best)
-    const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
-    const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
-    const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
-    const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+    const leftShoulder = keypoints[BodyParts.LEFT_SHOULDER];
+    const rightShoulder = keypoints[BodyParts.RIGHT_SHOULDER];
+    const leftHip = keypoints[BodyParts.LEFT_HIP];
+    const rightHip = keypoints[BodyParts.RIGHT_HIP];
 
     // Safe array of points that exist and are visible
     const safeShoulders = [];
@@ -214,9 +339,9 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
     }
 
     // 2. Second approach: Use face orientation as fallback
-    const nose = keypoints[CocoBodyParts.NOSE];
-    const leftEye = keypoints[CocoBodyParts.LEFT_EYE];
-    const rightEye = keypoints[CocoBodyParts.RIGHT_EYE];
+    const nose = keypoints[BodyParts.NOSE];
+    const leftEye = keypoints[BodyParts.LEFT_EYE];
+    const rightEye = keypoints[BodyParts.RIGHT_EYE];
 
     if (nose && (leftEye || rightEye) && this.isPointVisible(nose)) {
       // Use visible eye, or average of both if available
@@ -264,12 +389,16 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
    * Check if the required keypoints for pose analysis are visible
    */
   private hasRequiredKeypoints(keypoints: PoseKeypoint[]): boolean {
+    // Select correct body part indices based on active model
+    const BodyParts =
+      activeModelType === 'BlazePose' ? MediaPipeBodyParts : CocoBodyParts;
+
     // Required keypoints for spine angle calculation
     const requiredParts = [
-      CocoBodyParts.LEFT_SHOULDER,
-      CocoBodyParts.RIGHT_SHOULDER,
-      CocoBodyParts.LEFT_HIP,
-      CocoBodyParts.RIGHT_HIP,
+      BodyParts.LEFT_SHOULDER,
+      BodyParts.RIGHT_SHOULDER,
+      BodyParts.LEFT_HIP,
+      BodyParts.RIGHT_HIP,
     ];
 
     // Check if all required keypoints are visible
@@ -281,28 +410,28 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
 
   /**
    * Check if a keypoint is visible with sufficient confidence
+   * MoveNet uses 'score', BlazePose uses 'visibility'
    */
   private isPointVisible(point: PoseKeypoint): boolean {
     if (!point) {
       return false;
     }
 
-    // Different models use different confidence thresholds
-    // MoveNet uses 'score', BlazePose uses 'visibility'
-    const confidence =
-      point.score !== undefined
-        ? point.score
-        : point.visibility !== undefined
-          ? point.visibility
-          : 0;
+    const VISIBILITY_THRESHOLD = 0.2;
 
-    return confidence > 0.2; // Threshold to consider a point visible
+    if (point.score !== undefined) {
+      return point.score > VISIBILITY_THRESHOLD;
+    }
+    if (point.visibility !== undefined) {
+      return point.visibility > VISIBILITY_THRESHOLD;
+    }
+    return false;
   }
 
   /**
    * Check if detector is initialized
    */
   isInitialized(): boolean {
-    return this.detector !== null;
+    return sharedDetector !== null;
   }
 }
