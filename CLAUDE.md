@@ -46,7 +46,7 @@ This blocks direct pushes to `main` - all changes must go through PRs.
 - **main branch**: Nothing merges without a PR and human approval
 - **PR merge process**: Periodically diff dev from main, split into clean PRs, merge to main
 
-**⚠️ CRITICAL: Only humans merge to main. Agents must NEVER merge PRs without explicit human confirmation.**
+**⚠️ CRITICAL: Only humans merge to main. Agents must NEVER merge PRs to main unless the user explicitly says "YES" (uppercase). Phrases like "get it to main" or "merge it" are NOT sufficient - you must ask for confirmation and receive "YES" before merging any PR to main.**
 
 **🔄 REBASE OFTEN**: Multiple agents push to dev constantly. Always rebase before starting work:
 
