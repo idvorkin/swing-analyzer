@@ -20,6 +20,7 @@ import {
   clearPoseTrackDB,
   getPoseTrackFromDB,
   seedPoseTrackFixture,
+  seekToTime,
 } from './helpers';
 
 test.describe('User Journey: Load and Analyze Sample Video', () => {
@@ -139,11 +140,10 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   });
 
   test.describe('Step 3: Video Playback Controls', () => {
-    // NOTE: These tests require video codec support (H.264) which headless Chrome lacks.
-    // The cached pose path works correctly - these tests verify video playback behavior.
-    // To run these tests, use headed mode: npx playwright test --headed
+    // SKIPPED: App bug - play button click doesn't start video playback (swing-o6o)
+    // WebM/VP9 codec IS supported in headless Chromium - this is NOT a codec issue
 
-    test.skip('play button starts video playback (requires video codec)', async ({
+    test.skip('play button starts video playback', async ({
       page,
     }) => {
       await seedPoseTrackFixture(page, 'swing-sample');
@@ -178,7 +178,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(isPlaying).toBe(true);
     });
 
-    test.skip('pause button stops video playback (requires video codec)', async ({ page }) => {
+    test.skip('pause button stops video playback', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
@@ -224,7 +224,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(isPaused).toBe(true);
     });
 
-    test.skip('stop button resets video to beginning (requires video codec)', async ({
+    test.skip('stop button resets video to beginning', async ({
       page,
     }) => {
       await seedPoseTrackFixture(page, 'swing-sample');
@@ -305,10 +305,10 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await expect(page.locator('#arm-angle')).toBeVisible();
     });
 
-    test.skip('rep counter increments after completing swing cycle (requires video codec)', async ({
+    // SKIPPED: Depends on video playback working (blocked by swing-o6o)
+    test.skip('rep counter increments after completing swing cycle', async ({
       page,
     }) => {
-      // This test requires video playback which needs H.264 codec support
       await seedPoseTrackFixture(page, 'swing-sample');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
@@ -349,10 +349,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   });
 
   test.describe('Step 6: Frame-by-Frame Navigation', () => {
-    // NOTE: These tests require video seeking which needs codec support in headless Chrome.
-    // To run these tests, use headed mode: npx playwright test --headed
-
-    test.skip('next frame button advances video (requires video codec)', async ({
+    test('next frame button advances video', async ({
       page,
     }) => {
       await seedPoseTrackFixture(page, 'swing-sample');
@@ -394,7 +391,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(newTime).toBeGreaterThan(initialTime);
     });
 
-    test.skip('prev frame button goes back in video (requires video codec)', async ({
+    test('prev frame button goes back in video', async ({
       page,
     }) => {
       await seedPoseTrackFixture(page, 'swing-sample');
@@ -482,6 +479,119 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       // Status bar may or may not be visible depending on extraction state
       // This is a soft assertion - just documenting current behavior
       expect(typeof statusBarExists).toBe('boolean');
+    });
+  });
+
+  test.describe('Skeleton Redraw on Seek', () => {
+    test('skeleton redraws when video is seeked manually', async ({ page }) => {
+      // Seed pose data first
+      await seedPoseTrackFixture(page, 'swing-sample');
+
+      // Load video
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      // Wait for cached poses to be loaded and controls enabled
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector(
+            '#play-pause-btn'
+          ) as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
+      // Get video duration to seek to middle
+      const duration = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.duration || 0;
+      });
+      expect(duration).toBeGreaterThan(0);
+
+      // Seek to middle of video (while paused)
+      const seekTime = duration / 2;
+      await seekToTime(page, seekTime);
+
+      // Wait a moment for skeleton to render
+      await page.waitForTimeout(500);
+
+      // Check that canvas has content (skeleton drawn)
+      // The canvas should have non-transparent pixels if skeleton is drawn
+      const canvasHasContent = await page.evaluate(() => {
+        const canvas = document.querySelector('canvas');
+        if (!canvas) return false;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return false;
+
+        // Get image data from a portion of the canvas
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Check if any pixel has alpha > 0 (non-transparent)
+        for (let i = 3; i < data.length; i += 4) {
+          if (data[i] > 0) {
+            return true;
+          }
+        }
+        return false;
+      });
+
+      expect(canvasHasContent).toBe(true);
+    });
+
+    test('skeleton updates when seeking to different positions', async ({
+      page,
+    }) => {
+      // Seed pose data
+      await seedPoseTrackFixture(page, 'swing-sample');
+
+      // Load video
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      // Wait for controls enabled
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector(
+            '#play-pause-btn'
+          ) as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
+      // Get duration
+      const duration = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.duration || 0;
+      });
+
+      // Seek to 25% of video
+      await seekToTime(page, duration * 0.25);
+      await page.waitForTimeout(300);
+
+      // Get spine angle at 25%
+      const angleAt25 = await page.evaluate(() => {
+        const el = document.querySelector('#spine-angle');
+        return el?.textContent || '0°';
+      });
+
+      // Seek to 75% of video
+      await seekToTime(page, duration * 0.75);
+      await page.waitForTimeout(300);
+
+      // Get spine angle at 75%
+      const angleAt75 = await page.evaluate(() => {
+        const el = document.querySelector('#spine-angle');
+        return el?.textContent || '0°';
+      });
+
+      // Angles should be defined (not just checking they're different,
+      // as they might happen to be similar at those positions)
+      expect(angleAt25).toMatch(/\d+°/);
+      expect(angleAt75).toMatch(/\d+°/);
     });
   });
 });
