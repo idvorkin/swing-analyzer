@@ -24,6 +24,67 @@ bd dep add SWING-2 SWING-1 # SWING-1 blocks SWING-2
 
 See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 
+## PR Workflow
+
+### Splitting Messy PRs into Clean Commits
+
+When a branch has accumulated many unrelated changes:
+
+1. **Analyze the branch**: `git log main..HEAD --oneline` to see all commits
+2. **Categorize changes** into logical groups (e.g., bug fixes, new features, refactors)
+3. **Create beads issues** for each PR: `bd create --title="Merge PR #X: description" --priority=1`
+4. **Add dependencies** between PRs: `bd dep add <blocked> <blocker>`
+5. **Cherry-pick or manually copy** changes to new feature branches
+6. **Rebase each branch** on main: `git rebase origin/main`
+7. **Run code review agent** on each PR to find issues
+8. **Fix issues**, run tests, push
+
+### PR Review Checklist
+
+For each PR before merge:
+
+```bash
+git fetch origin main && git rebase origin/main  # Rebase on latest main
+npx playwright test                               # Run E2E tests
+npx tsc --noEmit                                  # Type check
+```
+
+Use code review agent to check for:
+
+- Dead code, unused variables
+- Missing error handling
+- Race conditions, memory leaks
+- Type safety issues
+
+### Tracking PRs in Beads
+
+```bash
+# Create issues for each PR
+bd create --title="Merge PR #44: BlazePose abstraction" --type=task --priority=1
+
+# Set up merge order with dependencies
+bd dep add swing-25 swing-22  # swing-25 blocked by swing-22
+
+# Check what's ready to merge
+bd ready
+
+# Check what's blocked
+bd blocked
+
+# After merging, close the issue
+bd close swing-22 --reason="Merged in PR #44"
+```
+
+### Handling Overlapping PRs
+
+When two PRs modify the same files:
+
+1. Compare with `git diff origin/branch-a origin/branch-b -- path/to/file`
+2. Identify which has better code (error handling, tests, etc.)
+3. Create a beads task to merge unique changes: `bd create --title="Merge PR #X unique changes into PR #Y"`
+4. Cherry-pick or manually copy the unique improvements
+5. Close the superseded PR
+
 ## Architecture Overview
 
 ### Pipeline Design (RxJS-based)
