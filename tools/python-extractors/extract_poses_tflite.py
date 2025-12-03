@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10,<3.12"
+# dependencies = [
+#     "tflite-runtime>=2.14.0",
+#     "opencv-python-headless>=4.8.0",
+#     "numpy<2",
+# ]
+# ///
 """
 PoseTrack Extractor (TFLite) - Extract poses using BlazePose TFLite models
 
@@ -6,11 +14,8 @@ Uses raw TFLite models without MediaPipe SDK - works on CPU without OpenGL.
 Downloads Google's BlazePose models automatically on first run.
 
 Usage:
-    uv run --with tflite-runtime --with opencv-python-headless --with numpy --with requests \
-        scripts/extract_poses_tflite.py video.mp4
-
-Requirements:
-    tflite-runtime, opencv-python-headless, numpy, requests
+    uv run tools/python-extractors/extract_poses_tflite.py video.mp4
+    uv run tools/python-extractors/extract_poses_tflite.py video.mp4 --full
 """
 
 import argparse

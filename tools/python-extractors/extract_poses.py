@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#     "mediapipe>=0.10.0",
+#     "opencv-python-headless>=4.8.0",
+#     "numpy>=1.24.0",
+# ]
+# ///
 """
 PoseTrack Extractor - Extract pose data from videos using MediaPipe BlazePose
 
@@ -6,13 +14,10 @@ Generates .posetrack.json files compatible with the Swing Analyzer app.
 This enables faster testing and batch processing without browser/WebGL.
 
 Usage:
-    python extract_poses.py video.mp4                    # Output to video.posetrack.json
-    python extract_poses.py video.mp4 -o poses.json     # Custom output path
-    python extract_poses.py video.mp4 --preview         # Show preview while extracting
-    python extract_poses.py video.mp4 --full            # Output all 33 BlazePose keypoints
-
-Requirements:
-    pip install mediapipe opencv-python numpy
+    uv run tools/python-extractors/extract_poses.py video.mp4
+    uv run tools/python-extractors/extract_poses.py video.mp4 -o poses.json
+    uv run tools/python-extractors/extract_poses.py video.mp4 --preview
+    uv run tools/python-extractors/extract_poses.py video.mp4 --full
 """
 
 import argparse
