@@ -105,6 +105,11 @@ export function useFilmstripCapture(
       abortControllerRef.current = null;
     }
 
+    // Stop any ongoing loading/playback from previous source
+    video.pause();
+    video.src = ''; // Clear previous source to stop network requests
+    video.load(); // Reset internal state
+
     currentSrcRef.current = videoSrc;
     pendingRequestsRef.current = []; // Clear pending requests
 
@@ -258,6 +263,12 @@ export function useFilmstripCapture(
   const requestCaptures = useCallback(
     (requests: CaptureRequest[]) => {
       if (requests.length === 0) return;
+
+      // If already capturing, abort current session and start fresh
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
 
       pendingRequestsRef.current = requests;
       processCaptureQueue();
