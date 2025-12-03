@@ -1,0 +1,20 @@
+# Python dependencies for pose extraction scripts
+#
+# TWO OPTIONS:
+#
+# 1. Full MediaPipe (extract_poses.py) - best accuracy, needs libGL
+#    sudo apt-get install libgl1   # Required system dependency
+#    uv run --with mediapipe --with opencv-python-headless --with numpy \
+#        scripts/extract_poses.py video.mp4
+#
+# 2. TFLite-only (extract_poses_tflite.py) - no system deps, works anywhere
+#    uv run --python 3.11 --with tflite-runtime --with opencv-python-headless \
+#        --with "numpy<2" scripts/extract_poses_tflite.py video.mp4
+
+# For extract_poses.py (MediaPipe)
+mediapipe>=0.10.0
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
+
+# For extract_poses_tflite.py (requires Python 3.11, numpy<2)
+# tflite-runtime>=2.14.0
