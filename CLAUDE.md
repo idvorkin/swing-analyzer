@@ -31,8 +31,9 @@ See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 
 ### Branch Strategy
 
-- **dev branch**: Agents work freely here without PRs
-- **main branch**: Nothing merges without a PR
+- **feature branches**: Agents work here, one branch per task
+- **dev branch**: Feature branches merge here after local review
+- **main branch**: Nothing merges without a PR and human approval
 - **PR merge process**: Periodically diff dev from main, split into clean PRs, merge to main
 
 **⚠️ CRITICAL: Only humans merge to main. Agents must NEVER merge PRs without explicit human confirmation.**
@@ -42,6 +43,16 @@ See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 ```bash
 git fetch origin && git rebase origin/dev
 ```
+
+### Merging Feature Branches to Dev
+
+Before merging your feature branch to dev:
+
+1. **Rebase on dev**: `git fetch origin && git rebase origin/dev`
+2. **Run PR review agent locally**: Use code-reviewer subagent to check for issues
+3. **Fix any issues** found by the review
+4. **Run tests**: `npx playwright test && npx tsc --noEmit`
+5. **Merge to dev**: `git checkout dev && git merge feature-branch && git push`
 
 ### Splitting Dev Branch into Clean PRs
 
