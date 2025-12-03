@@ -9,6 +9,7 @@ import * as poseDetection from '@tensorflow-models/pose-detection';
 import '@tensorflow/tfjs-backend-webgl';
 import * as tf from '@tensorflow/tfjs-core';
 import { Skeleton } from '../models/Skeleton';
+import { normalizeToCocoFormat } from '../pipeline/KeypointAdapter';
 import type { PoseKeypoint } from '../types';
 import type {
   PoseExtractionOptions,
@@ -162,13 +163,20 @@ export async function extractPosesFromVideo(
       // Detect pose
       const poses = await detector.estimatePoses(canvas);
 
+      // Get keypoints and normalize to COCO format if using BlazePose
+      let keypoints: PoseKeypoint[] = [];
+      if (poses.length > 0) {
+        const rawKeypoints = poses[0].keypoints as PoseKeypoint[];
+        // BlazePose returns 33 keypoints, normalize to COCO 17-keypoint format
+        keypoints = normalizeToCocoFormat(rawKeypoints);
+      }
+
       // Create frame data
       const frame: PoseTrackFrame = {
         frameIndex,
         timestamp: Math.round(video.currentTime * 1000),
         videoTime: video.currentTime,
-        keypoints:
-          poses.length > 0 ? (poses[0].keypoints as PoseKeypoint[]) : [],
+        keypoints,
         score: poses.length > 0 ? poses[0].score : undefined,
       };
 
@@ -284,6 +292,7 @@ async function createPoseDetector(
         poseDetection.SupportedModels.BlazePose,
         {
           runtime: 'tfjs',
+          modelType: 'lite',
           enableSmoothing: false,
         }
       );

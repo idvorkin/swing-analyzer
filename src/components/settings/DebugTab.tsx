@@ -1,6 +1,22 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import type { PoseModel } from '../../config/modelConfig';
 import { useSwingAnalyzerContext } from '../../contexts/SwingAnalyzerContext';
 import { SettingsRow } from './SettingsRow';
+
+// Storage key for model preference
+const MODEL_STORAGE_KEY = 'swing-analyzer-pose-model';
+
+// Get saved model preference
+export function getSavedModelPreference(): PoseModel {
+  const saved = localStorage.getItem(MODEL_STORAGE_KEY);
+  return saved === 'blazepose' ? 'blazepose' : 'movenet';
+}
+
+// Save model preference
+function saveModelPreference(model: PoseModel): void {
+  localStorage.setItem(MODEL_STORAGE_KEY, model);
+}
 
 // Wrench icon for debug tools
 const WrenchIcon = () => (
@@ -25,6 +41,18 @@ interface DebugTabProps {
 
 export function DebugTab({ onClose }: DebugTabProps) {
   const { appState, setDisplayMode } = useSwingAnalyzerContext();
+  const [selectedModel, setSelectedModel] = useState<PoseModel>(
+    getSavedModelPreference()
+  );
+  const [needsReload, setNeedsReload] = useState(false);
+
+  const handleModelChange = (model: PoseModel) => {
+    const previousModel = getSavedModelPreference();
+    setSelectedModel(model);
+    saveModelPreference(model);
+    // Only show reload prompt if model actually changed
+    setNeedsReload(model !== previousModel);
+  };
 
   return (
     <div className="settings-section">
@@ -72,6 +100,80 @@ export function DebugTab({ onClose }: DebugTabProps) {
           <span className="settings-radio-desc">Show only skeleton</span>
         </label>
       </div>
+
+      {/* Pose Model Selection */}
+      <SettingsRow
+        icon="🤖"
+        iconVariant="purple"
+        title="Pose Detection Model"
+        subtitle="Choose ML model for pose estimation"
+      />
+
+      <div className="settings-radio-group">
+        <label className="settings-radio-option">
+          <input
+            type="radio"
+            name="pose-model"
+            value="movenet"
+            checked={selectedModel === 'movenet'}
+            onChange={() => handleModelChange('movenet')}
+          />
+          <span className="settings-radio-label">MoveNet Lightning</span>
+          <span className="settings-radio-desc">
+            Fast, 17 keypoints (default)
+          </span>
+        </label>
+
+        <label className="settings-radio-option">
+          <input
+            type="radio"
+            name="pose-model"
+            value="blazepose"
+            checked={selectedModel === 'blazepose'}
+            onChange={() => handleModelChange('blazepose')}
+          />
+          <span className="settings-radio-label">BlazePose Lite</span>
+          <span className="settings-radio-desc">
+            33 keypoints, more detailed
+          </span>
+        </label>
+      </div>
+
+      {needsReload && (
+        <div
+          style={{
+            marginTop: '0.5rem',
+            padding: '0.5rem',
+            background: '#2a2a3e',
+            borderRadius: '8px',
+          }}
+        >
+          <p
+            style={{
+              margin: '0 0 0.5rem 0',
+              fontSize: '0.875rem',
+              color: '#fbbf24',
+            }}
+          >
+            Reload required to apply model change
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#6366f1',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+            }}
+          >
+            Reload Now
+          </button>
+        </div>
+      )}
 
       {/* Debug Tools Link */}
       <div style={{ marginTop: '0.5rem' }}>
