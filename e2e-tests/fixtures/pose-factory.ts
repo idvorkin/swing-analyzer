@@ -13,10 +13,10 @@ import type {
   PrecomputedAngles,
 } from '../../src/types/posetrack';
 
-// Video hash for swing-sample.mp4 (computed from the actual file)
+// Video hash for swing-sample.webm (computed from the actual file)
 // This allows fixtures to match the hardcoded sample video
 export const SWING_SAMPLE_VIDEO_HASH =
-  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  '036de1481e14531ca6a3b30003c24e81cef8cdcb0733baad0a77730b11f85130';
 
 /**
  * COCO keypoint indices for reference

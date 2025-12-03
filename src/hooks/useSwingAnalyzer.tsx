@@ -563,7 +563,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       // Reset state and stop current video
       resetVideoAndState();
 
-      const videoURL = '/videos/swing-sample.mp4';
+      // Use WebM format for better headless browser compatibility (VP9 codec is open-source)
+      const videoURL = '/videos/swing-sample.webm';
 
       if (!videoURL) {
         throw new Error('Video URL is empty');
@@ -572,8 +573,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       // Fetch the video as a File for pose extraction
       const response = await fetch(videoURL);
       const blob = await response.blob();
-      const videoFile = new File([blob], 'swing-sample.mp4', {
-        type: 'video/mp4',
+      const videoFile = new File([blob], 'swing-sample.webm', {
+        type: 'video/webm',
       });
       setCurrentVideoFile(videoFile);
 
