@@ -21,6 +21,7 @@ import type {
   PrecomputedAngles,
 } from '../types/posetrack';
 import { computeQuickVideoHash } from '../utils/videoHash';
+import type { PoseDetectorFactory } from './MockPoseDetector';
 import { createPoseTrackMetadata } from './PoseTrackService';
 
 /**
@@ -34,10 +35,15 @@ const MODEL_VERSIONS: Record<PoseModel, string> = {
 
 /**
  * Extract poses from a video file
+ *
+ * @param videoFile - The video file to extract poses from
+ * @param options - Extraction options (model, callbacks, etc.)
+ * @param detectorFactory - Optional factory for creating pose detector (for testing with mocks)
  */
 export async function extractPosesFromVideo(
   videoFile: File,
-  options: PoseExtractionOptions
+  options: PoseExtractionOptions,
+  detectorFactory?: PoseDetectorFactory
 ): Promise<PoseExtractionResult> {
   const startTime = performance.now();
 
@@ -128,8 +134,10 @@ export async function extractPosesFromVideo(
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
 
-    // Initialize pose detector
-    detector = await createPoseDetector(options.model);
+    // Initialize pose detector (use factory if provided, otherwise create real detector)
+    detector = detectorFactory
+      ? await detectorFactory()
+      : await createPoseDetector(options.model);
 
     // Create canvas for frame extraction
     const canvas = document.createElement('canvas');

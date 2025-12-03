@@ -27,3 +27,11 @@ export {
   waitForCachedPoseTrack,
   waitForModelReady,
 } from './video';
+
+// Mock pose detector helpers
+export {
+  clearMockPoseDetector,
+  isMockPoseDetectorAvailable,
+  setupMockPoseDetector,
+  setupMockPoseDetectorWithData,
+} from './mockPoseDetector';

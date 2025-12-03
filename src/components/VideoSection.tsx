@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 import { useFilmstripCapture, type CaptureRequest } from '../hooks/useFilmstripCapture';
 import { usePoseTrack } from '../hooks/usePoseTrack';
-import type { BatchAnalysisResult } from '../pipeline/SwingAnalyzer';
 import { SwingPositionName } from '../types';
 import { PoseTrackStatusBar } from './PoseTrackStatusBar';
 
@@ -108,7 +107,7 @@ const VideoSection: React.FC = () => {
   // Filmstrip frame capture (uses hidden video element)
   const {
     capturedFrames,
-    isCapturing,
+    isCapturing: _isCapturing, // Available for future loading indicator
     requestCaptures,
   } = useFilmstripCapture({ videoSrc });
 

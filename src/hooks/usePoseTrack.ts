@@ -13,6 +13,7 @@ import {
   extractPosesFromVideo,
   getModelDisplayName,
 } from '../services/PoseExtractor';
+import { getMockDetectorFactory } from '../services/testSetup';
 import {
   downloadPoseTrack,
   hasPoseTrackForVideo,
@@ -35,6 +36,8 @@ export interface UsePoseTrackOptions {
   defaultModel?: PoseModel;
   /** Pre-compute angles during extraction (default: true) */
   precomputeAngles?: boolean;
+  /** Optional detector factory for testing with mocks */
+  detectorFactory?: () => Promise<import('@tensorflow-models/pose-detection').PoseDetector>;
 }
 
 export interface UsePoseTrackReturn {
@@ -75,6 +78,7 @@ export function usePoseTrack(
     autoExtract = true,
     defaultModel = 'movenet-lightning',
     precomputeAngles = true,
+    detectorFactory,
   } = options;
 
   // State
@@ -181,29 +185,36 @@ export function usePoseTrack(
       const BATCH_ANALYSIS_INTERVAL = 30; // Run batch analysis every 30 frames (~1 sec at 30fps)
 
       try {
-        const result = await extractPosesFromVideo(videoFile, {
-          model,
-          precomputeAngles,
-          signal: controller.signal,
-          onProgress: (progress: PoseExtractionProgress) => {
-            // Run batch analysis periodically during extraction
-            let batchRepCount: number | undefined;
-            let batchAnalysis: ReturnType<typeof SwingAnalyzer.analyzeFrames> | undefined;
-            if (progress.currentFrame - lastBatchAnalysisFrame >= BATCH_ANALYSIS_INTERVAL) {
-              const frames = liveCache.getAllFrames();
-              if (frames.length > 0) {
-                batchAnalysis = SwingAnalyzer.analyzeFrames(frames);
-                batchRepCount = batchAnalysis.repCount;
-                lastBatchAnalysisFrame = progress.currentFrame;
+        // Use explicit factory, or check for global mock (for E2E tests), or use real detector
+        const factory = detectorFactory ?? getMockDetectorFactory();
+
+        const result = await extractPosesFromVideo(
+          videoFile,
+          {
+            model,
+            precomputeAngles,
+            signal: controller.signal,
+            onProgress: (progress: PoseExtractionProgress) => {
+              // Run batch analysis periodically during extraction
+              let batchRepCount: number | undefined;
+              let batchAnalysis: ReturnType<typeof SwingAnalyzer.analyzeFrames> | undefined;
+              if (progress.currentFrame - lastBatchAnalysisFrame >= BATCH_ANALYSIS_INTERVAL) {
+                const frames = liveCache.getAllFrames();
+                if (frames.length > 0) {
+                  batchAnalysis = SwingAnalyzer.analyzeFrames(frames);
+                  batchRepCount = batchAnalysis.repCount;
+                  lastBatchAnalysisFrame = progress.currentFrame;
+                }
               }
-            }
-            setStatus({ type: 'extracting', progress, batchRepCount, batchAnalysis });
+              setStatus({ type: 'extracting', progress, batchRepCount, batchAnalysis });
+            },
+            // Stream each frame to the live cache as it's extracted
+            onFrameExtracted: (frame) => {
+              liveCache.addFrame(frame);
+            },
           },
-          // Stream each frame to the live cache as it's extracted
-          onFrameExtracted: (frame) => {
-            liveCache.addFrame(frame);
-          },
-        });
+          factory
+        );
 
         // Mark cache as complete with metadata
         liveCache.markComplete(result.poseTrack.metadata);
