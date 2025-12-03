@@ -19,6 +19,10 @@ import {
   loadPoseTrackFromStorage,
   savePoseTrackToStorage,
 } from '../services/PoseTrackService';
+import {
+  recordExtractionComplete,
+  recordExtractionCancel,
+} from '../services/SessionRecorder';
 import type {
   PoseExtractionProgress,
   PoseModel,
@@ -225,6 +229,14 @@ export function usePoseTrack(
           fromCache: false,
         });
 
+        // Record extraction completion for debugging
+        recordExtractionComplete({
+          frameCount: result.poseTrack.frames.length,
+          extractionTimeMs: result.extractionTimeMs,
+          extractionFps: result.extractionFps,
+          model,
+        });
+
         console.log(
           `Pose extraction complete: ${result.poseTrack.frames.length} frames in ${(result.extractionTimeMs / 1000).toFixed(1)}s (${result.extractionFps.toFixed(1)} fps)`
         );
@@ -236,6 +248,7 @@ export function usePoseTrack(
         }
 
         if (error instanceof DOMException && error.name === 'AbortError') {
+          recordExtractionCancel();
           setStatus({ type: 'none' });
         } else {
           console.error('Pose extraction failed:', error);

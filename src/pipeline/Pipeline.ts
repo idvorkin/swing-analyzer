@@ -213,11 +213,16 @@ export class Pipeline {
    * Used for batch/extraction mode where frames come from extraction
    * rather than video playback.
    *
-   * Returns the rep count after processing.
+   * @param skeletonEvent - The skeleton event to process
+   * @param emitToSubscribers - Whether to emit skeleton events to subscribers (default: false for extraction mode)
+   * @returns The rep count after processing
    */
-  async processSkeletonEvent(skeletonEvent: SkeletonEvent): Promise<number> {
-    // Emit to skeleton subscribers
-    this.skeletonSubject.next(skeletonEvent);
+  async processSkeletonEvent(skeletonEvent: SkeletonEvent, emitToSubscribers = false): Promise<number> {
+    // Only emit to skeleton subscribers if explicitly requested
+    // During extraction, we don't want to render skeletons to the canvas
+    if (emitToSubscribers) {
+      this.skeletonSubject.next(skeletonEvent);
+    }
 
     // Store latest skeleton
     if (skeletonEvent.skeleton) {

@@ -94,6 +94,12 @@ export class SwingFormProcessor implements FormProcessor {
   // Track if standing calibration has been done
   private isCalibrated = false;
 
+  // Track if we're in batch/extraction mode (frame is null)
+  private isBatchMode = false;
+
+  // Store current skeleton keypoints for batch mode rendering
+  private currentKeypoints: Array<{ x: number; y: number; score?: number }> = [];
+
   constructor(
     private videoElement: HTMLVideoElement,
     private canvasElement: HTMLCanvasElement
@@ -114,6 +120,14 @@ export class SwingFormProcessor implements FormProcessor {
     // If no skeleton was detected, return empty observable
     if (!skeletonEvent.skeleton) {
       return EMPTY;
+    }
+
+    // Detect batch/extraction mode: frame is null when processing extracted frames
+    this.isBatchMode = skeletonEvent.poseEvent.frameEvent.frame === null;
+
+    // Store current keypoints for batch mode rendering
+    if (skeletonEvent.poseEvent.pose?.keypoints) {
+      this.currentKeypoints = skeletonEvent.poseEvent.pose.keypoints;
     }
 
     const skeleton = skeletonEvent.skeleton;
@@ -484,6 +498,9 @@ export class SwingFormProcessor implements FormProcessor {
    * The crop is a square region centered on the detected person's bounding box.
    * If no bounding box is available, falls back to center crop.
    *
+   * In batch/extraction mode, renders skeleton on a dark background since
+   * the video element is at the wrong frame.
+   *
    * @param skeleton - The skeleton to use for person-centered cropping
    */
   private captureCurrentFrame(skeleton?: Skeleton): ImageData {
@@ -496,23 +513,34 @@ export class SwingFormProcessor implements FormProcessor {
     let imageData = new ImageData(1, 1); // Default
 
     if (tempCtx) {
-      // First draw the video frame
-      tempCtx.drawImage(
-        this.videoElement,
-        0,
-        0,
-        tempCanvas.width,
-        tempCanvas.height
-      );
+      if (this.isBatchMode) {
+        // In batch mode, render skeleton on dark background
+        // The video element is at the wrong frame during extraction
+        tempCtx.fillStyle = '#1a1a2e';
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
-      // Then draw the canvas with the skeleton overlay
-      tempCtx.drawImage(
-        this.canvasElement,
-        0,
-        0,
-        tempCanvas.width,
-        tempCanvas.height
-      );
+        // Render skeleton programmatically
+        this.renderSkeletonToContext(tempCtx, this.currentKeypoints, tempCanvas.width, tempCanvas.height);
+      } else {
+        // Normal mode: draw video frame then canvas overlay
+        // First draw the video frame
+        tempCtx.drawImage(
+          this.videoElement,
+          0,
+          0,
+          tempCanvas.width,
+          tempCanvas.height
+        );
+
+        // Then draw the canvas with the skeleton overlay
+        tempCtx.drawImage(
+          this.canvasElement,
+          0,
+          0,
+          tempCanvas.width,
+          tempCanvas.height
+        );
+      }
 
       // Calculate crop region centered on the person
       const cropSize = this.calculatePersonCenteredCrop(
@@ -531,6 +559,58 @@ export class SwingFormProcessor implements FormProcessor {
     }
 
     return imageData;
+  }
+
+  /**
+   * Render skeleton keypoints and connections to a canvas context
+   * Used in batch mode when we can't capture from the main video/canvas
+   */
+  private renderSkeletonToContext(
+    ctx: CanvasRenderingContext2D,
+    keypoints: Array<{ x: number; y: number; score?: number }>,
+    width: number,
+    height: number
+  ): void {
+    if (!keypoints || keypoints.length === 0) return;
+
+    // COCO keypoint connections (pairs of indices)
+    const connections = [
+      [5, 6], // shoulders
+      [5, 7], [7, 9], // left arm
+      [6, 8], [8, 10], // right arm
+      [5, 11], [6, 12], // torso sides
+      [11, 12], // hips
+      [11, 13], [13, 15], // left leg
+      [12, 14], [14, 16], // right leg
+    ];
+
+    const minScore = 0.3;
+
+    // Draw connections
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+
+    for (const [i, j] of connections) {
+      const p1 = keypoints[i];
+      const p2 = keypoints[j];
+      if (p1 && p2 && (p1.score ?? 1) >= minScore && (p2.score ?? 1) >= minScore) {
+        ctx.beginPath();
+        ctx.moveTo(p1.x * width, p1.y * height);
+        ctx.lineTo(p2.x * width, p2.y * height);
+        ctx.stroke();
+      }
+    }
+
+    // Draw keypoints
+    ctx.fillStyle = '#f472b6';
+    for (const kp of keypoints) {
+      if (kp && (kp.score ?? 1) >= minScore) {
+        ctx.beginPath();
+        ctx.arc(kp.x * width, kp.y * height, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   }
 
   /**

@@ -179,6 +179,7 @@ export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEven
       frameEvent: {
         frame: null as unknown as HTMLVideoElement, // Not used in batch mode
         timestamp: frame.timestamp,
+        videoTime: frame.videoTime, // Include video time for seeking
       },
     },
   };
