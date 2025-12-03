@@ -179,10 +179,12 @@ export interface PoseExtractionResult {
 /**
  * Status of pose track for a video
  */
+import type { BatchAnalysisResult } from '../pipeline/SwingAnalyzer';
+
 export type PoseTrackStatus =
   | { type: 'none' }
-  | { type: 'extracting'; progress: PoseExtractionProgress; batchRepCount?: number }
-  | { type: 'ready'; poseTrack: PoseTrackFile; fromCache: boolean; batchRepCount?: number }
+  | { type: 'extracting'; progress: PoseExtractionProgress; batchRepCount?: number; batchAnalysis?: BatchAnalysisResult }
+  | { type: 'ready'; poseTrack: PoseTrackFile; fromCache: boolean; batchRepCount?: number; batchAnalysis?: BatchAnalysisResult }
   | { type: 'error'; error: string };
 
 /**

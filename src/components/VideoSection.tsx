@@ -115,11 +115,16 @@ const VideoSection: React.FC = () => {
     [videoRef]
   );
 
+  // Get batch analysis from poseTrackStatus
+  const batchAnalysis = (poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'extracting')
+    ? poseTrackStatus.batchAnalysis
+    : undefined;
+
   // Render the filmstrip
   // biome-ignore lint/correctness/useExhaustiveDependencies: positionOrder and positionNames are stable
   const renderFilmstrip = useCallback(() => {
     const container = filmstripRef.current;
-    if (!container || !pipelineRef.current) return;
+    if (!container) return;
 
     container.innerHTML = '';
 
@@ -129,70 +134,107 @@ const VideoSection: React.FC = () => {
       return;
     }
 
-    const repProcessor = pipelineRef.current.getRepProcessor();
-    if (!repProcessor) return;
+    // Try to get reps from pipeline first (has images)
+    let hasRenderedFromPipeline = false;
+    if (pipelineRef.current) {
+      const repProcessor = pipelineRef.current.getRepProcessor();
+      if (repProcessor) {
+        const completedReps = repProcessor.getAllReps();
+        if (completedReps.length > 0) {
+          const currentRep = completedReps[appState.currentRepIndex];
+          if (currentRep) {
+            hasRenderedFromPipeline = true;
+            const strip = document.createElement('div');
+            strip.className = 'filmstrip';
 
-    const completedReps = repProcessor.getAllReps();
-    if (completedReps.length === 0) return;
+            positionOrder.forEach((position) => {
+              const checkpoint = currentRep.checkpoints.get(position);
+              const thumb = document.createElement('div');
+              thumb.className = 'filmstrip-thumb';
 
-    const currentRep = completedReps[appState.currentRepIndex];
-    if (!currentRep) return;
+              if (checkpoint) {
+                const canvas = document.createElement('canvas');
+                canvas.width = checkpoint.image.width;
+                canvas.height = checkpoint.image.height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.putImageData(checkpoint.image, 0, 0);
+                }
+                thumb.appendChild(canvas);
 
-    // Create filmstrip
-    const strip = document.createElement('div');
-    strip.className = 'filmstrip';
+                const label = document.createElement('div');
+                label.className = 'filmstrip-label';
+                label.textContent = positionNames[position];
+                thumb.appendChild(label);
 
-    positionOrder.forEach((position) => {
-      const checkpoint = currentRep.checkpoints.get(position);
-      const thumb = document.createElement('div');
-      thumb.className = 'filmstrip-thumb';
+                let videoTimeSec: number | null = null;
+                if (checkpoint.videoTime !== undefined) {
+                  videoTimeSec = checkpoint.videoTime;
+                } else if (videoStartTime) {
+                  videoTimeSec = (checkpoint.timestamp - videoStartTime) / 1000;
+                }
 
-      if (checkpoint) {
-        const canvas = document.createElement('canvas');
-        canvas.width = checkpoint.image.width;
-        canvas.height = checkpoint.image.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.putImageData(checkpoint.image, 0, 0);
+                if (videoTimeSec !== null) {
+                  const seekTime = videoTimeSec;
+                  thumb.addEventListener('click', () => seekToVideoTime(seekTime));
+                  thumb.style.cursor = 'pointer';
+                }
+              } else {
+                thumb.innerHTML = `<div class="filmstrip-empty-thumb">${positionNames[position]}</div>`;
+              }
+
+              strip.appendChild(thumb);
+            });
+
+            container.appendChild(strip);
+          }
         }
-        thumb.appendChild(canvas);
-
-        // Add label
-        const label = document.createElement('div');
-        label.className = 'filmstrip-label';
-        label.textContent = positionNames[position];
-        thumb.appendChild(label);
-
-        // Calculate video time: use videoTime if available, otherwise calculate from timestamp
-        let videoTimeSec: number | null = null;
-        if (checkpoint.videoTime !== undefined) {
-          videoTimeSec = checkpoint.videoTime;
-        } else if (videoStartTime) {
-          videoTimeSec = (checkpoint.timestamp - videoStartTime) / 1000;
-        }
-
-        // Click to seek (capture videoTimeSec in closure)
-        if (videoTimeSec !== null) {
-          const seekTime = videoTimeSec;
-          thumb.addEventListener('click', () => {
-            seekToVideoTime(seekTime);
-          });
-          thumb.style.cursor = 'pointer';
-        }
-      } else {
-        thumb.innerHTML = `<div class="filmstrip-empty-thumb">${positionNames[position]}</div>`;
       }
+    }
 
-      strip.appendChild(thumb);
-    });
+    // Fall back to batch analysis cycles (no images, but has video times)
+    if (!hasRenderedFromPipeline && batchAnalysis && batchAnalysis.cycles.length > 0) {
+      const cycleIndex = Math.min(appState.currentRepIndex, batchAnalysis.cycles.length - 1);
+      const currentCycle = batchAnalysis.cycles[cycleIndex];
+      if (currentCycle) {
+        const strip = document.createElement('div');
+        strip.className = 'filmstrip';
 
-    container.appendChild(strip);
+        positionOrder.forEach((position) => {
+          const candidate = currentCycle.positions.get(position);
+          const thumb = document.createElement('div');
+          thumb.className = 'filmstrip-thumb';
+
+          if (candidate && candidate.videoTime !== undefined) {
+            // Show position label with video time (clickable)
+            const timeStr = candidate.videoTime.toFixed(1);
+            thumb.innerHTML = `
+              <div class="filmstrip-batch-thumb">
+                <div class="filmstrip-batch-label">${positionNames[position]}</div>
+                <div class="filmstrip-batch-time">${timeStr}s</div>
+                <div class="filmstrip-batch-angle">${candidate.spineAngle.toFixed(0)}°</div>
+              </div>
+            `;
+            const seekTime = candidate.videoTime;
+            thumb.addEventListener('click', () => seekToVideoTime(seekTime));
+            thumb.style.cursor = 'pointer';
+          } else {
+            thumb.innerHTML = `<div class="filmstrip-empty-thumb">${positionNames[position]}</div>`;
+          }
+
+          strip.appendChild(thumb);
+        });
+
+        container.appendChild(strip);
+      }
+    }
   }, [
     appState.currentRepIndex,
     repCount,
     pipelineRef,
     seekToVideoTime,
     videoStartTime,
+    batchAnalysis,
   ]);
 
   // Re-render filmstrip when rep changes
