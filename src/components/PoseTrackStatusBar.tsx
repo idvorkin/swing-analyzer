@@ -62,7 +62,15 @@ export function PoseTrackStatusBar({
                 style={{ width: `${status.progress.percentage}%` }}
               />
             </div>
-            <span className="progress-text">{status.progress.percentage}%</span>
+            <span className="progress-text">
+              {status.progress.percentage}% • {status.progress.currentFrame}/{status.progress.totalFrames} frames
+              {status.progress.elapsedTime != null && (
+                <> • {status.progress.elapsedTime.toFixed(1)}s</>
+              )}
+              {status.progress.fps != null && (
+                <> @ {status.progress.fps.toFixed(1)} fps</>
+              )}
+            </span>
           </>
         )}
 

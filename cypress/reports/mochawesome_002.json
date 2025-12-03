@@ -1,0 +1,202 @@
+{
+  "stats": {
+    "suites": 1,
+    "tests": 6,
+    "passes": 6,
+    "pending": 0,
+    "failures": 0,
+    "start": "2025-12-02T18:32:57.873Z",
+    "end": "2025-12-02T18:33:01.205Z",
+    "duration": 3332,
+    "testsRegistered": 6,
+    "passPercent": 100,
+    "pendingPercent": 0,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 0,
+    "hasSkipped": false
+  },
+  "results": [
+    {
+      "uuid": "033b5fa1-6051-4994-8d0c-ee87d48358ec",
+      "title": "",
+      "fullFile": "cypress/e2e/pose-track-loading.cy.ts",
+      "file": "cypress/e2e/pose-track-loading.cy.ts",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "30fb09aa-332c-4bd7-9ca7-389b306b59da",
+          "title": "Pose Track Fixture Loading",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "can load a pose track fixture into IndexedDB",
+              "fullTitle": "Pose Track Fixture Loading can load a pose track fixture into IndexedDB",
+              "timedOut": null,
+              "duration": 458,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-track-loading.cy.ts/can load a pose track fixture into IndexedDB - final.png\"",
+              "code": "// Load the fixture\ncy.loadPoseTrackFixture();\n// Visit pose studio and verify the track appears\ncy.visit('/poses');\n// Should show 1 file instead of 0\ncy.contains('1 files').should('be.visible');\n// Should show the video name from the fixture\ncy.contains('swing-sample.mp4').should('be.visible');",
+              "err": {},
+              "uuid": "a2feacca-3151-4026-a8a0-685938f037d0",
+              "parentUUID": "30fb09aa-332c-4bd7-9ca7-389b306b59da",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "displays pose track metadata correctly",
+              "fullTitle": "Pose Track Fixture Loading displays pose track metadata correctly",
+              "timedOut": null,
+              "duration": 190,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-track-loading.cy.ts/displays pose track metadata correctly - final.png\"",
+              "code": "cy.loadPoseTrackFixture();\ncy.visit('/poses');\n// Check the file card shows correct info\ncy.get('.file-card').within(() => {\n    cy.contains('swing-sample.mp4').should('be.visible');\n    cy.contains('Lightning').should('be.visible'); // movenet-lightning\n    cy.contains('30 frames').should('be.visible');\n    cy.contains('10.0s').should('be.visible');\n});",
+              "err": {},
+              "uuid": "218e47b2-3bba-45c6-8759-14508d2c6d94",
+              "parentUUID": "30fb09aa-332c-4bd7-9ca7-389b306b59da",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "can test (analyze) a saved pose track",
+              "fullTitle": "Pose Track Fixture Loading can test (analyze) a saved pose track",
+              "timedOut": null,
+              "duration": 206,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-track-loading.cy.ts/can test (analyze) a saved pose track - final.png\"",
+              "code": "cy.loadPoseTrackFixture();\ncy.visit('/poses');\n// Click the Test button\ncy.contains('button', 'Test').click();\n// Should show an alert with analysis results\ncy.on('window:alert', (text) => {\n    expect(text).to.include('Analysis Results');\n    expect(text).to.include('Total Frames');\n});",
+              "err": {},
+              "uuid": "7418c989-2abf-4ec5-b703-317666032b8b",
+              "parentUUID": "30fb09aa-332c-4bd7-9ca7-389b306b59da",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "can delete a saved pose track",
+              "fullTitle": "Pose Track Fixture Loading can delete a saved pose track",
+              "timedOut": null,
+              "duration": 255,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-track-loading.cy.ts/can delete a saved pose track - final.png\"",
+              "code": "cy.loadPoseTrackFixture();\ncy.visit('/poses');\n// Should show 1 file\ncy.contains('1 files').should('be.visible');\n// Click delete button (the trash icon button)\ncy.get('.btn-danger').click();\n// Confirm the deletion\ncy.on('window:confirm', () => true);\n// Should now show 0 files\ncy.contains('0 files').should('be.visible');\ncy.contains('No saved pose tracks yet').should('be.visible');",
+              "err": {},
+              "uuid": "fba5e101-dcb8-4bb7-b5db-e4d33275f925",
+              "parentUUID": "30fb09aa-332c-4bd7-9ca7-389b306b59da",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "shows download button for saved pose tracks",
+              "fullTitle": "Pose Track Fixture Loading shows download button for saved pose tracks",
+              "timedOut": null,
+              "duration": 189,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-track-loading.cy.ts/shows download button for saved pose tracks - final.png\"",
+              "code": "cy.loadPoseTrackFixture();\ncy.visit('/poses');\n// Find download button by its SVG path (download icon)\ncy.get('.file-card').within(() => {\n    cy.get('button[title=\"Download\"]').should('exist');\n});",
+              "err": {},
+              "uuid": "0a330f76-63ed-45c9-b6a6-3cee4e5c4cc6",
+              "parentUUID": "30fb09aa-332c-4bd7-9ca7-389b306b59da",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "clears pose tracks correctly",
+              "fullTitle": "Pose Track Fixture Loading clears pose tracks correctly",
+              "timedOut": null,
+              "duration": 249,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-track-loading.cy.ts/clears pose tracks correctly - final.png\"",
+              "code": "// First load a fixture\ncy.loadPoseTrackFixture();\ncy.visit('/poses');\ncy.contains('1 files').should('be.visible');\n// Clear and reload\ncy.clearPoseTracks();\ncy.reload();\n// Should be empty\ncy.contains('0 files').should('be.visible');",
+              "err": {},
+              "uuid": "fd14c427-6c27-49ef-93a4-1f89321d1f2a",
+              "parentUUID": "30fb09aa-332c-4bd7-9ca7-389b306b59da",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "a2feacca-3151-4026-a8a0-685938f037d0",
+            "218e47b2-3bba-45c6-8759-14508d2c6d94",
+            "7418c989-2abf-4ec5-b703-317666032b8b",
+            "fba5e101-dcb8-4bb7-b5db-e4d33275f925",
+            "0a330f76-63ed-45c9-b6a6-3cee4e5c4cc6",
+            "fd14c427-6c27-49ef-93a4-1f89321d1f2a"
+          ],
+          "failures": [],
+          "pending": [],
+          "skipped": [],
+          "duration": 1547,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "7.2.0"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": true,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false,
+        "code": true
+      },
+      "version": "7.1.4"
+    },
+    "marge": {
+      "options": {
+        "reportDir": "cypress/reports",
+        "overwrite": false,
+        "html": true,
+        "json": true,
+        "embeddedScreenshots": true,
+        "inlineAssets": true
+      },
+      "version": "6.3.2"
+    }
+  }
+}
