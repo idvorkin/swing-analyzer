@@ -4,6 +4,10 @@ import {
   BLAZEPOSE_LITE_CONFIG,
   DEFAULT_MODEL_CONFIG,
 } from '../config/modelConfig';
+import {
+  DEFAULT_SAMPLE_VIDEO,
+  LOCAL_SAMPLE_VIDEO,
+} from '../config/sampleVideos';
 import type { LivePoseCache } from '../pipeline/LivePoseCache';
 import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import {
@@ -580,20 +584,29 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     if (!frameAcquisitionRef.current || !videoRef.current) return;
 
     console.log('[DEBUG] loadHardcodedVideo: Function called');
-    setStatus('Loading hardcoded video...');
+    setStatus('Loading sample video...');
     try {
       // Reset state and stop current video
       resetVideoAndState();
 
-      // Use WebM format for better headless browser compatibility (VP9 codec is open-source)
-      const videoURL = '/videos/swing-sample.webm';
+      // Try remote URL first, fall back to local
+      let videoURL = DEFAULT_SAMPLE_VIDEO;
+      let response = await fetch(videoURL);
 
-      if (!videoURL) {
-        throw new Error('Video URL is empty');
+      if (!response.ok) {
+        console.log(
+          '[DEBUG] Remote sample failed, falling back to local:',
+          response.status
+        );
+        videoURL = LOCAL_SAMPLE_VIDEO;
+        response = await fetch(videoURL);
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch video: ${response.status}`);
       }
 
       // Fetch the video as a File for pose extraction
-      const response = await fetch(videoURL);
       const blob = await response.blob();
       const videoFile = new File([blob], 'swing-sample.webm', {
         type: 'video/webm',
