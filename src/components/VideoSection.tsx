@@ -29,6 +29,7 @@ const VideoSection: React.FC = () => {
     currentVideoFile,
     reinitializeWithCachedPoses,
     reinitializeWithLiveCache,
+    setRepCount,
   } = useSwingAnalyzerContext();
 
   // Pose track extraction
@@ -70,6 +71,17 @@ const VideoSection: React.FC = () => {
       reinitializeWithCachedPoses(poseTrackStatus.poseTrack);
     }
   }, [poseTrackStatus, reinitializeWithCachedPoses]);
+
+  // Update rep count from batch analysis when available
+  useEffect(() => {
+    if (
+      (poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'extracting') &&
+      poseTrackStatus.batchRepCount !== undefined
+    ) {
+      console.log(`Setting rep count from batch analysis: ${poseTrackStatus.batchRepCount}`);
+      setRepCount(poseTrackStatus.batchRepCount);
+    }
+  }, [poseTrackStatus, setRepCount]);
 
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);

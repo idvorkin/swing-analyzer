@@ -86,10 +86,10 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
     const videoTime = frameEvent.videoTime ?? 0;
     const isComplete = this.cache.isExtractionComplete();
 
-    // During streaming, only use frames within tolerance
+    // During streaming, first try frames within tolerance
     // After extraction, use any available frame (closest match)
     const tolerance = isComplete ? undefined : this.streamingTolerance;
-    const cachedFrame = this.cache.getFrame(videoTime, tolerance);
+    let cachedFrame = this.cache.getFrame(videoTime, tolerance);
 
     if (cachedFrame) {
       // Frame available within tolerance - return immediately
@@ -97,7 +97,17 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
       return of(this.buildSkeletonEvent(cachedFrame, frameEvent));
     }
 
-    // No frame within tolerance
+    // No frame within tolerance - during streaming, fall back to closest available
+    // This prevents gaps in pose detection when playback is faster than extraction
+    if (!isComplete) {
+      cachedFrame = this.cache.getFrame(videoTime, undefined); // No tolerance = closest
+      if (cachedFrame) {
+        this.frameStats.used++;
+        return of(this.buildSkeletonEvent(cachedFrame, frameEvent));
+      }
+    }
+
+    // No frame available at all
     this.frameStats.skipped++;
 
     // Log stats periodically (every 2 seconds)
@@ -117,8 +127,7 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
         `CachedPoseSkeletonTransformer: No frame at ${videoTime}s (extraction complete)`
       );
     }
-    // During streaming, we just skip this frame - extraction hasn't caught up yet
-    // Don't wait because switchMap would cancel the wait anyway when new frames arrive
+    // During streaming with empty cache, return null - extraction hasn't started yet
 
     return of({
       skeleton: null,

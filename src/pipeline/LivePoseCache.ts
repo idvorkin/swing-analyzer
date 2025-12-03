@@ -190,6 +190,16 @@ export class LivePoseCache {
   }
 
   /**
+   * Get all cached frames sorted by frame index
+   * Useful for batch analysis during extraction
+   */
+  getAllFrames(): PoseTrackFrame[] {
+    return Array.from(this.frames.values()).sort(
+      (a, b) => a.frameIndex - b.frameIndex
+    );
+  }
+
+  /**
    * Get the video hash this cache is for
    */
   getVideoHash(): string | null {

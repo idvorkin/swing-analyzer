@@ -892,5 +892,6 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     getVideoContainerClass,
     reinitializeWithCachedPoses, // Switch to cached poses when available
     reinitializeWithLiveCache, // Switch to streaming poses during extraction
+    setRepCount, // Allow external setting of rep count (for batch analysis)
   };
 }

@@ -181,8 +181,8 @@ export interface PoseExtractionResult {
  */
 export type PoseTrackStatus =
   | { type: 'none' }
-  | { type: 'extracting'; progress: PoseExtractionProgress }
-  | { type: 'ready'; poseTrack: PoseTrackFile; fromCache: boolean }
+  | { type: 'extracting'; progress: PoseExtractionProgress; batchRepCount?: number }
+  | { type: 'ready'; poseTrack: PoseTrackFile; fromCache: boolean; batchRepCount?: number }
   | { type: 'error'; error: string };
 
 /**
