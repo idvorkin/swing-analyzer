@@ -54,7 +54,9 @@ export function useFilmstripCapture(
   const { videoSrc, captureWidth = 200, captureHeight = 200 } = options;
 
   // State
-  const [capturedFrames, setCapturedFrames] = useState<Map<number, CapturedFrame[]>>(new Map());
+  const [capturedFrames, setCapturedFrames] = useState<
+    Map<number, CapturedFrame[]>
+  >(new Map());
   const [isCapturing, setIsCapturing] = useState(false);
 
   // Refs
@@ -62,6 +64,7 @@ export function useFilmstripCapture(
   const captureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const pendingRequestsRef = useRef<CaptureRequest[]>([]);
   const currentSrcRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Create hidden video and canvas elements
   useEffect(() => {
@@ -95,7 +98,15 @@ export function useFilmstripCapture(
 
     // Only reload if source changed
     if (currentSrcRef.current === videoSrc) return;
+
+    // Abort any in-progress captures before changing source
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
     currentSrcRef.current = videoSrc;
+    pendingRequestsRef.current = []; // Clear pending requests
 
     video.src = videoSrc;
     video.load();
@@ -149,6 +160,10 @@ export function useFilmstripCapture(
       return;
     }
 
+    // Create abort controller for this capture session
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     // Wait for video to be ready
     if (video.readyState < 2) {
       await new Promise<void>((resolve) => {
@@ -160,27 +175,46 @@ export function useFilmstripCapture(
       });
     }
 
+    // Check if aborted before starting
+    if (abortController.signal.aborted) {
+      setIsCapturing(false);
+      return;
+    }
+
     setIsCapturing(true);
     const results = new Map<number, CapturedFrame[]>();
 
     for (const request of pendingRequestsRef.current) {
+      // Check if aborted
+      if (abortController.signal.aborted) {
+        break;
+      }
+
       // Seek to the requested time
       video.currentTime = request.videoTime;
 
-      // Wait for seek to complete
-      await new Promise<void>((resolve) => {
+      // Wait for seek to complete, track if it succeeded or timed out
+      const seekCompleted = await new Promise<boolean>((resolve) => {
         const handleSeeked = () => {
           video.removeEventListener('seeked', handleSeeked);
-          resolve();
+          resolve(true);
         };
         video.addEventListener('seeked', handleSeeked);
 
         // Timeout after 2 seconds
         setTimeout(() => {
           video.removeEventListener('seeked', handleSeeked);
-          resolve();
+          resolve(false); // Indicates timeout
         }, 2000);
       });
+
+      // Skip this frame if seek timed out
+      if (!seekCompleted) {
+        console.warn(
+          `Seek timed out for videoTime ${request.videoTime}, skipping frame`
+        );
+        continue;
+      }
 
       // Small delay for frame to render
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -203,15 +237,18 @@ export function useFilmstripCapture(
     }
 
     pendingRequestsRef.current = [];
+    abortControllerRef.current = null;
 
-    // Merge new results with existing captured frames
-    setCapturedFrames((prev) => {
-      const merged = new Map(prev);
-      for (const [cycleIndex, frames] of results) {
-        merged.set(cycleIndex, frames);
-      }
-      return merged;
-    });
+    // Merge new results with existing captured frames (unless aborted)
+    if (!abortController.signal.aborted) {
+      setCapturedFrames((prev) => {
+        const merged = new Map(prev);
+        for (const [cycleIndex, frames] of results) {
+          merged.set(cycleIndex, frames);
+        }
+        return merged;
+      });
+    }
     setIsCapturing(false);
 
     console.log(`Captured ${results.size} new cycles of filmstrip frames`);
