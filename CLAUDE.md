@@ -50,6 +50,8 @@ This blocks direct pushes to `main` - all changes must go through PRs.
 
 **📦 MINIMAL PRs**: When creating PRs to main, include ONLY the changes the user explicitly requested. Do not bundle unrelated changes from the branch. If unsure what to include, ask the user to confirm scope before creating the PR.
 
+**🚫 NO --no-verify**: Never use `git commit --no-verify` unless absolutely necessary. If pre-commit hooks fail due to linting issues, make a separate commit to fix the linting first, then make your actual change commit.
+
 **🔄 REBASE OFTEN**: Multiple agents push to dev constantly. Always rebase before starting work:
 
 ```bash
