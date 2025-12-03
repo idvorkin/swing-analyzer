@@ -15,11 +15,7 @@
  *   9-10: wrists, 11-12: hips, 13-14: knees, 15-16: ankles
  */
 
-import {
-  CocoBodyParts,
-  MediaPipeBodyParts,
-  type PoseKeypoint,
-} from '../types';
+import { CocoBodyParts, MediaPipeBodyParts, type PoseKeypoint } from '../types';
 
 /**
  * Mapping from MediaPipe-33 indices to COCO-17 indices
@@ -74,6 +70,7 @@ export function mediaPipeToCoco(keypoints: PoseKeypoint[]): PoseKeypoint[] {
       cocoKeypoints[cocoIndex] = {
         x: 0,
         y: 0,
+        z: 0,
         score: 0,
         visibility: 0,
       };
@@ -102,7 +99,9 @@ export function isCocoFormat(keypoints: PoseKeypoint[]): boolean {
  * If already COCO format, returns as-is
  * If MediaPipe format, converts to COCO
  */
-export function normalizeToCocoFormat(keypoints: PoseKeypoint[]): PoseKeypoint[] {
+export function normalizeToCocoFormat(
+  keypoints: PoseKeypoint[]
+): PoseKeypoint[] {
   if (isCocoFormat(keypoints)) {
     return keypoints;
   }
