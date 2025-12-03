@@ -263,6 +263,7 @@ async function createPoseDetector(
         poseDetection.SupportedModels.MoveNet,
         {
           modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+          modelUrl: '/models/movenet-lightning/model.json',
           enableSmoothing: false, // No smoothing for offline extraction
         }
       );
