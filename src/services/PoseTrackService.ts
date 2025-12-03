@@ -115,13 +115,27 @@ export function parsePoseTrack(json: string): PoseTrackFile {
 }
 
 /**
- * Serialize a pose track to JSON string
+ * Serialize a pose track to JSON string.
+ * Strips runtime-only fields (like frameImage) that cannot be serialized.
  */
 export function serializePoseTrack(
   poseTrack: PoseTrackFile,
   pretty: boolean = false
 ): string {
-  return JSON.stringify(poseTrack, null, pretty ? 2 : undefined);
+  // Strip runtime-only fields from frames before serialization
+  // frameImage is an ImageData object that cannot be serialized to JSON
+  const cleanedFrames = poseTrack.frames.map((frame) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { frameImage, ...serializableFrame } = frame;
+    return serializableFrame;
+  });
+
+  const cleanedPoseTrack = {
+    ...poseTrack,
+    frames: cleanedFrames,
+  };
+
+  return JSON.stringify(cleanedPoseTrack, null, pretty ? 2 : undefined);
 }
 
 /**

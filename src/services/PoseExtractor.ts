@@ -167,6 +167,14 @@ export async function extractPosesFromVideo(
         ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
       }
 
+      // Capture frame image for filmstrip thumbnails BEFORE pose detection
+      // This is the actual video frame that should be used for thumbnails
+      // Only capture if not in mock mode (mock mode doesn't draw to canvas)
+      let frameImage: ImageData | undefined;
+      if (!useMockDetector) {
+        frameImage = ctx.getImageData(0, 0, videoWidth, videoHeight);
+      }
+
       // Detect pose (mock detector ignores canvas and returns fixture data)
       const poses = await detector.estimatePoses(canvas);
 
@@ -183,13 +191,14 @@ export async function extractPosesFromVideo(
         ? frameIndex * frameInterval
         : video.currentTime;
 
-      // Create frame data
+      // Create frame data with frameImage for thumbnail capture
       const frame: PoseTrackFrame = {
         frameIndex,
         timestamp: Math.round(videoTime * 1000),
         videoTime,
         keypoints,
         score: poses.length > 0 ? poses[0].score : undefined,
+        frameImage, // Runtime-only, passed to pipeline for thumbnail capture
       };
 
       // Pre-compute angles if requested

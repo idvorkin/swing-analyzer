@@ -247,6 +247,110 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
   });
 });
 
+test.describe('Playback Mode: No Duplicate Rep Counting', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for test setup to be available (app fully initialized)
+    await page.waitForFunction(
+      () => !!(window as unknown as { __testSetup?: unknown }).__testSetup,
+      { timeout: 10000 }
+    );
+
+    await clearPoseTrackDB(page);
+  });
+
+  test('rep count stays stable after extraction when playing video', async ({
+    page,
+  }) => {
+    // Capture console logs
+    page.on('console', (msg) => {
+      const text = msg.text();
+      if (text.includes('playbackOnly') || text.includes('Pipeline') ||
+          text.includes('Rep processor') || text.includes('Playback')) {
+        console.log(`[BROWSER] ${text}`);
+      }
+    });
+
+    // Configure mock pose detector - fast extraction (0ms delay for speed)
+    await setupMockPoseDetector(page, 'swing-sample', 0);
+
+    // Load video - triggers extraction
+    await page.click('#load-hardcoded-btn');
+    await page.waitForSelector('video', { timeout: 10000 });
+
+    // Wait for extraction to complete (status bar shows "Pose track ready")
+    // This confirms all poses have been extracted before we start playback
+    await page.waitForFunction(
+      () => {
+        const statusEl = document.querySelector('.pose-status-bar');
+        return statusEl?.textContent?.includes('Pose track ready');
+      },
+      { timeout: 120000 }
+    );
+
+    // Get rep count after extraction completes
+    const repCountAfterExtraction = await page.evaluate(() => {
+      const el = document.querySelector('#rep-counter');
+      return parseInt(el?.textContent || '0', 10);
+    });
+    console.log(`Rep count after extraction: ${repCountAfterExtraction}`);
+    expect(repCountAfterExtraction).toBeGreaterThan(0);
+
+    // Now play the video - this should use cached poses with playback-only mode
+    await page.click('#play-pause-btn');
+
+    // Wait for video to play for a bit (let it play through some frames)
+    await page.waitForTimeout(3000);
+
+    // Get rep count after playback
+    const repCountAfterPlayback = await page.evaluate(() => {
+      const el = document.querySelector('#rep-counter');
+      return parseInt(el?.textContent || '0', 10);
+    });
+    console.log(`Rep count after playback: ${repCountAfterPlayback}`);
+
+    // Rep count should NOT have increased during playback
+    // (playback-only mode should skip form/rep processing)
+    expect(repCountAfterPlayback).toBe(repCountAfterExtraction);
+  });
+
+  test('skeleton still renders during playback after extraction', async ({
+    page,
+  }) => {
+    // Configure mock pose detector (0ms delay for speed)
+    await setupMockPoseDetector(page, 'swing-sample', 0);
+
+    // Load video and wait for extraction to complete
+    await page.click('#load-hardcoded-btn');
+    await page.waitForSelector('video', { timeout: 10000 });
+
+    // Wait for extraction to complete (status bar shows "Pose track ready")
+    await page.waitForFunction(
+      () => {
+        const statusEl = document.querySelector('.pose-status-bar');
+        return statusEl?.textContent?.includes('Pose track ready');
+      },
+      { timeout: 120000 }
+    );
+
+    // Play the video
+    await page.click('#play-pause-btn');
+
+    // Wait a moment for playback to start
+    await page.waitForTimeout(1000);
+
+    // Check that skeleton canvas is visible
+    const canvasVisible = await page.evaluate(() => {
+      const canvas = document.querySelector('#output-canvas');
+      return canvas && (canvas as HTMLCanvasElement).width > 0;
+    });
+    expect(canvasVisible).toBe(true);
+
+    console.log('Skeleton canvas visible during playback');
+  });
+});
+
 test.describe.skip('Filmstrip Frame Capture During Extraction', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');

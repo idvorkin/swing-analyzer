@@ -30,6 +30,14 @@ export interface FrameEvent {
   frame: HTMLCanvasElement | HTMLVideoElement;
   timestamp: number;
   videoTime?: number; // video.currentTime in seconds (for seeking)
+
+  /**
+   * Frame image captured during extraction.
+   * Only populated in extraction mode by PoseExtractor.
+   * Undefined during playback, camera mode, or real-time processing.
+   * Used for filmstrip thumbnail capture when main video is at wrong position.
+   */
+  frameImage?: ImageData;
 }
 
 /**

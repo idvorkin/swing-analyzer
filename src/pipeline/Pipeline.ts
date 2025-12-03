@@ -14,6 +14,13 @@ import type {
 
 /**
  * Orchestrates the entire processing pipeline from frame to swing rep analysis using RxJS
+ *
+ * Supports two modes:
+ * - Full mode (playbackOnly=false): Frame → Skeleton → Form → Rep processing
+ * - Playback mode (playbackOnly=true): Frame → Skeleton only (for visualization)
+ *
+ * Playback mode is used when cached poses are available and reps were already
+ * counted during extraction. This prevents duplicate rep counting.
  */
 export class Pipeline {
   // Latest data from the pipeline
@@ -29,11 +36,19 @@ export class Pipeline {
   private checkpointSubject = new Subject<FormEvent>();
   private skeletonSubject = new Subject<SkeletonEvent>();
 
+  /**
+   * @param frameAcquisition - Source of video frames
+   * @param skeletonTransformer - Transforms frames to skeletons (ML or cached)
+   * @param formProcessor - Detects swing positions (unused in playback mode)
+   * @param repProcessor - Counts reps (unused in playback mode)
+   * @param playbackOnly - When true, skip form/rep processing (for cached pose playback)
+   */
   constructor(
     private frameAcquisition: FrameAcquisition,
     private skeletonTransformer: SkeletonTransformer,
     private formProcessor: FormProcessor,
-    private repProcessor: RepProcessor
+    private repProcessor: RepProcessor,
+    private playbackOnly: boolean = false
   ) {}
 
   /**
@@ -53,14 +68,52 @@ export class Pipeline {
       return this.resultSubject.asObservable();
     }
 
-    console.log("Starting pipeline...");
+    console.log(`Starting pipeline... (playbackOnly=${this.playbackOnly})`);
     this.isActive = true;
 
     // Build the RxJS pipeline
     const frameStream = this.frameAcquisition.start();
     console.log("Frame acquisition started");
 
-    // Set up the reactive pipeline
+    // In playback mode, only process skeleton events (no form/rep processing)
+    if (this.playbackOnly) {
+      this.pipelineSubscription = frameStream
+        .pipe(
+          // Stage 1: Skeleton Transformation only
+          switchMap((frameEvent) =>
+            this.skeletonTransformer.transformToSkeleton(frameEvent)
+          ),
+
+          // Emit skeleton events for rendering
+          tap((skeletonEvent) => {
+            this.skeletonSubject.next(skeletonEvent);
+            if (skeletonEvent.skeleton) {
+              this.latestSkeleton = skeletonEvent.skeleton;
+            }
+          }),
+
+          share()
+        )
+        .subscribe({
+          next: () => {
+            // Playback mode: just skeleton rendering, no rep counting
+          },
+          error: (error) => {
+            console.error('Error in playback pipeline:', error);
+            this.skeletonSubject.error(error);
+          },
+          complete: () => {
+            console.log('Playback pipeline complete');
+            this.skeletonSubject.complete();
+            this.isActive = false;
+          }
+        });
+
+      console.log("Playback pipeline (skeleton-only) set up and active");
+      return this.resultSubject.asObservable();
+    }
+
+    // Full mode: Frame → Skeleton → Form → Rep processing
     this.pipelineSubscription = frameStream
       .pipe(
         // Stage 1: Skeleton Transformation (combined pose detection and skeleton construction)
@@ -72,7 +125,7 @@ export class Pipeline {
         tap((skeletonEvent) => {
           // Emit the skeleton event to subscribers
           this.skeletonSubject.next(skeletonEvent);
-          
+
           // Store latest skeleton
           if (skeletonEvent.skeleton) {
             this.latestSkeleton = skeletonEvent.skeleton;
@@ -87,7 +140,7 @@ export class Pipeline {
         // Emit checkpoint events
         tap((checkpointEvent) => {
           console.log(`Pipeline: Form processor emitted checkpoint for position ${checkpointEvent.position}`);
-          
+
           // Pass checkpoint event to subscribers
           this.checkpointSubject.next(checkpointEvent);
         }),
@@ -101,7 +154,7 @@ export class Pipeline {
         // Update rep count and emit result
         tap((repEvent) => {
           console.log(`Pipeline: Rep processor finished, rep count = ${repEvent.repCount}, incremented = ${repEvent.repIncremented || false}`);
-          
+
           this.repCount = repEvent.repCount;
 
           // Pass result to observers
@@ -137,7 +190,7 @@ export class Pipeline {
         }
       });
 
-    console.log("Pipeline subscriptions set up and active");
+    console.log("Full pipeline subscriptions set up and active");
     return this.resultSubject.asObservable();
   }
 

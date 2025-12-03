@@ -50,6 +50,14 @@ export interface CreatePipelineOptions {
    * Set to 0 to disable delay and process as fast as possible.
    */
   simulatedFps?: number;
+
+  /**
+   * Skip form/rep processing during playback.
+   * When true, the pipeline only emits skeleton events for rendering.
+   * Defaults to true when using cached poses (cachedPoseTrack or livePoseCache).
+   * Set to false to force full processing even with cached poses.
+   */
+  playbackOnly?: boolean;
 }
 
 /**
@@ -69,6 +77,7 @@ export function createPipeline(
 
   // Choose skeleton transformer based on available cache options
   let skeletonTransformer: SkeletonTransformer;
+  let usingCachedPoses = false;
 
   // Build config for cached transformer (default 15 FPS simulation)
   const cachedConfig: CachedPoseSkeletonTransformerConfig = {
@@ -81,12 +90,14 @@ export function createPipeline(
       options.livePoseCache,
       cachedConfig
     );
+    usingCachedPoses = true;
   } else if (options.cachedPoseTrack) {
     // Static mode: use pre-loaded PoseTrackFile
     skeletonTransformer = new CachedPoseSkeletonTransformer(
       options.cachedPoseTrack,
       cachedConfig
     );
+    usingCachedPoses = true;
   } else {
     // ML mode: use real-time ML inference
     skeletonTransformer = createSkeletonTransformer(options.modelConfig);
@@ -95,12 +106,18 @@ export function createPipeline(
   const formProcessor = createFormProcessor(videoElement, canvasElement);
   const repProcessor = createRepProcessor();
 
+  // Determine playback mode:
+  // - If explicitly set, use that value
+  // - Otherwise, default to playback-only when using cached poses
+  const playbackOnly = options.playbackOnly ?? usingCachedPoses;
+
   // Create the pipeline with all stages
   return new Pipeline(
     frameAcquisition,
     skeletonTransformer,
     formProcessor,
-    repProcessor
+    repProcessor,
+    playbackOnly
   );
 }
 
@@ -180,6 +197,7 @@ export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEven
         frame: null as unknown as HTMLVideoElement, // Not used in batch mode
         timestamp: frame.timestamp,
         videoTime: frame.videoTime, // Include video time for seeking
+        frameImage: frame.frameImage, // Pass through for thumbnail capture
       },
     },
   };
