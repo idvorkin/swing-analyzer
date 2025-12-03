@@ -34,13 +34,14 @@ const inContainer = isRunningInContainer();
 const tailscaleHosts = getTailscaleHostnames();
 const devHost =
   inContainer && tailscaleHosts.length > 0 ? '0.0.0.0' : 'localhost';
+const devPort = Number(process.env.PORT) || 5173;
 
 // Enable HTTPS for Tailscale (camera APIs require secure context)
 const useSsl = inContainer && tailscaleHosts.length > 0;
 
 if (useSsl) {
   console.log(`\n🔗 Tailscale detected in container`);
-  console.log(`   Access via: https://${tailscaleHosts[1]}:5173\n`);
+  console.log(`   Access via: https://${tailscaleHosts[1]}:${devPort}\n`);
 }
 
 // https://vite.dev/config/
@@ -121,6 +122,7 @@ export default defineConfig({
   ],
   server: {
     host: devHost,
+    port: devPort,
     allowedHosts: tailscaleHosts.length > 0 ? tailscaleHosts : undefined,
   },
   build: {
