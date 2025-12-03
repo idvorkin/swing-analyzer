@@ -39,16 +39,28 @@ const devPort = Number(process.env.PORT) || 5173;
 // Enable HTTPS for Tailscale (camera APIs require secure context)
 const useSsl = inContainer && tailscaleHosts.length > 0;
 
-if (useSsl) {
-  console.log(`\n🔗 Tailscale detected in container`);
-  console.log(`   Access via: https://${tailscaleHosts[1]}:${devPort}\n`);
+// Plugin to print Tailscale URL after server starts (with correct port)
+function tailscaleUrlPlugin() {
+  return {
+    name: 'tailscale-url',
+    configureServer(server: { httpServer: { address: () => { port: number } | null } | null }) {
+      if (!useSsl || tailscaleHosts.length === 0) return;
+
+      server.httpServer?.once('listening', () => {
+        const address = server.httpServer?.address();
+        const actualPort = typeof address === 'object' && address ? address.port : devPort;
+        console.log(`\n🔗 Tailscale detected in container`);
+        console.log(`   Access via: https://${tailscaleHosts[1]}:${actualPort}\n`);
+      });
+    },
+  };
 }
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    ...(useSsl ? [basicSsl()] : []),
+    ...(useSsl ? [basicSsl(), tailscaleUrlPlugin()] : []),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['pwa-192x192.png', 'pwa-512x512.png'],
