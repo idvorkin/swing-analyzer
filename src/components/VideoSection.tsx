@@ -1,9 +1,11 @@
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
-import { useFilmstripCapture, type CaptureRequest } from '../hooks/useFilmstripCapture';
+import {
+  type CaptureRequest,
+  useFilmstripCapture,
+} from '../hooks/useFilmstripCapture';
 import { usePoseTrack } from '../hooks/usePoseTrack';
-import type { BatchAnalysisResult } from '../pipeline/SwingAnalyzer';
 import { SwingPositionName } from '../types';
 import { PoseTrackStatusBar } from './PoseTrackStatusBar';
 
@@ -77,10 +79,13 @@ const VideoSection: React.FC = () => {
   // Update rep count from batch analysis when available
   useEffect(() => {
     if (
-      (poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'extracting') &&
+      (poseTrackStatus.type === 'ready' ||
+        poseTrackStatus.type === 'extracting') &&
       poseTrackStatus.batchRepCount !== undefined
     ) {
-      console.log(`Setting rep count from batch analysis: ${poseTrackStatus.batchRepCount}`);
+      console.log(
+        `Setting rep count from batch analysis: ${poseTrackStatus.batchRepCount}`
+      );
       setRepCount(poseTrackStatus.batchRepCount);
     }
   }, [poseTrackStatus, setRepCount]);
@@ -106,25 +111,23 @@ const VideoSection: React.FC = () => {
   }, [videoRef]);
 
   // Filmstrip frame capture (uses hidden video element)
-  const {
-    capturedFrames,
-    isCapturing,
-    requestCaptures,
-  } = useFilmstripCapture({ videoSrc });
+  const { capturedFrames, requestCaptures } = useFilmstripCapture({ videoSrc });
 
   // Track how many cycles we've requested captures for
   const capturedCycleCountRef = useRef<number>(0);
 
   // Reset cycle count when video source changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally reset on videoSrc change
   useEffect(() => {
     capturedCycleCountRef.current = 0;
   }, [videoSrc]);
 
   // Request frame captures when batch analysis has NEW cycles
   useEffect(() => {
-    const batchAnalysis = (poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'extracting')
-      ? poseTrackStatus.batchAnalysis
-      : undefined;
+    const batchAnalysis =
+      poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'extracting'
+        ? poseTrackStatus.batchAnalysis
+        : undefined;
 
     if (!batchAnalysis || batchAnalysis.cycles.length === 0) return;
     if (!videoSrc) return;
@@ -160,7 +163,9 @@ const VideoSection: React.FC = () => {
     }
 
     if (requests.length > 0) {
-      console.log(`Requesting filmstrip captures for cycles ${alreadyCaptured + 1}-${totalCycles} (${requests.length} positions)`);
+      console.log(
+        `Requesting filmstrip captures for cycles ${alreadyCaptured + 1}-${totalCycles} (${requests.length} positions)`
+      );
       capturedCycleCountRef.current = totalCycles;
       requestCaptures(requests);
     }
@@ -199,9 +204,10 @@ const VideoSection: React.FC = () => {
   );
 
   // Get batch analysis from poseTrackStatus
-  const batchAnalysis = (poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'extracting')
-    ? poseTrackStatus.batchAnalysis
-    : undefined;
+  const batchAnalysis =
+    poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'extracting'
+      ? poseTrackStatus.batchAnalysis
+      : undefined;
 
   // Render the filmstrip
   // biome-ignore lint/correctness/useExhaustiveDependencies: positionOrder and positionNames are stable
@@ -259,7 +265,9 @@ const VideoSection: React.FC = () => {
 
                 if (videoTimeSec !== null) {
                   const seekTime = videoTimeSec;
-                  thumb.addEventListener('click', () => seekToVideoTime(seekTime));
+                  thumb.addEventListener('click', () =>
+                    seekToVideoTime(seekTime)
+                  );
                   thumb.style.cursor = 'pointer';
                 }
               } else {
@@ -276,8 +284,15 @@ const VideoSection: React.FC = () => {
     }
 
     // Fall back to batch analysis cycles with captured frames
-    if (!hasRenderedFromPipeline && batchAnalysis && batchAnalysis.cycles.length > 0) {
-      const cycleIndex = Math.min(appState.currentRepIndex, batchAnalysis.cycles.length - 1);
+    if (
+      !hasRenderedFromPipeline &&
+      batchAnalysis &&
+      batchAnalysis.cycles.length > 0
+    ) {
+      const cycleIndex = Math.min(
+        appState.currentRepIndex,
+        batchAnalysis.cycles.length - 1
+      );
       const currentCycle = batchAnalysis.cycles[cycleIndex];
       const cycleFrames = capturedFrames.get(cycleIndex);
 
@@ -287,7 +302,9 @@ const VideoSection: React.FC = () => {
 
         positionOrder.forEach((position) => {
           const candidate = currentCycle.positions.get(position);
-          const capturedFrame = cycleFrames?.find((f) => f.position === position);
+          const capturedFrame = cycleFrames?.find(
+            (f) => f.position === position
+          );
           const thumb = document.createElement('div');
           thumb.className = 'filmstrip-thumb';
 
