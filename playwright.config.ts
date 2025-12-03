@@ -1,11 +1,28 @@
+import { execSync } from 'node:child_process';
 import { defineConfig, devices } from '@playwright/test';
 import { existsSync } from 'fs';
 
 const PORT = process.env.E2E_PORT || '5173';
-// Detect if running in container (HTTPS) or locally (HTTP)
-const isContainer =
-  existsSync('/.dockerenv') || process.env.container !== undefined;
-const PROTOCOL = isContainer ? 'https' : 'http';
+
+// Check if Tailscale is running (matches vite.config.ts logic)
+function isTailscaleRunning(): boolean {
+  try {
+    const output = execSync('tailscale status --json', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const status = JSON.parse(output);
+    return !!status.Self?.DNSName;
+  } catch {
+    return false;
+  }
+}
+
+// Detect if running in container with Tailscale (HTTPS) - matches vite.config.ts
+const isContainer = existsSync('/.dockerenv');
+const hasTailscale = isTailscaleRunning();
+const useHttps = isContainer && hasTailscale;
+const PROTOCOL = useHttps ? 'https' : 'http';
 const BASE_URL = `${PROTOCOL}://localhost:${PORT}`;
 
 export default defineConfig({
@@ -33,7 +50,7 @@ export default defineConfig({
     screenshot: process.env.CI ? 'only-on-failure' : 'on',
     actionTimeout: 15000,
     // Ignore HTTPS errors for self-signed certs in dev
-    ignoreHTTPSErrors: isContainer,
+    ignoreHTTPSErrors: useHttps,
   },
 
   projects: [
@@ -61,7 +78,7 @@ export default defineConfig({
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000, // 2 minutes for server to start
-    ignoreHTTPSErrors: isContainer,
+    ignoreHTTPSErrors: useHttps,
   },
 
   // Output directory for test artifacts
