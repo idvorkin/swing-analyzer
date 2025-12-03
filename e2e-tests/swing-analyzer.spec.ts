@@ -86,10 +86,12 @@ test.describe('Swing Analyzer', () => {
     const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_VIDEO_HASH);
     expect(storedTrack).not.toBeNull();
 
-    // Check first frame has keypoints
-    const firstFrame = storedTrack?.frames[0];
-    expect(firstFrame?.keypoints).toBeDefined();
-    expect(firstFrame?.keypoints.length).toBe(17); // COCO-17 format
+    // Find first frame WITH keypoints (frame 0 may be empty if no pose detected)
+    const frameWithKeypoints = storedTrack?.frames.find(
+      (f) => f.keypoints.length > 0
+    );
+    expect(frameWithKeypoints?.keypoints).toBeDefined();
+    expect(frameWithKeypoints?.keypoints.length).toBe(17); // COCO-17 format
   });
 
   test('should have precomputed angles in pose track', async ({ page }) => {
