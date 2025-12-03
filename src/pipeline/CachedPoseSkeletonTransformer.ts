@@ -19,7 +19,7 @@
 
 import { type Observable, of } from 'rxjs';
 import { Skeleton } from '../models/Skeleton';
-import type { PoseKeypoint } from '../types';
+import { CocoBodyParts, type PoseKeypoint } from '../types';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
 import { LivePoseCache } from './LivePoseCache';
 import type {
@@ -164,16 +164,10 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
    * Calculate spine angle from keypoints
    */
   private calculateSpineAngle(keypoints: PoseKeypoint[]): number {
-    // COCO keypoint indices
-    const LEFT_SHOULDER = 5;
-    const RIGHT_SHOULDER = 6;
-    const LEFT_HIP = 11;
-    const RIGHT_HIP = 12;
-
-    const leftShoulder = keypoints[LEFT_SHOULDER];
-    const rightShoulder = keypoints[RIGHT_SHOULDER];
-    const leftHip = keypoints[LEFT_HIP];
-    const rightHip = keypoints[RIGHT_HIP];
+    const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
+    const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
+    const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
+    const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
 
     if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) {
       console.warn(
@@ -201,7 +195,12 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
    * Check if required keypoints are visible
    */
   private hasRequiredKeypoints(keypoints: PoseKeypoint[]): boolean {
-    const requiredIndices = [5, 6, 11, 12]; // Shoulders and hips
+    const requiredIndices = [
+      CocoBodyParts.LEFT_SHOULDER,
+      CocoBodyParts.RIGHT_SHOULDER,
+      CocoBodyParts.LEFT_HIP,
+      CocoBodyParts.RIGHT_HIP,
+    ];
     return requiredIndices.every((index) => {
       const point = keypoints[index];
       return point && (point.score ?? point.visibility ?? 0) > 0.2;
