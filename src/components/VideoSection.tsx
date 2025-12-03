@@ -273,7 +273,7 @@ const VideoSection: React.FC = () => {
         <div className="video-controls">
           <button
             id="prev-frame-btn"
-            disabled={!appState.isModelLoaded}
+            disabled={!appState.isModelLoaded || !currentVideoFile}
             onClick={previousFrame}
             title="Previous Frame (Shortcut: ,)"
             type="button"
@@ -294,7 +294,7 @@ const VideoSection: React.FC = () => {
           <button
             id="play-pause-btn"
             className="toggle-button"
-            disabled={!appState.isModelLoaded}
+            disabled={!appState.isModelLoaded || !currentVideoFile}
             onClick={togglePlayPause}
             type="button"
           >
@@ -317,7 +317,7 @@ const VideoSection: React.FC = () => {
 
           <button
             id="next-frame-btn"
-            disabled={!appState.isModelLoaded}
+            disabled={!appState.isModelLoaded || !currentVideoFile}
             onClick={nextFrame}
             title="Next Frame (Shortcut: .)"
             type="button"
@@ -337,7 +337,7 @@ const VideoSection: React.FC = () => {
 
           <button
             id="stop-btn"
-            disabled={!appState.isModelLoaded}
+            disabled={!appState.isModelLoaded || !currentVideoFile}
             onClick={stopVideo}
             type="button"
           >
