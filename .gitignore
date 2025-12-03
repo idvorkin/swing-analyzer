@@ -76,3 +76,9 @@ old_beads_data/
 
 # Aider AI assistant
 .aider.*
+
+# Large video files (use form-analyzer-samples repo instead)
+# @see https://github.com/idvorkin-ai-tools/form-analyzer-samples
+public/videos/*.webm
+public/videos/*.mp4
+public/videos/*.mov

@@ -48,6 +48,15 @@ test.describe('Swing Analyzer', () => {
     const videoExists = await page.isVisible('video');
     expect(videoExists).toBe(true);
 
+    // Wait for video src to be set (may load from remote or local fallback)
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video && video.src && video.src.includes('swing-sample.webm');
+      },
+      { timeout: 10000 }
+    );
+
     // Check the video has the expected source
     const videoSrc = await page.$eval(
       'video',
