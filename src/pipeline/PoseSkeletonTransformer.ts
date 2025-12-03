@@ -3,13 +3,19 @@ import '@tensorflow/tfjs-backend-webgl';
 import * as tf from '@tensorflow/tfjs-core';
 import { type Observable, from, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
+import {
+  DEFAULT_MODEL_CONFIG,
+  type ModelConfig,
+} from '../config/modelConfig';
 import { Skeleton } from '../models/Skeleton';
 import { CocoBodyParts, type PoseKeypoint, type PoseResult } from '../types';
+import { normalizeToCocoFormat } from './KeypointAdapter';
 import type {
   FrameEvent,
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
+import { PoseDetectorFactory } from './PoseDetectorFactory';
 
 /**
  * A pose event with the pose result and original frame data
@@ -45,10 +51,32 @@ export const SKELETON_CONNECTIONS = [
 /**
  * Skeleton transformer stage - transforms frames to skeletons using ML pose detection
  * This combines the functionality of pose detection and skeleton construction
+ *
+ * Supports multiple pose detection models via ModelConfig:
+ * - MoveNet (Lightning/Thunder) - COCO-17 keypoints
+ * - BlazePose (Lite/Full/Heavy) - MediaPipe-33 keypoints (normalized to COCO-17)
  */
 export class PoseSkeletonTransformer implements SkeletonTransformer {
   // Store the pose detector instance
   private detector: poseDetection.PoseDetector | null = null;
+
+  // Model configuration
+  private config: ModelConfig;
+
+  // Keypoint format produced by the model
+  private keypointFormat: 'coco' | 'mediapipe' = 'coco';
+
+  // Model name for logging
+  private modelName: string = '';
+
+  /**
+   * Create a PoseSkeletonTransformer with optional model configuration
+   *
+   * @param config - Model configuration (defaults to MoveNet Lightning)
+   */
+  constructor(config: ModelConfig = DEFAULT_MODEL_CONFIG) {
+    this.config = config;
+  }
 
   /**
    * Initialize the pose detection model
@@ -62,27 +90,23 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       tf.env().set('WEBGL_CPU_FORWARD', false);
       tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
 
-      // Use MoveNet - better performance on mobile
-      const detectorConfig = {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-        modelUrl: '/models/movenet-lightning/model.json',
-        enableSmoothing: true,
-      };
+      // Use factory to create the detector based on config
+      const result = await PoseDetectorFactory.create(this.config);
+      this.detector = result.detector;
+      this.keypointFormat = result.keypointFormat;
+      this.modelName = result.modelName;
 
-      this.detector = await poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
-        detectorConfig
-      );
-
-      console.log('Pose detector initialized successfully');
+      console.log(`Pose detector initialized: ${this.modelName}`);
     } catch (error) {
       console.error('Failed to initialize primary model:', error);
 
-      // Try a fallback model
+      // Try a fallback model (PoseNet)
       try {
         this.detector = await poseDetection.createDetector(
           poseDetection.SupportedModels.PoseNet
         );
+        this.keypointFormat = 'coco';
+        this.modelName = 'PoseNet (fallback)';
         console.log('Fallback model initialized');
       } catch (fallbackError) {
         console.error('Failed to initialize fallback model:', fallbackError);
@@ -128,9 +152,15 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
         // Use the first detected pose (we're focused on single person)
         const pose = poses[0];
 
+        // Normalize keypoints to COCO format if using BlazePose (MediaPipe format)
+        const keypoints =
+          this.keypointFormat === 'mediapipe'
+            ? normalizeToCocoFormat(pose.keypoints as PoseKeypoint[])
+            : (pose.keypoints as PoseKeypoint[]);
+
         return {
           pose: {
-            keypoints: pose.keypoints,
+            keypoints,
             score: pose.score,
           },
           frameEvent,
@@ -304,5 +334,19 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
    */
   isInitialized(): boolean {
     return this.detector !== null;
+  }
+
+  /**
+   * Get the name of the currently loaded model
+   */
+  getModelName(): string {
+    return this.modelName;
+  }
+
+  /**
+   * Get the current model configuration
+   */
+  getConfig(): ModelConfig {
+    return this.config;
   }
 }
