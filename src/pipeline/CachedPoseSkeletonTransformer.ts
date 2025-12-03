@@ -17,8 +17,7 @@
  * - No WebGL/TensorFlow dependencies during playback
  */
 
-import { from, type Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { type Observable, of } from 'rxjs';
 import { Skeleton } from '../models/Skeleton';
 import type { PoseKeypoint } from '../types';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
@@ -35,24 +34,20 @@ import type { PoseEvent } from './PoseSkeletonTransformer';
  */
 export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
   private cache: LivePoseCache;
-  private waitTimeoutMs: number;
+  /** Max time difference (seconds) for frame lookup during streaming */
+  private streamingTolerance = 0.1; // 100ms - about 3 frames at 30fps
 
   /**
    * Create from LivePoseCache (streaming mode)
    */
-  constructor(cache: LivePoseCache, options?: { waitTimeoutMs?: number });
+  constructor(cache: LivePoseCache);
 
   /**
    * Create from static PoseTrackFile (static mode)
    */
-  constructor(poseTrack: PoseTrackFile, options?: { waitTimeoutMs?: number });
+  constructor(poseTrack: PoseTrackFile);
 
-  constructor(
-    cacheOrPoseTrack: LivePoseCache | PoseTrackFile,
-    options: { waitTimeoutMs?: number } = {}
-  ) {
-    const { waitTimeoutMs = 5000 } = options;
-    this.waitTimeoutMs = waitTimeoutMs;
+  constructor(cacheOrPoseTrack: LivePoseCache | PoseTrackFile) {
 
     if (cacheOrPoseTrack instanceof LivePoseCache) {
       this.cache = cacheOrPoseTrack;
@@ -75,46 +70,43 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
 
   /**
    * Transform a frame event into a skeleton using cached pose data.
-   * If frame isn't cached yet, waits for extraction to produce it.
+   *
+   * During streaming (extraction in progress):
+   * - Only uses frames within tolerance of requested time
+   * - Returns null skeleton if no nearby frame exists (skips frame)
+   * - Does NOT wait for extraction (waiting gets cancelled by switchMap anyway)
+   *
+   * After extraction complete:
+   * - Uses closest available frame regardless of distance
    */
   transformToSkeleton(frameEvent: FrameEvent): Observable<SkeletonEvent> {
     const videoTime = frameEvent.videoTime ?? 0;
+    const isComplete = this.cache.isExtractionComplete();
 
-    // Try to get frame from cache (non-blocking first)
-    const cachedFrame = this.cache.getFrame(videoTime);
+    // During streaming, only use frames within tolerance
+    // After extraction, use any available frame (closest match)
+    const tolerance = isComplete ? undefined : this.streamingTolerance;
+    const cachedFrame = this.cache.getFrame(videoTime, tolerance);
 
     if (cachedFrame) {
-      // Frame available - return immediately
+      // Frame available within tolerance - return immediately
       return of(this.buildSkeletonEvent(cachedFrame, frameEvent));
     }
 
-    // Frame not available - check if extraction is complete
-    if (this.cache.isExtractionComplete()) {
-      // Extraction done but frame not found - return null skeleton
+    // No frame within tolerance
+    if (isComplete) {
+      // Extraction done but no frame found - return null skeleton
       console.warn(
         `CachedPoseSkeletonTransformer: No frame at ${videoTime}s (extraction complete)`
       );
-      return of({
-        skeleton: null,
-        poseEvent: this.createPoseEvent(null, frameEvent),
-      });
     }
+    // During streaming, we just skip this frame - extraction hasn't caught up yet
+    // Don't wait because switchMap would cancel the wait anyway when new frames arrive
 
-    // Wait for extraction to produce the frame
-    return from(
-      this.cache.waitForFrame(videoTime, { timeoutMs: this.waitTimeoutMs })
-    ).pipe(
-      map((frame) => this.buildSkeletonEvent(frame, frameEvent)),
-      catchError((error) => {
-        console.warn(
-          `CachedPoseSkeletonTransformer: ${(error as Error).message}`
-        );
-        return of({
-          skeleton: null,
-          poseEvent: this.createPoseEvent(null, frameEvent),
-        });
-      })
-    );
+    return of({
+      skeleton: null,
+      poseEvent: this.createPoseEvent(null, frameEvent),
+    });
   }
 
   /**

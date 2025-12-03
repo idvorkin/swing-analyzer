@@ -88,9 +88,12 @@ export class LivePoseCache {
 
   /**
    * Get a frame by video time (non-blocking)
-   * Returns null if frame not available
+   * Returns null if frame not available or outside tolerance
+   *
+   * @param videoTime - The video time to look up
+   * @param tolerance - Optional max time difference in seconds (default: unlimited)
    */
-  getFrame(videoTime: number): PoseTrackFrame | null {
+  getFrame(videoTime: number, tolerance?: number): PoseTrackFrame | null {
     const roundedTime = Math.round(videoTime * 1000) / 1000;
 
     // Try exact match first
@@ -102,6 +105,13 @@ export class LivePoseCache {
     // Find closest frame
     const closestTime = this.findClosestTime(roundedTime);
     if (closestTime !== null) {
+      // Check if within tolerance
+      if (
+        tolerance !== undefined &&
+        Math.abs(closestTime - roundedTime) > tolerance
+      ) {
+        return null; // Closest frame is too far away
+      }
       return this.frames.get(closestTime) ?? null;
     }
 
