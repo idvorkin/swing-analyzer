@@ -203,10 +203,18 @@ export function useFilmstripCapture(
     }
 
     pendingRequestsRef.current = [];
-    setCapturedFrames(results);
+
+    // Merge new results with existing captured frames
+    setCapturedFrames((prev) => {
+      const merged = new Map(prev);
+      for (const [cycleIndex, frames] of results) {
+        merged.set(cycleIndex, frames);
+      }
+      return merged;
+    });
     setIsCapturing(false);
 
-    console.log(`Captured ${results.size} cycles of filmstrip frames`);
+    console.log(`Captured ${results.size} new cycles of filmstrip frames`);
   }, [captureCurrentFrame]);
 
   // Request frame captures

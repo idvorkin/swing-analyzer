@@ -112,22 +112,30 @@ const VideoSection: React.FC = () => {
     requestCaptures,
   } = useFilmstripCapture({ videoSrc });
 
-  // Track which batch analysis we've requested captures for
-  const lastCapturedAnalysisRef = useRef<BatchAnalysisResult | null>(null);
+  // Track how many cycles we've requested captures for
+  const capturedCycleCountRef = useRef<number>(0);
 
-  // Request frame captures when batch analysis is ready
+  // Reset cycle count when video source changes
+  useEffect(() => {
+    capturedCycleCountRef.current = 0;
+  }, [videoSrc]);
+
+  // Request frame captures when batch analysis has NEW cycles
   useEffect(() => {
     const batchAnalysis = (poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'extracting')
       ? poseTrackStatus.batchAnalysis
       : undefined;
 
     if (!batchAnalysis || batchAnalysis.cycles.length === 0) return;
-    if (lastCapturedAnalysisRef.current === batchAnalysis) return;
     if (!videoSrc) return;
 
-    lastCapturedAnalysisRef.current = batchAnalysis;
+    // Only capture NEW cycles we haven't captured yet
+    const alreadyCaptured = capturedCycleCountRef.current;
+    const totalCycles = batchAnalysis.cycles.length;
 
-    // Build capture requests from batch analysis
+    if (totalCycles <= alreadyCaptured) return;
+
+    // Build capture requests for NEW cycles only
     const requests: CaptureRequest[] = [];
     const positionOrder = [
       SwingPositionName.Top,
@@ -136,7 +144,7 @@ const VideoSection: React.FC = () => {
       SwingPositionName.Release,
     ];
 
-    for (let cycleIdx = 0; cycleIdx < batchAnalysis.cycles.length; cycleIdx++) {
+    for (let cycleIdx = alreadyCaptured; cycleIdx < totalCycles; cycleIdx++) {
       const cycle = batchAnalysis.cycles[cycleIdx];
       for (const position of positionOrder) {
         const candidate = cycle.positions.get(position);
@@ -152,7 +160,8 @@ const VideoSection: React.FC = () => {
     }
 
     if (requests.length > 0) {
-      console.log(`Requesting filmstrip captures for ${requests.length} positions`);
+      console.log(`Requesting filmstrip captures for cycles ${alreadyCaptured + 1}-${totalCycles} (${requests.length} positions)`);
+      capturedCycleCountRef.current = totalCycles;
       requestCaptures(requests);
     }
   }, [poseTrackStatus, videoSrc, requestCaptures]);
