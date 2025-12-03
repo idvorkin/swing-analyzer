@@ -396,11 +396,15 @@ def extract_poses(
     print(f"\n  Completed in {elapsed:.1f}s ({frame_idx / elapsed:.1f} fps)")
 
     # Build output
+    keypoint_format = "blazepose-33" if output_format == "blazepose" else "coco-17"
+    keypoint_count = 33 if output_format == "blazepose" else 17
     posetrack = {
         "metadata": {
             "version": "1.0",
             "model": "blazepose",
             "modelVersion": f"tflite-{model_type}",
+            "keypointFormat": keypoint_format,
+            "keypointCount": keypoint_count,
             "sourceVideoHash": video_hash,
             "sourceVideoName": video_path.name,
             "sourceVideoDuration": round(duration, 4),
@@ -433,15 +437,22 @@ def main():
         "--format", choices=["coco", "blazepose"], default="coco",
         help="Output format: coco (17 keypoints) or blazepose (33 keypoints)"
     )
+    parser.add_argument(
+        "--full", action="store_true",
+        help="Output all 33 BlazePose keypoints (alias for --format blazepose)"
+    )
 
     args = parser.parse_args()
+
+    # --full is alias for --format blazepose
+    output_format = "blazepose" if args.full else args.format
 
     if not args.video.exists():
         print(f"Error: Video not found: {args.video}", file=sys.stderr)
         sys.exit(1)
 
     try:
-        extract_poses(args.video, args.output, args.model, args.format)
+        extract_poses(args.video, args.output, args.model, output_format)
     except KeyboardInterrupt:
         print("\nAborted")
         sys.exit(1)
