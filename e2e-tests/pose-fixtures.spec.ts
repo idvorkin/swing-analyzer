@@ -60,7 +60,7 @@ test.describe('Pose Track Fixtures', () => {
         SWING_SAMPLE_VIDEO_HASH
       );
       expect(storedTrack).not.toBeNull();
-      expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample.mp4');
+      expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample.webm');
       expect(storedTrack?.metadata.version).toBe('1.0');
       expect(storedTrack?.frames.length).toBeGreaterThan(0);
     });

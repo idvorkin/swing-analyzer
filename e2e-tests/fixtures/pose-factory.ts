@@ -311,7 +311,7 @@ export function createMetadata(
   frameCount: number,
   fps: number = 30,
   videoHash: string = SWING_SAMPLE_VIDEO_HASH,
-  videoName: string = 'swing-sample.mp4'
+  videoName: string = 'swing-sample.webm'
 ): PoseTrackMetadata {
   return {
     version: '1.0',
