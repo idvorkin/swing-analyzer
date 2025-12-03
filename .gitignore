@@ -61,3 +61,6 @@ node_modules/.vite/
 
 # Generated at build time
 src/generated_version.ts
+
+# Stale beads snapshot (migration artifact)
+old_beads_data/

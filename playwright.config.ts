@@ -43,9 +43,8 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         launchOptions: {
           args: [
+            // Enables video autoplay without user interaction (for file-based video playback)
             '--autoplay-policy=no-user-gesture-required',
-            '--use-fake-ui-for-media-stream',
-            '--use-fake-device-for-media-stream',
           ],
         },
       },
