@@ -26,18 +26,26 @@ See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 
 ## PR Workflow
 
-### Splitting Messy PRs into Clean Commits
+### Branch Strategy
 
-When a branch has accumulated many unrelated changes:
+- **dev branch**: Agents work freely here without PRs
+- **main branch**: Nothing merges without a PR
+- **PR merge process**: Periodically diff dev from main, split into clean PRs, merge to main
 
-1. **Analyze the branch**: `git log main..HEAD --oneline` to see all commits
-2. **Categorize changes** into logical groups (e.g., bug fixes, new features, refactors)
-3. **Create beads issues** for each PR: `bd create --title="Merge PR #X: description" --priority=1`
-4. **Add dependencies** between PRs: `bd dep add <blocked> <blocker>`
-5. **Cherry-pick or manually copy** changes to new feature branches
-6. **Rebase each branch** on main: `git rebase origin/main`
-7. **Run code review agent** on each PR to find issues
-8. **Fix issues**, run tests, push
+### Splitting Dev Branch into Clean PRs
+
+When dev has accumulated many unrelated changes:
+
+1. **Diff dev from main**: `git diff main..dev --stat` to see all changes
+2. **Analyze commits**: `git log main..dev --oneline` to see commit history
+3. **Categorize changes** into logical groups (e.g., bug fixes, new features, refactors)
+4. **Create beads issues** for each PR: `bd create --title="Merge PR #X: description" --priority=1`
+5. **Add dependencies** between PRs: `bd dep add <blocked> <blocker>`
+6. **Create feature branches** from main, cherry-pick or manually copy changes
+7. **Rebase each branch** on main: `git rebase origin/main`
+8. **Run code review agent** on each PR to find issues
+9. **Fix issues**, run tests, push
+10. **Merge PRs** in dependency order, then sync dev with main
 
 ### PR Review Checklist
 
