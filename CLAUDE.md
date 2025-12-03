@@ -34,6 +34,12 @@ See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 
 **⚠️ CRITICAL: Only humans merge to main. Agents must NEVER merge PRs without explicit human confirmation.**
 
+**🔄 REBASE OFTEN**: Multiple agents push to dev constantly. Always rebase before starting work:
+
+```bash
+git fetch origin && git rebase origin/dev
+```
+
 ### Splitting Dev Branch into Clean PRs
 
 When dev has accumulated many unrelated changes:
