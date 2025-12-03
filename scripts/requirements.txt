@@ -1,0 +1,11 @@
+# Python dependencies for pose extraction scripts
+#
+# Install with: pip install -r requirements.txt
+# Or use uv:    uv run --with mediapipe --with opencv-python scripts/extract_poses.py
+#
+# For headless environments (no display), use opencv-python-headless
+# but note: mediapipe still requires libGL.so.1 system library
+
+mediapipe>=0.10.0
+opencv-python>=4.8.0        # Use opencv-python-headless for servers
+numpy>=1.24.0
