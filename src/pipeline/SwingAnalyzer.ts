@@ -15,8 +15,9 @@
  */
 
 import type { AngularVelocity } from '../models/BiomechanicsAnalyzer';
-import type { Skeleton } from '../models/Skeleton';
+import { Skeleton } from '../models/Skeleton';
 import { SwingPositionName } from '../types';
+import type { PoseTrackFrame } from '../types/posetrack';
 
 /**
  * Result of analyzing a single frame
@@ -381,4 +382,79 @@ export class SwingAnalyzer {
   getMaxSpineAngleInCycle(): number {
     return this.maxSpineAngleInCycle;
   }
+
+  /**
+   * Batch analyze all frames from a PoseTrack and return rep count
+   *
+   * This enables instant rep counting without video playback:
+   * - When cached poses are loaded, immediately get rep count
+   * - During extraction, progressively update rep count
+   *
+   * @param frames - Array of PoseTrackFrames to analyze
+   * @param config - Optional analyzer configuration
+   * @returns Batch analysis result with rep count and detected cycles
+   */
+  static analyzeFrames(
+    frames: PoseTrackFrame[],
+    config?: Partial<SwingAnalyzerConfig>
+  ): BatchAnalysisResult {
+    const analyzer = new SwingAnalyzer(config);
+    const cycles: DetectedCycle[] = [];
+
+    for (const frame of frames) {
+      if (!frame.keypoints || frame.keypoints.length === 0) {
+        continue;
+      }
+
+      // Build skeleton from keypoints
+      const spineAngle = frame.angles?.spineAngle ?? 0;
+      const skeleton = new Skeleton(frame.keypoints, spineAngle, true);
+
+      // Analyze the frame
+      const result = analyzer.analyzeFrame(
+        skeleton,
+        frame.timestamp,
+        frame.videoTime
+      );
+
+      // If a cycle completed, record it
+      if (result.cycleCompleted && result.cyclePositions) {
+        cycles.push({
+          cycleNumber: cycles.length + 1,
+          positions: result.cyclePositions,
+          maxSpineAngle: result.maxSpineAngleInCycle,
+        });
+      }
+    }
+
+    return {
+      repCount: cycles.length,
+      cycles,
+      framesAnalyzed: frames.length,
+    };
+  }
+}
+
+/**
+ * Result of batch analyzing multiple frames
+ */
+export interface BatchAnalysisResult {
+  /** Total number of completed reps */
+  repCount: number;
+  /** Details of each detected cycle */
+  cycles: DetectedCycle[];
+  /** Number of frames analyzed */
+  framesAnalyzed: number;
+}
+
+/**
+ * A detected swing cycle with position data
+ */
+export interface DetectedCycle {
+  /** Cycle number (1-indexed) */
+  cycleNumber: number;
+  /** Best candidates for each position in this cycle */
+  positions: Map<SwingPositionName, PositionCandidate>;
+  /** Maximum spine angle reached in this cycle */
+  maxSpineAngle: number;
 }

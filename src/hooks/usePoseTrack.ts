@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LivePoseCache } from '../pipeline/LivePoseCache';
 import { PoseTrackPipeline } from '../pipeline/PoseTrackPipeline';
+import { SwingAnalyzer } from '../pipeline/SwingAnalyzer';
 import {
   extractPosesFromVideo,
   getModelDisplayName,
@@ -135,7 +136,17 @@ export function usePoseTrack(
         // Use existing pose track
         currentPoseTrackRef.current = existing;
         pipelineRef.current = new PoseTrackPipeline(existing);
-        setStatus({ type: 'ready', poseTrack: existing, fromCache: true });
+
+        // Run batch analysis immediately for instant rep count
+        const batchResult = SwingAnalyzer.analyzeFrames(existing.frames);
+        console.log(`Batch analysis complete: ${batchResult.repCount} reps from ${batchResult.framesAnalyzed} cached frames`);
+
+        setStatus({
+          type: 'ready',
+          poseTrack: existing,
+          fromCache: true,
+          batchRepCount: batchResult.repCount,
+        });
         return;
       }
 
@@ -164,13 +175,27 @@ export function usePoseTrack(
         },
       });
 
+      // Track last batch analysis time to throttle updates
+      let lastBatchAnalysisFrame = 0;
+      const BATCH_ANALYSIS_INTERVAL = 30; // Run batch analysis every 30 frames (~1 sec at 30fps)
+
       try {
         const result = await extractPosesFromVideo(videoFile, {
           model,
           precomputeAngles,
           signal: controller.signal,
           onProgress: (progress: PoseExtractionProgress) => {
-            setStatus({ type: 'extracting', progress });
+            // Run batch analysis periodically during extraction
+            let batchRepCount: number | undefined;
+            if (progress.currentFrame - lastBatchAnalysisFrame >= BATCH_ANALYSIS_INTERVAL) {
+              const frames = liveCache.getAllFrames();
+              if (frames.length > 0) {
+                const batchResult = SwingAnalyzer.analyzeFrames(frames);
+                batchRepCount = batchResult.repCount;
+                lastBatchAnalysisFrame = progress.currentFrame;
+              }
+            }
+            setStatus({ type: 'extracting', progress, batchRepCount });
           },
           // Stream each frame to the live cache as it's extracted
           onFrameExtracted: (frame) => {
@@ -185,14 +210,18 @@ export function usePoseTrack(
         currentPoseTrackRef.current = result.poseTrack;
         pipelineRef.current = new PoseTrackPipeline(result.poseTrack);
 
+        // Run batch analysis for final rep count
+        const batchResult = SwingAnalyzer.analyzeFrames(result.poseTrack.frames);
+
         setStatus({
           type: 'ready',
           poseTrack: result.poseTrack,
           fromCache: false,
+          batchRepCount: batchResult.repCount,
         });
 
         console.log(
-          `Pose extraction complete: ${result.poseTrack.frames.length} frames in ${(result.extractionTimeMs / 1000).toFixed(1)}s (${result.extractionFps.toFixed(1)} fps)`
+          `Pose extraction complete: ${result.poseTrack.frames.length} frames in ${(result.extractionTimeMs / 1000).toFixed(1)}s (${result.extractionFps.toFixed(1)} fps), ${batchResult.repCount} reps detected`
         );
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
