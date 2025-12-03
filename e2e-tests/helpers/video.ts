@@ -14,7 +14,7 @@ import type { Page } from '@playwright/test';
 export async function loadHardcodedVideo(page: Page): Promise<void> {
   await page.click('#load-hardcoded-btn');
   await page.waitForSelector(
-    '.status-indicator:has-text("Hardcoded video loaded")',
+    '.status-indicator:has-text("Video loaded")',
     {
       timeout: 15000,
     }
@@ -28,6 +28,9 @@ export async function loadHardcodedVideo(page: Page): Promise<void> {
  */
 export async function loadHardcodedVideoAndPlay(page: Page): Promise<void> {
   await loadHardcodedVideo(page);
+
+  // Click play button to start playback (video no longer auto-plays)
+  await page.click('#play-pause-btn');
 
   // Wait for video to start playing
   await page.waitForFunction(
