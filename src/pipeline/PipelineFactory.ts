@@ -1,3 +1,4 @@
+import type { ModelConfig } from '../config/modelConfig';
 import type { PoseTrackFile } from '../types/posetrack';
 import { CachedPoseSkeletonTransformer } from './CachedPoseSkeletonTransformer';
 import type { LivePoseCache } from './LivePoseCache';
@@ -29,6 +30,12 @@ export interface CreatePipelineOptions {
    * with blocking waits for frames not yet extracted.
    */
   livePoseCache?: LivePoseCache;
+
+  /**
+   * Model configuration for pose detection.
+   * Allows switching between MoveNet and BlazePose.
+   */
+  modelConfig?: ModelConfig;
 }
 
 /**
@@ -61,7 +68,7 @@ export function createPipeline(
     );
   } else {
     // ML mode: use real-time ML inference
-    skeletonTransformer = createSkeletonTransformer();
+    skeletonTransformer = createSkeletonTransformer(options.modelConfig);
   }
 
   const formProcessor = createFormProcessor(videoElement, canvasElement);
@@ -89,9 +96,11 @@ export function createFrameAcquisition(
 /**
  * Create a skeleton transformer component
  * This combines the pose detection and skeleton construction stages
+ *
+ * @param config - Optional model configuration (defaults to MoveNet Lightning)
  */
-export function createSkeletonTransformer(): SkeletonTransformer {
-  return new PoseSkeletonTransformer();
+export function createSkeletonTransformer(config?: ModelConfig): SkeletonTransformer {
+  return new PoseSkeletonTransformer(config);
 }
 
 /**

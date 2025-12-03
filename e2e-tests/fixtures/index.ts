@@ -55,7 +55,7 @@ function loadJsonFile(filename: string): PoseTrackFile {
  * These match the JSON files in the poses/ directory
  */
 export const FIXTURES = {
-  /** Main swing sample fixture - matches swing-sample.mp4 hardcoded video */
+  /** Main swing sample fixture - matches swing-sample.webm hardcoded video */
   'swing-sample': () =>
     Promise.resolve(loadJsonFile('swing-sample.posetrack.json')),
 

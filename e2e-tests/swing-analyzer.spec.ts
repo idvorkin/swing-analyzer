@@ -53,7 +53,7 @@ test.describe('Swing Analyzer', () => {
       'video',
       (video) => (video as HTMLVideoElement).src
     );
-    expect(videoSrc).toContain('swing-sample.mp4');
+    expect(videoSrc).toContain('swing-sample.webm');
   });
 
   test('should seed and retrieve pose track data correctly', async ({
@@ -65,7 +65,7 @@ test.describe('Swing Analyzer', () => {
     // Verify data was stored
     const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_VIDEO_HASH);
     expect(storedTrack).not.toBeNull();
-    expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample.mp4');
+    expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample.webm');
     expect(storedTrack?.frames.length).toBeGreaterThan(0);
   });
 
