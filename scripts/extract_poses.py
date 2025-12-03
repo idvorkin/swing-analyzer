@@ -9,6 +9,7 @@ Usage:
     python extract_poses.py video.mp4                    # Output to video.posetrack.json
     python extract_poses.py video.mp4 -o poses.json     # Custom output path
     python extract_poses.py video.mp4 --preview         # Show preview while extracting
+    python extract_poses.py video.mp4 --full            # Output all 33 BlazePose keypoints
 
 Requirements:
     pip install mediapipe opencv-python numpy
@@ -64,6 +65,43 @@ MEDIAPIPE_PARTS = {
     "LEFT_FOOT_INDEX": 31,
     "RIGHT_FOOT_INDEX": 32,
 }
+
+# BlazePose 33 keypoint names (full output)
+BLAZEPOSE_NAMES = [
+    "nose",
+    "left_eye_inner",
+    "left_eye",
+    "left_eye_outer",
+    "right_eye_inner",
+    "right_eye",
+    "right_eye_outer",
+    "left_ear",
+    "right_ear",
+    "mouth_left",
+    "mouth_right",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_pinky",
+    "right_pinky",
+    "left_index",
+    "right_index",
+    "left_thumb",
+    "right_thumb",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle",
+    "left_heel",
+    "right_heel",
+    "left_foot_index",
+    "right_foot_index",
+]
 
 # COCO-17 keypoint names (what the app expects)
 COCO_NAMES = [
@@ -148,6 +186,23 @@ def mediapipe_to_coco(landmarks, width: int, height: int) -> list[dict]:
             "z": lm.z,
             "score": lm.visibility,
             "name": COCO_NAMES[coco_idx],
+        })
+
+    return keypoints
+
+
+def mediapipe_to_blazepose(landmarks, width: int, height: int) -> list[dict]:
+    """Convert MediaPipe landmarks to full BlazePose 33 keypoint format."""
+    keypoints = []
+
+    for idx, name in enumerate(BLAZEPOSE_NAMES):
+        lm = landmarks[idx]
+        keypoints.append({
+            "x": lm.x * width,
+            "y": lm.y * height,
+            "z": lm.z,
+            "score": lm.visibility,
+            "name": name,
         })
 
     return keypoints
@@ -243,6 +298,7 @@ def extract_poses(
     output_path: Optional[Path] = None,
     preview: bool = False,
     model_complexity: int = 1,
+    full_keypoints: bool = False,
 ) -> dict:
     """
     Extract poses from video using MediaPipe BlazePose.
@@ -252,6 +308,7 @@ def extract_poses(
         output_path: Path for output JSON (default: video.posetrack.json)
         preview: Show preview window during extraction
         model_complexity: BlazePose complexity (0=lite, 1=full, 2=heavy)
+        full_keypoints: Output all 33 BlazePose keypoints instead of COCO-17
 
     Returns:
         PoseTrack dictionary
@@ -317,16 +374,23 @@ def extract_poses(
         timestamp_ms = (frame_idx / fps) * 1000
         video_time = frame_idx / fps
 
+        # Choose keypoint format
+        keypoint_names = BLAZEPOSE_NAMES if full_keypoints else COCO_NAMES
+        convert_fn = mediapipe_to_blazepose if full_keypoints else mediapipe_to_coco
+
         if results.pose_landmarks:
-            keypoints = mediapipe_to_coco(
+            keypoints = convert_fn(
                 results.pose_landmarks.landmark, width, height
             )
 
             # Average visibility as score
             score = sum(kp["score"] for kp in keypoints) / len(keypoints)
 
-            # Compute angles
-            angles = compute_angles(keypoints)
+            # Compute angles (always use COCO mapping for angle calculation)
+            coco_keypoints = mediapipe_to_coco(
+                results.pose_landmarks.landmark, width, height
+            ) if full_keypoints else keypoints
+            angles = compute_angles(coco_keypoints)
 
             frame_data = {
                 "frameIndex": frame_idx,
@@ -344,7 +408,7 @@ def extract_poses(
                 "videoTime": round(video_time, 4),
                 "keypoints": [
                     {"x": 0, "y": 0, "z": 0, "score": 0, "name": name}
-                    for name in COCO_NAMES
+                    for name in keypoint_names
                 ],
                 "score": 0,
             }
@@ -381,11 +445,14 @@ def extract_poses(
     print(f"\n  Completed in {elapsed:.1f}s ({frame_idx / elapsed:.1f} fps)")
 
     # Build PoseTrack structure
+    keypoint_format = "blazepose-33" if full_keypoints else "coco-17"
     posetrack = {
         "metadata": {
             "version": "1.0",
             "model": "blazepose",
             "modelVersion": f"mediapipe-{mp.__version__}",
+            "keypointFormat": keypoint_format,
+            "keypointCount": 33 if full_keypoints else 17,
             "sourceVideoHash": video_hash,
             "sourceVideoName": video_path.name,
             "sourceVideoDuration": round(duration, 4),
@@ -419,6 +486,7 @@ Examples:
   %(prog)s video.mp4 -o poses.json       Custom output path
   %(prog)s video.mp4 --preview           Show preview during extraction
   %(prog)s video.mp4 --complexity 2      Use heavy model for better accuracy
+  %(prog)s video.mp4 --full              Output all 33 BlazePose keypoints
         """
     )
     parser.add_argument("video", type=Path, help="Input video file")
@@ -427,6 +495,10 @@ Examples:
     parser.add_argument(
         "--complexity", type=int, choices=[0, 1, 2], default=1,
         help="Model complexity: 0=lite, 1=full (default), 2=heavy"
+    )
+    parser.add_argument(
+        "--full", action="store_true",
+        help="Output all 33 BlazePose keypoints instead of COCO-17"
     )
 
     args = parser.parse_args()
@@ -441,6 +513,7 @@ Examples:
             output_path=args.output,
             preview=args.preview,
             model_complexity=args.complexity,
+            full_keypoints=args.full,
         )
     except KeyboardInterrupt:
         print("\nAborted")
