@@ -10,7 +10,7 @@
  * - Playback uses cached frames, waiting if extraction hasn't caught up
  */
 
-import { Subject } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
 import { filter, first, timeout } from 'rxjs/operators';
 import type {
   PoseTrackFile,
@@ -77,6 +77,8 @@ export class LivePoseCache {
     if (metadata) {
       this.metadata = { ...this.metadata, ...metadata };
     }
+    // Complete the Subject to allow any waiters to clean up
+    this.frameAdded$.complete();
   }
 
   /**
@@ -144,8 +146,8 @@ export class LivePoseCache {
 
     // Wait for a frame close to the requested time
     try {
-      await this.frameAdded$
-        .pipe(
+      await firstValueFrom(
+        this.frameAdded$.pipe(
           filter((event) => {
             // Accept frame if it's close enough to requested time
             const diff = Math.abs(event.videoTime - roundedTime);
@@ -154,7 +156,7 @@ export class LivePoseCache {
           first(),
           timeout(timeoutMs)
         )
-        .toPromise();
+      );
 
       // Frame should now be available
       const frame = this.getFrame(roundedTime);
