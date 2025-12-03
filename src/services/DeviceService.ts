@@ -7,11 +7,56 @@ export const DeviceService = {
     return window.innerWidth;
   },
 
+  /**
+   * Returns screen dimensions with pixel ratio (e.g., "1920x1080 @2x")
+   */
+  getScreenDimensions(): string {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const pixelRatio = window.devicePixelRatio || 1;
+    return `${width}x${height} @${pixelRatio}x`;
+  },
+
   getDeviceMemoryGB(): number | null {
     if ('deviceMemory' in navigator) {
       return (navigator as { deviceMemory?: number }).deviceMemory ?? null;
     }
     return null;
+  },
+
+  /**
+   * Returns the number of logical CPU cores
+   */
+  getCpuCores(): number | null {
+    return navigator.hardwareConcurrency ?? null;
+  },
+
+  /**
+   * Returns online/offline status
+   */
+  getOnlineStatus(): boolean {
+    return navigator.onLine;
+  },
+
+  /**
+   * Returns the effective connection type (4g, 3g, 2g, slow-2g)
+   * Only available in Chromium-based browsers
+   */
+  getConnectionType(): string | null {
+    const nav = navigator as Navigator & {
+      connection?: { effectiveType?: string };
+    };
+    return nav.connection?.effectiveType ?? null;
+  },
+
+  /**
+   * Returns display mode: 'standalone' for PWA, 'browser' for browser tab
+   */
+  getDisplayMode(): string {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      return 'standalone';
+    }
+    return 'browser';
   },
 
   isTouchDevice(): boolean {

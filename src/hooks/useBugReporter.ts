@@ -52,10 +52,7 @@ export function useBugReporter() {
     setIsSubmitting(true);
     try {
       const isMobile = DeviceService.isMobileDevice();
-      const metadata = getMetadata(
-        () => DeviceService.getCurrentRoute(),
-        () => DeviceService.getUserAgent()
-      );
+      const metadata = getMetadata(DeviceService);
       const body = buildIssueBody(data, metadata, {
         isMobile,
         hasScreenshot: !!data.screenshot,
