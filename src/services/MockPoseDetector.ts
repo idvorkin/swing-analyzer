@@ -42,8 +42,8 @@ export function createMockPoseDetector(
         await new Promise((resolve) => setTimeout(resolve, frameDelayMs));
       }
 
-      // Get the frame for current index
-      const frame = poseTrack.frames[frameIndex];
+      // Get the frame for current index, cycling through if we run out
+      const frame = poseTrack.frames[frameIndex % poseTrack.frames.length];
       frameIndex++;
 
       if (!frame || frame.keypoints.length === 0) {

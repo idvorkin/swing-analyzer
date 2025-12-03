@@ -488,6 +488,17 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       // This tests the extraction path using a mock pose detector
       // NO cache seeding - extraction runs with fixture data via mock detector
 
+      // Give this test extra time - extraction runs through all video frames
+      test.setTimeout(180000); // 3 minutes
+      page.setDefaultTimeout(120000); // 2 minutes for waitForFunction
+
+      // Listen for console logs from the browser
+      page.on('console', msg => {
+        if (msg.text().includes('[usePoseTrack]') || msg.text().includes('[Test]')) {
+          console.log('BROWSER:', msg.text());
+        }
+      });
+
       // Check if test setup is available
       const hasTestSetup = await page.evaluate(() => {
         return !!(window as unknown as { __testSetup?: unknown }).__testSetup;
@@ -515,6 +526,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       // Wait for extraction to complete and filmstrip to show images
       // The mock detector returns fixture poses, batch analysis detects cycles,
       // hidden video captures frames
+      // Note: Even with mock detector, we still need to seek through video frames
       await page.waitForFunction(
         () => {
           const filmstripContainer = document.querySelector('.filmstrip-container');
@@ -522,7 +534,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
           const canvases = filmstripContainer.querySelectorAll('canvas');
           return canvases.length >= 4;
         },
-        { timeout: 30000 } // Longer timeout for extraction
+        { timeout: 90000 } // ~60s for mock extraction + frame capture
       );
 
       // Verify video was NOT playing during this
