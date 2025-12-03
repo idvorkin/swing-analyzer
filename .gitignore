@@ -54,7 +54,11 @@ node_modules/.vite/
 
 # Misc
 *.gz
+!pose-tracks/*.gz
 *.tgz
+
+# Raw pose track JSON files (commit gzipped versions only)
+pose-tracks/*.json
 .vercel
 .SpecStory
 .specstory/.what-is-this.md
