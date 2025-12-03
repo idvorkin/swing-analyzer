@@ -35,6 +35,12 @@ export interface UsePoseTrackOptions {
   /** Pre-compute angles during extraction (default: true) */
   precomputeAngles?: boolean;
   /**
+   * Callback called BEFORE extraction starts, with the live cache.
+   * Used to reinitialize the pipeline before frames start arriving.
+   * This is async - extraction waits for it to complete.
+   */
+  onExtractionStart?: (liveCache: LivePoseCache) => Promise<void>;
+  /**
    * Callback called for each frame during extraction.
    * Used to stream frames through the pipeline for instant filmstrip.
    */
@@ -79,6 +85,7 @@ export function usePoseTrack(
     autoExtract = true,
     defaultModel = 'movenet-lightning',
     precomputeAngles = true,
+    onExtractionStart: onExtractionStartCallback,
     onFrameExtracted: onFrameExtractedCallback,
   } = options;
 
@@ -170,6 +177,17 @@ export function usePoseTrack(
         },
       });
 
+      // CRITICAL: Call onExtractionStart BEFORE extraction begins
+      // This allows the pipeline to be reinitialized synchronously before frames arrive
+      if (onExtractionStartCallback) {
+        try {
+          await onExtractionStartCallback(liveCache);
+        } catch (err) {
+          console.error('Error in onExtractionStart callback:', err);
+          // Continue with extraction even if callback fails
+        }
+      }
+
       try {
         const result = await extractPosesFromVideo(videoFile, {
           model,
@@ -230,7 +248,7 @@ export function usePoseTrack(
         abortControllerRef.current = null;
       }
     },
-    [model, autoExtract, precomputeAngles, cancelExtraction, onFrameExtractedCallback]
+    [model, autoExtract, precomputeAngles, cancelExtraction, onExtractionStartCallback, onFrameExtractedCallback]
   );
 
   /**

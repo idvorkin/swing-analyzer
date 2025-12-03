@@ -1,5 +1,5 @@
-import { type Observable, Subject, type Subscription, firstValueFrom } from 'rxjs';
-import { share, switchMap, tap } from 'rxjs/operators';
+import { type Observable, Subject, type Subscription, firstValueFrom, lastValueFrom } from 'rxjs';
+import { share, switchMap, tap, toArray } from 'rxjs/operators';
 import type { Skeleton } from '../models/Skeleton';
 import type { FormCheckpoint } from '../types';
 import type {
@@ -224,19 +224,21 @@ export class Pipeline {
       this.latestSkeleton = skeletonEvent.skeleton;
     }
 
-    // Process through form processor (use firstValueFrom instead of deprecated toPromise)
-    const formEvents = await firstValueFrom(
-      this.formProcessor.processFrame(skeletonEvent),
-      { defaultValue: undefined }
+    // Process through form processor - collect ALL emitted form events
+    // The form processor emits multiple events per cycle (top, connect, bottom, release)
+    const formEventsArray = await lastValueFrom(
+      this.formProcessor.processFrame(skeletonEvent).pipe(toArray()),
+      { defaultValue: [] as FormEvent[] }
     );
 
-    if (formEvents) {
+    // Process each form event through the rep processor
+    for (const formEvent of formEventsArray) {
       // Emit checkpoint event
-      this.checkpointSubject.next(formEvents);
+      this.checkpointSubject.next(formEvent);
 
       // Process through rep processor
       const repEvent = await firstValueFrom(
-        this.repProcessor.updateRepCount(formEvents),
+        this.repProcessor.updateRepCount(formEvent),
         { defaultValue: undefined }
       );
 

@@ -18,14 +18,16 @@ import { type FixtureName, loadFixture } from '../fixtures';
  * @param page - Playwright page instance
  * @param fixtureName - Name of the fixture to load
  * @param frameDelayMs - Delay per frame to simulate extraction (default: 10ms)
+ * @param sessionId - Optional unique session ID for parallel test isolation
  */
 export async function setupMockPoseDetector(
   page: Page,
   fixtureName: FixtureName,
-  frameDelayMs = 10
+  frameDelayMs = 10,
+  sessionId?: string
 ): Promise<void> {
   const fixture = await loadFixture(fixtureName);
-  await setupMockPoseDetectorWithData(page, fixture, frameDelayMs);
+  await setupMockPoseDetectorWithData(page, fixture, frameDelayMs, sessionId);
 }
 
 /**
@@ -34,19 +36,24 @@ export async function setupMockPoseDetector(
  * @param page - Playwright page instance
  * @param poseTrack - The pose track data to use for mock detection
  * @param frameDelayMs - Delay per frame to simulate extraction (default: 10ms)
+ * @param sessionId - Optional unique session ID for parallel test isolation
  */
 export async function setupMockPoseDetectorWithData(
   page: Page,
   poseTrack: PoseTrackFile,
-  frameDelayMs = 10
+  frameDelayMs = 10,
+  sessionId?: string
 ): Promise<void> {
+  // Generate a random session ID if not provided (for parallel test isolation)
+  const sid = sessionId || `test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
   await page.evaluate(
-    ({ data, delay }) => {
+    ({ data, delay, sid }) => {
       // Access the test setup exposed on window
       const testSetup = (
         window as unknown as {
           __testSetup?: {
-            setupMockPoseDetector: (poseTrack: unknown, delay: number) => void;
+            setupMockPoseDetector: (poseTrack: unknown, delay: number, sessionId?: string) => void;
           };
         }
       ).__testSetup;
@@ -57,9 +64,9 @@ export async function setupMockPoseDetectorWithData(
         );
       }
 
-      testSetup.setupMockPoseDetector(data, delay);
+      testSetup.setupMockPoseDetector(data, delay, sid);
     },
-    { data: poseTrack, delay: frameDelayMs }
+    { data: poseTrack, delay: frameDelayMs, sid }
   );
 }
 

@@ -24,6 +24,14 @@ import type {
   SkeletonTransformer,
 } from '../pipeline/PipelineInterfaces';
 import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
+import {
+  sessionRecorder,
+  recordPipelineInit,
+  recordPlaybackStart,
+  recordPlaybackPause,
+  recordPlaybackStop,
+  recordVideoLoad,
+} from '../services/SessionRecorder';
 import type { AppState } from '../types';
 import type { PoseTrackFile } from '../types/posetrack';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
@@ -120,6 +128,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
           setAppState((prev) => ({ ...prev, isModelLoaded: true }));
           setStatus('Ready. Upload a video or start camera.');
+          recordPipelineInit({ model: savedModel });
         }
       } catch (error) {
         console.error('Failed to initialize:', error);
@@ -128,6 +137,22 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     };
 
     initializePipeline();
+
+    // Set up session recorder pipeline state getter
+    // This runs at 4 FPS to capture pipeline state for debugging
+    sessionRecorder.setPipelineStateGetter(() => ({
+      repCount: pipelineRef.current?.getRepCount() ?? 0,
+      isPlaying: videoRef.current ? !videoRef.current.paused : false,
+      videoTime: videoRef.current?.currentTime ?? 0,
+      skeletonAngles: pipelineRef.current?.getLatestSkeleton()
+        ? {
+            spine: pipelineRef.current.getLatestSkeleton()?.getSpineAngle() ?? 0,
+            arm: pipelineRef.current.getLatestSkeleton()?.getArmToSpineAngle() ?? 0,
+            hip: pipelineRef.current.getLatestSkeleton()?.getHipAngle() ?? 0,
+            knee: pipelineRef.current.getLatestSkeleton()?.getKneeAngle() ?? 0,
+          }
+        : undefined,
+    }));
 
     // Cleanup on unmount
     return () => {
@@ -234,16 +259,19 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       // Only set videoStartTime on first play, not on resume after pause
       // This ensures checkpoint timestamps remain valid for seeking
       setVideoStartTime((prev) => prev ?? performance.now());
+      recordPlaybackStart({ videoTime: video.currentTime });
       // Don't manage pipeline here - VideoFrameAcquisition handles this internally
     };
 
     const handlePause = () => {
       setIsPlaying(false);
+      recordPlaybackPause({ videoTime: video.currentTime });
       // Don't manage pipeline here - VideoFrameAcquisition handles this internally
     };
 
     const handleEnded = () => {
       setIsPlaying(false);
+      recordPlaybackStop({ videoTime: video.currentTime, reason: 'ended' });
       // Don't reset rep count when video ends - just stop processing
       // Pipeline will automatically pause with video
     };
@@ -645,6 +673,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       await frameAcquisitionRef.current.loadVideoFromURL(blobUrl);
       setAppState((prev) => ({ ...prev, usingCamera: false }));
       setStatus('Video loaded. Press Play to start.');
+      recordVideoLoad({ source: 'hardcoded', fileName: 'sample-video.mp4' });
 
       // Make sure the canvas is visible
       if (canvasRef.current) {

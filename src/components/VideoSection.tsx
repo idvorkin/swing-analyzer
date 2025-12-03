@@ -3,6 +3,11 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 import { usePoseTrack } from '../hooks/usePoseTrack';
 import { buildSkeletonEventFromFrame } from '../pipeline/PipelineFactory';
+import type { LivePoseCache } from '../pipeline/LivePoseCache';
+import {
+  recordExtractionStart,
+  recordPipelineReinit,
+} from '../services/SessionRecorder';
 import { SwingPositionName } from '../types';
 import type { PoseTrackFrame } from '../types/posetrack';
 import { PoseTrackStatusBar } from './PoseTrackStatusBar';
@@ -33,9 +38,25 @@ const VideoSection: React.FC = () => {
     reinitializeWithLiveCache,
   } = useSwingAnalyzerContext();
 
+  // Called BEFORE extraction starts - reinitialize pipeline synchronously
+  const handleExtractionStart = useCallback(
+    async (liveCache: LivePoseCache): Promise<void> => {
+      console.log('Extraction starting, reinitializing pipeline with live cache...');
+      recordExtractionStart();
+      recordPipelineReinit({ mode: 'live_cache' });
+      reinitializeWithLiveCache(liveCache);
+    },
+    [reinitializeWithLiveCache]
+  );
+
   // Handle frame extraction by streaming through the pipeline
   const handleFrameExtracted = useCallback(
     (frame: PoseTrackFrame) => {
+      // Log every 30 frames to avoid spam but show progress
+      if (frame.frameIndex % 30 === 0) {
+        console.log(`[Extraction] Frame ${frame.frameIndex} at ${frame.videoTime?.toFixed(2)}s → pipeline`);
+      }
+
       if (!pipelineRef.current) {
         // Pipeline not ready - this can happen during initialization
         console.warn('Dropping extracted frame: pipeline not initialized');
@@ -61,9 +82,9 @@ const VideoSection: React.FC = () => {
     cancelExtraction,
     savePoseTrack,
     downloadPoseTrack: downloadPoseTrackFile,
-    getLivePoseCache,
   } = usePoseTrack({
     autoExtract: true,
+    onExtractionStart: handleExtractionStart,
     onFrameExtracted: handleFrameExtracted,
   });
 
@@ -74,16 +95,8 @@ const VideoSection: React.FC = () => {
     }
   }, [currentVideoFile, startExtraction]);
 
-  // Reinitialize pipeline with live cache when extraction starts for streaming playback
-  useEffect(() => {
-    if (poseTrackStatus.type === 'extracting') {
-      const liveCache = getLivePoseCache();
-      if (liveCache) {
-        console.log('Extraction started, switching to streaming cache...');
-        reinitializeWithLiveCache(liveCache);
-      }
-    }
-  }, [poseTrackStatus.type, getLivePoseCache, reinitializeWithLiveCache]);
+  // Note: Pipeline reinitialization for live extraction now happens via onExtractionStart callback
+  // This ensures the pipeline is ready BEFORE frames start arriving (fixes race condition)
 
   // Reinitialize pipeline with cached poses when they become available from storage
   useEffect(() => {
