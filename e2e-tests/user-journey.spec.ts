@@ -482,6 +482,123 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     });
   });
 
+  test.describe('Filmstrip Frame Capture', () => {
+    test('filmstrip shows captured images after loading video with cached poses', async ({ page }) => {
+      // Seed pose data first
+      await seedPoseTrackFixture(page, 'swing-sample');
+
+      // Load video
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      // Wait for controls to be enabled (indicates batch analysis is ready)
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
+      // Wait for rep count to be set from batch analysis
+      await page.waitForFunction(
+        () => {
+          const repCounter = document.querySelector('#rep-counter');
+          return repCounter && repCounter.textContent !== '0';
+        },
+        { timeout: 10000 }
+      );
+
+      // Wait for filmstrip to have canvas elements (captured frames)
+      // The hidden video element needs time to seek and capture each frame
+      await page.waitForFunction(
+        () => {
+          const filmstripContainer = document.querySelector('.filmstrip-container');
+          if (!filmstripContainer) return false;
+          const canvases = filmstripContainer.querySelectorAll('canvas');
+          // We expect 4 positions (Top, Connect, Bottom, Release)
+          return canvases.length >= 4;
+        },
+        { timeout: 15000 }
+      );
+
+      // Verify filmstrip contains canvas elements (actual images, not placeholders)
+      const filmstripInfo = await page.evaluate(() => {
+        const filmstripContainer = document.querySelector('.filmstrip-container');
+        if (!filmstripContainer) return { found: false, canvasCount: 0, hasLabels: false };
+
+        const canvases = filmstripContainer.querySelectorAll('canvas');
+        const labels = filmstripContainer.querySelectorAll('.filmstrip-label');
+
+        return {
+          found: true,
+          canvasCount: canvases.length,
+          hasLabels: labels.length > 0,
+        };
+      });
+
+      expect(filmstripInfo.found).toBe(true);
+      expect(filmstripInfo.canvasCount).toBeGreaterThanOrEqual(4);
+      expect(filmstripInfo.hasLabels).toBe(true);
+    });
+
+    test('filmstrip thumbnails are clickable and seek video', async ({ page }) => {
+      // Seed pose data
+      await seedPoseTrackFixture(page, 'swing-sample');
+
+      // Load video
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      // Wait for controls to be enabled
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
+      // Wait for filmstrip with images
+      await page.waitForFunction(
+        () => {
+          const filmstripContainer = document.querySelector('.filmstrip-container');
+          if (!filmstripContainer) return false;
+          const canvases = filmstripContainer.querySelectorAll('canvas');
+          return canvases.length >= 4;
+        },
+        { timeout: 15000 }
+      );
+
+      // Get initial video time
+      const initialTime = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.currentTime || 0;
+      });
+
+      // Click on a filmstrip thumbnail (the last one - Release position)
+      await page.click('.filmstrip-thumb:last-child');
+
+      // Wait for video time to change
+      await page.waitForFunction(
+        (prevTime) => {
+          const video = document.querySelector('video');
+          return video && Math.abs(video.currentTime - prevTime) > 0.1;
+        },
+        initialTime,
+        { timeout: 5000 }
+      );
+
+      // Verify video seeked to a different position
+      const newTime = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.currentTime || 0;
+      });
+
+      expect(Math.abs(newTime - initialTime)).toBeGreaterThan(0.1);
+    });
+  });
+
   test.describe('Skeleton Redraw on Seek', () => {
     test('skeleton redraws when video is seeked manually', async ({ page }) => {
       // Seed pose data first

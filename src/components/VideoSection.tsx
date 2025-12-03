@@ -1,7 +1,9 @@
 import type React from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import { useFilmstripCapture, type CaptureRequest } from '../hooks/useFilmstripCapture';
 import { usePoseTrack } from '../hooks/usePoseTrack';
+import type { BatchAnalysisResult } from '../pipeline/SwingAnalyzer';
 import { SwingPositionName } from '../types';
 import { PoseTrackStatusBar } from './PoseTrackStatusBar';
 
@@ -82,6 +84,78 @@ const VideoSection: React.FC = () => {
       setRepCount(poseTrackStatus.batchRepCount);
     }
   }, [poseTrackStatus, setRepCount]);
+
+  // Track video source URL for filmstrip capture
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
+
+  // Update video source when video element source changes
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const updateSrc = () => {
+      setVideoSrc(video.src || null);
+    };
+
+    // Check initial source
+    updateSrc();
+
+    // Listen for source changes
+    video.addEventListener('loadeddata', updateSrc);
+    return () => video.removeEventListener('loadeddata', updateSrc);
+  }, [videoRef]);
+
+  // Filmstrip frame capture (uses hidden video element)
+  const {
+    capturedFrames,
+    isCapturing,
+    requestCaptures,
+  } = useFilmstripCapture({ videoSrc });
+
+  // Track which batch analysis we've requested captures for
+  const lastCapturedAnalysisRef = useRef<BatchAnalysisResult | null>(null);
+
+  // Request frame captures when batch analysis is ready
+  useEffect(() => {
+    const batchAnalysis = (poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'extracting')
+      ? poseTrackStatus.batchAnalysis
+      : undefined;
+
+    if (!batchAnalysis || batchAnalysis.cycles.length === 0) return;
+    if (lastCapturedAnalysisRef.current === batchAnalysis) return;
+    if (!videoSrc) return;
+
+    lastCapturedAnalysisRef.current = batchAnalysis;
+
+    // Build capture requests from batch analysis
+    const requests: CaptureRequest[] = [];
+    const positionOrder = [
+      SwingPositionName.Top,
+      SwingPositionName.Connect,
+      SwingPositionName.Bottom,
+      SwingPositionName.Release,
+    ];
+
+    for (let cycleIdx = 0; cycleIdx < batchAnalysis.cycles.length; cycleIdx++) {
+      const cycle = batchAnalysis.cycles[cycleIdx];
+      for (const position of positionOrder) {
+        const candidate = cycle.positions.get(position);
+        if (candidate && candidate.videoTime !== undefined) {
+          requests.push({
+            cycleIndex: cycleIdx,
+            position,
+            videoTime: candidate.videoTime,
+            spineAngle: candidate.spineAngle,
+          });
+        }
+      }
+    }
+
+    if (requests.length > 0) {
+      console.log(`Requesting filmstrip captures for ${requests.length} positions`);
+      requestCaptures(requests);
+    }
+  }, [poseTrackStatus, videoSrc, requestCaptures]);
 
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);
@@ -192,21 +266,43 @@ const VideoSection: React.FC = () => {
       }
     }
 
-    // Fall back to batch analysis cycles (no images, but has video times)
+    // Fall back to batch analysis cycles with captured frames
     if (!hasRenderedFromPipeline && batchAnalysis && batchAnalysis.cycles.length > 0) {
       const cycleIndex = Math.min(appState.currentRepIndex, batchAnalysis.cycles.length - 1);
       const currentCycle = batchAnalysis.cycles[cycleIndex];
+      const cycleFrames = capturedFrames.get(cycleIndex);
+
       if (currentCycle) {
         const strip = document.createElement('div');
         strip.className = 'filmstrip';
 
         positionOrder.forEach((position) => {
           const candidate = currentCycle.positions.get(position);
+          const capturedFrame = cycleFrames?.find((f) => f.position === position);
           const thumb = document.createElement('div');
           thumb.className = 'filmstrip-thumb';
 
-          if (candidate && candidate.videoTime !== undefined) {
-            // Show position label with video time (clickable)
+          if (capturedFrame) {
+            // We have a captured frame - render the actual image
+            const canvas = document.createElement('canvas');
+            canvas.width = capturedFrame.imageData.width;
+            canvas.height = capturedFrame.imageData.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.putImageData(capturedFrame.imageData, 0, 0);
+            }
+            thumb.appendChild(canvas);
+
+            const label = document.createElement('div');
+            label.className = 'filmstrip-label';
+            label.textContent = positionNames[position];
+            thumb.appendChild(label);
+
+            const seekTime = capturedFrame.videoTime;
+            thumb.addEventListener('click', () => seekToVideoTime(seekTime));
+            thumb.style.cursor = 'pointer';
+          } else if (candidate && candidate.videoTime !== undefined) {
+            // No captured frame yet - show placeholder with video time (clickable)
             const timeStr = candidate.videoTime.toFixed(1);
             thumb.innerHTML = `
               <div class="filmstrip-batch-thumb">
@@ -235,6 +331,7 @@ const VideoSection: React.FC = () => {
     seekToVideoTime,
     videoStartTime,
     batchAnalysis,
+    capturedFrames,
   ]);
 
   // Re-render filmstrip when rep changes
