@@ -7,27 +7,45 @@ import { SettingsRow } from './SettingsRow';
 const MODEL_STORAGE_KEY = 'swing-analyzer-pose-model';
 const BLAZEPOSE_VARIANT_KEY = 'swing-analyzer-blazepose-variant';
 
-// Get saved model preference
+// Get saved model preference (with error handling for private browsing/quota issues)
 export function getSavedModelPreference(): PoseModel {
-  const saved = localStorage.getItem(MODEL_STORAGE_KEY);
-  return saved === 'blazepose' ? 'blazepose' : 'movenet';
+  try {
+    const saved = localStorage.getItem(MODEL_STORAGE_KEY);
+    return saved === 'blazepose' ? 'blazepose' : 'movenet';
+  } catch (error) {
+    console.warn('Failed to read model preference from localStorage:', error);
+    return 'movenet';
+  }
 }
 
-// Get saved BlazePose variant
+// Get saved BlazePose variant (with error handling for private browsing/quota issues)
 export function getSavedBlazePoseVariant(): BlazePoseVariant {
-  const saved = localStorage.getItem(BLAZEPOSE_VARIANT_KEY);
-  if (saved === 'full' || saved === 'heavy') return saved;
-  return 'lite';
+  try {
+    const saved = localStorage.getItem(BLAZEPOSE_VARIANT_KEY);
+    if (saved === 'full' || saved === 'heavy') return saved;
+    return 'lite';
+  } catch (error) {
+    console.warn('Failed to read BlazePose variant from localStorage:', error);
+    return 'lite';
+  }
 }
 
-// Save model preference
+// Save model preference (with error handling for private browsing/quota issues)
 function saveModelPreference(model: PoseModel): void {
-  localStorage.setItem(MODEL_STORAGE_KEY, model);
+  try {
+    localStorage.setItem(MODEL_STORAGE_KEY, model);
+  } catch (error) {
+    console.error('Failed to save model preference:', error);
+  }
 }
 
-// Save BlazePose variant
+// Save BlazePose variant (with error handling for private browsing/quota issues)
 function saveBlazePoseVariant(variant: BlazePoseVariant): void {
-  localStorage.setItem(BLAZEPOSE_VARIANT_KEY, variant);
+  try {
+    localStorage.setItem(BLAZEPOSE_VARIANT_KEY, variant);
+  } catch (error) {
+    console.error('Failed to save BlazePose variant:', error);
+  }
 }
 
 export function AnalysisTab() {
