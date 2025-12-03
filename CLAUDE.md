@@ -29,6 +29,16 @@ See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 
 ## PR Workflow
 
+### Git Hooks Setup
+
+Run this at session start to enable shared hooks:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This blocks direct pushes to `main` - all changes must go through PRs.
+
 ### Branch Strategy
 
 - **feature branches**: Agents work here, one branch per task
