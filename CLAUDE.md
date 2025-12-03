@@ -243,6 +243,15 @@ just e2e-report       # View HTML report with traces
 just test-unit        # Run unit tests
 ```
 
+### When to Run Tests
+
+- **Unit tests**: Run after any code changes (`just test-unit`)
+- **E2E tests**: Run after major changes, especially:
+  - Pipeline or transformer changes
+  - UI component changes affecting video/skeleton rendering
+  - Changes to pose detection or extraction
+  - Before creating PRs for significant features
+
 ### Viewing Test Reports
 
 Run `just e2e-report` to start the report server. It will display:
