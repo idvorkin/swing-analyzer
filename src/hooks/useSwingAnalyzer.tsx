@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getSavedModelPreference } from '../components/settings/DebugTab';
 import {
+  getSavedBlazePoseVariant,
+  getSavedModelPreference,
+} from '../components/settings/AnalysisTab';
+import {
+  BLAZEPOSE_FULL_CONFIG,
+  BLAZEPOSE_HEAVY_CONFIG,
   BLAZEPOSE_LITE_CONFIG,
   DEFAULT_MODEL_CONFIG,
 } from '../config/modelConfig';
@@ -71,13 +76,25 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     const initializePipeline = async () => {
       try {
         if (videoRef.current && canvasRef.current) {
-          // Get model config based on saved preference
+          // Get model config based on saved preferences
           const savedModel = getSavedModelPreference();
-          const modelConfig =
-            savedModel === 'blazepose'
-              ? BLAZEPOSE_LITE_CONFIG
-              : DEFAULT_MODEL_CONFIG;
-          console.log(`Using pose model: ${savedModel}`);
+          const blazePoseVariant = getSavedBlazePoseVariant();
+          let modelConfig = DEFAULT_MODEL_CONFIG;
+          if (savedModel === 'blazepose') {
+            switch (blazePoseVariant) {
+              case 'full':
+                modelConfig = BLAZEPOSE_FULL_CONFIG;
+                break;
+              case 'heavy':
+                modelConfig = BLAZEPOSE_HEAVY_CONFIG;
+                break;
+              default:
+                modelConfig = BLAZEPOSE_LITE_CONFIG;
+            }
+          }
+          console.log(
+            `Using pose model: ${savedModel}${savedModel === 'blazepose' ? ` (${blazePoseVariant})` : ''}`
+          );
 
           // Create pipeline components
           const pipeline = createPipeline(videoRef.current, canvasRef.current, {
@@ -373,10 +390,20 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         );
         // Use saved model preference for consistency with main pipeline
         const savedModel = getSavedModelPreference();
-        const modelConfig =
-          savedModel === 'blazepose'
-            ? BLAZEPOSE_LITE_CONFIG
-            : DEFAULT_MODEL_CONFIG;
+        const blazePoseVariant = getSavedBlazePoseVariant();
+        let modelConfig = DEFAULT_MODEL_CONFIG;
+        if (savedModel === 'blazepose') {
+          switch (blazePoseVariant) {
+            case 'full':
+              modelConfig = BLAZEPOSE_FULL_CONFIG;
+              break;
+            case 'heavy':
+              modelConfig = BLAZEPOSE_HEAVY_CONFIG;
+              break;
+            default:
+              modelConfig = BLAZEPOSE_LITE_CONFIG;
+          }
+        }
         directSkeletonTransformerRef.current =
           createSkeletonTransformer(modelConfig);
 

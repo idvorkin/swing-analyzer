@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AboutTab } from './settings/AboutTab';
-import { BugReportTab } from './settings/BugReportTab';
-import { DebugTab } from './settings/DebugTab';
+import { AnalysisTab } from './settings/AnalysisTab';
+import { GeneralTab } from './settings/GeneralTab';
 import {
-  BugIcon,
+  ActivityIcon,
   CloseIcon,
   InfoIcon,
   MonitorIcon,
-  RocketIcon,
   SettingsIcon,
 } from './settings/Icons';
 import './settings/Settings.css';
-import { UpdatesTab } from './settings/UpdatesTab';
 
 const TABS = [
-  { id: 'debug' as const, label: 'Display', Icon: MonitorIcon },
-  { id: 'bug' as const, label: 'Bug Report', Icon: BugIcon },
-  { id: 'updates' as const, label: 'Updates', Icon: RocketIcon },
+  { id: 'general' as const, label: 'General', Icon: MonitorIcon },
+  { id: 'analysis' as const, label: 'Analysis', Icon: ActivityIcon },
   { id: 'about' as const, label: 'About', Icon: InfoIcon },
 ] as const;
 
@@ -55,7 +52,7 @@ export function SettingsModal({
   updateAvailable,
   onReload,
 }: SettingsModalProps) {
-  const [activeSection, setActiveSection] = useState<TabId>('about');
+  const [activeSection, setActiveSection] = useState<TabId>('general');
 
   const handleShakeToggle = useCallback(async () => {
     if (!shakeEnabled) {
@@ -142,29 +139,25 @@ export function SettingsModal({
 
         {/* Content */}
         <div className="settings-content">
-          {activeSection === 'debug' && <DebugTab onClose={onClose} />}
+          {activeSection === 'general' && <GeneralTab />}
 
-          {activeSection === 'bug' && (
-            <BugReportTab
+          {activeSection === 'analysis' && <AnalysisTab />}
+
+          {activeSection === 'about' && (
+            <AboutTab
               shakeEnabled={shakeEnabled}
               onShakeToggle={handleShakeToggle}
               isShakeSupported={isShakeSupported}
               shortcut={shortcut}
               onReportBug={handleReportBug}
-            />
-          )}
-
-          {activeSection === 'updates' && (
-            <UpdatesTab
               updateAvailable={updateAvailable}
               lastCheckTime={lastCheckTime}
               isCheckingUpdate={isCheckingUpdate}
               onCheckForUpdate={onCheckForUpdate}
               onReload={onReload}
+              onClose={onClose}
             />
           )}
-
-          {activeSection === 'about' && <AboutTab />}
         </div>
       </div>
     </div>
