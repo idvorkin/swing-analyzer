@@ -64,3 +64,6 @@ src/generated_version.ts
 
 # Stale beads snapshot (migration artifact)
 old_beads_data/
+
+# Aider AI assistant
+.aider.*
