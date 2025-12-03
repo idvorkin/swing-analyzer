@@ -30,9 +30,9 @@ export class PoseDetectorFactory {
     config: ModelConfig = DEFAULT_MODEL_CONFIG
   ): Promise<PoseDetectorResult> {
     if (config.model === 'blazepose') {
-      return this.createBlazePose(config);
+      return PoseDetectorFactory.createBlazePose(config);
     }
-    return this.createMoveNet(config);
+    return PoseDetectorFactory.createMoveNet(config);
   }
 
   /**
@@ -63,16 +63,23 @@ export class PoseDetectorFactory {
 
     console.log(`PoseDetectorFactory: Creating MoveNet ${variant}`);
 
-    const detector = await poseDetection.createDetector(
-      poseDetection.SupportedModels.MoveNet,
-      detectorConfig
-    );
+    try {
+      const detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.MoveNet,
+        detectorConfig
+      );
 
-    return {
-      detector,
-      modelName: `MoveNet ${variant}`,
-      keypointFormat: 'coco',
-    };
+      return {
+        detector,
+        modelName: `MoveNet ${variant}`,
+        keypointFormat: 'coco',
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to create MoveNet ${variant} detector: ${message}`
+      );
+    }
   }
 
   /**
@@ -84,13 +91,15 @@ export class PoseDetectorFactory {
     const variant = config.blazePoseVariant || 'lite';
     const runtime = config.blazePoseRuntime || 'tfjs';
 
-    console.log(`PoseDetectorFactory: Creating BlazePose ${variant} (${runtime} runtime)`);
+    console.log(
+      `PoseDetectorFactory: Creating BlazePose ${variant} (${runtime} runtime)`
+    );
 
     if (runtime === 'mediapipe') {
-      return this.createBlazePoseMediaPipe(config);
+      return PoseDetectorFactory.createBlazePoseMediaPipe(config);
     }
 
-    return this.createBlazePoseTfjs(config);
+    return PoseDetectorFactory.createBlazePoseTfjs(config);
   }
 
   /**
@@ -107,16 +116,23 @@ export class PoseDetectorFactory {
       enableSmoothing: config.enableSmoothing ?? true,
     };
 
-    const detector = await poseDetection.createDetector(
-      poseDetection.SupportedModels.BlazePose,
-      detectorConfig
-    );
+    try {
+      const detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.BlazePose,
+        detectorConfig
+      );
 
-    return {
-      detector,
-      modelName: `BlazePose ${variant} (tfjs)`,
-      keypointFormat: 'mediapipe',
-    };
+      return {
+        detector,
+        modelName: `BlazePose ${variant} (tfjs)`,
+        keypointFormat: 'mediapipe',
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to create BlazePose ${variant} (tfjs) detector: ${message}`
+      );
+    }
   }
 
   /**
@@ -136,15 +152,22 @@ export class PoseDetectorFactory {
       solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/pose',
     };
 
-    const detector = await poseDetection.createDetector(
-      poseDetection.SupportedModels.BlazePose,
-      detectorConfig
-    );
+    try {
+      const detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.BlazePose,
+        detectorConfig
+      );
 
-    return {
-      detector,
-      modelName: `BlazePose ${variant} (mediapipe)`,
-      keypointFormat: 'mediapipe',
-    };
+      return {
+        detector,
+        modelName: `BlazePose ${variant} (mediapipe)`,
+        keypointFormat: 'mediapipe',
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to create BlazePose ${variant} (mediapipe) detector: ${message}`
+      );
+    }
   }
 }

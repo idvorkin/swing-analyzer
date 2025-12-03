@@ -41,15 +41,17 @@ interface DebugTabProps {
 
 export function DebugTab({ onClose }: DebugTabProps) {
   const { appState, setDisplayMode } = useSwingAnalyzerContext();
-  const [selectedModel, setSelectedModel] = useState<PoseModel>(getSavedModelPreference());
+  const [selectedModel, setSelectedModel] = useState<PoseModel>(
+    getSavedModelPreference()
+  );
   const [needsReload, setNeedsReload] = useState(false);
 
   const handleModelChange = (model: PoseModel) => {
+    const previousModel = getSavedModelPreference();
     setSelectedModel(model);
     saveModelPreference(model);
-    setNeedsReload(model !== getSavedModelPreference());
-    // Always show reload prompt when changing
-    setNeedsReload(true);
+    // Only show reload prompt if model actually changed
+    setNeedsReload(model !== previousModel);
   };
 
   return (
@@ -117,7 +119,9 @@ export function DebugTab({ onClose }: DebugTabProps) {
             onChange={() => handleModelChange('movenet')}
           />
           <span className="settings-radio-label">MoveNet Lightning</span>
-          <span className="settings-radio-desc">Fast, 17 keypoints (default)</span>
+          <span className="settings-radio-desc">
+            Fast, 17 keypoints (default)
+          </span>
         </label>
 
         <label className="settings-radio-option">
@@ -129,13 +133,28 @@ export function DebugTab({ onClose }: DebugTabProps) {
             onChange={() => handleModelChange('blazepose')}
           />
           <span className="settings-radio-label">BlazePose Lite</span>
-          <span className="settings-radio-desc">33 keypoints, more detailed</span>
+          <span className="settings-radio-desc">
+            33 keypoints, more detailed
+          </span>
         </label>
       </div>
 
       {needsReload && (
-        <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: '#2a2a3e', borderRadius: '8px' }}>
-          <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#fbbf24' }}>
+        <div
+          style={{
+            marginTop: '0.5rem',
+            padding: '0.5rem',
+            background: '#2a2a3e',
+            borderRadius: '8px',
+          }}
+        >
+          <p
+            style={{
+              margin: '0 0 0.5rem 0',
+              fontSize: '0.875rem',
+              color: '#fbbf24',
+            }}
+          >
             Reload required to apply model change
           </p>
           <button
