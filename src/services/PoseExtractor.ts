@@ -261,10 +261,23 @@ export async function extractPosesFromVideo(
 
 /**
  * Create a pose detector for the specified model
+ * In test mode, uses mock detector if configured via testSetup
  */
 async function createPoseDetector(
   model: PoseModel
 ): Promise<poseDetection.PoseDetector> {
+  // Check for mock detector factory (set via E2E tests)
+  const mockFactory = (
+    window as unknown as {
+      __testSetup?: { getMockDetectorFactory?: () => (() => Promise<poseDetection.PoseDetector>) | undefined };
+    }
+  ).__testSetup?.getMockDetectorFactory?.();
+
+  if (mockFactory) {
+    console.log('[Test] Using mock pose detector');
+    return mockFactory();
+  }
+
   await tf.setBackend('webgl');
 
   switch (model) {

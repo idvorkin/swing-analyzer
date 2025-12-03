@@ -48,13 +48,16 @@ export function getMockDetectorFactory(): PoseDetectorFactory | undefined {
 }
 
 // Expose to window for E2E tests (only in development)
+// Check both Vite's DEV flag and MODE to ensure we're in dev mode
 // @ts-expect-error Vite-specific import.meta.env
-if (typeof window !== 'undefined' && import.meta.env?.DEV) {
+const isDev = import.meta.env?.DEV || import.meta.env?.MODE === 'development';
+if (typeof window !== 'undefined' && isDev) {
   (window as unknown as { __testSetup: typeof testSetup }).__testSetup = {
     setupMockPoseDetector,
     clearMockPoseDetector,
     getMockDetectorFactory,
   };
+  console.log('[Test] Test setup exposed on window.__testSetup');
 }
 
 const testSetup = {
