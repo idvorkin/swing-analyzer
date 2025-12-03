@@ -8,7 +8,7 @@
  */
 
 import type { Pose, PoseDetector } from '@tensorflow-models/pose-detection';
-import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
+import type { PoseTrackFile } from '../types/posetrack';
 
 export interface MockPoseDetectorOptions {
   /** The PoseTrack data to use for mock poses */
@@ -24,14 +24,6 @@ export function createMockPoseDetector(
   options: MockPoseDetectorOptions
 ): PoseDetector {
   const { poseTrack, frameDelayMs = 0 } = options;
-
-  // Index frames by their approximate video time for lookup
-  const framesByTime = new Map<number, PoseTrackFrame>();
-  for (const frame of poseTrack.frames) {
-    // Round to nearest 10ms for lookup tolerance
-    const roundedTime = Math.round((frame.videoTime ?? 0) * 100) / 100;
-    framesByTime.set(roundedTime, frame);
-  }
 
   let frameIndex = 0;
 

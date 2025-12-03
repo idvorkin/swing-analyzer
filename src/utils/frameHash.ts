@@ -179,14 +179,24 @@ export async function computeFrameHashes(
 /**
  * Seek video to specific time and wait for it to be ready
  */
-function seekToTime(video: HTMLVideoElement, time: number): Promise<void> {
-  return new Promise((resolve) => {
+function seekToTime(
+  video: HTMLVideoElement,
+  time: number,
+  timeout = 5000
+): Promise<void> {
+  return new Promise((resolve, reject) => {
     if (Math.abs(video.currentTime - time) < 0.01) {
       resolve();
       return;
     }
 
+    const timeoutId = setTimeout(() => {
+      video.removeEventListener('seeked', onSeeked);
+      reject(new Error(`Seek to ${time}s timed out after ${timeout}ms`));
+    }, timeout);
+
     const onSeeked = () => {
+      clearTimeout(timeoutId);
       video.removeEventListener('seeked', onSeeked);
       resolve();
     };
@@ -234,12 +244,15 @@ export async function verifyPoseTrackMatch(
     });
   }
 
-  // Calculate overall match score
+  // Calculate overall match score (guard against empty comparisons)
   const avgSimilarity =
-    comparisons.reduce((sum, c) => sum + c.similarity, 0) / comparisons.length;
+    comparisons.length > 0
+      ? comparisons.reduce((sum, c) => sum + c.similarity, 0) /
+        comparisons.length
+      : 0;
 
   // Consider it a match if average similarity > 0.8 (allow for compression artifacts)
-  const isMatch = avgSimilarity > 0.8;
+  const isMatch = comparisons.length > 0 && avgSimilarity > 0.8;
 
   return {
     isMatch,
