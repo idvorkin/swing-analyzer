@@ -146,6 +146,7 @@ export function usePoseTrack(
           poseTrack: existing,
           fromCache: true,
           batchRepCount: batchResult.repCount,
+          batchAnalysis: batchResult,
         });
         return;
       }
@@ -187,15 +188,16 @@ export function usePoseTrack(
           onProgress: (progress: PoseExtractionProgress) => {
             // Run batch analysis periodically during extraction
             let batchRepCount: number | undefined;
+            let batchAnalysis: ReturnType<typeof SwingAnalyzer.analyzeFrames> | undefined;
             if (progress.currentFrame - lastBatchAnalysisFrame >= BATCH_ANALYSIS_INTERVAL) {
               const frames = liveCache.getAllFrames();
               if (frames.length > 0) {
-                const batchResult = SwingAnalyzer.analyzeFrames(frames);
-                batchRepCount = batchResult.repCount;
+                batchAnalysis = SwingAnalyzer.analyzeFrames(frames);
+                batchRepCount = batchAnalysis.repCount;
                 lastBatchAnalysisFrame = progress.currentFrame;
               }
             }
-            setStatus({ type: 'extracting', progress, batchRepCount });
+            setStatus({ type: 'extracting', progress, batchRepCount, batchAnalysis });
           },
           // Stream each frame to the live cache as it's extracted
           onFrameExtracted: (frame) => {
@@ -218,6 +220,7 @@ export function usePoseTrack(
           poseTrack: result.poseTrack,
           fromCache: false,
           batchRepCount: batchResult.repCount,
+          batchAnalysis: batchResult,
         });
 
         console.log(
