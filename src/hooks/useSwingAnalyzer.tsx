@@ -13,8 +13,10 @@ import {
   DEFAULT_SAMPLE_VIDEO,
   LOCAL_SAMPLE_VIDEO,
 } from '../config/sampleVideos';
-import type { LivePoseCache } from '../pipeline/LivePoseCache';
+import { Skeleton } from '../models/Skeleton';
+import { LivePoseCache } from '../pipeline/LivePoseCache';
 import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
+import { CocoBodyParts, type PoseKeypoint } from '../types';
 import {
   createFrameAcquisition,
   createPipeline,
@@ -77,6 +79,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const frameAcquisitionRef = useRef<VideoFrameAcquisition | null>(null);
   const skeletonRendererRef = useRef<SkeletonRenderer | null>(null);
   const pipelineSubscriptionsRef = useRef<{ unsubscribe: () => void }[]>([]);
+  const livePoseCacheRef = useRef<LivePoseCache | null>(null);
 
   // Initialize pipeline and models - runs once on mount
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only once on mount
@@ -286,6 +289,71 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       video.removeEventListener('ended', handleEnded);
     };
   }, []);
+
+  // Helper function to build a Skeleton from cached frame data
+  const buildSkeletonFromFrame = useCallback((keypoints: PoseKeypoint[]): Skeleton | null => {
+    if (!keypoints || keypoints.length === 0) return null;
+
+    // Calculate spine angle
+    const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
+    const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
+    const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
+    const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+
+    let spineAngle = 0;
+    if (leftShoulder && rightShoulder && leftHip && rightHip) {
+      const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
+      const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
+      const hipMidX = (leftHip.x + rightHip.x) / 2;
+      const hipMidY = (leftHip.y + rightHip.y) / 2;
+      const deltaX = shoulderMidX - hipMidX;
+      const deltaY = hipMidY - shoulderMidY;
+      spineAngle = Math.abs((Math.atan2(deltaX, deltaY) * 180) / Math.PI);
+    }
+
+    // Check visibility
+    const minScore = 0.3;
+    const hasVisibleKeypoints =
+      (leftShoulder?.score ?? 0) >= minScore &&
+      (rightShoulder?.score ?? 0) >= minScore &&
+      (leftHip?.score ?? 0) >= minScore &&
+      (rightHip?.score ?? 0) >= minScore;
+
+    return new Skeleton(keypoints, spineAngle, hasVisibleKeypoints);
+  }, []);
+
+  // Render skeleton from cache on video time updates (for cached pose playback)
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const renderSkeletonFromCache = () => {
+      // Only render from cache if we're using cached poses
+      const cache = livePoseCacheRef.current;
+      if (!cache || !skeletonRendererRef.current) return;
+
+      const frame = cache.getFrame(video.currentTime);
+      if (!frame?.keypoints) return;
+
+      const skeleton = buildSkeletonFromFrame(frame.keypoints);
+      if (skeleton) {
+        // Update angles in UI
+        setSpineAngle(Math.round(skeleton.getSpineAngle() || 0));
+        setArmToSpineAngle(Math.round(skeleton.getArmToVerticalAngle() || 0));
+        // Render skeleton
+        skeletonRendererRef.current.renderSkeleton(skeleton, performance.now());
+      }
+    };
+
+    // Render on time updates (during playback) and after seeks
+    video.addEventListener('timeupdate', renderSkeletonFromCache);
+    video.addEventListener('seeked', renderSkeletonFromCache);
+
+    return () => {
+      video.removeEventListener('timeupdate', renderSkeletonFromCache);
+      video.removeEventListener('seeked', renderSkeletonFromCache);
+    };
+  }, [buildSkeletonFromFrame]);
 
   // Manual control of pipeline - rarely needed now
   const startProcessing = useCallback(() => {
@@ -865,6 +933,10 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         });
         pipelineRef.current = pipeline;
 
+        // Store the cache for video event-driven skeleton rendering
+        // Convert PoseTrackFile to LivePoseCache for consistent getFrame() API
+        livePoseCacheRef.current = LivePoseCache.fromPoseTrackFile(cachedPoseTrack);
+
         // Initialize the new pipeline (no-op for cached transformer)
         await pipeline.initialize();
 
@@ -916,6 +988,9 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
           livePoseCache: liveCache,
         });
         pipelineRef.current = pipeline;
+
+        // Store the cache for video event-driven skeleton rendering
+        livePoseCacheRef.current = liveCache;
 
         // Initialize the new pipeline (no-op for cached transformer)
         await pipeline.initialize();
