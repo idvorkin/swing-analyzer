@@ -107,28 +107,27 @@ Observable<Frame>    Observable<Skeleton>    Observable<Form>   Observable<Rep>
 - Model tests: `src/models/Skeleton.test.ts`
 - Service tests: `src/services/*.test.ts`
 
-### Test Commands
+### Test Commands (via justfile)
 
 ```bash
-npm run test          # E2E tests
-npm run test:unit     # Unit tests
-npm run test:ui       # Playwright UI mode
-npm run test:debug    # Debug mode
+just e2e              # Run all E2E tests
+just e2e-desktop      # Run desktop-only tests
+just e2e-ui           # Playwright UI mode
+just e2e-debug        # Debug mode
+just e2e-report       # View HTML report with traces
+just test-unit        # Run unit tests
 ```
 
-## Development Servers
+### Viewing Test Reports
 
-When working on this project, start the Playwright report server in the background so you can view test results with traces:
+Run `just e2e-report` to start the report server. It will display:
 
-```bash
-# Run tests and start report server
-npx playwright test --reporter=html && npx playwright show-report --host 0.0.0.0 --port 9323 &
-```
+- Access URLs (local and Tailscale)
+- Instructions for viewing trace files
+- Options for SSH tunnel or online trace viewer
 
-**Tailscale URL**: http://c-5001:9323
-
-The report includes:
+The HTML report includes:
 
 - Test results with pass/fail status
+- Videos and screenshots (captured automatically in dev)
 - Trace viewer with timeline, DOM snapshots, network requests, and console logs
-- Click any test to view its trace
