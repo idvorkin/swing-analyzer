@@ -2,7 +2,9 @@ import type React from 'react';
 import { useCallback, useEffect, useRef } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 import { usePoseTrack } from '../hooks/usePoseTrack';
+import { buildSkeletonEventFromFrame } from '../pipeline/PipelineFactory';
 import { SwingPositionName } from '../types';
+import type { PoseTrackFrame } from '../types/posetrack';
 import { PoseTrackStatusBar } from './PoseTrackStatusBar';
 
 const VideoSection: React.FC = () => {
@@ -31,6 +33,27 @@ const VideoSection: React.FC = () => {
     reinitializeWithLiveCache,
   } = useSwingAnalyzerContext();
 
+  // Handle frame extraction by streaming through the pipeline
+  const handleFrameExtracted = useCallback(
+    (frame: PoseTrackFrame) => {
+      if (!pipelineRef.current) {
+        // Pipeline not ready - this can happen during initialization
+        console.warn('Dropping extracted frame: pipeline not initialized');
+        return;
+      }
+
+      // Build skeleton event from the extracted frame
+      const skeletonEvent = buildSkeletonEventFromFrame(frame);
+
+      // Process through the pipeline (form processor → rep processor)
+      // This updates rep count and filmstrip during extraction
+      pipelineRef.current.processSkeletonEvent(skeletonEvent).catch((err) => {
+        console.error('Error processing extracted frame:', err);
+      });
+    },
+    [pipelineRef]
+  );
+
   // Pose track extraction
   const {
     status: poseTrackStatus,
@@ -39,7 +62,10 @@ const VideoSection: React.FC = () => {
     savePoseTrack,
     downloadPoseTrack: downloadPoseTrackFile,
     getLivePoseCache,
-  } = usePoseTrack({ autoExtract: true });
+  } = usePoseTrack({
+    autoExtract: true,
+    onFrameExtracted: handleFrameExtracted,
+  });
 
   // Start pose extraction when video file changes
   useEffect(() => {

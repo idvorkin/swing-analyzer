@@ -34,6 +34,11 @@ export interface UsePoseTrackOptions {
   defaultModel?: PoseModel;
   /** Pre-compute angles during extraction (default: true) */
   precomputeAngles?: boolean;
+  /**
+   * Callback called for each frame during extraction.
+   * Used to stream frames through the pipeline for instant filmstrip.
+   */
+  onFrameExtracted?: (frame: import('../types/posetrack').PoseTrackFrame) => void;
 }
 
 export interface UsePoseTrackReturn {
@@ -74,6 +79,7 @@ export function usePoseTrack(
     autoExtract = true,
     defaultModel = 'movenet-lightning',
     precomputeAngles = true,
+    onFrameExtracted: onFrameExtractedCallback,
   } = options;
 
   // State
@@ -175,6 +181,16 @@ export function usePoseTrack(
           // Stream each frame to the live cache as it's extracted
           onFrameExtracted: (frame) => {
             liveCache.addFrame(frame);
+            // Also call the external callback for pipeline processing
+            if (onFrameExtractedCallback) {
+              try {
+                onFrameExtractedCallback(frame);
+              } catch (err) {
+                // Log but don't fail extraction - the callback is for instant filmstrip
+                // and should not interrupt pose extraction
+                console.error('Error in onFrameExtracted callback:', err);
+              }
+            }
           },
         });
 
@@ -195,9 +211,14 @@ export function usePoseTrack(
           `Pose extraction complete: ${result.poseTrack.frames.length} frames in ${(result.extractionTimeMs / 1000).toFixed(1)}s (${result.extractionFps.toFixed(1)} fps)`
         );
       } catch (error) {
+        // Always clear live cache on any failure
+        if (livePoseCacheRef.current) {
+          livePoseCacheRef.current.clear();
+          livePoseCacheRef.current = null;
+        }
+
         if (error instanceof DOMException && error.name === 'AbortError') {
           setStatus({ type: 'none' });
-          livePoseCacheRef.current = null;
         } else {
           console.error('Pose extraction failed:', error);
           setStatus({
@@ -209,7 +230,7 @@ export function usePoseTrack(
         abortControllerRef.current = null;
       }
     },
-    [model, autoExtract, precomputeAngles, cancelExtraction]
+    [model, autoExtract, precomputeAngles, cancelExtraction, onFrameExtractedCallback]
   );
 
   /**

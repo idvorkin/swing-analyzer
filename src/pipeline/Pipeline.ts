@@ -1,4 +1,4 @@
-import { type Observable, Subject, type Subscription } from 'rxjs';
+import { type Observable, Subject, type Subscription, firstValueFrom } from 'rxjs';
 import { share, switchMap, tap } from 'rxjs/operators';
 import type { Skeleton } from '../models/Skeleton';
 import type { FormCheckpoint } from '../types';
@@ -199,6 +199,62 @@ export class Pipeline {
    */
   getRepProcessor(): RepProcessor {
     return this.repProcessor;
+  }
+
+  /**
+   * Get the form processor
+   */
+  getFormProcessor(): FormProcessor {
+    return this.formProcessor;
+  }
+
+  /**
+   * Process a skeleton event directly, bypassing frame acquisition.
+   * Used for batch/extraction mode where frames come from extraction
+   * rather than video playback.
+   *
+   * Returns the rep count after processing.
+   */
+  async processSkeletonEvent(skeletonEvent: SkeletonEvent): Promise<number> {
+    // Emit to skeleton subscribers
+    this.skeletonSubject.next(skeletonEvent);
+
+    // Store latest skeleton
+    if (skeletonEvent.skeleton) {
+      this.latestSkeleton = skeletonEvent.skeleton;
+    }
+
+    // Process through form processor (use firstValueFrom instead of deprecated toPromise)
+    const formEvents = await firstValueFrom(
+      this.formProcessor.processFrame(skeletonEvent),
+      { defaultValue: undefined }
+    );
+
+    if (formEvents) {
+      // Emit checkpoint event
+      this.checkpointSubject.next(formEvents);
+
+      // Process through rep processor
+      const repEvent = await firstValueFrom(
+        this.repProcessor.updateRepCount(formEvents),
+        { defaultValue: undefined }
+      );
+
+      if (repEvent) {
+        this.repCount = repEvent.repCount;
+
+        // Emit result
+        if (repEvent.checkpointEvent.skeletonEvent.skeleton) {
+          this.resultSubject.next({
+            skeleton: repEvent.checkpointEvent.skeletonEvent.skeleton,
+            checkpoint: repEvent.checkpointEvent.checkpoint,
+            repCount: repEvent.repCount,
+          });
+        }
+      }
+    }
+
+    return this.repCount;
   }
 }
 

@@ -1,5 +1,7 @@
 import type { ModelConfig } from '../config/modelConfig';
-import type { PoseTrackFile } from '../types/posetrack';
+import { Skeleton } from '../models/Skeleton';
+import { CocoBodyParts, type PoseKeypoint } from '../types';
+import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
 import {
   CachedPoseSkeletonTransformer,
   type CachedPoseSkeletonTransformerConfig,
@@ -10,6 +12,7 @@ import type {
   FormProcessor,
   FrameAcquisition,
   RepProcessor,
+  SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
 import { PoseSkeletonTransformer } from './PoseSkeletonTransformer';
@@ -154,5 +157,93 @@ export function createCachedSkeletonTransformer(
   return new CachedPoseSkeletonTransformer(
     poseTrack,
     config ?? { simulatedFps: 15 }
+  );
+}
+
+/**
+ * Build a SkeletonEvent from a PoseTrackFrame.
+ * Used for batch/extraction mode to process extracted frames through the pipeline.
+ *
+ * @param frame - The extracted pose track frame
+ * @returns A SkeletonEvent that can be passed to Pipeline.processSkeletonEvent()
+ */
+export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEvent {
+  const skeleton = buildSkeletonFromFrame(frame);
+
+  return {
+    skeleton,
+    poseEvent: {
+      pose: skeleton
+        ? { keypoints: frame.keypoints, score: frame.score }
+        : null,
+      frameEvent: {
+        frame: null as unknown as HTMLVideoElement, // Not used in batch mode
+        timestamp: frame.timestamp,
+      },
+    },
+  };
+}
+
+/**
+ * Build a Skeleton from a PoseTrackFrame
+ */
+function buildSkeletonFromFrame(frame: PoseTrackFrame): Skeleton | null {
+  if (!frame.keypoints || frame.keypoints.length === 0) {
+    return null;
+  }
+
+  // Use pre-computed spine angle if available
+  const precomputed = frame.angles?.spineAngle;
+  const spineAngle =
+    precomputed && precomputed !== 0
+      ? precomputed
+      : calculateSpineAngle(frame.keypoints);
+
+  const hasVisibleKeypoints = hasRequiredKeypoints(frame.keypoints);
+
+  return new Skeleton(frame.keypoints, spineAngle, hasVisibleKeypoints);
+}
+
+/**
+ * Calculate spine angle from keypoints
+ */
+function calculateSpineAngle(keypoints: PoseKeypoint[]): number {
+  const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
+  const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
+  const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
+  const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+
+  if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) {
+    return 0;
+  }
+
+  // Calculate midpoints
+  const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
+  const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
+  const hipMidX = (leftHip.x + rightHip.x) / 2;
+  const hipMidY = (leftHip.y + rightHip.y) / 2;
+
+  // Calculate angle from vertical
+  const dx = shoulderMidX - hipMidX;
+  const dy = hipMidY - shoulderMidY; // Inverted for screen coordinates
+
+  return Math.atan2(dx, dy) * (180 / Math.PI);
+}
+
+/**
+ * Check if frame has required keypoints for skeleton
+ */
+function hasRequiredKeypoints(keypoints: PoseKeypoint[]): boolean {
+  const minScore = 0.3;
+  const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
+  const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
+  const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
+  const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+
+  return (
+    (leftShoulder?.score ?? 0) >= minScore &&
+    (rightShoulder?.score ?? 0) >= minScore &&
+    (leftHip?.score ?? 0) >= minScore &&
+    (rightHip?.score ?? 0) >= minScore
   );
 }
