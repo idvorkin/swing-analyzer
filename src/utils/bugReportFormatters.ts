@@ -56,6 +56,14 @@ export function buildIssueBody(
 | App Version | \`${metadata.appVersion}\` |
 | Browser | \`${metadata.userAgent}\` |
 | Timestamp | \`${metadata.timestamp}\` |
+| Screen | \`${metadata.screen}\` |
+| Device Memory | \`${metadata.deviceMemory}\` |
+| CPU Cores | \`${metadata.cpuCores}\` |
+| Online Status | \`${metadata.onlineStatus}\` |
+| Connection Type | \`${metadata.connectionType}\` |
+| Display Mode | \`${metadata.displayMode}\` |
+| Touch Device | \`${metadata.touchDevice}\` |
+| Mobile | \`${metadata.mobile}\` |
 `;
   }
 
@@ -82,16 +90,50 @@ export function buildGitHubIssueUrl(
   return issueUrl.toString();
 }
 
+export interface DeviceInfoProvider {
+  getCurrentRoute: () => string;
+  getUserAgent: () => string;
+  getScreenDimensions: () => string;
+  getDeviceMemoryGB: () => number | null;
+  getCpuCores: () => number | null;
+  getOnlineStatus: () => boolean;
+  getConnectionType: () => string | null;
+  getDisplayMode: () => string;
+  isTouchDevice: () => boolean;
+  isMobileDevice: () => boolean;
+}
+
+function formatNullable<T>(
+  value: T | null | undefined,
+  formatter?: (v: T) => string
+): string {
+  if (value === null || value === undefined) {
+    return 'Unknown';
+  }
+  return formatter ? formatter(value) : String(value);
+}
+
 export function getMetadata(
-  getCurrentRoute: () => string,
-  getUserAgent: () => string,
+  provider: DeviceInfoProvider,
   currentDate: Date = new Date()
 ): BugReportMetadata {
+  const memory = provider.getDeviceMemoryGB();
+  const cpuCores = provider.getCpuCores();
+  const connectionType = provider.getConnectionType();
+
   return {
-    route: getCurrentRoute(),
-    userAgent: getUserAgent(),
+    route: provider.getCurrentRoute(),
+    userAgent: provider.getUserAgent(),
     timestamp: currentDate.toISOString(),
     appVersion: GIT_SHA_SHORT,
+    screen: provider.getScreenDimensions(),
+    deviceMemory: formatNullable(memory, (v) => `${v} GB`),
+    cpuCores: formatNullable(cpuCores),
+    onlineStatus: provider.getOnlineStatus() ? 'Online' : 'Offline',
+    connectionType: formatNullable(connectionType),
+    displayMode: provider.getDisplayMode(),
+    touchDevice: provider.isTouchDevice() ? 'Yes' : 'No',
+    mobile: provider.isMobileDevice() ? 'Yes' : 'No',
   };
 }
 
@@ -117,5 +159,13 @@ ${error.stack || 'No stack trace available'}
 | App Version | ${formatBuildLink()} |
 | Browser | \`${metadata.userAgent}\` |
 | Timestamp | \`${metadata.timestamp}\` |
+| Screen | \`${metadata.screen}\` |
+| Device Memory | \`${metadata.deviceMemory}\` |
+| CPU Cores | \`${metadata.cpuCores}\` |
+| Online Status | \`${metadata.onlineStatus}\` |
+| Connection Type | \`${metadata.connectionType}\` |
+| Display Mode | \`${metadata.displayMode}\` |
+| Touch Device | \`${metadata.touchDevice}\` |
+| Mobile | \`${metadata.mobile}\` |
 `;
 }
