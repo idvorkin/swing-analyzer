@@ -179,6 +179,11 @@ export async function extractPosesFromVideo(
 
       frames.push(frame);
 
+      // Notify listener of extracted frame (for streaming to LivePoseCache)
+      if (options.onFrameExtracted) {
+        options.onFrameExtracted(frame);
+      }
+
       // Report progress
       if (options.onProgress) {
         const progress: PoseExtractionProgress = {

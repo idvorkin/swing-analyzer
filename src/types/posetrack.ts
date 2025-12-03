@@ -120,6 +120,12 @@ export interface PoseExtractionOptions {
   /** Callback for progress updates */
   onProgress?: (progress: PoseExtractionProgress) => void;
 
+  /**
+   * Callback fired for each frame as it's extracted.
+   * Use this to progressively populate a LivePoseCache for streaming playback.
+   */
+  onFrameExtracted?: (frame: PoseTrackFrame) => void;
+
   /** AbortSignal for cancellation */
   signal?: AbortSignal;
 }

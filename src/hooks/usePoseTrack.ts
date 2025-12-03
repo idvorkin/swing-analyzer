@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { LivePoseCache } from '../pipeline/LivePoseCache';
 import { PoseTrackPipeline } from '../pipeline/PoseTrackPipeline';
 import {
   extractPosesFromVideo,
@@ -60,6 +61,8 @@ export interface UsePoseTrackReturn {
   loadExisting: (videoHash: string) => Promise<boolean>;
   /** Get the pose track pipeline for analysis */
   getPipeline: () => PoseTrackPipeline | null;
+  /** Get the live pose cache for streaming playback during extraction */
+  getLivePoseCache: () => LivePoseCache | null;
   /** Get model display name */
   getModelDisplayName: (model: PoseModel) => string;
 }
@@ -82,6 +85,7 @@ export function usePoseTrack(
   const abortControllerRef = useRef<AbortController | null>(null);
   const pipelineRef = useRef<PoseTrackPipeline | null>(null);
   const currentPoseTrackRef = useRef<PoseTrackFile | null>(null);
+  const livePoseCacheRef = useRef<LivePoseCache | null>(null);
 
   /**
    * Cancel ongoing extraction
@@ -90,6 +94,11 @@ export function usePoseTrack(
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
+    }
+    // Clear the live cache on cancel
+    if (livePoseCacheRef.current) {
+      livePoseCacheRef.current.clear();
+      livePoseCacheRef.current = null;
     }
   }, []);
 
@@ -100,6 +109,10 @@ export function usePoseTrack(
       if (pipelineRef.current) {
         pipelineRef.current.dispose();
         pipelineRef.current = null;
+      }
+      if (livePoseCacheRef.current) {
+        livePoseCacheRef.current.clear();
+        livePoseCacheRef.current = null;
       }
     };
   }, [cancelExtraction]);
@@ -136,6 +149,10 @@ export function usePoseTrack(
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
+      // Create live cache for streaming playback during extraction
+      const liveCache = new LivePoseCache(hash);
+      livePoseCacheRef.current = liveCache;
+
       setStatus({
         type: 'extracting',
         progress: {
@@ -155,7 +172,14 @@ export function usePoseTrack(
           onProgress: (progress: PoseExtractionProgress) => {
             setStatus({ type: 'extracting', progress });
           },
+          // Stream each frame to the live cache as it's extracted
+          onFrameExtracted: (frame) => {
+            liveCache.addFrame(frame);
+          },
         });
+
+        // Mark cache as complete with metadata
+        liveCache.markComplete(result.poseTrack.metadata);
 
         // Store the result
         currentPoseTrackRef.current = result.poseTrack;
@@ -173,6 +197,7 @@ export function usePoseTrack(
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           setStatus({ type: 'none' });
+          livePoseCacheRef.current = null;
         } else {
           console.error('Pose extraction failed:', error);
           setStatus({
@@ -286,6 +311,13 @@ export function usePoseTrack(
     return pipelineRef.current;
   }, []);
 
+  /**
+   * Get the live pose cache for streaming playback during extraction
+   */
+  const getLivePoseCache = useCallback((): LivePoseCache | null => {
+    return livePoseCacheRef.current;
+  }, []);
+
   return {
     status,
     videoHash,
@@ -299,6 +331,7 @@ export function usePoseTrack(
     checkForExisting,
     loadExisting,
     getPipeline,
+    getLivePoseCache,
     getModelDisplayName,
   };
 }
