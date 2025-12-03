@@ -487,11 +487,15 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       // Seed pose data first
       await seedPoseTrackFixture(page, 'swing-sample');
 
+      // Verify data was seeded
+      const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_VIDEO_HASH);
+      expect(storedTrack).not.toBeNull();
+
       // Load video
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
-      // Wait for cached poses to be loaded and controls enabled
+      // Wait for controls to be enabled (cached poses should enable controls)
       await page.waitForFunction(
         () => {
           const btn = document.querySelector(

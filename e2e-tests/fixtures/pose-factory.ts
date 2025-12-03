@@ -15,8 +15,9 @@ import type {
 
 // Video hash for swing-sample.webm (computed from the actual file)
 // This allows fixtures to match the hardcoded sample video
+// Hash computed from first 64KB using SHA-256 (same as computeQuickVideoHash)
 export const SWING_SAMPLE_VIDEO_HASH =
-  '036de1481e14531ca6a3b30003c24e81cef8cdcb0733baad0a77730b11f85130';
+  '0ce46559b40a329fae35b0910f445a634b0c62ae63cc9edf65ce48fa9695ad9e';
 
 /**
  * COCO keypoint indices for reference

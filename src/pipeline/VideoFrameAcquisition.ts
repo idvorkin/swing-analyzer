@@ -219,11 +219,23 @@ export class VideoFrameAcquisition implements FrameAcquisition {
    */
   private createFrameStream(): Observable<FrameEvent> {
     const frameInterval = 1000 / this.frameRate;
+
     // Listen to play and pause events
     const play$ = fromEvent(this.videoElement, 'play');
     const pause$ = fromEvent(this.videoElement, 'pause');
-    // Merge play/pause events, start with current state
-    return merge(play$, pause$).pipe(
+
+    // Emit frame on seek (even when paused) for skeleton redraw
+    const seeked$ = fromEvent(this.videoElement, 'seeked').pipe(
+      map(() => ({
+        frame: this.videoElement,
+        timestamp: performance.now(),
+        videoTime: this.videoElement.currentTime,
+      })),
+      takeUntil(this.stop$)
+    );
+
+    // Playback frames (only when playing)
+    const playback$ = merge(play$, pause$).pipe(
       startWith(this.videoElement.paused ? 'pause' : 'play'),
       switchMap(() =>
         this.videoElement.paused
@@ -239,6 +251,9 @@ export class VideoFrameAcquisition implements FrameAcquisition {
       ),
       takeUntil(this.stop$)
     );
+
+    // Merge seeked events with playback events
+    return merge(seeked$, playback$);
   }
 
   /**

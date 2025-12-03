@@ -13,7 +13,6 @@ import {
 } from '../test-utils/pose-fixtures';
 import { Skeleton } from '../models/Skeleton';
 import { SwingAnalyzer, DEFAULT_SWING_CONFIG } from './SwingAnalyzer';
-import { SwingPositionName } from '../types';
 
 /**
  * Helper to create a Skeleton from keypoints
@@ -84,16 +83,8 @@ describe('SwingAnalyzer', () => {
       const skeleton = createSkeleton(createBottomKeypoints());
       const result = analyzer.analyzeFrame(skeleton, 0);
 
-      // Bottom should have higher spine angle than top (more forward lean)
-      const topSkeleton = createSkeleton(createTopKeypoints());
-      const topResult = analyzer.analyzeFrame(topSkeleton, 100);
-
-      // Reset and re-analyze to get clean result
-      analyzer.reset();
-      const bottomResult = analyzer.analyzeFrame(skeleton, 0);
-
-      expect(bottomResult.spineAngle).toBeGreaterThanOrEqual(0);
-      expect(bottomResult.cycleCompleted).toBe(false);
+      expect(result.spineAngle).toBeGreaterThanOrEqual(0);
+      expect(result.cycleCompleted).toBe(false);
     });
 
     it('tracks max spine angle', () => {

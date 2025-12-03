@@ -70,7 +70,6 @@ export class Pipeline {
 
         // Emit every skeleton event regardless of whether it results in a checkpoint
         tap((skeletonEvent) => {
-          
           // Emit the skeleton event to subscribers
           this.skeletonSubject.next(skeletonEvent);
           

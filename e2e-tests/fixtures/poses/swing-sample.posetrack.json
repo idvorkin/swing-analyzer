@@ -3,7 +3,7 @@
     "version": "1.0",
     "model": "movenet-lightning",
     "modelVersion": "4.0.0",
-    "sourceVideoHash": "036de1481e14531ca6a3b30003c24e81cef8cdcb0733baad0a77730b11f85130",
+    "sourceVideoHash": "0ce46559b40a329fae35b0910f445a634b0c62ae63cc9edf65ce48fa9695ad9e",
     "sourceVideoName": "swing-sample.webm",
     "sourceVideoDuration": 5.0,
     "extractedAt": "2024-01-15T10:30:00.000Z",
