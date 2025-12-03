@@ -74,6 +74,7 @@ export function mediaPipeToCoco(keypoints: PoseKeypoint[]): PoseKeypoint[] {
       cocoKeypoints[cocoIndex] = {
         x: 0,
         y: 0,
+        z: 0,
         score: 0,
         visibility: 0,
       };
