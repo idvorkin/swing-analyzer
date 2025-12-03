@@ -68,6 +68,9 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
     console.log('CachedPoseSkeletonTransformer: Ready (using cached poses)');
   }
 
+  // Track frame usage stats for debugging
+  private frameStats = { used: 0, skipped: 0, lastLogTime: 0 };
+
   /**
    * Transform a frame event into a skeleton using cached pose data.
    *
@@ -90,10 +93,24 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
 
     if (cachedFrame) {
       // Frame available within tolerance - return immediately
+      this.frameStats.used++;
       return of(this.buildSkeletonEvent(cachedFrame, frameEvent));
     }
 
     // No frame within tolerance
+    this.frameStats.skipped++;
+
+    // Log stats periodically (every 2 seconds)
+    const now = Date.now();
+    if (now - this.frameStats.lastLogTime > 2000) {
+      console.log(
+        `CachedPoseSkeletonTransformer: Frames used=${this.frameStats.used}, ` +
+          `skipped=${this.frameStats.skipped}, cache size=${this.cache.getFrameCount()}, ` +
+          `extraction complete=${isComplete}`
+      );
+      this.frameStats.lastLogTime = now;
+    }
+
     if (isComplete) {
       // Extraction done but no frame found - return null skeleton
       console.warn(
@@ -131,9 +148,13 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
       return null;
     }
 
-    // Use pre-computed spine angle if available, otherwise calculate
+    // Use pre-computed spine angle if available and non-zero
+    // Fall back to calculation if precomputed is 0 (legacy data bug)
+    const precomputed = frame.angles?.spineAngle;
     const spineAngle =
-      frame.angles?.spineAngle ?? this.calculateSpineAngle(frame.keypoints);
+      precomputed && precomputed !== 0
+        ? precomputed
+        : this.calculateSpineAngle(frame.keypoints);
     const hasVisibleKeypoints = this.hasRequiredKeypoints(frame.keypoints);
 
     return new Skeleton(frame.keypoints, spineAngle, hasVisibleKeypoints);
@@ -155,6 +176,11 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
     const rightHip = keypoints[RIGHT_HIP];
 
     if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) {
+      console.warn(
+        `CachedPoseSkeletonTransformer: Missing keypoints for spine angle - ` +
+          `LS:${!!leftShoulder} RS:${!!rightShoulder} LH:${!!leftHip} RH:${!!rightHip}, ` +
+          `total keypoints: ${keypoints.length}`
+      );
       return 0;
     }
 

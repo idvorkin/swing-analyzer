@@ -359,14 +359,52 @@ async function estimateVideoFps(_video: HTMLVideoElement): Promise<number> {
 }
 
 /**
- * Compute angles from keypoints for a single frame
+ * Calculate spine angle from keypoints (angle from vertical)
+ * Returns 0 if required keypoints are missing
+ * @internal Exported for testing
  */
-function computeAngles(keypoints: PoseKeypoint[]): PrecomputedAngles {
-  // Create a temporary skeleton to compute angles
-  const skeleton = new Skeleton(keypoints, 0, true);
+export function calculateSpineAngle(keypoints: PoseKeypoint[]): number {
+  // COCO keypoint indices
+  const LEFT_SHOULDER = 5;
+  const RIGHT_SHOULDER = 6;
+  const LEFT_HIP = 11;
+  const RIGHT_HIP = 12;
+
+  const leftShoulder = keypoints[LEFT_SHOULDER];
+  const rightShoulder = keypoints[RIGHT_SHOULDER];
+  const leftHip = keypoints[LEFT_HIP];
+  const rightHip = keypoints[RIGHT_HIP];
+
+  if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) {
+    return 0;
+  }
+
+  // Calculate midpoints
+  const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
+  const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
+  const hipMidX = (leftHip.x + rightHip.x) / 2;
+  const hipMidY = (leftHip.y + rightHip.y) / 2;
+
+  // Calculate angle from vertical
+  const deltaX = shoulderMidX - hipMidX;
+  const deltaY = hipMidY - shoulderMidY; // Inverted for screen coordinates
+
+  return Math.abs((Math.atan2(deltaX, deltaY) * 180) / Math.PI);
+}
+
+/**
+ * Compute angles from keypoints for a single frame
+ * @internal Exported for testing
+ */
+export function computeAngles(keypoints: PoseKeypoint[]): PrecomputedAngles {
+  // Calculate spine angle first
+  const spineAngle = calculateSpineAngle(keypoints);
+
+  // Create skeleton with calculated spine angle for other angles
+  const skeleton = new Skeleton(keypoints, spineAngle, true);
 
   return {
-    spineAngle: skeleton.getSpineAngle(),
+    spineAngle,
     armToSpineAngle: skeleton.getArmToSpineAngle(),
     armToVerticalAngle: skeleton.getArmToVerticalAngle(),
     hipAngle: skeleton.getHipAngle(),
