@@ -475,6 +475,57 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   });
 
   test.describe('Filmstrip Frame Capture', () => {
+    test('filmstrip shows captured images WITHOUT playing video (batch analysis)', async ({ page }) => {
+      // This tests the core behavior: filmstrip frames are captured from batch analysis
+      // using a hidden video element, NOT from video playback
+      await seedPoseTrackFixture(page, 'swing-sample');
+
+      // Load video
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      // Wait for controls to be enabled
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
+      // IMPORTANT: Verify video is NOT playing - filmstrip should appear anyway
+      const videoPaused = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.paused;
+      });
+      expect(videoPaused).toBe(true);
+
+      // Wait for filmstrip with actual images (not text placeholders)
+      await page.waitForFunction(
+        () => {
+          const filmstripContainer = document.querySelector('.filmstrip-container');
+          if (!filmstripContainer) return false;
+          const canvases = filmstripContainer.querySelectorAll('canvas');
+          return canvases.length >= 4;
+        },
+        { timeout: 15000 }
+      );
+
+      // Double-check video is STILL paused
+      const stillPaused = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.paused;
+      });
+      expect(stillPaused).toBe(true);
+
+      // Verify we have actual captured frames
+      const canvasCount = await page.evaluate(() => {
+        const filmstripContainer = document.querySelector('.filmstrip-container');
+        return filmstripContainer?.querySelectorAll('canvas').length || 0;
+      });
+      expect(canvasCount).toBeGreaterThanOrEqual(4);
+    });
+
     test('filmstrip shows captured images after loading video with cached poses', async ({ page }) => {
       // Seed pose data first
       await seedPoseTrackFixture(page, 'swing-sample');
