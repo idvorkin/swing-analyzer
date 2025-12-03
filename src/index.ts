@@ -9,6 +9,9 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './components/App';
 
+// Initialize test setup (exposes __testSetup on window in dev mode)
+import './services/testSetup';
+
 // Initialize TensorFlow backend
 async function initialize() {
   console.log('Initializing TensorFlow.js...');
