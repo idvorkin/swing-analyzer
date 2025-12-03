@@ -452,3 +452,14 @@ export function formatFileSize(bytes: number): string {
   }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/**
+ * Re-export frame hash utilities for verification
+ */
+export {
+  computeFrameHash,
+  hashSimilarity,
+  verifyPoseTrackMatch,
+  type FrameComparison,
+  type PoseTrackVerification,
+} from '../utils/frameHash';

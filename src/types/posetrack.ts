@@ -51,6 +51,13 @@ export interface PoseTrackMetadata {
 
   /** Height of the source video in pixels */
   videoHeight: number;
+
+  /**
+   * Perceptual hashes of sampled frames for verification.
+   * Used to verify pose track matches the video even if video hash differs
+   * (e.g., re-encoded video with same content).
+   */
+  frameHashes?: Array<{ timestamp: number; hash: string }>;
 }
 
 /**
@@ -94,6 +101,9 @@ export interface PoseTrackFrame {
 
   /** Pre-computed angles (optional, saves ~20% analysis time) */
   angles?: PrecomputedAngles;
+
+  /** Perceptual hash of the video frame (optional, for verification) */
+  frameHash?: string;
 }
 
 /**
@@ -128,6 +138,19 @@ export interface PoseExtractionOptions {
 
   /** AbortSignal for cancellation */
   signal?: AbortSignal;
+
+  /**
+   * Compute perceptual hash for each frame (for verification).
+   * Default: true. Set to false to disable.
+   * Adds ~10% overhead but enables matching pose track to video content.
+   */
+  computeFrameHashes?: boolean;
+
+  /**
+   * Interval in seconds for sampling frame hashes in metadata.
+   * Default: 0 (every frame). Set to 1 for every second, etc.
+   */
+  frameHashInterval?: number;
 }
 
 /**

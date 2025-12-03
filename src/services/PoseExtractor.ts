@@ -20,6 +20,7 @@ import type {
   PoseTrackFrame,
   PrecomputedAngles,
 } from '../types/posetrack';
+import { computeFrameHash } from '../utils/frameHash';
 import { computeQuickVideoHash } from '../utils/videoHash';
 import type { PoseDetectorFactory } from './MockPoseDetector';
 import { createPoseTrackMetadata } from './PoseTrackService';
@@ -148,6 +149,12 @@ export async function extractPosesFromVideo(
       throw new Error('Failed to get canvas 2d context');
     }
 
+    // Create small canvas for frame hash computation (enabled by default)
+    const hashCanvas =
+      options.computeFrameHashes !== false
+        ? document.createElement('canvas')
+        : undefined;
+
     // Extract frames
     const frames: PoseTrackFrame[] = [];
     let frameIndex = 0;
@@ -191,6 +198,25 @@ export async function extractPosesFromVideo(
       // Pre-compute angles if requested
       if (options.precomputeAngles && frame.keypoints.length > 0) {
         frame.angles = computeAngles(frame.keypoints);
+      }
+
+      // Compute frame hash if requested (default: every frame for comprehensive verification)
+      if (options.computeFrameHashes !== false) {
+        const hashInterval = options.frameHashInterval ?? 0; // Default: every frame
+        const shouldHashThisFrame =
+          hashInterval === 0 || // Hash every frame
+          frameIndex === 0 || // Always hash first frame
+          Math.floor(video.currentTime / hashInterval) !==
+            Math.floor((video.currentTime - frameInterval) / hashInterval);
+
+        if (shouldHashThisFrame && hashCanvas) {
+          try {
+            frame.frameHash = computeFrameHash(video, hashCanvas);
+          } catch (e) {
+            // Frame hash computation is optional, don't fail extraction
+            console.warn('Failed to compute frame hash:', e);
+          }
+        }
       }
 
       frames.push(frame);
@@ -242,6 +268,16 @@ export async function extractPosesFromVideo(
       videoWidth,
       videoHeight,
     });
+
+    // Collect frame hashes for metadata (for verification)
+    if (options.computeFrameHashes) {
+      metadata.frameHashes = frames
+        .filter((f) => f.frameHash)
+        .map((f) => ({
+          timestamp: f.videoTime,
+          hash: f.frameHash!,
+        }));
+    }
 
     // Build pose track file
     const poseTrack: PoseTrackFile = {
