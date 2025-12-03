@@ -580,42 +580,26 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
       await frameAcquisitionRef.current.loadVideoFromURL(videoURL);
       setAppState((prev) => ({ ...prev, usingCamera: false }));
-      setStatus('Hardcoded video loaded.');
+      setStatus('Video loaded. Press Play to start.');
 
-      // Make sure the canvas is visible before playing
+      // Make sure the canvas is visible
       if (canvasRef.current) {
         canvasRef.current.style.display = 'block';
       }
 
-      // Force pipeline reset before playing
+      // Force pipeline reset
       if (pipelineRef.current) {
         pipelineRef.current.reset();
       }
 
-      // Video element event handlers will handle pipeline start
-      if (videoRef.current && videoRef.current.readyState >= 2) {
-        videoRef.current.play().catch((err) => {
-          console.error('Error playing hardcoded video:', err);
-        });
-      } else if (videoRef.current) {
-        videoRef.current.addEventListener(
-          'loadeddata',
-          () => {
-            // Reset display mode again just to be safe
-            setDisplayMode(appState.displayMode);
-
-            videoRef.current?.play().catch((err) => {
-              console.error('Error playing hardcoded video after load:', err);
-            });
-          },
-          { once: true }
-        );
-      }
+      // Don't auto-play - let user press Play button manually.
+      // This ensures React effects have time to run and reinitialize
+      // the pipeline with the live pose cache before playback starts.
     } catch (error) {
       console.error('[DEBUG] loadHardcodedVideo: Error loading video:', error);
       setStatus('Error: Could not load hardcoded video.');
     }
-  }, [resetVideoAndState, appState.displayMode, setDisplayMode]);
+  }, [resetVideoAndState]);
 
   // Handle video upload
   const handleVideoUpload = useCallback(
@@ -640,28 +624,12 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       frameAcquisitionRef.current
         .loadVideoFromURL(fileURL)
         .then(() => {
-          setStatus(`Loaded video: ${file.name}`);
+          setStatus(`Loaded: ${file.name}. Press Play to start.`);
           setAppState((prev) => ({ ...prev, usingCamera: false }));
 
-          // Video element event handlers will handle pipeline start
-          if (videoRef.current && videoRef.current.readyState >= 2) {
-            videoRef.current.play().catch((err) => {
-              console.error('Error playing uploaded video:', err);
-            });
-          } else if (videoRef.current) {
-            videoRef.current.addEventListener(
-              'loadeddata',
-              () => {
-                videoRef.current?.play().catch((err) => {
-                  console.error(
-                    'Error playing uploaded video after load:',
-                    err
-                  );
-                });
-              },
-              { once: true }
-            );
-          }
+          // Don't auto-play - let user press Play button manually.
+          // This ensures React effects have time to run and reinitialize
+          // the pipeline with the live pose cache before playback starts.
         })
         .catch((error) => {
           console.error('Error loading video:', error);
