@@ -359,7 +359,10 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         const { createSkeletonTransformer } = await import(
           '../pipeline/PipelineFactory'
         );
-        directSkeletonTransformerRef.current = createSkeletonTransformer();
+        // Use saved model preference for consistency with main pipeline
+        const savedModel = getSavedModelPreference();
+        const modelConfig = savedModel === 'blazepose' ? BLAZEPOSE_LITE_CONFIG : DEFAULT_MODEL_CONFIG;
+        directSkeletonTransformerRef.current = createSkeletonTransformer(modelConfig);
 
         // Initialize it
         await directSkeletonTransformerRef.current.initialize();
