@@ -21,6 +21,7 @@ import {
   getPoseTrackFromDB,
   seedPoseTrackFixture,
   seekToTime,
+  setupMockPoseDetector,
 } from './helpers';
 
 test.describe('User Journey: Load and Analyze Sample Video', () => {
@@ -483,6 +484,62 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   });
 
   test.describe('Filmstrip Frame Capture', () => {
+    test('filmstrip fills in progressively during mock extraction', async ({ page }) => {
+      // This tests the extraction path using a mock pose detector
+      // NO cache seeding - extraction runs with fixture data via mock detector
+
+      // Check if test setup is available
+      const hasTestSetup = await page.evaluate(() => {
+        return !!(window as unknown as { __testSetup?: unknown }).__testSetup;
+      });
+      console.log('__testSetup available:', hasTestSetup);
+
+      // Set up mock detector BEFORE loading video
+      await setupMockPoseDetector(page, 'swing-sample', 5); // 5ms per frame
+
+      // Verify mock was set up
+      const hasMockFactory = await page.evaluate(() => {
+        const testSetup = (window as unknown as {
+          __testSetup?: { getMockDetectorFactory?: () => unknown };
+        }).__testSetup;
+        const factory = testSetup?.getMockDetectorFactory?.();
+        console.log('[Test] getMockDetectorFactory returned:', factory ? 'FACTORY' : 'undefined');
+        return !!factory;
+      });
+      console.log('Mock factory set:', hasMockFactory);
+
+      // Load video - this triggers extraction with mock detector
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      // Wait for extraction to complete and filmstrip to show images
+      // The mock detector returns fixture poses, batch analysis detects cycles,
+      // hidden video captures frames
+      await page.waitForFunction(
+        () => {
+          const filmstripContainer = document.querySelector('.filmstrip-container');
+          if (!filmstripContainer) return false;
+          const canvases = filmstripContainer.querySelectorAll('canvas');
+          return canvases.length >= 4;
+        },
+        { timeout: 30000 } // Longer timeout for extraction
+      );
+
+      // Verify video was NOT playing during this
+      const videoPaused = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.paused;
+      });
+      expect(videoPaused).toBe(true);
+
+      // Verify filmstrip has actual captured frames
+      const canvasCount = await page.evaluate(() => {
+        const filmstripContainer = document.querySelector('.filmstrip-container');
+        return filmstripContainer?.querySelectorAll('canvas').length || 0;
+      });
+      expect(canvasCount).toBeGreaterThanOrEqual(4);
+    });
+
     test('filmstrip shows captured images WITHOUT playing video (batch analysis)', async ({ page }) => {
       // This tests the core behavior: filmstrip frames are captured from batch analysis
       // using a hidden video element, NOT from video playback

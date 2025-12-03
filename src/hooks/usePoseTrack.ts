@@ -186,7 +186,10 @@ export function usePoseTrack(
 
       try {
         // Use explicit factory, or check for global mock (for E2E tests), or use real detector
-        const factory = detectorFactory ?? getMockDetectorFactory();
+        const mockFactory = getMockDetectorFactory();
+        const factory = detectorFactory ?? mockFactory;
+        console.log('[usePoseTrack] Mock factory:', mockFactory ? 'AVAILABLE' : 'undefined');
+        console.log('[usePoseTrack] Using factory:', factory ? 'YES' : 'NO (real detector)');
 
         const result = await extractPosesFromVideo(
           videoFile,
