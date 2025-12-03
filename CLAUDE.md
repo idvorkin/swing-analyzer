@@ -32,6 +32,8 @@ See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 - **main branch**: Nothing merges without a PR
 - **PR merge process**: Periodically diff dev from main, split into clean PRs, merge to main
 
+**⚠️ CRITICAL: Only humans merge to main. Agents must NEVER merge PRs without explicit human confirmation.**
+
 ### Splitting Dev Branch into Clean PRs
 
 When dev has accumulated many unrelated changes:
