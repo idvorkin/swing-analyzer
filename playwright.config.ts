@@ -34,7 +34,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 10,
+  workers: process.env.CI ? 1 : undefined, // Auto-detect in dev, single worker in CI
 
   // HTML report with console output
   reporter: [
@@ -44,10 +44,10 @@ export default defineConfig({
 
   use: {
     baseURL: BASE_URL,
-    // Enhanced artifact capture - full capture in dev, selective in CI
-    trace: process.env.CI ? 'retain-on-failure' : 'on',
-    video: process.env.CI ? 'retain-on-failure' : 'on',
-    screenshot: process.env.CI ? 'only-on-failure' : 'on',
+    // Only capture artifacts on failure to reduce overhead
+    trace: 'retain-on-failure',
+    video: 'retain-on-failure',
+    screenshot: 'only-on-failure',
     actionTimeout: 15000,
     // Ignore HTTPS errors for self-signed certs in dev
     ignoreHTTPSErrors: useHttps,

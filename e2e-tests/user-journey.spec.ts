@@ -483,7 +483,8 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     });
   });
 
-  test.describe('Filmstrip Frame Capture', () => {
+  // Run filmstrip tests serially - they share IndexedDB state and hidden video elements
+  test.describe.serial('Filmstrip Frame Capture', () => {
     test('filmstrip fills in progressively during mock extraction', async ({ page }) => {
       // This tests the extraction path using a mock pose detector
       // NO cache seeding - extraction runs with fixture data via mock detector

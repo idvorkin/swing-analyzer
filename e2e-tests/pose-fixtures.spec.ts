@@ -116,12 +116,15 @@ test.describe('Pose Track Fixtures', () => {
         SWING_SAMPLE_VIDEO_HASH
       );
 
-      // Verify frame structure
+      // Verify frame structure (not all frames have valid poses)
       const firstFrame = storedTrack?.frames[0];
       expect(firstFrame).toBeDefined();
       expect(firstFrame?.frameIndex).toBe(0);
       expect(firstFrame?.keypoints).toBeDefined();
-      expect(firstFrame?.keypoints.length).toBeGreaterThan(0);
+
+      // Find a frame with keypoints (pose detection can fail on some frames)
+      const frameWithKeypoints = storedTrack?.frames.find(f => f.keypoints.length > 0);
+      expect(frameWithKeypoints?.keypoints.length).toBeGreaterThan(0);
     });
 
     test('stores precomputed angles', async ({ page }) => {
