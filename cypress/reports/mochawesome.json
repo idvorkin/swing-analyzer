@@ -1,0 +1,169 @@
+{
+  "stats": {
+    "suites": 1,
+    "tests": 4,
+    "passes": 3,
+    "pending": 0,
+    "failures": 1,
+    "start": "2025-12-02T18:31:47.512Z",
+    "end": "2025-12-02T18:32:20.393Z",
+    "duration": 32881,
+    "testsRegistered": 4,
+    "passPercent": 75,
+    "pendingPercent": 0,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 0,
+    "hasSkipped": false
+  },
+  "results": [
+    {
+      "uuid": "64d817d7-8e04-4731-a3f4-393255d4caf7",
+      "title": "",
+      "fullFile": "cypress/e2e/main-page.cy.ts",
+      "file": "cypress/e2e/main-page.cy.ts",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "90366935-09de-41c5-88d0-f8760588ac9f",
+          "title": "Swing Analyzer Main Page",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "loads the application and displays the main UI elements",
+              "fullTitle": "Swing Analyzer Main Page loads the application and displays the main UI elements",
+              "timedOut": null,
+              "duration": 801,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/main-page.cy.ts/loads the application and displays the main UI elements - final.png\"",
+              "code": "// Header\ncy.contains('h1', 'Swing Analyzer').should('be.visible');\n// Top controls\ncy.get('#load-hardcoded-btn').should('be.visible').and('contain', 'Sample');\ncy.get('#camera-btn').should('be.visible').and('contain', 'Camera');\ncy.get('input[type=\"file\"]#video-upload').should('exist');\n// Video container\ncy.get('.video-container').should('exist');\ncy.getVideoElement().should('exist');\ncy.getCanvasElement().should('exist');",
+              "err": {},
+              "uuid": "474c8889-c7f2-4a39-81a2-781803fb97fd",
+              "parentUUID": "90366935-09de-41c5-88d0-f8760588ac9f",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "displays video controls",
+              "fullTitle": "Swing Analyzer Main Page displays video controls",
+              "timedOut": null,
+              "duration": 156,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/main-page.cy.ts/displays video controls - final.png\"",
+              "code": "cy.get('#prev-frame-btn').should('exist');\ncy.get('#play-pause-btn').should('exist');\ncy.get('#next-frame-btn').should('exist');\ncy.get('#stop-btn').should('exist');",
+              "err": {},
+              "uuid": "63011380-4fff-477b-9cca-740a46db2e49",
+              "parentUUID": "90366935-09de-41c5-88d0-f8760588ac9f",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "has settings button that opens settings modal",
+              "fullTitle": "Swing Analyzer Main Page has settings button that opens settings modal",
+              "timedOut": null,
+              "duration": 10436,
+              "state": "failed",
+              "speed": null,
+              "pass": false,
+              "fail": true,
+              "pending": false,
+              "context": "\"screenshots/main-page.cy.ts/Swing Analyzer Main Page -- has settings button that opens settings modal (failed).png\"",
+              "code": "cy.get('button[aria-label=\"Open settings\"]').click();\ncy.contains('Settings').should('be.visible');",
+              "err": {
+                "message": "AssertionError: Timed out retrying after 10000ms: expected '<button>' to be 'visible'\n\nThis element `<button>` is not visible because it has CSS property: `position: fixed` and it's being covered by another element:\n\n`<div class=\"settings-overlay\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"settings-title\">...</div>`",
+                "estack": "AssertionError: Timed out retrying after 10000ms: expected '<button>' to be 'visible'\n\nThis element `<button>` is not visible because it has CSS property: `position: fixed` and it's being covered by another element:\n\n`<div class=\"settings-overlay\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"settings-title\">...</div>`\n    at Context.eval (webpack://swing-analyzer/./cypress/e2e/main-page.cy.ts:30:28)",
+                "diff": null
+              },
+              "uuid": "c9c4344a-f74c-4e17-87e6-ae9686566a1c",
+              "parentUUID": "90366935-09de-41c5-88d0-f8760588ac9f",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "shows analysis section with rep count",
+              "fullTitle": "Swing Analyzer Main Page shows analysis section with rep count",
+              "timedOut": null,
+              "duration": 262,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/main-page.cy.ts/shows analysis section with rep count - final.png\"",
+              "code": "cy.get('.analysis-section').should('exist');",
+              "err": {},
+              "uuid": "ffb23dcf-adb0-4971-9ed1-7e27c3d85bc0",
+              "parentUUID": "90366935-09de-41c5-88d0-f8760588ac9f",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "474c8889-c7f2-4a39-81a2-781803fb97fd",
+            "63011380-4fff-477b-9cca-740a46db2e49",
+            "ffb23dcf-adb0-4971-9ed1-7e27c3d85bc0"
+          ],
+          "failures": [
+            "c9c4344a-f74c-4e17-87e6-ae9686566a1c"
+          ],
+          "pending": [],
+          "skipped": [],
+          "duration": 11655,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "7.2.0"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": true,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false,
+        "code": true
+      },
+      "version": "7.1.4"
+    },
+    "marge": {
+      "options": {
+        "reportDir": "cypress/reports",
+        "overwrite": false,
+        "html": true,
+        "json": true,
+        "embeddedScreenshots": true,
+        "inlineAssets": true
+      },
+      "version": "6.3.2"
+    }
+  }
+}

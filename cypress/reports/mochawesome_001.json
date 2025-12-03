@@ -1,0 +1,245 @@
+{
+  "stats": {
+    "suites": 1,
+    "tests": 8,
+    "passes": 7,
+    "pending": 0,
+    "failures": 1,
+    "start": "2025-12-02T18:32:22.095Z",
+    "end": "2025-12-02T18:32:56.126Z",
+    "duration": 34031,
+    "testsRegistered": 8,
+    "passPercent": 87.5,
+    "pendingPercent": 0,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 0,
+    "hasSkipped": false
+  },
+  "results": [
+    {
+      "uuid": "05b2bff1-60e4-44ef-a796-0045ebf9980d",
+      "title": "",
+      "fullFile": "cypress/e2e/pose-studio.cy.ts",
+      "file": "cypress/e2e/pose-studio.cy.ts",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "41255a0d-0832-48d6-aa23-b6da5659ba29",
+          "title": "Pose Studio Page",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "loads the Pose Studio page",
+              "fullTitle": "Pose Studio Page loads the Pose Studio page",
+              "timedOut": null,
+              "duration": 502,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-studio.cy.ts/loads the Pose Studio page - final.png\"",
+              "code": "cy.contains('Pose Studio').should('be.visible');\ncy.contains('Extract, manage, and test pose data').should('be.visible');",
+              "err": {},
+              "uuid": "e734a147-3745-4e55-a16d-ee468c62c01c",
+              "parentUUID": "41255a0d-0832-48d6-aa23-b6da5659ba29",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "displays the Extract Poses card",
+              "fullTitle": "Pose Studio Page displays the Extract Poses card",
+              "timedOut": null,
+              "duration": 148,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-studio.cy.ts/displays the Extract Poses card - final.png\"",
+              "code": "cy.contains('Extract Poses').should('be.visible');\ncy.get('.drop-zone').should('exist');\ncy.contains('Click to select video').should('be.visible');",
+              "err": {},
+              "uuid": "564e5369-03e4-4dcf-bce3-385945ca103b",
+              "parentUUID": "41255a0d-0832-48d6-aa23-b6da5659ba29",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "displays the Preview card",
+              "fullTitle": "Pose Studio Page displays the Preview card",
+              "timedOut": null,
+              "duration": 144,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-studio.cy.ts/displays the Preview card - final.png\"",
+              "code": "cy.contains('Preview').should('be.visible');\ncy.contains('No pose track').should('be.visible');",
+              "err": {},
+              "uuid": "9ae67236-183c-4722-a9c9-07d10acc6392",
+              "parentUUID": "41255a0d-0832-48d6-aa23-b6da5659ba29",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "shows empty state for saved pose tracks when none exist",
+              "fullTitle": "Pose Studio Page shows empty state for saved pose tracks when none exist",
+              "timedOut": null,
+              "duration": 158,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-studio.cy.ts/shows empty state for saved pose tracks when none exist - final.png\"",
+              "code": "cy.contains('Saved Pose Tracks').should('be.visible');\ncy.contains('0 files').should('be.visible');\ncy.contains('No saved pose tracks yet').should('be.visible');",
+              "err": {},
+              "uuid": "84098770-a00d-437a-a1af-e38f59dd5c66",
+              "parentUUID": "41255a0d-0832-48d6-aa23-b6da5659ba29",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "has navigation links",
+              "fullTitle": "Pose Studio Page has navigation links",
+              "timedOut": null,
+              "duration": 124,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-studio.cy.ts/has navigation links - final.png\"",
+              "code": "cy.get('.pose-studio-nav').within(() => {\n    cy.contains('Analyzer').should('have.attr', 'href', '/');\n    cy.contains('Pose Studio').should('have.attr', 'href', '/poses');\n    cy.contains('Debug').should('have.attr', 'href', '/debug');\n});",
+              "err": {},
+              "uuid": "8150dee7-57bf-4645-8907-f4ee70d0088c",
+              "parentUUID": "41255a0d-0832-48d6-aa23-b6da5659ba29",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "navigates to main analyzer",
+              "fullTitle": "Pose Studio Page navigates to main analyzer",
+              "timedOut": null,
+              "duration": 10446,
+              "state": "failed",
+              "speed": null,
+              "pass": false,
+              "fail": true,
+              "pending": false,
+              "context": "\"screenshots/pose-studio.cy.ts/Pose Studio Page -- navigates to main analyzer (failed).png\"",
+              "code": "cy.contains('Analyzer').click();\ncy.url().should('eq', `${Cypress.config().baseUrl}/`);\ncy.contains('h1', 'Swing Analyzer').should('be.visible');",
+              "err": {
+                "message": "AssertionError: Timed out retrying after 10000ms: expected 'https://localhost:5173/poses' to equal 'https://localhost:5173/'",
+                "estack": "AssertionError: Timed out retrying after 10000ms: expected 'https://localhost:5173/poses' to equal 'https://localhost:5173/'\n    at Context.eval (webpack://swing-analyzer/./cypress/e2e/pose-studio.cy.ts:39:13)",
+                "diff": "- 'https://localhost:5173/poses'\n+ 'https://localhost:5173/'\n"
+              },
+              "uuid": "7b263708-b1a8-4031-882b-f2beb09ef6ef",
+              "parentUUID": "41255a0d-0832-48d6-aa23-b6da5659ba29",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "has model selector",
+              "fullTitle": "Pose Studio Page has model selector",
+              "timedOut": null,
+              "duration": 288,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-studio.cy.ts/has model selector - final.png\"",
+              "code": "// PoseModelSelector should be present\ncy.get('.pose-model-selector, select').should('exist');",
+              "err": {},
+              "uuid": "23a0d712-6f37-4eaf-b868-34cddd0669cb",
+              "parentUUID": "41255a0d-0832-48d6-aa23-b6da5659ba29",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "has Extract Poses button (initially disabled without video)",
+              "fullTitle": "Pose Studio Page has Extract Poses button (initially disabled without video)",
+              "timedOut": null,
+              "duration": 137,
+              "state": "passed",
+              "speed": "fast",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": "\"screenshots/pose-studio.cy.ts/has Extract Poses button (initially disabled without video) - final.png\"",
+              "code": "cy.contains('button', 'Extract Poses').should('be.disabled');",
+              "err": {},
+              "uuid": "5637bf87-cd5d-48dd-a285-62678ad54c9a",
+              "parentUUID": "41255a0d-0832-48d6-aa23-b6da5659ba29",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "e734a147-3745-4e55-a16d-ee468c62c01c",
+            "564e5369-03e4-4dcf-bce3-385945ca103b",
+            "9ae67236-183c-4722-a9c9-07d10acc6392",
+            "84098770-a00d-437a-a1af-e38f59dd5c66",
+            "8150dee7-57bf-4645-8907-f4ee70d0088c",
+            "23a0d712-6f37-4eaf-b868-34cddd0669cb",
+            "5637bf87-cd5d-48dd-a285-62678ad54c9a"
+          ],
+          "failures": [
+            "7b263708-b1a8-4031-882b-f2beb09ef6ef"
+          ],
+          "pending": [],
+          "skipped": [],
+          "duration": 11947,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "7.2.0"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": true,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false,
+        "code": true
+      },
+      "version": "7.1.4"
+    },
+    "marge": {
+      "options": {
+        "reportDir": "cypress/reports",
+        "overwrite": false,
+        "html": true,
+        "json": true,
+        "embeddedScreenshots": true,
+        "inlineAssets": true
+      },
+      "version": "6.3.2"
+    }
+  }
+}

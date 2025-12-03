@@ -195,11 +195,13 @@ export async function extractPosesFromVideo(
           currentKeypoints: frame.keypoints,
         };
 
-        // Estimate time remaining
+        // Timing stats
         const elapsed = performance.now() - startTime;
         const framesRemaining = totalFrames - frameIndex - 1;
         const msPerFrame = elapsed / (frameIndex + 1);
         progress.estimatedTimeRemaining = (framesRemaining * msPerFrame) / 1000;
+        progress.elapsedTime = elapsed / 1000;
+        progress.fps = (frameIndex + 1) / (elapsed / 1000);
 
         options.onProgress(progress);
       }

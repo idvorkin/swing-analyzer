@@ -1,0 +1,337 @@
+[2025-12-02 16:19:00] Daemon started (interval: 5s, auto-commit: false, auto-push: false)
+[2025-12-02 16:19:00] Using database: /home/developer/gits/swing-analyzer/.beads/beads.db
+[2025-12-02 16:19:00] Database opened: /home/developer/gits/swing-analyzer/.beads/beads.db
+[2025-12-02 16:19:00] Upgrading .beads/.gitignore...
+[2025-12-02 16:19:00] Warning: failed to upgrade .gitignore: open .beads/.gitignore: no such file or directory
+[2025-12-02 16:19:00] Repository fingerprint validated: bbe895bc
+[2025-12-02 16:19:00] Starting RPC server: /home/developer/gits/swing-analyzer/.beads/bd.sock
+[2025-12-02 16:19:00] RPC server ready (socket listening)
+[2025-12-02 16:19:00] Registered in global registry
+[2025-12-02 16:19:00] Starting sync cycle...
+[2025-12-02 16:19:00] Exported to JSONL
+[2025-12-02 16:19:01] Pulled sync branch feature/person-centered-filmstrip-crop
+[2025-12-02 16:19:01] Imported from JSONL
+[2025-12-02 16:19:01] Sync cycle complete
+[2025-12-02 16:19:01] Monitoring parent process (PID 0)
+[2025-12-02 16:19:01] Using event-driven mode
+[2025-12-02 16:40:06] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-02 16:40:06] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 16:40:06] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 16:40:07] Import triggered by file change
+[2025-12-02 16:40:07] Starting auto-import...
+[2025-12-02 16:40:07] Skipping import: JSONL content unchanged
+[2025-12-02 16:41:34] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-02 16:41:34] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 16:41:35] Import triggered by file change
+[2025-12-02 16:41:35] Starting auto-import...
+[2025-12-02 16:41:35] Skipping import: JSONL content unchanged
+[2025-12-02 16:48:46] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-02 16:48:46] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 16:48:46] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 16:48:47] Import triggered by file change
+[2025-12-02 16:48:47] Starting auto-import...
+[2025-12-02 16:48:47] Skipping import: JSONL content unchanged
+[2025-12-02 16:53:55] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 16:53:55] JSONL removed/renamed, re-establishing watch
+[2025-12-02 16:53:55] JSONL still missing after 50ms, retrying...
+[2025-12-02 16:53:55] JSONL still missing after 100ms, retrying...
+[2025-12-02 16:53:55] JSONL still missing after 200ms, retrying...
+[2025-12-02 16:53:56] JSONL still missing after 400ms, retrying...
+[2025-12-02 16:53:56] Failed to re-establish JSONL watch after all retries
+[2025-12-02 16:53:56] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-02 16:53:56] Git ref change detected: /home/developer/gits/swing-analyzer/.git/refs/heads/main.lock
+[2025-12-02 16:53:56] Import triggered by file change
+[2025-12-02 16:53:56] Starting auto-import...
+[2025-12-02 16:53:56] Skipping import: JSONL content unchanged
+[2025-12-02 16:53:57] Import triggered by file change
+[2025-12-02 16:53:57] Starting auto-import...
+[2025-12-02 16:53:57] Skipping import: JSONL content unchanged
+[2025-12-02 17:15:04] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-02 17:15:04] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 17:15:04] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 17:15:05] Import triggered by file change
+[2025-12-02 17:15:05] Starting auto-import...
+[2025-12-02 17:15:05] Skipping import: JSONL content unchanged
+[2025-12-02 20:33:26] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-02 20:33:26] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 20:33:26] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 20:33:27] Import triggered by file change
+[2025-12-02 20:33:27] Starting auto-import...
+[2025-12-02 20:33:27] Skipping import: JSONL content unchanged
+[2025-12-02 20:53:56] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-02 20:53:56] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 20:53:56] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-02 20:53:57] Import triggered by file change
+[2025-12-02 20:53:57] Starting auto-import...
+[2025-12-02 20:53:57] Skipping import: JSONL content unchanged
+[2025-12-03 01:04:50] Git ref change detected: /home/developer/gits/swing-analyzer/.git/refs/heads/main.lock
+[2025-12-03 01:04:51] Import triggered by file change
+[2025-12-03 01:04:51] Starting auto-import...
+[2025-12-03 01:04:51] Skipping import: JSONL content unchanged
+[2025-12-03 01:27:42] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 01:27:42] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 01:27:42] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 01:27:43] Import triggered by file change
+[2025-12-03 01:27:43] Starting auto-import...
+[2025-12-03 01:27:43] Skipping import: JSONL content unchanged
+[2025-12-03 01:35:30] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 01:35:30] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 01:35:30] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 01:35:31] Import triggered by file change
+[2025-12-03 01:35:31] Starting auto-import...
+[2025-12-03 01:35:31] Skipping import: JSONL content unchanged
+[2025-12-03 01:38:32] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 01:38:32] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 01:38:32] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 01:38:33] Import triggered by file change
+[2025-12-03 01:38:33] Starting auto-import...
+[2025-12-03 01:38:33] Skipping import: JSONL content unchanged
+[2025-12-03 01:40:47] Git ref change detected: /home/developer/gits/swing-analyzer/.git/refs/heads/main.lock
+[2025-12-03 01:40:48] Import triggered by file change
+[2025-12-03 01:40:48] Starting auto-import...
+[2025-12-03 01:40:48] Skipping import: JSONL content unchanged
+[2025-12-03 01:46:55] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 01:46:55] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 01:46:55] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 01:46:56] Import triggered by file change
+[2025-12-03 01:46:56] Starting auto-import...
+[2025-12-03 01:46:56] Skipping import: JSONL content unchanged
+[2025-12-03 01:59:16] Git ref change detected: /home/developer/gits/swing-analyzer/.git/refs/heads/main.lock
+[2025-12-03 01:59:17] Import triggered by file change
+[2025-12-03 01:59:17] Starting auto-import...
+[2025-12-03 01:59:17] Skipping import: JSONL content unchanged
+[2025-12-03 02:10:31] Mutation detected: create SWING-vif
+[2025-12-03 02:10:32] Export triggered by mutation events
+[2025-12-03 02:10:32] Starting export...
+[2025-12-03 02:10:32] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:10:32] Exported to JSONL
+[2025-12-03 02:10:32] Export complete
+[2025-12-03 02:10:33] Import triggered by file change
+[2025-12-03 02:10:33] Starting auto-import...
+[2025-12-03 02:10:33] Skipping import: JSONL content unchanged
+[2025-12-03 02:10:41] Mutation detected: create SWING-7zf
+[2025-12-03 02:10:41] Export triggered by mutation events
+[2025-12-03 02:10:41] Starting export...
+[2025-12-03 02:10:41] Exported to JSONL
+[2025-12-03 02:10:41] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:10:41] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:10:41] Export complete
+[2025-12-03 02:10:41] Mutation detected: create SWING-3vi
+[2025-12-03 02:10:42] Export triggered by mutation events
+[2025-12-03 02:10:42] Starting export...
+[2025-12-03 02:10:42] Exported to JSONL
+[2025-12-03 02:10:42] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:10:42] Export complete
+[2025-12-03 02:10:42] Import triggered by file change
+[2025-12-03 02:10:42] Starting auto-import...
+[2025-12-03 02:10:42] Skipping import: JSONL content unchanged
+[2025-12-03 02:10:42] Mutation detected: create SWING-ugd
+[2025-12-03 02:10:43] Export triggered by mutation events
+[2025-12-03 02:10:43] Starting export...
+[2025-12-03 02:10:43] Exported to JSONL
+[2025-12-03 02:10:43] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:10:43] Export complete
+[2025-12-03 02:10:43] Import triggered by file change
+[2025-12-03 02:10:43] Starting auto-import...
+[2025-12-03 02:10:43] Skipping import: JSONL content unchanged
+[2025-12-03 02:10:44] Import triggered by file change
+[2025-12-03 02:10:44] Starting auto-import...
+[2025-12-03 02:10:44] Skipping import: JSONL content unchanged
+[2025-12-03 02:10:54] Mutation detected: create SWING-7ii
+[2025-12-03 02:10:54] Export triggered by mutation events
+[2025-12-03 02:10:54] Starting export...
+[2025-12-03 02:10:54] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:10:54] Exported to JSONL
+[2025-12-03 02:10:54] Export complete
+[2025-12-03 02:10:55] Import triggered by file change
+[2025-12-03 02:10:55] Starting auto-import...
+[2025-12-03 02:10:55] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:08] Mutation detected: create SWING-6zp
+[2025-12-03 02:11:09] Export triggered by mutation events
+[2025-12-03 02:11:09] Starting export...
+[2025-12-03 02:11:09] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:09] Exported to JSONL
+[2025-12-03 02:11:09] Export complete
+[2025-12-03 02:11:09] Mutation detected: create SWING-7b0
+[2025-12-03 02:11:09] Export triggered by mutation events
+[2025-12-03 02:11:09] Starting export...
+[2025-12-03 02:11:09] Exported to JSONL
+[2025-12-03 02:11:09] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:09] Export complete
+[2025-12-03 02:11:10] Import triggered by file change
+[2025-12-03 02:11:10] Starting auto-import...
+[2025-12-03 02:11:10] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:10] Import triggered by file change
+[2025-12-03 02:11:10] Starting auto-import...
+[2025-12-03 02:11:10] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:11] Mutation detected: create SWING-sxk
+[2025-12-03 02:11:11] Export triggered by mutation events
+[2025-12-03 02:11:11] Starting export...
+[2025-12-03 02:11:11] Exported to JSONL
+[2025-12-03 02:11:11] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:11] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:11:11] Export complete
+[2025-12-03 02:11:11] Mutation detected: create SWING-f3p
+[2025-12-03 02:11:12] Export triggered by mutation events
+[2025-12-03 02:11:12] Starting export...
+[2025-12-03 02:11:12] Exported to JSONL
+[2025-12-03 02:11:12] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:12] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:11:12] Export complete
+[2025-12-03 02:11:12] Mutation detected: create SWING-d0l
+[2025-12-03 02:11:12] Import triggered by file change
+[2025-12-03 02:11:12] Starting auto-import...
+[2025-12-03 02:11:12] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:12] Export triggered by mutation events
+[2025-12-03 02:11:12] Starting export...
+[2025-12-03 02:11:12] Exported to JSONL
+[2025-12-03 02:11:12] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:12] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:11:12] Export complete
+[2025-12-03 02:11:13] Import triggered by file change
+[2025-12-03 02:11:13] Starting auto-import...
+[2025-12-03 02:11:13] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:13] Mutation detected: create SWING-dds
+[2025-12-03 02:11:13] Export triggered by mutation events
+[2025-12-03 02:11:13] Starting export...
+[2025-12-03 02:11:13] Exported to JSONL
+[2025-12-03 02:11:13] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:13] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:11:13] Export complete
+[2025-12-03 02:11:14] Import triggered by file change
+[2025-12-03 02:11:14] Starting auto-import...
+[2025-12-03 02:11:14] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:14] Import triggered by file change
+[2025-12-03 02:11:14] Starting auto-import...
+[2025-12-03 02:11:14] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:24] Mutation detected: create SWING-joq
+[2025-12-03 02:11:25] Export triggered by mutation events
+[2025-12-03 02:11:25] Starting export...
+[2025-12-03 02:11:25] Exported to JSONL
+[2025-12-03 02:11:25] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:25] Export complete
+[2025-12-03 02:11:26] Import triggered by file change
+[2025-12-03 02:11:26] Starting auto-import...
+[2025-12-03 02:11:26] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:35] Mutation detected: create SWING-1ji
+[2025-12-03 02:11:36] Export triggered by mutation events
+[2025-12-03 02:11:36] Starting export...
+[2025-12-03 02:11:36] Exported to JSONL
+[2025-12-03 02:11:36] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:36] Export complete
+[2025-12-03 02:11:36] Mutation detected: create SWING-ama
+[2025-12-03 02:11:37] Export triggered by mutation events
+[2025-12-03 02:11:37] Starting export...
+[2025-12-03 02:11:37] Exported to JSONL
+[2025-12-03 02:11:37] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:37] Export complete
+[2025-12-03 02:11:37] Import triggered by file change
+[2025-12-03 02:11:37] Starting auto-import...
+[2025-12-03 02:11:37] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:37] Mutation detected: create SWING-hjq
+[2025-12-03 02:11:38] Export triggered by mutation events
+[2025-12-03 02:11:38] Starting export...
+[2025-12-03 02:11:38] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:38] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:11:38] Exported to JSONL
+[2025-12-03 02:11:38] Export complete
+[2025-12-03 02:11:38] Import triggered by file change
+[2025-12-03 02:11:38] Starting auto-import...
+[2025-12-03 02:11:38] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:38] Mutation detected: create SWING-dy2
+[2025-12-03 02:11:39] Export triggered by mutation events
+[2025-12-03 02:11:39] Starting export...
+[2025-12-03 02:11:39] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:39] Exported to JSONL
+[2025-12-03 02:11:39] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:11:39] Export complete
+[2025-12-03 02:11:39] Import triggered by file change
+[2025-12-03 02:11:39] Starting auto-import...
+[2025-12-03 02:11:39] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:40] Import triggered by file change
+[2025-12-03 02:11:40] Starting auto-import...
+[2025-12-03 02:11:40] Skipping import: JSONL content unchanged
+[2025-12-03 02:11:51] Mutation detected: create SWING-pqk
+[2025-12-03 02:11:51] Export triggered by mutation events
+[2025-12-03 02:11:51] Starting export...
+[2025-12-03 02:11:51] Exported to JSONL
+[2025-12-03 02:11:51] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:11:51] Export complete
+[2025-12-03 02:11:52] Import triggered by file change
+[2025-12-03 02:11:52] Starting auto-import...
+[2025-12-03 02:11:52] Skipping import: JSONL content unchanged
+[2025-12-03 02:12:01] Mutation detected: create SWING-21o
+[2025-12-03 02:12:01] Export triggered by mutation events
+[2025-12-03 02:12:01] Starting export...
+[2025-12-03 02:12:01] Exported to JSONL
+[2025-12-03 02:12:01] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:12:01] Export complete
+[2025-12-03 02:12:02] Mutation detected: create SWING-bf3
+[2025-12-03 02:12:02] Import triggered by file change
+[2025-12-03 02:12:02] Starting auto-import...
+[2025-12-03 02:12:02] Skipping import: JSONL content unchanged
+[2025-12-03 02:12:02] Export triggered by mutation events
+[2025-12-03 02:12:02] Starting export...
+[2025-12-03 02:12:02] Exported to JSONL
+[2025-12-03 02:12:02] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:12:02] Export complete
+[2025-12-03 02:12:03] Mutation detected: create SWING-7s4
+[2025-12-03 02:12:03] Export triggered by mutation events
+[2025-12-03 02:12:03] Starting export...
+[2025-12-03 02:12:03] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:12:03] Exported to JSONL
+[2025-12-03 02:12:03] Export complete
+[2025-12-03 02:12:03] Import triggered by file change
+[2025-12-03 02:12:03] Starting auto-import...
+[2025-12-03 02:12:03] Skipping import: JSONL content unchanged
+[2025-12-03 02:12:04] Mutation detected: create SWING-6i1
+[2025-12-03 02:12:04] Import triggered by file change
+[2025-12-03 02:12:04] Starting auto-import...
+[2025-12-03 02:12:04] Skipping import: JSONL content unchanged
+[2025-12-03 02:12:04] Export triggered by mutation events
+[2025-12-03 02:12:04] Starting export...
+[2025-12-03 02:12:04] Exported to JSONL
+[2025-12-03 02:12:04] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:12:04] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:12:04] Export complete
+[2025-12-03 02:12:05] Import triggered by file change
+[2025-12-03 02:12:05] Starting auto-import...
+[2025-12-03 02:12:05] Skipping import: JSONL content unchanged
+[2025-12-03 02:48:37] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:48:37] JSONL removed/renamed, re-establishing watch
+[2025-12-03 02:48:37] Successfully re-established JSONL watch after 50ms
+[2025-12-03 02:48:37] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:48:38] Import triggered by file change
+[2025-12-03 02:48:38] Starting auto-import...
+[2025-12-03 02:48:38] JSONL content changed, proceeding with import...
+[2025-12-03 02:48:38] Pulled sync branch feature/person-centered-filmstrip-crop
+[2025-12-03 02:48:38] Imported from JSONL
+[2025-12-03 02:48:38] Auto-import complete
+[2025-12-03 02:48:39] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:48:39] JSONL removed/renamed, re-establishing watch
+[2025-12-03 02:48:39] Successfully re-established JSONL watch after 50ms
+[2025-12-03 02:48:39] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:48:39] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: WRITE)
+[2025-12-03 02:48:40] Import triggered by file change
+[2025-12-03 02:48:40] Starting auto-import...
+[2025-12-03 02:48:40] Skipping import: JSONL content unchanged
+[2025-12-03 02:48:55] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:48:55] JSONL removed/renamed, re-establishing watch
+[2025-12-03 02:48:55] Successfully re-established JSONL watch after 50ms
+[2025-12-03 02:48:55] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:48:56] Import triggered by file change
+[2025-12-03 02:48:56] Starting auto-import...
+[2025-12-03 02:48:56] JSONL content changed, proceeding with import...
+[2025-12-03 02:48:56] Pulled sync branch feature/person-centered-filmstrip-crop
+[2025-12-03 02:48:56] Imported from JSONL
+[2025-12-03 02:48:56] Auto-import complete
+[2025-12-03 02:48:57] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:48:57] JSONL removed/renamed, re-establishing watch
+[2025-12-03 02:48:57] Successfully re-established JSONL watch after 50ms
+[2025-12-03 02:48:57] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:48:57] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: WRITE)
+[2025-12-03 02:48:57] JSONL file created: /home/developer/gits/swing-analyzer/.beads/issues.jsonl
+[2025-12-03 02:48:57] File change detected: /home/developer/gits/swing-analyzer/.beads/issues.jsonl (op: CHMOD)
+[2025-12-03 02:48:58] Import triggered by file change
+[2025-12-03 02:48:58] Starting auto-import...
+[2025-12-03 02:48:58] Skipping import: JSONL content unchanged

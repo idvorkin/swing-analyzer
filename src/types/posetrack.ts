@@ -152,6 +152,12 @@ export interface PoseExtractionProgress {
   /** Estimated time remaining in seconds */
   estimatedTimeRemaining?: number;
 
+  /** Elapsed time in seconds */
+  elapsedTime?: number;
+
+  /** Current extraction speed in frames per second */
+  fps?: number;
+
   /** Current keypoints (for live preview) */
   currentKeypoints?: PoseKeypoint[];
 }
