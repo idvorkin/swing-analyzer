@@ -2,24 +2,27 @@
 
 ## Task Tracking (Beads)
 
-This project uses [beads](https://github.com/steveyegge/beads) for issue tracking. Follow the AI-supervised workflow:
+This project uses [beads](https://github.com/steveyegge/beads) for issue tracking. Run `bd prime` at session start for workflow context.
 
-1. **Find ready work**: `/beads:ready` - shows unblocked tasks
-2. **Claim task**: `/beads:update ID in_progress` - prevents duplicate work
+**AI-supervised workflow:**
+
+1. **Find ready work**: `bd ready` - shows unblocked tasks
+2. **Claim task**: `bd update ID --status in_progress` - prevents duplicate work
 3. **Do the work**: implement, test, document
-4. **Discover new work**: `/beads:create` then link with `/beads:dep`
-5. **Complete**: `/beads:close ID "reason"` - documents why
-6. **Check unblocked**: `/beads:ready` - see what's now available
+4. **Discover new work**: `bd create "title"` then link with `bd dep add`
+5. **Complete**: `bd close ID --reason "why"` - documents completion
+6. **Check unblocked**: `bd ready` - see what's now available
 
-Quick reference:
+**Quick reference:**
 
 ```bash
-bd list                    # List all issues
+bd prime                   # Get workflow context (run at session start)
 bd ready                   # Show unblocked work
-bd show SWING-1            # View issue details
-bd update SWING-1 --status in_progress
-bd close SWING-1 --reason "Done in PR #42"
-bd dep add SWING-2 SWING-1 # SWING-1 blocks SWING-2
+bd list                    # List all issues
+bd show swing-abc          # View issue details
+bd update swing-abc --status in_progress
+bd close swing-abc --reason "Done in PR #42"
+bd dep add swing-def swing-abc  # swing-abc blocks swing-def
 ```
 
 See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
