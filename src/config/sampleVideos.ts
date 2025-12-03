@@ -5,6 +5,8 @@
  * @see https://github.com/idvorkin-ai-tools/form-analyzer-samples
  */
 
+// Note: This URL must support CORS for browser fetch() to work.
+// raw.githubusercontent.com supports CORS by default.
 const SAMPLES_BASE_URL =
   'https://raw.githubusercontent.com/idvorkin-ai-tools/form-analyzer-samples/main';
 
