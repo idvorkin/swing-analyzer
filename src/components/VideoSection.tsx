@@ -27,6 +27,8 @@ const VideoSection: React.FC = () => {
     navigateToPreviousRep,
     navigateToNextRep,
     currentVideoFile,
+    reinitializeWithCachedPoses,
+    reinitializeWithLiveCache,
   } = useSwingAnalyzerContext();
 
   // Pose track extraction
@@ -36,6 +38,7 @@ const VideoSection: React.FC = () => {
     cancelExtraction,
     savePoseTrack,
     downloadPoseTrack: downloadPoseTrackFile,
+    getLivePoseCache,
   } = usePoseTrack({ autoExtract: true });
 
   // Start pose extraction when video file changes
@@ -44,6 +47,29 @@ const VideoSection: React.FC = () => {
       startExtraction(currentVideoFile);
     }
   }, [currentVideoFile, startExtraction]);
+
+  // Reinitialize pipeline with live cache when extraction starts for streaming playback
+  useEffect(() => {
+    if (poseTrackStatus.type === 'extracting') {
+      const liveCache = getLivePoseCache();
+      if (liveCache) {
+        console.log('Extraction started, switching to streaming cache...');
+        reinitializeWithLiveCache(liveCache);
+      }
+    }
+  }, [poseTrackStatus.type, getLivePoseCache, reinitializeWithLiveCache]);
+
+  // Reinitialize pipeline with cached poses when they become available from storage
+  useEffect(() => {
+    if (
+      poseTrackStatus.type === 'ready' &&
+      poseTrackStatus.fromCache &&
+      poseTrackStatus.poseTrack
+    ) {
+      console.log('Cached pose data detected, reinitializing pipeline...');
+      reinitializeWithCachedPoses(poseTrackStatus.poseTrack);
+    }
+  }, [poseTrackStatus, reinitializeWithCachedPoses]);
 
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);

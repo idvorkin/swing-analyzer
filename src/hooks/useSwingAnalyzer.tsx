@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Skeleton } from '../models/Skeleton';
+import type { LivePoseCache } from '../pipeline/LivePoseCache';
 import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import {
   createFrameAcquisition,
@@ -11,6 +11,7 @@ import type {
 } from '../pipeline/PipelineInterfaces';
 import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
 import type { AppState } from '../types';
+import type { PoseTrackFile } from '../types/posetrack';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 
 export function useSwingAnalyzer(initialState?: Partial<AppState>) {
@@ -41,6 +42,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [videoStartTime, setVideoStartTime] = useState<number | null>(null);
   const [currentVideoFile, setCurrentVideoFile] = useState<File | null>(null);
+  const [usingCachedPoses, setUsingCachedPoses] = useState<boolean>(false);
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -52,6 +54,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const pipelineRef = useRef<Pipeline | null>(null);
   const frameAcquisitionRef = useRef<VideoFrameAcquisition | null>(null);
   const skeletonRendererRef = useRef<SkeletonRenderer | null>(null);
+  const pipelineSubscriptionsRef = useRef<{ unsubscribe: () => void }[]>([]);
 
   // Initialize pipeline and models - runs once on mount
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only once on mount
@@ -108,12 +111,13 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     };
   }, []);
 
-  // Setup persistent subscriptions to pipeline events and start it once
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only once on mount
-  useEffect(() => {
-    if (!pipelineRef.current) return;
-
-    const pipeline = pipelineRef.current;
+  // Helper function to set up pipeline subscriptions
+  const setupPipelineSubscriptions = useCallback((pipeline: Pipeline) => {
+    // Clean up existing subscriptions
+    for (const sub of pipelineSubscriptionsRef.current) {
+      sub.unsubscribe();
+    }
+    pipelineSubscriptionsRef.current = [];
 
     // Subscribe to skeleton events to render every detected skeleton
     const skeletonSubscription = pipeline.getSkeletonEvents().subscribe({
@@ -125,7 +129,12 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
           setArmToSpineAngle(
             Math.round(skeletonEvent.skeleton.getArmToVerticalAngle() || 0)
           );
-          renderSkeleton(skeletonEvent.skeleton);
+          if (skeletonRendererRef.current) {
+            skeletonRendererRef.current.renderSkeleton(
+              skeletonEvent.skeleton,
+              performance.now()
+            );
+          }
         }
       },
       error: (err) => {
@@ -150,15 +159,32 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       },
     });
 
-    // Mark pipeline as processing now - it will automatically respond to video play/pause
+    // Store subscriptions for cleanup
+    pipelineSubscriptionsRef.current = [
+      skeletonSubscription,
+      pipelineSubscription,
+    ];
+
+    // Mark pipeline as processing now
     setAppState((prev) => ({ ...prev, isProcessing: true }));
+  }, []);
+
+  // Setup persistent subscriptions to pipeline events and start it once
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only once on mount
+  useEffect(() => {
+    if (!pipelineRef.current) return;
+
+    setupPipelineSubscriptions(pipelineRef.current);
 
     // Clean up subscriptions on unmount
     return () => {
-      // Make sure pipeline is stopped before unsubscribing
-      pipeline.stop();
-      skeletonSubscription.unsubscribe();
-      pipelineSubscription.unsubscribe();
+      if (pipelineRef.current) {
+        pipelineRef.current.stop();
+      }
+      for (const sub of pipelineSubscriptionsRef.current) {
+        sub.unsubscribe();
+      }
+      pipelineSubscriptionsRef.current = [];
     };
   }, []);
 
@@ -245,13 +271,6 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
     // Reset spine angle but keep rep count
     setSpineAngle(0);
-  }, []);
-
-  // Render skeleton on canvas
-  const renderSkeleton = useCallback((skeleton: Skeleton) => {
-    if (skeleton && skeletonRendererRef.current) {
-      skeletonRendererRef.current.renderSkeleton(skeleton, performance.now());
-    }
   }, []);
 
   // Set body part display options
@@ -752,6 +771,110 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     return videoWidth > videoHeight ? 'video-landscape' : 'video-portrait';
   }, []);
 
+  /**
+   * Reinitialize the pipeline with cached pose data.
+   * Call this when cached pose data becomes available to switch from ML inference
+   * to using pre-extracted poses.
+   */
+  const reinitializeWithCachedPoses = useCallback(
+    async (cachedPoseTrack: PoseTrackFile) => {
+      if (!videoRef.current || !canvasRef.current) {
+        console.warn('Cannot reinitialize: video or canvas not ready');
+        return;
+      }
+
+      console.log('Reinitializing pipeline with cached pose data...');
+
+      // Stop current pipeline
+      if (pipelineRef.current) {
+        pipelineRef.current.stop();
+      }
+
+      // Clean up existing subscriptions
+      for (const sub of pipelineSubscriptionsRef.current) {
+        sub.unsubscribe();
+      }
+      pipelineSubscriptionsRef.current = [];
+
+      try {
+        // Create new pipeline with cached data
+        const pipeline = createPipeline(videoRef.current, canvasRef.current, {
+          cachedPoseTrack,
+        });
+        pipelineRef.current = pipeline;
+
+        // Initialize the new pipeline (no-op for cached transformer)
+        await pipeline.initialize();
+
+        // Set up subscriptions for the new pipeline
+        setupPipelineSubscriptions(pipeline);
+
+        // Update state to indicate we're using cached poses
+        setUsingCachedPoses(true);
+        setAppState((prev) => ({ ...prev, isModelLoaded: true }));
+        setStatus('Ready (using cached poses)');
+
+        console.log('Pipeline reinitialized with cached pose data');
+      } catch (error) {
+        console.error('Failed to reinitialize with cached poses:', error);
+        setStatus('Error: Failed to load cached poses');
+      }
+    },
+    [setupPipelineSubscriptions]
+  );
+
+  /**
+   * Reinitialize the pipeline with a live pose cache for streaming mode.
+   * Call this when extraction starts to enable playback using progressively
+   * extracted frames instead of ML inference.
+   */
+  const reinitializeWithLiveCache = useCallback(
+    async (liveCache: LivePoseCache) => {
+      if (!videoRef.current || !canvasRef.current) {
+        console.warn('Cannot reinitialize: video or canvas not ready');
+        return;
+      }
+
+      console.log('Reinitializing pipeline with live pose cache...');
+
+      // Stop current pipeline
+      if (pipelineRef.current) {
+        pipelineRef.current.stop();
+      }
+
+      // Clean up existing subscriptions
+      for (const sub of pipelineSubscriptionsRef.current) {
+        sub.unsubscribe();
+      }
+      pipelineSubscriptionsRef.current = [];
+
+      try {
+        // Create new pipeline with live cache for streaming
+        const pipeline = createPipeline(videoRef.current, canvasRef.current, {
+          livePoseCache: liveCache,
+        });
+        pipelineRef.current = pipeline;
+
+        // Initialize the new pipeline (no-op for cached transformer)
+        await pipeline.initialize();
+
+        // Set up subscriptions for the new pipeline
+        setupPipelineSubscriptions(pipeline);
+
+        // Update state to indicate we're using cached poses (streaming)
+        setUsingCachedPoses(true);
+        setAppState((prev) => ({ ...prev, isModelLoaded: true }));
+        setStatus('Ready (streaming poses)');
+
+        console.log('Pipeline reinitialized with live pose cache');
+      } catch (error) {
+        console.error('Failed to reinitialize with live cache:', error);
+        setStatus('Error: Failed to initialize streaming');
+      }
+    },
+    [setupPipelineSubscriptions]
+  );
+
   return {
     // State
     appState,
@@ -763,6 +886,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     videoStartTime,
     isFullscreen,
     currentVideoFile,
+    usingCachedPoses,
 
     // Refs
     videoRef,
@@ -790,5 +914,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     navigateToPreviousRep,
     navigateToNextRep,
     getVideoContainerClass,
+    reinitializeWithCachedPoses, // Switch to cached poses when available
+    reinitializeWithLiveCache, // Switch to streaming poses during extraction
   };
 }

@@ -1,5 +1,29 @@
 - Use PRs to do updates
 
+## Task Tracking (Beads)
+
+This project uses [beads](https://github.com/steveyegge/beads) for issue tracking. Follow the AI-supervised workflow:
+
+1. **Find ready work**: `/beads:ready` - shows unblocked tasks
+2. **Claim task**: `/beads:update ID in_progress` - prevents duplicate work
+3. **Do the work**: implement, test, document
+4. **Discover new work**: `/beads:create` then link with `/beads:dep`
+5. **Complete**: `/beads:close ID "reason"` - documents why
+6. **Check unblocked**: `/beads:ready` - see what's now available
+
+Quick reference:
+
+```bash
+bd list                    # List all issues
+bd ready                   # Show unblocked work
+bd show SWING-1            # View issue details
+bd update SWING-1 --status in_progress
+bd close SWING-1 --reason "Done in PR #42"
+bd dep add SWING-2 SWING-1 # SWING-1 blocks SWING-2
+```
+
+See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
+
 ## Architecture Overview
 
 ### Pipeline Design (RxJS-based)
