@@ -613,7 +613,9 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       });
       setCurrentVideoFile(videoFile);
 
-      await frameAcquisitionRef.current.loadVideoFromURL(videoURL);
+      // Use blob URL to avoid double-fetching the video
+      const blobUrl = URL.createObjectURL(blob);
+      await frameAcquisitionRef.current.loadVideoFromURL(blobUrl);
       setAppState((prev) => ({ ...prev, usingCamera: false }));
       setStatus('Video loaded. Press Play to start.');
 
