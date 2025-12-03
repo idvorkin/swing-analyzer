@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSavedModelPreference } from '../components/settings/DebugTab';
-import { BLAZEPOSE_LITE_CONFIG, DEFAULT_MODEL_CONFIG } from '../config/modelConfig';
+import {
+  BLAZEPOSE_LITE_CONFIG,
+  DEFAULT_MODEL_CONFIG,
+} from '../config/modelConfig';
 import type { LivePoseCache } from '../pipeline/LivePoseCache';
 import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import {
@@ -66,11 +69,16 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         if (videoRef.current && canvasRef.current) {
           // Get model config based on saved preference
           const savedModel = getSavedModelPreference();
-          const modelConfig = savedModel === 'blazepose' ? BLAZEPOSE_LITE_CONFIG : DEFAULT_MODEL_CONFIG;
+          const modelConfig =
+            savedModel === 'blazepose'
+              ? BLAZEPOSE_LITE_CONFIG
+              : DEFAULT_MODEL_CONFIG;
           console.log(`Using pose model: ${savedModel}`);
 
           // Create pipeline components
-          const pipeline = createPipeline(videoRef.current, canvasRef.current, { modelConfig });
+          const pipeline = createPipeline(videoRef.current, canvasRef.current, {
+            modelConfig,
+          });
           pipelineRef.current = pipeline;
 
           // Get frame acquisition for direct media control
@@ -359,7 +367,14 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         const { createSkeletonTransformer } = await import(
           '../pipeline/PipelineFactory'
         );
-        directSkeletonTransformerRef.current = createSkeletonTransformer();
+        // Use saved model preference for consistency with main pipeline
+        const savedModel = getSavedModelPreference();
+        const modelConfig =
+          savedModel === 'blazepose'
+            ? BLAZEPOSE_LITE_CONFIG
+            : DEFAULT_MODEL_CONFIG;
+        directSkeletonTransformerRef.current =
+          createSkeletonTransformer(modelConfig);
 
         // Initialize it
         await directSkeletonTransformerRef.current.initialize();
