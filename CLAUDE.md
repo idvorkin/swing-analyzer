@@ -27,6 +27,83 @@ bd dep add swing-def swing-abc  # swing-abc blocks swing-def
 
 See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 
+## PR Workflow
+
+### Branch Strategy
+
+- **dev branch**: Agents work freely here without PRs
+- **main branch**: Nothing merges without a PR
+- **PR merge process**: Periodically diff dev from main, split into clean PRs, merge to main
+
+**⚠️ CRITICAL: Only humans merge to main. Agents must NEVER merge PRs without explicit human confirmation.**
+
+**🔄 REBASE OFTEN**: Multiple agents push to dev constantly. Always rebase before starting work:
+
+```bash
+git fetch origin && git rebase origin/dev
+```
+
+### Splitting Dev Branch into Clean PRs
+
+When dev has accumulated many unrelated changes:
+
+1. **Diff dev from main**: `git diff main..dev --stat` to see all changes
+2. **Analyze commits**: `git log main..dev --oneline` to see commit history
+3. **Categorize changes** into logical groups (e.g., bug fixes, new features, refactors)
+4. **Create beads issues** for each PR: `bd create --title="Merge PR #X: description" --priority=1`
+5. **Add dependencies** between PRs: `bd dep add <blocked> <blocker>`
+6. **Create feature branches** from main, cherry-pick or manually copy changes
+7. **Rebase each branch** on main: `git rebase origin/main`
+8. **Run code review agent** on each PR to find issues
+9. **Fix issues**, run tests, push
+10. **Merge PRs** in dependency order, then sync dev with main
+
+### PR Review Checklist
+
+For each PR before merge:
+
+```bash
+git fetch origin main && git rebase origin/main  # Rebase on latest main
+npx playwright test                               # Run E2E tests
+npx tsc --noEmit                                  # Type check
+```
+
+Use code review agent to check for:
+
+- Dead code, unused variables
+- Missing error handling
+- Race conditions, memory leaks
+- Type safety issues
+
+### Tracking PRs in Beads
+
+```bash
+# Create issues for each PR
+bd create --title="Merge PR #44: BlazePose abstraction" --type=task --priority=1
+
+# Set up merge order with dependencies
+bd dep add swing-25 swing-22  # swing-25 blocked by swing-22
+
+# Check what's ready to merge
+bd ready
+
+# Check what's blocked
+bd blocked
+
+# After merging, close the issue
+bd close swing-22 --reason="Merged in PR #44"
+```
+
+### Handling Overlapping PRs
+
+When two PRs modify the same files:
+
+1. Compare with `git diff origin/branch-a origin/branch-b -- path/to/file`
+2. Identify which has better code (error handling, tests, etc.)
+3. Create a beads task to merge unique changes: `bd create --title="Merge PR #X unique changes into PR #Y"`
+4. Cherry-pick or manually copy the unique improvements
+5. Close the superseded PR
+
 ## Architecture Overview
 
 ### Pipeline Design (RxJS-based)
