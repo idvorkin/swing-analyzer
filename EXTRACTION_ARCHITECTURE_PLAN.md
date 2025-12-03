@@ -11,6 +11,7 @@ During playback:
 - Skeleton SHOULD render on main canvas
 - Use cached poses (no re-extraction needed)
 - Filmstrip already populated from extraction
+- **Rep count should NOT change** - reps were already counted during extraction
 
 ## Key Insight
 
@@ -23,22 +24,33 @@ Extraction:
   PoseExtractor ──► keypoints only ──► SwingFormProcessor tries to capture from main video (WRONG FRAME)
 
 Playback:
-  VideoFrameAcquisition ──► CachedPoseSkeletonTransformer ──► renders skeleton ──► re-runs form/rep (redundant)
+  VideoFrameAcquisition ──► CachedPoseSkeletonTransformer ──► SwingFormProcessor ──► SwingRepProcessor
+                                                              (DUPLICATE rep counting!)
 ```
+
+**Bugs:**
+1. Filmstrip thumbnails show frame 0 (wrong frame)
+2. Playing video after extraction counts reps AGAIN (doubles the count)
 
 ## Proposed Architecture
 
 ```
 Extraction:
-  PoseExtractor captures frameImage ──► passes through pipeline ──► SwingFormProcessor uses frameImage for thumbnails
+  PoseExtractor captures frameImage ──► Pipeline (full) ──► reps counted, thumbnails captured correctly
 
 Playback:
-  VideoFrameAcquisition ──► CachedPoseSkeletonTransformer ──► renders skeleton only (form/rep already done)
+  VideoFrameAcquisition ──► CachedPoseSkeletonTransformer ──► render skeleton ONLY
+                                                              (NO form/rep processing)
 ```
+
+**Key change:** Playback mode skips form/rep processing entirely. It just:
+1. Looks up cached skeleton by video time
+2. Renders skeleton to canvas
+3. Updates angle displays
 
 ## Implementation Steps
 
-### Step 1: Add frameImage to PoseTrackFrame type
+### Step 1: Add frameImage to PoseTrackFrame type (runtime-only)
 
 File: `src/types/posetrack.ts`
 
@@ -50,9 +62,14 @@ export interface PoseTrackFrame {
   keypoints: PoseKeypoint[];
   score?: number;
   angles?: PrecomputedAngles;
-  frameImage?: ImageData;  // NEW: captured during extraction for thumbnails
+
+  // RUNTIME ONLY - not serialized to PoseTrack files
+  // Only populated during extraction for filmstrip thumbnails
+  frameImage?: ImageData;
 }
 ```
+
+**Important:** This field is transient. It must be excluded from JSON serialization.
 
 ### Step 2: Add frameImage to FrameEvent interface
 
@@ -63,7 +80,13 @@ export interface FrameEvent {
   frame: HTMLCanvasElement | HTMLVideoElement;
   timestamp: number;
   videoTime?: number;
-  frameImage?: ImageData;  // NEW: for extraction mode
+
+  /**
+   * Frame image captured during extraction.
+   * Only populated in extraction mode by PoseExtractor.
+   * Undefined during playback.
+   */
+  frameImage?: ImageData;
 }
 ```
 
@@ -77,7 +100,7 @@ In `extractPosesFromVideo()`, after drawing frame to canvas for ML:
 // After: ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
 // Before: const poses = await detector.estimatePoses(canvas);
 
-// Capture frame for thumbnails
+// Capture frame for thumbnails (only needed for frames that might become checkpoints)
 const frameImage = ctx.getImageData(0, 0, videoWidth, videoHeight);
 
 // Later when building frame:
@@ -87,7 +110,7 @@ const frame: PoseTrackFrame = {
   videoTime,
   keypoints,
   score: poses.length > 0 ? poses[0].score : undefined,
-  frameImage,  // NEW
+  frameImage,  // Passed to pipeline, cleared after thumbnail capture
 };
 ```
 
@@ -109,7 +132,7 @@ export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEven
         frame: null as unknown as HTMLVideoElement,
         timestamp: frame.timestamp,
         videoTime: frame.videoTime,
-        frameImage: frame.frameImage,  // NEW: pass through
+        frameImage: frame.frameImage,  // Pass through for thumbnail capture
       },
     },
   };
@@ -120,16 +143,19 @@ export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEven
 
 File: `src/pipeline/SwingFormProcessor.ts`
 
-Update `processFrame` to pass frameImage to capture method:
-
 ```typescript
-processFrame(skeletonEvent: SkeletonEvent): Observable<FormEvent> {
-  // ... existing code ...
+private currentFrameImage?: ImageData;
 
-  // Store frameImage for use in updatePositionCandidate
+processFrame(skeletonEvent: SkeletonEvent): Observable<FormEvent> {
+  // Store frameImage temporarily for use in updatePositionCandidate
   this.currentFrameImage = skeletonEvent.poseEvent.frameEvent.frameImage;
 
-  // ... rest of method ...
+  // ... existing processing code ...
+
+  // Clear after processing to prevent stale data
+  this.currentFrameImage = undefined;
+
+  return result;
 }
 ```
 
@@ -142,12 +168,11 @@ private captureCurrentFrame(skeleton?: Skeleton): ImageData {
     return this.renderSkeletonOnFrame(this.currentFrameImage, skeleton);
   }
 
-  // Playback mode: capture from video element
+  // Fallback: capture from video element (for camera/live mode)
   // ... existing code ...
 }
 
 private renderSkeletonOnFrame(frameImage: ImageData, skeleton?: Skeleton): ImageData {
-  // Create temp canvas, draw frameImage, render skeleton on top, crop
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = frameImage.width;
   tempCanvas.height = frameImage.height;
@@ -158,7 +183,7 @@ private renderSkeletonOnFrame(frameImage: ImageData, skeleton?: Skeleton): Image
 
     // Render skeleton if available
     if (skeleton) {
-      this.renderSkeletonToContext(ctx, skeleton);
+      drawSkeletonToContext(ctx, skeleton);  // Use shared utility
     }
 
     // Crop around person
@@ -168,23 +193,188 @@ private renderSkeletonOnFrame(frameImage: ImageData, skeleton?: Skeleton): Image
 
   return frameImage;
 }
+```
 
-private renderSkeletonToContext(ctx: CanvasRenderingContext2D, skeleton: Skeleton): void {
-  // Draw skeleton connections and keypoints
+### Step 6: Create shared skeleton drawing utility
+
+File: `src/utils/skeletonDrawing.ts` (NEW)
+
+Extract skeleton rendering logic that can be shared between `SkeletonRenderer` and `SwingFormProcessor`:
+
+```typescript
+import type { Skeleton } from '../models/Skeleton';
+
+export interface SkeletonDrawOptions {
+  keypointRadius?: number;
+  lineWidth?: number;
+  keypointColor?: string;
+  lineColor?: string;
+}
+
+const DEFAULT_OPTIONS: SkeletonDrawOptions = {
+  keypointRadius: 4,
+  lineWidth: 2,
+  keypointColor: '#00ff00',
+  lineColor: '#00ff00',
+};
+
+export function drawSkeletonToContext(
+  ctx: CanvasRenderingContext2D,
+  skeleton: Skeleton,
+  options: SkeletonDrawOptions = {}
+): void {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
   const keypoints = skeleton.getKeypoints();
-  // ... render logic ...
+
+  // Draw connections
+  const connections = skeleton.getConnections();
+  ctx.strokeStyle = opts.lineColor!;
+  ctx.lineWidth = opts.lineWidth!;
+
+  for (const [startIdx, endIdx] of connections) {
+    const start = keypoints[startIdx];
+    const end = keypoints[endIdx];
+    if (start && end && start.score > 0.3 && end.score > 0.3) {
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+    }
+  }
+
+  // Draw keypoints
+  ctx.fillStyle = opts.keypointColor!;
+  for (const kp of keypoints) {
+    if (kp.score > 0.3) {
+      ctx.beginPath();
+      ctx.arc(kp.x, kp.y, opts.keypointRadius!, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
 }
 ```
 
-### Step 6: Ensure Pipeline.processSkeletonEvent doesn't emit skeleton events
+### Step 7: Simplify Playback Pipeline - Skip Form/Rep Processing
 
-File: `src/pipeline/Pipeline.ts`
+This is the key architectural change. When using cached poses, playback should ONLY render skeletons.
 
-Already done - `processSkeletonEvent` does not call `skeletonSubject.next()`.
+**Option A: Separate Playback Pipeline (Recommended)**
+
+Create a simpler pipeline for playback that doesn't include form/rep processors:
+
+File: `src/pipeline/PlaybackPipeline.ts` (NEW)
+
+```typescript
+export class PlaybackPipeline {
+  private skeletonSubject = new Subject<SkeletonEvent>();
+
+  constructor(
+    private frameAcquisition: FrameAcquisition,
+    private skeletonTransformer: SkeletonTransformer  // CachedPoseSkeletonTransformer
+  ) {}
+
+  start(): Observable<SkeletonEvent> {
+    // Just frame acquisition → skeleton lookup → emit
+    // NO form processing, NO rep processing
+    return this.frameAcquisition.start().pipe(
+      switchMap(frame => this.skeletonTransformer.transformToSkeleton(frame)),
+      tap(skeletonEvent => this.skeletonSubject.next(skeletonEvent))
+    );
+  }
+
+  getSkeletonEvents(): Observable<SkeletonEvent> {
+    return this.skeletonSubject.asObservable();
+  }
+}
+```
+
+**Option B: Flag in Existing Pipeline**
+
+Add a `playbackOnly` mode to the existing Pipeline:
+
+```typescript
+class Pipeline {
+  constructor(
+    private frameAcquisition: FrameAcquisition,
+    private skeletonTransformer: SkeletonTransformer,
+    private formProcessor: FormProcessor,
+    private repProcessor: RepProcessor,
+    private playbackOnly: boolean = false  // NEW
+  ) {}
+
+  start(): Observable<PipelineResult> {
+    return this.frameAcquisition.start().pipe(
+      switchMap(frame => this.skeletonTransformer.transformToSkeleton(frame)),
+      tap(skeletonEvent => this.skeletonSubject.next(skeletonEvent)),
+
+      // SKIP form/rep processing in playback mode
+      ...(this.playbackOnly ? [] : [
+        switchMap(skeletonEvent => this.formProcessor.processFrame(skeletonEvent)),
+        switchMap(formEvent => this.repProcessor.updateRepCount(formEvent)),
+      ])
+    );
+  }
+}
+```
+
+### Step 8: Update PipelineFactory
+
+File: `src/pipeline/PipelineFactory.ts`
+
+```typescript
+export interface PipelineOptions {
+  cachedPoseTrack?: PoseTrackFile;
+  livePoseCache?: LivePoseCache;
+  playbackOnly?: boolean;  // NEW: skip form/rep processing
+}
+
+export function createPipeline(
+  videoElement: HTMLVideoElement,
+  canvasElement: HTMLCanvasElement,
+  options: PipelineOptions = {}
+): Pipeline {
+  // If using cached poses, default to playback-only mode
+  const playbackOnly = options.playbackOnly ??
+    (options.cachedPoseTrack !== undefined || options.livePoseCache !== undefined);
+
+  // ... rest of factory logic ...
+
+  return new Pipeline(
+    frameAcquisition,
+    skeletonTransformer,
+    formProcessor,
+    repProcessor,
+    playbackOnly  // Pass the flag
+  );
+}
+```
+
+### Step 9: Ensure frameImage is NOT serialized
+
+File: `src/services/PoseTrackService.ts`
+
+Update serialization to strip runtime-only fields:
+
+```typescript
+export function serializePoseTrack(poseTrack: PoseTrackFile, pretty: boolean = false): string {
+  // Strip runtime-only fields before serialization
+  const cleanedFrames = poseTrack.frames.map(frame => {
+    const { frameImage, ...serializableFrame } = frame;
+    return serializableFrame;
+  });
+
+  const cleanedPoseTrack = {
+    ...poseTrack,
+    frames: cleanedFrames,
+  };
+
+  return JSON.stringify(cleanedPoseTrack, null, pretty ? 2 : undefined);
+}
+```
 
 ## Data Flow Summary
 
-### Extraction Mode
+### Extraction Mode (Full Processing)
 ```
 PoseExtractor
   ├── draws frame to canvas
@@ -195,26 +385,19 @@ PoseExtractor
         ▼
 VideoSection.handleFrameExtracted()
   └── buildSkeletonEventFromFrame(frame)
-        └── SkeletonEvent with frameImage in frameEvent
+        └── SkeletonEvent with frameImage
               │
               ▼
 Pipeline.processSkeletonEvent()
-  ├── does NOT emit to skeletonSubject (no rendering)
-  └── passes to SwingFormProcessor
+  ├── does NOT emit to skeletonSubject (no canvas rendering)
+  ├── SwingFormProcessor uses frameImage for thumbnail
+  └── SwingRepProcessor counts reps
         │
         ▼
-SwingFormProcessor.processFrame()
-  ├── detects this.currentFrameImage is set
-  └── uses it for thumbnail capture
-        │
-        ▼
-Checkpoint created with correct thumbnail
-  │
-  ▼
-resultSubject.next({ repCount }) → UI updates
+resultSubject.next({ repCount }) → UI updates filmstrip & rep count
 ```
 
-### Playback Mode
+### Playback Mode (Visualization Only)
 ```
 Video.play()
   │
@@ -226,44 +409,55 @@ CachedPoseSkeletonTransformer
   └── looks up cached pose by videoTime
         │
         ▼
-Pipeline tap() operator
-  └── skeletonSubject.next(skeletonEvent)
-        │
-        ▼
+skeletonSubject.next(skeletonEvent)
+  │
+  ▼
 Subscription in useSwingAnalyzer
   ├── updates angle displays
   └── skeletonRenderer.renderSkeleton() → CANVAS DRAW
-        │
-        ▼
-SwingFormProcessor.processFrame()
-  ├── this.currentFrameImage is undefined
-  └── captures from video element (correct position now)
+
+*** NO form/rep processing ***
+*** Rep count unchanged ***
+*** Filmstrip unchanged ***
 ```
 
-## UI Components & Subscriptions
+## UI Components & Data Sources
 
-| Component | Data Source | Subscription |
-|-----------|-------------|--------------|
-| Rep Counter | `repCount` state | `resultSubject.subscribe()` |
-| Filmstrip | `repProcessor.getAllReps()` | `useEffect([repCount])` triggers `renderFilmstrip()` |
-| Skeleton Canvas | `skeletonEvent` | `skeletonSubject.subscribe()` → `skeletonRenderer.renderSkeleton()` |
-| Angle Displays | `spineAngle`, `armAngle` state | `skeletonSubject.subscribe()` |
-| Progress Bar | `poseTrackStatus` | `onProgress` callback in extraction |
+| Component | Extraction Mode | Playback Mode |
+|-----------|-----------------|---------------|
+| Rep Counter | Updates from resultSubject | Static (unchanged) |
+| Filmstrip | Populates as reps complete | Static (already populated) |
+| Skeleton Canvas | Not rendered | Renders from skeletonSubject |
+| Angle Displays | Not updated | Updates from skeletonSubject |
+| Progress Bar | Shows extraction % | Hidden |
 
 ## Files to Modify
 
-1. `src/types/posetrack.ts` - Add `frameImage?: ImageData` to `PoseTrackFrame`
+1. `src/types/posetrack.ts` - Add `frameImage?: ImageData` (runtime-only)
 2. `src/pipeline/PipelineInterfaces.ts` - Add `frameImage?: ImageData` to `FrameEvent`
 3. `src/services/PoseExtractor.ts` - Capture `ImageData` after drawing frame
-4. `src/pipeline/PipelineFactory.ts` - Pass `frameImage` in `buildSkeletonEventFromFrame`
-5. `src/pipeline/SwingFormProcessor.ts` - Use `frameImage` if available, add skeleton rendering helper
+4. `src/pipeline/PipelineFactory.ts` - Pass `frameImage`, add `playbackOnly` option
+5. `src/pipeline/SwingFormProcessor.ts` - Use `frameImage` if available
+6. `src/utils/skeletonDrawing.ts` - NEW: shared skeleton rendering utility
+7. `src/pipeline/Pipeline.ts` - Add `playbackOnly` mode to skip form/rep
+8. `src/services/PoseTrackService.ts` - Strip `frameImage` from serialization
 
 ## Testing
 
 After implementation:
 1. Load a video file
 2. Watch extraction progress - filmstrip should show correct frames with skeleton overlay
-3. Rep count should update during extraction
+3. Rep count should update during extraction (e.g., shows "3 reps")
 4. Press play - skeleton should render on main canvas
-5. Click filmstrip thumbnail - should seek to correct video time
-6. All existing E2E tests should pass
+5. **Rep count should stay at 3** - NOT increase to 6
+6. Click filmstrip thumbnail - should seek to correct video time
+7. Save/load PoseTrack file - should work (no ImageData in JSON)
+8. All existing E2E tests should pass
+
+## Memory Considerations
+
+- `frameImage` is ~8MB per frame at 1080p
+- But it's only held briefly during processing of each frame
+- Cleared immediately after thumbnail is created (cropped thumbnail is much smaller)
+- Not stored in PoseTrack files
+- No memory accumulation over time
