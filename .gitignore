@@ -69,5 +69,10 @@ src/generated_version.ts
 # Stale beads snapshot (migration artifact)
 old_beads_data/
 
+# Beads data files (synced via bd sync to beads-metadata branch)
+.beads/issues.jsonl
+.beads/deletions.jsonl
+.beads/metadata.json
+
 # Aider AI assistant
 .aider.*
