@@ -82,3 +82,4 @@ old_beads_data/
 public/videos/*.webm
 public/videos/*.mp4
 public/videos/*.mov
+.claude/settings.local.json
