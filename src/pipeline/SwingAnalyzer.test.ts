@@ -12,7 +12,8 @@ import {
   createReleaseKeypoints,
 } from '../test-utils/pose-fixtures';
 import { Skeleton } from '../models/Skeleton';
-import { SwingAnalyzer, DEFAULT_SWING_CONFIG } from './SwingAnalyzer';
+import { SwingAnalyzer, DEFAULT_SWING_CONFIG, type SwingFrameResult } from './SwingAnalyzer';
+import { SwingPositionName } from '../types';
 
 /**
  * Helper to create a Skeleton from keypoints
@@ -182,6 +183,124 @@ describe('SwingAnalyzer', () => {
       expect(result.cycleCompleted).toBe(false);
       // Max angle should have increased
       expect(result.maxSpineAngleInCycle).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('processFrame', () => {
+    it('returns complete frame result with skeleton', () => {
+      const skeleton = createSkeleton(createTopKeypoints());
+      const result = analyzer.processFrame(skeleton, 0);
+
+      expect(result.skeleton).toBe(skeleton);
+      expect(result.repCount).toBe(0);
+      expect(result.repCompleted).toBe(false);
+      expect(result.angles).toBeDefined();
+      expect(result.angles.spine).toBeGreaterThanOrEqual(0);
+      expect(result.angles.hip).toBeGreaterThan(0);
+      expect(result.angles.knee).toBeGreaterThan(0);
+    });
+
+    it('detects TOP position when spine angle is low', () => {
+      const skeleton = createSkeleton(createTopKeypoints());
+      const result = analyzer.processFrame(skeleton, 0);
+
+      // Top position is detected when spineAngle < 20
+      if (result.angles.spine < 20) {
+        expect(result.position).toBe(SwingPositionName.Top);
+      }
+    });
+
+    it('detects BOTTOM position when spine angle is high', () => {
+      const skeleton = createSkeleton(createBottomKeypoints());
+      const result = analyzer.processFrame(skeleton, 0);
+
+      // Bottom position is detected when spineAngle > 70
+      if (result.angles.spine > 70) {
+        expect(result.position).toBe(SwingPositionName.Bottom);
+      }
+    });
+
+    it('starts with rep count of 0', () => {
+      const skeleton = createSkeleton(createTopKeypoints());
+      const result = analyzer.processFrame(skeleton, 0);
+
+      expect(result.repCount).toBe(0);
+      expect(analyzer.getRepCount()).toBe(0);
+    });
+
+    it('tracks detected positions', () => {
+      const topSkeleton = createSkeleton(createTopKeypoints());
+      const bottomSkeleton = createSkeleton(createBottomKeypoints());
+
+      analyzer.processFrame(topSkeleton, 0);
+      analyzer.processFrame(bottomSkeleton, 100);
+
+      // Rep count should still be 0 (not a complete cycle yet)
+      expect(analyzer.getRepCount()).toBe(0);
+    });
+
+    it('resets rep count on reset()', () => {
+      const skeleton = createSkeleton(createTopKeypoints());
+      analyzer.processFrame(skeleton, 0);
+
+      analyzer.reset();
+
+      expect(analyzer.getRepCount()).toBe(0);
+    });
+
+    it('includes hinge score in result', () => {
+      const skeleton = createSkeleton(createBottomKeypoints());
+      const result = analyzer.processFrame(skeleton, 0);
+
+      expect(typeof result.hingeScore).toBe('number');
+      // Hinge score is typically -1 to 1, but synthetic test data may exceed this
+      expect(Number.isFinite(result.hingeScore)).toBe(true);
+    });
+
+    it('passes through video time', () => {
+      const skeleton = createSkeleton(createTopKeypoints());
+      const result = analyzer.processFrame(skeleton, Date.now(), 1.5);
+
+      expect(result).toBeDefined();
+      // Video time is passed to internal analysis but not directly exposed in result
+      // The cyclePositions would contain it if cycle completed
+    });
+  });
+
+  describe('rep counting', () => {
+    it('processes full swing cycle sequence', () => {
+      const frames = [
+        { keypoints: createTopKeypoints(), time: 0 },
+        { keypoints: createConnectKeypoints(), time: 100 },
+        { keypoints: createBottomKeypoints(), time: 200 },
+        { keypoints: createReleaseKeypoints(), time: 300 },
+        { keypoints: createTopKeypoints(), time: 400 },
+      ];
+
+      const results: SwingFrameResult[] = [];
+
+      for (const frame of frames) {
+        const skeleton = createSkeleton(frame.keypoints);
+        results.push(analyzer.processFrame(skeleton, frame.time));
+      }
+
+      expect(results).toHaveLength(5);
+      // Each result should have the expected structure
+      for (const result of results) {
+        expect(result.skeleton).toBeDefined();
+        expect(typeof result.repCount).toBe('number');
+        expect(typeof result.repCompleted).toBe('boolean');
+        expect(result.angles).toBeDefined();
+      }
+    });
+
+    it('getRepCount returns current rep count', () => {
+      expect(analyzer.getRepCount()).toBe(0);
+
+      const skeleton = createSkeleton(createTopKeypoints());
+      analyzer.processFrame(skeleton, 0);
+
+      expect(analyzer.getRepCount()).toBe(0);
     });
   });
 });

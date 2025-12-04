@@ -8,7 +8,6 @@ import {
   recordExtractionStart,
   recordPipelineReinit,
 } from '../services/SessionRecorder';
-import { SwingPositionName } from '../types';
 import type { PoseTrackFrame } from '../types/posetrack';
 import { PoseTrackStatusBar } from './PoseTrackStatusBar';
 
@@ -30,7 +29,6 @@ const VideoSection: React.FC = () => {
     previousFrame,
     getVideoContainerClass,
     pipelineRef,
-    videoStartTime,
     navigateToPreviousRep,
     navigateToNextRep,
     currentVideoFile,
@@ -66,11 +64,9 @@ const VideoSection: React.FC = () => {
       // Build skeleton event from the extracted frame
       const skeletonEvent = buildSkeletonEventFromFrame(frame);
 
-      // Process through the pipeline (form processor → rep processor)
-      // This updates rep count and filmstrip during extraction
-      pipelineRef.current.processSkeletonEvent(skeletonEvent).catch((err) => {
-        console.error('Error processing extracted frame:', err);
-      });
+      // Process through the pipeline (SwingAnalyzer handles position + rep counting)
+      // This updates rep count during extraction
+      pipelineRef.current.processSkeletonEvent(skeletonEvent);
     },
     [pipelineRef]
   );
@@ -113,35 +109,6 @@ const VideoSection: React.FC = () => {
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);
 
-  // Position order and names
-  const positionOrder = [
-    SwingPositionName.Top,
-    SwingPositionName.Connect,
-    SwingPositionName.Bottom,
-    SwingPositionName.Release,
-  ];
-
-  const positionNames: Record<SwingPositionName, string> = {
-    [SwingPositionName.Top]: 'Top',
-    [SwingPositionName.Connect]: 'Connect',
-    [SwingPositionName.Bottom]: 'Bottom',
-    [SwingPositionName.Release]: 'Release',
-  };
-
-  // Seek to a specific video time in seconds
-  const seekToVideoTime = useCallback(
-    (videoTimeSec: number) => {
-      if (!videoRef.current) return;
-
-      videoRef.current.pause();
-      videoRef.current.currentTime = Math.max(
-        0,
-        Math.min(videoTimeSec, videoRef.current.duration)
-      );
-    },
-    [videoRef]
-  );
-
   // Render the filmstrip
   // biome-ignore lint/correctness/useExhaustiveDependencies: positionOrder and positionNames are stable
   const renderFilmstrip = useCallback(() => {
@@ -156,71 +123,12 @@ const VideoSection: React.FC = () => {
       return;
     }
 
-    const repProcessor = pipelineRef.current.getRepProcessor();
-    if (!repProcessor) return;
-
-    const completedReps = repProcessor.getAllReps();
-    if (completedReps.length === 0) return;
-
-    const currentRep = completedReps[appState.currentRepIndex];
-    if (!currentRep) return;
-
-    // Create filmstrip
-    const strip = document.createElement('div');
-    strip.className = 'filmstrip';
-
-    positionOrder.forEach((position) => {
-      const checkpoint = currentRep.checkpoints.get(position);
-      const thumb = document.createElement('div');
-      thumb.className = 'filmstrip-thumb';
-
-      if (checkpoint) {
-        const canvas = document.createElement('canvas');
-        canvas.width = checkpoint.image.width;
-        canvas.height = checkpoint.image.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.putImageData(checkpoint.image, 0, 0);
-        }
-        thumb.appendChild(canvas);
-
-        // Add label
-        const label = document.createElement('div');
-        label.className = 'filmstrip-label';
-        label.textContent = positionNames[position];
-        thumb.appendChild(label);
-
-        // Calculate video time: use videoTime if available, otherwise calculate from timestamp
-        let videoTimeSec: number | null = null;
-        if (checkpoint.videoTime !== undefined) {
-          videoTimeSec = checkpoint.videoTime;
-        } else if (videoStartTime) {
-          videoTimeSec = (checkpoint.timestamp - videoStartTime) / 1000;
-        }
-
-        // Click to seek (capture videoTimeSec in closure)
-        if (videoTimeSec !== null) {
-          const seekTime = videoTimeSec;
-          thumb.addEventListener('click', () => {
-            seekToVideoTime(seekTime);
-          });
-          thumb.style.cursor = 'pointer';
-        }
-      } else {
-        thumb.innerHTML = `<div class="filmstrip-empty-thumb">${positionNames[position]}</div>`;
-      }
-
-      strip.appendChild(thumb);
-    });
-
-    container.appendChild(strip);
-  }, [
-    appState.currentRepIndex,
-    repCount,
-    pipelineRef,
-    seekToVideoTime,
-    videoStartTime,
-  ]);
+    // Note: Filmstrip thumbnails are not currently captured in simplified pipeline.
+    // The SwingAnalyzer focuses on rep counting; thumbnail capture was removed
+    // when consolidating SwingFormProcessor + SwingRepProcessor into SwingAnalyzer.
+    // TODO: Re-implement thumbnail capture if needed for the filmstrip feature.
+    container.innerHTML = `<div class="filmstrip-empty">Rep ${repCount} completed</div>`;
+  }, [repCount, pipelineRef]);
 
   // Re-render filmstrip when rep changes
   useEffect(() => {

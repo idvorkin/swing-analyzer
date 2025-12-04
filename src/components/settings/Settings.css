@@ -977,3 +977,43 @@
   width: 1rem;
   height: 1rem;
 }
+
+/* ==========================================================================
+   Session Recording Stats
+   ========================================================================== */
+
+.settings-session-card {
+  padding: var(--settings-space-lg);
+  background: var(--settings-bg-tertiary);
+  border-radius: var(--settings-radius-md);
+  margin-top: var(--settings-space-md);
+}
+
+.settings-session-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--settings-space-sm);
+  margin-bottom: var(--settings-space-lg);
+  font-size: var(--settings-text-xs);
+}
+
+.settings-session-stat {
+  color: var(--settings-text-tertiary);
+}
+
+.settings-session-stat-value {
+  color: var(--settings-text-primary);
+}
+
+.settings-session-stat--error {
+  grid-column: span 2;
+  color: var(--settings-danger);
+}
+
+.settings-session-hint {
+  margin-top: var(--settings-space-md);
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-xs);
+  color: var(--settings-text-tertiary);
+  text-align: center;
+}
