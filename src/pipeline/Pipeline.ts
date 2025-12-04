@@ -1,5 +1,5 @@
-import { type Observable, Subject, type Subscription } from 'rxjs';
-import { share, switchMap, tap } from 'rxjs/operators';
+import { type Observable, Subject, type Subscription, firstValueFrom, lastValueFrom } from 'rxjs';
+import { share, switchMap, tap, toArray } from 'rxjs/operators';
 import type { Skeleton } from '../models/Skeleton';
 import type { FormCheckpoint } from '../types';
 import type {
@@ -9,11 +9,15 @@ import type {
   RepProcessor,
   SkeletonEvent,
   SkeletonTransformer,
-  RepEvent,
 } from './PipelineInterfaces';
 
 /**
  * Orchestrates the entire processing pipeline from frame to swing rep analysis using RxJS
+ *
+ * Pipeline flow: Frame → Skeleton → Form → Rep processing
+ *
+ * Note: Skeleton rendering during cached pose playback is handled separately
+ * by video event listeners (timeupdate/seeked), not by this pipeline.
  */
 export class Pipeline {
   // Latest data from the pipeline
@@ -49,18 +53,15 @@ export class Pipeline {
    */
   start(): Observable<PipelineResult> {
     if (this.isActive) {
-      console.log("Pipeline already active, returning existing result subject");
       return this.resultSubject.asObservable();
     }
 
-    console.log("Starting pipeline...");
     this.isActive = true;
 
     // Build the RxJS pipeline
     const frameStream = this.frameAcquisition.start();
-    console.log("Frame acquisition started");
 
-    // Set up the reactive pipeline
+    // Full pipeline: Frame → Skeleton → Form → Rep processing
     this.pipelineSubscription = frameStream
       .pipe(
         // Stage 1: Skeleton Transformation (combined pose detection and skeleton construction)
@@ -72,7 +73,7 @@ export class Pipeline {
         tap((skeletonEvent) => {
           // Emit the skeleton event to subscribers
           this.skeletonSubject.next(skeletonEvent);
-          
+
           // Store latest skeleton
           if (skeletonEvent.skeleton) {
             this.latestSkeleton = skeletonEvent.skeleton;
@@ -86,22 +87,16 @@ export class Pipeline {
 
         // Emit checkpoint events
         tap((checkpointEvent) => {
-          console.log(`Pipeline: Form processor emitted checkpoint for position ${checkpointEvent.position}`);
-          
-          // Pass checkpoint event to subscribers
           this.checkpointSubject.next(checkpointEvent);
         }),
 
         // Stage 3: Rep Processing
         switchMap((checkpointEvent) => {
-          console.log("Pipeline: Passing checkpoint to rep processor");
           return this.repProcessor.updateRepCount(checkpointEvent);
         }),
 
         // Update rep count and emit result
         tap((repEvent) => {
-          console.log(`Pipeline: Rep processor finished, rep count = ${repEvent.repCount}, incremented = ${repEvent.repIncremented || false}`);
-          
           this.repCount = repEvent.repCount;
 
           // Pass result to observers
@@ -111,7 +106,6 @@ export class Pipeline {
               checkpoint: repEvent.checkpointEvent.checkpoint,
               repCount: repEvent.repCount,
             });
-            console.log(`Pipeline: Emitted result with rep count ${repEvent.repCount}`);
           }
         }),
 
@@ -119,9 +113,6 @@ export class Pipeline {
         share()
       )
       .subscribe({
-        next: (_: RepEvent) => {
-          console.log(`Pipeline subscription: Processing complete for rep event`);
-        },
         error: (error) => {
           console.error('Error in pipeline:', error);
           this.resultSubject.error(error);
@@ -129,7 +120,6 @@ export class Pipeline {
           this.skeletonSubject.error(error);
         },
         complete: () => {
-          console.log('Pipeline complete');
           this.resultSubject.complete();
           this.checkpointSubject.complete();
           this.skeletonSubject.complete();
@@ -137,7 +127,14 @@ export class Pipeline {
         }
       });
 
-    console.log("Pipeline subscriptions set up and active");
+    return this.resultSubject.asObservable();
+  }
+
+  /**
+   * Get an observable for pipeline results without starting frame acquisition.
+   * Use this to listen for rep count updates from batch processing (processSkeletonEvent).
+   */
+  getResults(): Observable<PipelineResult> {
     return this.resultSubject.asObservable();
   }
 
@@ -199,6 +196,69 @@ export class Pipeline {
    */
   getRepProcessor(): RepProcessor {
     return this.repProcessor;
+  }
+
+  /**
+   * Get the form processor
+   */
+  getFormProcessor(): FormProcessor {
+    return this.formProcessor;
+  }
+
+  /**
+   * Process a skeleton event directly, bypassing frame acquisition.
+   * Used for batch/extraction mode where frames come from extraction
+   * rather than video playback.
+   *
+   * Note: We don't emit skeleton events to subscribers here because
+   * batch mode doesn't need real-time skeleton rendering. The skeleton
+   * events are only used for form/rep processing.
+   *
+   * @param skeletonEvent - The skeleton event to process
+   * @returns The rep count after processing
+   */
+  async processSkeletonEvent(skeletonEvent: SkeletonEvent): Promise<number> {
+    // Don't emit skeleton events during batch processing
+    // The video is at wrong position and we don't need rendering
+
+    // Store latest skeleton
+    if (skeletonEvent.skeleton) {
+      this.latestSkeleton = skeletonEvent.skeleton;
+    }
+
+    // Process through form processor - collect ALL emitted form events
+    // The form processor emits multiple events per cycle (top, connect, bottom, release)
+    const formEventsArray = await lastValueFrom(
+      this.formProcessor.processFrame(skeletonEvent).pipe(toArray()),
+      { defaultValue: [] as FormEvent[] }
+    );
+
+    // Process each form event through the rep processor
+    for (const formEvent of formEventsArray) {
+      // Emit checkpoint event
+      this.checkpointSubject.next(formEvent);
+
+      // Process through rep processor
+      const repEvent = await firstValueFrom(
+        this.repProcessor.updateRepCount(formEvent),
+        { defaultValue: undefined }
+      );
+
+      if (repEvent) {
+        this.repCount = repEvent.repCount;
+
+        // Emit result
+        if (repEvent.checkpointEvent.skeletonEvent.skeleton) {
+          this.resultSubject.next({
+            skeleton: repEvent.checkpointEvent.skeletonEvent.skeleton,
+            checkpoint: repEvent.checkpointEvent.checkpoint,
+            repCount: repEvent.repCount,
+          });
+        }
+      }
+    }
+
+    return this.repCount;
   }
 }
 

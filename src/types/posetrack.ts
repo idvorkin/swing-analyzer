@@ -94,6 +94,14 @@ export interface PoseTrackFrame {
 
   /** Pre-computed angles (optional, saves ~20% analysis time) */
   angles?: PrecomputedAngles;
+
+  /**
+   * RUNTIME ONLY - not serialized to PoseTrack files.
+   * Frame image captured during extraction for filmstrip thumbnails.
+   * Only populated in extraction mode by PoseExtractor.
+   * Cleared immediately after thumbnail creation to conserve memory.
+   */
+  frameImage?: ImageData;
 }
 
 /**

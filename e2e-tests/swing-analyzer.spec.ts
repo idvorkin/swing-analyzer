@@ -48,21 +48,21 @@ test.describe('Swing Analyzer', () => {
     const videoExists = await page.isVisible('video');
     expect(videoExists).toBe(true);
 
-    // Wait for video src to be set (may load from remote or local fallback)
+    // Wait for video src to be set (video is loaded as blob URL from fetch)
     await page.waitForFunction(
       () => {
         const video = document.querySelector('video') as HTMLVideoElement;
-        return video && video.src && video.src.includes('swing-sample.webm');
+        return video && video.src && video.src.startsWith('blob:');
       },
       { timeout: 10000 }
     );
 
-    // Check the video has the expected source
+    // Check the video has a blob source (video is fetched and converted to blob URL)
     const videoSrc = await page.$eval(
       'video',
       (video) => (video as HTMLVideoElement).src
     );
-    expect(videoSrc).toContain('swing-sample.webm');
+    expect(videoSrc).toMatch(/^blob:/);
   });
 
   test('should seed and retrieve pose track data correctly', async ({
@@ -86,10 +86,12 @@ test.describe('Swing Analyzer', () => {
     const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_VIDEO_HASH);
     expect(storedTrack).not.toBeNull();
 
-    // Check first frame has keypoints
-    const firstFrame = storedTrack?.frames[0];
-    expect(firstFrame?.keypoints).toBeDefined();
-    expect(firstFrame?.keypoints.length).toBe(17); // COCO-17 format
+    // Find first frame WITH keypoints (frame 0 may be empty if no pose detected)
+    const frameWithKeypoints = storedTrack?.frames.find(
+      (f) => f.keypoints.length > 0
+    );
+    expect(frameWithKeypoints?.keypoints).toBeDefined();
+    expect(frameWithKeypoints?.keypoints.length).toBe(17); // COCO-17 format
   });
 
   test('should have precomputed angles in pose track', async ({ page }) => {

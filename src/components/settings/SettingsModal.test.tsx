@@ -23,12 +23,35 @@ vi.mock('../../services/DeviceService', () => ({
   },
 }));
 
-// Mock the SwingAnalyzerContext for DebugTab
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(() => null),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+};
+Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+
+// Mock the SwingAnalyzerContext for GeneralTab and DebugTab
 vi.mock('../../contexts/SwingAnalyzerContext', () => ({
   useSwingAnalyzerContext: vi.fn(() => ({
     appState: { displayMode: 'both' },
     setDisplayMode: vi.fn(),
   })),
+}));
+
+// Mock SessionRecorder for DebugTab
+vi.mock('../../services/SessionRecorder', () => ({
+  sessionRecorder: {
+    getStats: vi.fn(() => ({
+      duration: 60000,
+      interactions: 5,
+      snapshots: 10,
+      stateChanges: 20,
+      errors: 0,
+    })),
+    downloadRecording: vi.fn(),
+  },
 }));
 
 const defaultProps = {
@@ -97,16 +120,31 @@ describe('SettingsModal', () => {
   });
 
   describe('Tab Navigation', () => {
-    it('shows About tab by default', () => {
+    it('shows General tab by default with display mode options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
-      expect(screen.getByText('Swing Analyzer')).toBeInTheDocument();
+      expect(screen.getByText('Display Mode')).toBeInTheDocument();
     });
 
-    it('switches to Updates tab when clicked', () => {
+    it('has four tabs: General, Analysis, Debug, About', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+      expect(screen.getByText('General')).toBeInTheDocument();
+      expect(screen.getByText('Analysis')).toBeInTheDocument();
+      expect(screen.getByText('Debug')).toBeInTheDocument();
+      expect(screen.getByText('About')).toBeInTheDocument();
+    });
+
+    it('switches to Debug tab when clicked', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Updates'));
-      expect(screen.getByText(/Check for Updates/)).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Debug'));
+      expect(screen.getByText('Session Recording')).toBeInTheDocument();
+    });
+
+    it('switches to Analysis tab when clicked', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Analysis'));
+      expect(screen.getByText('Pose Detection Model')).toBeInTheDocument();
     });
 
     it('switches to About tab when clicked', () => {
@@ -117,92 +155,22 @@ describe('SettingsModal', () => {
     });
   });
 
-  describe('Bug Report Tab', () => {
-    it('displays keyboard shortcut', () => {
+  describe('General Tab', () => {
+    it('shows display mode options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
-      fireEvent.click(screen.getByText('Bug Report'));
-      expect(screen.getByText('Cmd+I')).toBeInTheDocument();
-    });
-
-    it('calls onOpenBugReporter and onClose when Report a Bug is clicked', () => {
-      const onClose = vi.fn();
-      const onOpenBugReporter = vi.fn();
-      renderWithRouter(
-        <SettingsModal
-          {...defaultProps}
-          onClose={onClose}
-          onOpenBugReporter={onOpenBugReporter}
-        />
-      );
-
-      fireEvent.click(screen.getByText('Bug Report'));
-      fireEvent.click(screen.getByText(/Report a Bug/));
-      expect(onClose).toHaveBeenCalledTimes(1);
-      expect(onOpenBugReporter).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Both')).toBeInTheDocument();
+      expect(screen.getByText('Video Only')).toBeInTheDocument();
+      expect(screen.getByText('Overlay Only')).toBeInTheDocument();
     });
   });
 
-  describe('Updates Tab', () => {
-    it('shows "Never" when lastCheckTime is null', () => {
+  describe('Analysis Tab', () => {
+    it('shows pose model options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Updates'));
-      expect(screen.getByText('Never')).toBeInTheDocument();
-    });
-
-    it('shows formatted date when lastCheckTime is set', () => {
-      const lastCheckTime = new Date('2024-01-15T14:30:00');
-      renderWithRouter(
-        <SettingsModal {...defaultProps} lastCheckTime={lastCheckTime} />
-      );
-
-      fireEvent.click(screen.getByText('Updates'));
-      // The formatted date should contain "Jan 15"
-      expect(screen.getByText(/Jan 15/)).toBeInTheDocument();
-    });
-
-    it('shows update available banner when updateAvailable is true', () => {
-      renderWithRouter(
-        <SettingsModal {...defaultProps} updateAvailable={true} />
-      );
-
-      fireEvent.click(screen.getByText('Updates'));
-      expect(screen.getByText('New Version Available!')).toBeInTheDocument();
-    });
-
-    it('calls onReload when Reload to Update is clicked', () => {
-      const onReload = vi.fn();
-      renderWithRouter(
-        <SettingsModal
-          {...defaultProps}
-          updateAvailable={true}
-          onReload={onReload}
-        />
-      );
-
-      fireEvent.click(screen.getByText('Updates'));
-      fireEvent.click(screen.getByText('Reload to Update'));
-      expect(onReload).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onCheckForUpdate when Check for Updates is clicked', async () => {
-      const onCheckForUpdate = vi.fn().mockResolvedValue(undefined);
-      renderWithRouter(
-        <SettingsModal {...defaultProps} onCheckForUpdate={onCheckForUpdate} />
-      );
-
-      fireEvent.click(screen.getByText('Updates'));
-      fireEvent.click(screen.getByText(/Check for Updates/));
-      expect(onCheckForUpdate).toHaveBeenCalledTimes(1);
-    });
-
-    it('shows Checking... when isCheckingUpdate is true', () => {
-      renderWithRouter(
-        <SettingsModal {...defaultProps} isCheckingUpdate={true} />
-      );
-
-      fireEvent.click(screen.getByText('Updates'));
-      expect(screen.getByText('Checking...')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Analysis'));
+      expect(screen.getByText('MoveNet Lightning')).toBeInTheDocument();
+      expect(screen.getByText('BlazePose')).toBeInTheDocument();
     });
   });
 
@@ -221,6 +189,99 @@ describe('SettingsModal', () => {
       fireEvent.click(screen.getByText('About'));
       expect(screen.getByText('GitHub')).toBeInTheDocument();
       expect(screen.getByText(/Learn More/)).toBeInTheDocument();
+    });
+
+    it('displays keyboard shortcut for bug report', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+      fireEvent.click(screen.getByText('About'));
+      expect(screen.getByText('Cmd+I')).toBeInTheDocument();
+    });
+
+    it('calls onOpenBugReporter and onClose when Report a Bug is clicked', () => {
+      const onClose = vi.fn();
+      const onOpenBugReporter = vi.fn();
+      renderWithRouter(
+        <SettingsModal
+          {...defaultProps}
+          onClose={onClose}
+          onOpenBugReporter={onOpenBugReporter}
+        />
+      );
+
+      fireEvent.click(screen.getByText('About'));
+      fireEvent.click(screen.getByText(/Report a Bug/));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onOpenBugReporter).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows "Never" when lastCheckTime is null', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('About'));
+      expect(screen.getByText('Never')).toBeInTheDocument();
+    });
+
+    it('shows formatted date when lastCheckTime is set', () => {
+      const lastCheckTime = new Date('2024-01-15T14:30:00');
+      renderWithRouter(
+        <SettingsModal {...defaultProps} lastCheckTime={lastCheckTime} />
+      );
+
+      fireEvent.click(screen.getByText('About'));
+      // The formatted date should contain "Jan 15" - use getAllByText since it may appear multiple times
+      const dateElements = screen.getAllByText(/Jan 15/);
+      expect(dateElements.length).toBeGreaterThan(0);
+    });
+
+    it('shows update available banner when updateAvailable is true', () => {
+      renderWithRouter(
+        <SettingsModal {...defaultProps} updateAvailable={true} />
+      );
+
+      fireEvent.click(screen.getByText('About'));
+      expect(screen.getByText('New Version Available!')).toBeInTheDocument();
+    });
+
+    it('calls onReload when Reload to Update is clicked', () => {
+      const onReload = vi.fn();
+      renderWithRouter(
+        <SettingsModal
+          {...defaultProps}
+          updateAvailable={true}
+          onReload={onReload}
+        />
+      );
+
+      fireEvent.click(screen.getByText('About'));
+      fireEvent.click(screen.getByText('Reload to Update'));
+      expect(onReload).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onCheckForUpdate when Check for Updates is clicked', async () => {
+      const onCheckForUpdate = vi.fn().mockResolvedValue(undefined);
+      renderWithRouter(
+        <SettingsModal {...defaultProps} onCheckForUpdate={onCheckForUpdate} />
+      );
+
+      fireEvent.click(screen.getByText('About'));
+      fireEvent.click(screen.getByText(/Check for Updates/));
+      expect(onCheckForUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows Checking... when isCheckingUpdate is true', () => {
+      renderWithRouter(
+        <SettingsModal {...defaultProps} isCheckingUpdate={true} />
+      );
+
+      fireEvent.click(screen.getByText('About'));
+      expect(screen.getByText('Checking...')).toBeInTheDocument();
+    });
+
+    it('has debug tools link', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('About'));
+      expect(screen.getByText('Debug Tools')).toBeInTheDocument();
     });
   });
 });

@@ -5,6 +5,7 @@ import {
 } from '../models/BiomechanicsAnalyzer';
 import type { Skeleton } from '../models/Skeleton';
 import { type FormCheckpoint as SwingForm, SwingPositionName } from '../types';
+import { drawSkeletonToContext } from '../utils/skeletonDrawing';
 import type {
   FormEvent,
   FormProcessor,
@@ -94,6 +95,9 @@ export class SwingFormProcessor implements FormProcessor {
   // Track if standing calibration has been done
   private isCalibrated = false;
 
+  // Current frame image from extraction (runtime-only, for thumbnail capture)
+  private currentFrameImage?: ImageData;
+
   constructor(
     private videoElement: HTMLVideoElement,
     private canvasElement: HTMLCanvasElement
@@ -115,6 +119,10 @@ export class SwingFormProcessor implements FormProcessor {
     if (!skeletonEvent.skeleton) {
       return EMPTY;
     }
+
+    // Store frameImage temporarily for use in thumbnail capture
+    // This is the actual video frame from extraction (not the main video which may be at frame 0)
+    this.currentFrameImage = skeletonEvent.poseEvent.frameEvent.frameImage;
 
     const skeleton = skeletonEvent.skeleton;
     const spineAngle = Math.abs(skeleton.getSpineAngle());
@@ -484,10 +492,19 @@ export class SwingFormProcessor implements FormProcessor {
    * The crop is a square region centered on the detected person's bounding box.
    * If no bounding box is available, falls back to center crop.
    *
+   * During extraction mode, uses the frameImage from PoseExtractor (correct frame).
+   * During playback/camera mode, captures from the video element.
+   *
    * @param skeleton - The skeleton to use for person-centered cropping
    */
   private captureCurrentFrame(skeleton?: Skeleton): ImageData {
-    // Create a temporary canvas to blend video and skeleton
+    // If we have a frame image from extraction, use it instead of the video element
+    // This is critical because during extraction, the main video is paused at frame 0
+    if (this.currentFrameImage) {
+      return this.renderSkeletonOnFrame(this.currentFrameImage, skeleton);
+    }
+
+    // Fallback: capture from video element (for camera/live mode or playback)
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = this.canvasElement.width;
     tempCanvas.height = this.canvasElement.height;
@@ -531,6 +548,47 @@ export class SwingFormProcessor implements FormProcessor {
     }
 
     return imageData;
+  }
+
+  /**
+   * Render skeleton overlay on a frame image and crop around the person.
+   * Used during extraction mode when we have the actual frame from PoseExtractor.
+   *
+   * @param frameImage - The video frame captured during extraction
+   * @param skeleton - The skeleton to render and use for cropping
+   */
+  private renderSkeletonOnFrame(frameImage: ImageData, skeleton?: Skeleton): ImageData {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = frameImage.width;
+    tempCanvas.height = frameImage.height;
+    const ctx = tempCanvas.getContext('2d');
+
+    if (!ctx) {
+      return frameImage;
+    }
+
+    // Draw the frame image
+    ctx.putImageData(frameImage, 0, 0);
+
+    // Draw skeleton overlay if available
+    if (skeleton) {
+      drawSkeletonToContext(ctx, skeleton.getKeypoints());
+    }
+
+    // Calculate crop region centered on the person
+    const cropSize = this.calculatePersonCenteredCrop(
+      skeleton,
+      frameImage.width,
+      frameImage.height
+    );
+
+    // Get the cropped image data
+    return ctx.getImageData(
+      cropSize.x,
+      cropSize.y,
+      cropSize.size,
+      cropSize.size
+    );
   }
 
   /**
@@ -602,6 +660,7 @@ export class SwingFormProcessor implements FormProcessor {
     this.isDownswing = true;
     this.biomechanicsAnalyzer.reset();
     this.isCalibrated = false;
+    this.currentFrameImage = undefined; // Clear runtime frame image
   }
 
   /**

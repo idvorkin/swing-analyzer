@@ -145,22 +145,37 @@ export async function extractPosesFromVideo(
     let frameIndex = 0;
     const frameInterval = 1 / fps;
 
+    // Check if we're in mock mode - skip video seeking if so
+    const useMockDetector = isMockDetectorEnabled();
+
     // Seek to start
     video.currentTime = 0;
 
-    while (video.currentTime < duration) {
+    while (frameIndex < totalFrames) {
       // Check for cancellation
       if (options.signal?.aborted) {
         throw new DOMException('Aborted', 'AbortError');
       }
 
-      // Wait for seek to complete
-      await seekToTime(video, frameIndex * frameInterval);
+      // In mock mode, skip video seeking - poses come from fixture data
+      // In real mode, seek video and draw frame
+      if (!useMockDetector) {
+        // Wait for seek to complete
+        await seekToTime(video, frameIndex * frameInterval);
 
-      // Draw frame to canvas
-      ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+        // Draw frame to canvas
+        ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+      }
 
-      // Detect pose
+      // Capture frame image for filmstrip thumbnails BEFORE pose detection
+      // This is the actual video frame that should be used for thumbnails
+      // Only capture if not in mock mode (mock mode doesn't draw to canvas)
+      let frameImage: ImageData | undefined;
+      if (!useMockDetector) {
+        frameImage = ctx.getImageData(0, 0, videoWidth, videoHeight);
+      }
+
+      // Detect pose (mock detector ignores canvas and returns fixture data)
       const poses = await detector.estimatePoses(canvas);
 
       // Get keypoints and normalize to COCO format if using BlazePose
@@ -171,13 +186,19 @@ export async function extractPosesFromVideo(
         keypoints = normalizeToCocoFormat(rawKeypoints);
       }
 
-      // Create frame data
+      // Calculate video time (in mock mode, video.currentTime doesn't update)
+      const videoTime = useMockDetector
+        ? frameIndex * frameInterval
+        : video.currentTime;
+
+      // Create frame data with frameImage for thumbnail capture
       const frame: PoseTrackFrame = {
         frameIndex,
-        timestamp: Math.round(video.currentTime * 1000),
-        videoTime: video.currentTime,
+        timestamp: Math.round(videoTime * 1000),
+        videoTime,
         keypoints,
         score: poses.length > 0 ? poses[0].score : undefined,
+        frameImage, // Runtime-only, passed to pipeline for thumbnail capture
       };
 
       // Pre-compute angles if requested
@@ -198,7 +219,7 @@ export async function extractPosesFromVideo(
           currentFrame: frameIndex + 1,
           totalFrames,
           percentage: Math.round(((frameIndex + 1) / totalFrames) * 100),
-          currentTime: video.currentTime,
+          currentTime: videoTime,
           totalDuration: duration,
           currentKeypoints: frame.keypoints,
         };
@@ -216,8 +237,8 @@ export async function extractPosesFromVideo(
 
       frameIndex++;
 
-      // Move to next frame
-      if (video.currentTime + frameInterval >= duration) {
+      // In real mode, also check video.currentTime for early exit
+      if (!useMockDetector && video.currentTime + frameInterval >= duration) {
         break;
       }
     }
@@ -260,11 +281,36 @@ export async function extractPosesFromVideo(
 }
 
 /**
+ * Check if we're using a mock pose detector (for tests)
+ */
+function isMockDetectorEnabled(): boolean {
+  const mockFactory = (
+    window as unknown as {
+      __testSetup?: { getMockDetectorFactory?: () => (() => Promise<poseDetection.PoseDetector>) | undefined };
+    }
+  ).__testSetup?.getMockDetectorFactory?.();
+  return !!mockFactory;
+}
+
+/**
  * Create a pose detector for the specified model
+ * In test mode, uses mock detector if configured via testSetup
  */
 async function createPoseDetector(
   model: PoseModel
 ): Promise<poseDetection.PoseDetector> {
+  // Check for mock detector factory (set via E2E tests)
+  const mockFactory = (
+    window as unknown as {
+      __testSetup?: { getMockDetectorFactory?: () => (() => Promise<poseDetection.PoseDetector>) | undefined };
+    }
+  ).__testSetup?.getMockDetectorFactory?.();
+
+  if (mockFactory) {
+    console.log('[Test] Using mock pose detector');
+    return mockFactory();
+  }
+
   await tf.setBackend('webgl');
 
   switch (model) {

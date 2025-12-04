@@ -38,6 +38,166 @@ This document outlines the comprehensive E2E testing strategy for Swing Analyzer
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Mock Pose Detector Architecture
+
+E2E tests can run in two modes:
+
+### Mode 1: Pre-Seeded IndexedDB (Cached Poses)
+
+For tests where poses are already "extracted":
+- Seed IndexedDB with pose fixture before test
+- App finds cached poses, skips extraction
+- Uses `CachedPoseSkeletonTransformer` for playback
+
+### Mode 2: Mock Pose Detector (Simulated Extraction)
+
+For tests that exercise the extraction flow:
+- Replace real ML detector with `MockPoseDetector`
+- Mock detector returns poses from a fixture file
+- Simulates realistic extraction timing with FPS delay
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Real Extraction Flow                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   Video Frame ──► TensorFlow ──► Keypoints ──► Pipeline      │
+│                   (30-100ms)                                 │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    Mock Extraction Flow                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   Video Frame ──► MockPoseDetector ──► Keypoints ──► Pipeline│
+│                   (configurable delay)                        │
+│                   └─ reads from fixture                       │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### MockPoseDetector Implementation
+
+```typescript
+// src/services/MockPoseDetector.ts
+
+export interface MockPoseDetectorOptions {
+  /** Pre-extracted pose data to return */
+  poseTrack: PoseTrackFile;
+  /** Delay per frame to simulate ML inference (ms) */
+  frameDelayMs?: number;  // Default: 0 (instant)
+}
+
+export function createMockPoseDetector(options: MockPoseDetectorOptions): PoseDetector {
+  const { poseTrack, frameDelayMs = 0 } = options;
+  let frameIndex = 0;
+
+  return {
+    async estimatePoses(_image: unknown): Promise<Pose[]> {
+      // Simulate ML inference time
+      if (frameDelayMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, frameDelayMs));
+      }
+
+      // Return pre-computed pose from fixture
+      const frame = poseTrack.frames[frameIndex % poseTrack.frames.length];
+      frameIndex++;
+
+      return frame.keypoints.length > 0 ? [{ keypoints: frame.keypoints }] : [];
+    },
+
+    dispose(): void {},
+    reset(): void { frameIndex = 0; }
+  };
+}
+```
+
+### FPS Delay Simulation
+
+The `frameDelayMs` parameter is critical for realistic testing:
+
+| Scenario | frameDelayMs | Simulated FPS | Use Case |
+|----------|--------------|---------------|----------|
+| Instant | 0 | ∞ | Fast unit tests |
+| Fast device | 33 | ~30 FPS | High-end desktop |
+| Typical device | 67 | ~15 FPS | Average laptop |
+| Slow device | 100 | ~10 FPS | Mobile/low-end |
+
+**Why simulate FPS delay?**
+
+1. **Timing bugs**: UI that depends on extraction pacing (filmstrip, progress bars)
+2. **Race conditions**: Code that assumes extraction takes time
+3. **User experience**: See what users actually experience
+4. **Realistic reps**: Reps appear at realistic intervals during "extraction"
+
+### Streaming During Extraction
+
+When extraction runs (real or mock), frames stream through the pipeline:
+
+```
+Extraction starts
+    │
+    ▼
+┌──────────────────────────────────────────────────────┐
+│  Frame 1 extracted ──► FormProcessor ──► RepProcessor │
+│      (67ms delay)                                     │
+│  Frame 2 extracted ──► FormProcessor ──► RepProcessor │
+│      (67ms delay)                                     │
+│  ...                                                  │
+│  Frame N: Rep detected! ──► Filmstrip updates         │
+│      (67ms delay)                                     │
+│  ...                                                  │
+└──────────────────────────────────────────────────────┘
+    │
+    ▼
+Extraction complete
+```
+
+At 15 FPS simulation, a 60-second video with 10 reps:
+- Total extraction time: ~4 seconds (60s video ÷ 15 FPS)
+- First rep appears: ~0.4 seconds (after ~6 frames)
+- User sees thumbnails appearing progressively
+
+### E2E Test Example: Filmstrip During Extraction
+
+```typescript
+test('filmstrip populates during extraction', async ({ page }) => {
+  // Configure mock detector with realistic timing
+  await page.evaluate(() => {
+    window.__MOCK_POSE_DETECTOR_CONFIG__ = {
+      frameDelayMs: 67,  // Simulate 15 FPS extraction
+    };
+  });
+
+  await page.goto('/');
+  await page.click('#load-hardcoded-btn');
+
+  // Wait for first rep to appear (not instant!)
+  await expect(page.locator('.filmstrip-thumbnail')).toBeVisible({
+    timeout: 5000
+  });
+
+  // More thumbnails should appear over time
+  await page.waitForTimeout(2000);
+  const count = await page.locator('.filmstrip-thumbnail').count();
+  expect(count).toBeGreaterThan(1);
+});
+```
+
+### Playback vs Extraction FPS
+
+Two different FPS concepts:
+
+| Context | What it controls | Default |
+|---------|------------------|---------|
+| `MockPoseDetector.frameDelayMs` | Extraction speed | 0 (instant) |
+| `CachedPoseSkeletonTransformer.simulatedFps` | Playback speed from cache | 15 FPS |
+
+**Extraction FPS**: How fast poses are "detected" during the extraction phase.
+
+**Playback FPS**: How fast cached poses are fed to the pipeline during video playback (after extraction).
+
 ## Test Categories
 
 ### 1. Smoke Tests (< 30 seconds)

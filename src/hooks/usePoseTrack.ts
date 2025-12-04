@@ -19,6 +19,10 @@ import {
   loadPoseTrackFromStorage,
   savePoseTrackToStorage,
 } from '../services/PoseTrackService';
+import {
+  recordExtractionComplete,
+  recordExtractionCancel,
+} from '../services/SessionRecorder';
 import type {
   PoseExtractionProgress,
   PoseModel,
@@ -34,6 +38,17 @@ export interface UsePoseTrackOptions {
   defaultModel?: PoseModel;
   /** Pre-compute angles during extraction (default: true) */
   precomputeAngles?: boolean;
+  /**
+   * Callback called BEFORE extraction starts, with the live cache.
+   * Used to reinitialize the pipeline before frames start arriving.
+   * This is async - extraction waits for it to complete.
+   */
+  onExtractionStart?: (liveCache: LivePoseCache) => Promise<void>;
+  /**
+   * Callback called for each frame during extraction.
+   * Used to stream frames through the pipeline for instant filmstrip.
+   */
+  onFrameExtracted?: (frame: import('../types/posetrack').PoseTrackFrame) => void;
 }
 
 export interface UsePoseTrackReturn {
@@ -74,6 +89,8 @@ export function usePoseTrack(
     autoExtract = true,
     defaultModel = 'movenet-lightning',
     precomputeAngles = true,
+    onExtractionStart: onExtractionStartCallback,
+    onFrameExtracted: onFrameExtractedCallback,
   } = options;
 
   // State
@@ -164,6 +181,17 @@ export function usePoseTrack(
         },
       });
 
+      // CRITICAL: Call onExtractionStart BEFORE extraction begins
+      // This allows the pipeline to be reinitialized synchronously before frames arrive
+      if (onExtractionStartCallback) {
+        try {
+          await onExtractionStartCallback(liveCache);
+        } catch (err) {
+          console.error('Error in onExtractionStart callback:', err);
+          // Continue with extraction even if callback fails
+        }
+      }
+
       try {
         const result = await extractPosesFromVideo(videoFile, {
           model,
@@ -175,6 +203,16 @@ export function usePoseTrack(
           // Stream each frame to the live cache as it's extracted
           onFrameExtracted: (frame) => {
             liveCache.addFrame(frame);
+            // Also call the external callback for pipeline processing
+            if (onFrameExtractedCallback) {
+              try {
+                onFrameExtractedCallback(frame);
+              } catch (err) {
+                // Log but don't fail extraction - the callback is for instant filmstrip
+                // and should not interrupt pose extraction
+                console.error('Error in onFrameExtracted callback:', err);
+              }
+            }
           },
         });
 
@@ -191,13 +229,27 @@ export function usePoseTrack(
           fromCache: false,
         });
 
+        // Record extraction completion for debugging
+        recordExtractionComplete({
+          frameCount: result.poseTrack.frames.length,
+          extractionTimeMs: result.extractionTimeMs,
+          extractionFps: result.extractionFps,
+          model,
+        });
+
         console.log(
           `Pose extraction complete: ${result.poseTrack.frames.length} frames in ${(result.extractionTimeMs / 1000).toFixed(1)}s (${result.extractionFps.toFixed(1)} fps)`
         );
       } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          setStatus({ type: 'none' });
+        // Always clear live cache on any failure
+        if (livePoseCacheRef.current) {
+          livePoseCacheRef.current.clear();
           livePoseCacheRef.current = null;
+        }
+
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          recordExtractionCancel();
+          setStatus({ type: 'none' });
         } else {
           console.error('Pose extraction failed:', error);
           setStatus({
@@ -209,7 +261,7 @@ export function usePoseTrack(
         abortControllerRef.current = null;
       }
     },
-    [model, autoExtract, precomputeAngles, cancelExtraction]
+    [model, autoExtract, precomputeAngles, cancelExtraction, onExtractionStartCallback, onFrameExtractedCallback]
   );
 
   /**

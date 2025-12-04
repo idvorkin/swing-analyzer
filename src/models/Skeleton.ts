@@ -34,6 +34,9 @@ export class Skeleton {
   // Knee angle cache (hip-knee-ankle angle)
   private _kneeAngle: number | null = null;
 
+  // Elbow angle cache (shoulder-elbow-wrist angle)
+  private _elbowAngle: number | null = null;
+
   // Timestamp for velocity calculations
   private _timestamp: number = 0;
 
@@ -489,6 +492,88 @@ export class Skeleton {
       console.error('Error calculating knee angle:', e);
       this._kneeAngle = 0;
       return 0;
+    }
+  }
+
+  /**
+   * Get the elbow angle (shoulder-elbow-wrist angle)
+   *
+   * BIOMECHANICS: This angle measures elbow flexion/extension.
+   * - ~180° = fully extended (straight arm)
+   * - ~90° = right angle
+   * - ~45° = tightly bent
+   *
+   * In a proper pull-up:
+   * - At Hang: ~170-180° (arms nearly straight)
+   * - At Top: ~45-70° (chin over bar)
+   */
+  getElbowAngle(): number {
+    if (this._elbowAngle !== null) {
+      return this._elbowAngle;
+    }
+
+    try {
+      // Get keypoints - prefer right side, fall back to left
+      const shoulder =
+        this.getKeypointByName('rightShoulder') ||
+        this.getKeypointByName('leftShoulder');
+      const elbow =
+        this.getKeypointByName('rightElbow') ||
+        this.getKeypointByName('leftElbow');
+      const wrist =
+        this.getKeypointByName('rightWrist') ||
+        this.getKeypointByName('leftWrist');
+
+      if (shoulder && elbow && wrist) {
+        this._elbowAngle = this.calculateAngleBetweenPoints(
+          shoulder,
+          elbow,
+          wrist
+        );
+        return this._elbowAngle;
+      }
+
+      this._elbowAngle = 0;
+      return 0;
+    } catch (e) {
+      console.error('Error calculating elbow angle:', e);
+      this._elbowAngle = 0;
+      return 0;
+    }
+  }
+
+  /**
+   * Get a generic angle between any three keypoints
+   *
+   * This is the configurable version that allows specifying arbitrary
+   * keypoints by name. Useful for exercise-specific angle calculations.
+   *
+   * @param point1Name - First point name (e.g., 'rightShoulder')
+   * @param vertexName - Vertex point name where angle is measured (e.g., 'rightElbow')
+   * @param point2Name - Second point name (e.g., 'rightWrist')
+   * @returns Angle in degrees, or null if keypoints not found
+   */
+  getAngle(
+    point1Name: string,
+    vertexName: string,
+    point2Name: string
+  ): number | null {
+    try {
+      const point1 = this.getKeypointByName(point1Name);
+      const vertex = this.getKeypointByName(vertexName);
+      const point2 = this.getKeypointByName(point2Name);
+
+      if (point1 && vertex && point2) {
+        return this.calculateAngleBetweenPoints(point1, vertex, point2);
+      }
+
+      return null;
+    } catch (e) {
+      console.error(
+        `Error calculating angle between ${point1Name}, ${vertexName}, ${point2Name}:`,
+        e
+      );
+      return null;
     }
   }
 

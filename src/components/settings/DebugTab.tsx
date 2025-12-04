@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { PoseModel } from '../../config/modelConfig';
 import { useSwingAnalyzerContext } from '../../contexts/SwingAnalyzerContext';
+import { sessionRecorder } from '../../services/SessionRecorder';
 import { SettingsRow } from './SettingsRow';
 
 // Storage key for model preference
@@ -39,12 +40,40 @@ interface DebugTabProps {
   onClose?: () => void;
 }
 
+// Download icon
+const DownloadIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
 export function DebugTab({ onClose }: DebugTabProps) {
   const { appState, setDisplayMode } = useSwingAnalyzerContext();
   const [selectedModel, setSelectedModel] = useState<PoseModel>(
     getSavedModelPreference()
   );
   const [needsReload, setNeedsReload] = useState(false);
+  const [recordingStats, setRecordingStats] = useState(sessionRecorder.getStats());
+
+  // Update stats every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRecordingStats(sessionRecorder.getStats());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleModelChange = (model: PoseModel) => {
     const previousModel = getSavedModelPreference();
@@ -52,6 +81,23 @@ export function DebugTab({ onClose }: DebugTabProps) {
     saveModelPreference(model);
     // Only show reload prompt if model actually changed
     setNeedsReload(model !== previousModel);
+  };
+
+  const handleDownloadSession = () => {
+    sessionRecorder.downloadRecording();
+  };
+
+  const formatDuration = (ms: number): string => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    }
+    return `${seconds}s`;
   };
 
   return (
@@ -186,6 +232,90 @@ export function DebugTab({ onClose }: DebugTabProps) {
           <WrenchIcon />
           Debug Model Loader
         </Link>
+      </div>
+
+      {/* Session Recording */}
+      <SettingsRow
+        icon="📹"
+        iconVariant="blue"
+        title="Session Recording"
+        subtitle="Download debug data for troubleshooting"
+      />
+
+      <div
+        style={{
+          padding: '0.75rem',
+          background: '#1a1a2e',
+          borderRadius: '8px',
+          marginTop: '0.5rem',
+        }}
+      >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '0.5rem',
+            marginBottom: '0.75rem',
+            fontSize: '0.8rem',
+            color: '#9ca3af',
+          }}
+        >
+          <div>
+            <span style={{ color: '#6b7280' }}>Duration: </span>
+            <span style={{ color: '#e5e7eb' }}>{formatDuration(recordingStats.duration)}</span>
+          </div>
+          <div>
+            <span style={{ color: '#6b7280' }}>Clicks: </span>
+            <span style={{ color: '#e5e7eb' }}>{recordingStats.interactions}</span>
+          </div>
+          <div>
+            <span style={{ color: '#6b7280' }}>Snapshots: </span>
+            <span style={{ color: '#e5e7eb' }}>{recordingStats.snapshots}</span>
+          </div>
+          <div>
+            <span style={{ color: '#6b7280' }}>Events: </span>
+            <span style={{ color: '#e5e7eb' }}>{recordingStats.stateChanges}</span>
+          </div>
+          {recordingStats.errors > 0 && (
+            <div style={{ gridColumn: 'span 2' }}>
+              <span style={{ color: '#ef4444' }}>Errors: {recordingStats.errors}</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleDownloadSession}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            width: '100%',
+            padding: '0.625rem 1rem',
+            background: '#10b981',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+          }}
+        >
+          <DownloadIcon />
+          Download Session Recording
+        </button>
+
+        <p
+          style={{
+            marginTop: '0.5rem',
+            fontSize: '0.75rem',
+            color: '#6b7280',
+            textAlign: 'center',
+          }}
+        >
+          Includes clicks, pipeline state, and events for debugging
+        </p>
       </div>
     </div>
   );

@@ -65,15 +65,15 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(await page.isVisible('video')).toBe(true);
     });
 
-    test('video source is swing-sample.webm', async ({ page }) => {
+    test('video source is loaded as blob URL', async ({ page }) => {
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
-      // Wait for video src to be populated
+      // Wait for video src to be populated (video is fetched and converted to blob URL)
       await page.waitForFunction(
         () => {
           const video = document.querySelector('video');
-          return video && video.src && video.src.includes('swing-sample.webm');
+          return video && video.src && video.src.startsWith('blob:');
         },
         { timeout: 10000 }
       );
@@ -82,7 +82,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
         'video',
         (video) => (video as HTMLVideoElement).src
       );
-      expect(videoSrc).toContain('swing-sample.webm');
+      expect(videoSrc).toMatch(/^blob:/);
     });
 
     test('video loads and controls become enabled (with seeded data)', async ({
@@ -107,12 +107,12 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
         { timeout: 20000 }
       );
 
-      // Video should be loaded
+      // Video should be loaded (as blob URL)
       const videoSrc = await page.$eval(
         'video',
         (video) => (video as HTMLVideoElement).src
       );
-      expect(videoSrc).toContain('swing-sample.webm');
+      expect(videoSrc).toMatch(/^blob:/);
     });
 
     test('playback controls become enabled (with seeded data)', async ({

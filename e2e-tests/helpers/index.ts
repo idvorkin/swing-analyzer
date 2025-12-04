@@ -12,7 +12,13 @@ export {
   seedPoseTrackData,
   seedPoseTrackFixture,
 } from './indexeddb';
-
+// Mock pose detector helpers
+export {
+  clearMockPoseDetector,
+  isMockPoseDetectorAvailable,
+  setupMockPoseDetector,
+  setupMockPoseDetectorWithData,
+} from './mockPoseDetector';
 // Video helpers
 export {
   getVideoState,
