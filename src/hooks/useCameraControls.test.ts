@@ -427,8 +427,11 @@ describe('useCameraControls', () => {
 
   describe('cameraMode state', () => {
     it('reflects the current camera mode', () => {
-      const { result, rerender } = renderHook(
-        ({ mode }: { mode: 'user' | 'environment' }) =>
+      const { result, rerender } = renderHook<
+        ReturnType<typeof useCameraControls>,
+        { mode: 'user' | 'environment' }
+      >(
+        ({ mode }) =>
           useCameraControls({
             frameAcquisitionRef,
             videoRef,
@@ -441,7 +444,7 @@ describe('useCameraControls', () => {
             stopProcessing,
           }),
         {
-          initialProps: { mode: 'environment' as const },
+          initialProps: { mode: 'environment' },
         }
       );
 
