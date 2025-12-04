@@ -34,7 +34,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 5,
+  // Reduced workers to avoid race conditions with shared IndexedDB state
+  // Tests that clear IndexedDB can interfere with tests that seed data
+  workers: process.env.CI ? 1 : 4,
 
   // HTML report with console output
   reporter: [
