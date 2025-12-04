@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AboutTab } from './settings/AboutTab';
 import { AnalysisTab } from './settings/AnalysisTab';
+import { DebugTab } from './settings/DebugTab';
 import { GeneralTab } from './settings/GeneralTab';
 import {
   ActivityIcon,
@@ -8,12 +9,14 @@ import {
   InfoIcon,
   MonitorIcon,
   SettingsIcon,
+  WrenchIcon,
 } from './settings/Icons';
 import './settings/Settings.css';
 
 const TABS = [
   { id: 'general' as const, label: 'General', Icon: MonitorIcon },
   { id: 'analysis' as const, label: 'Analysis', Icon: ActivityIcon },
+  { id: 'debug' as const, label: 'Debug', Icon: WrenchIcon },
   { id: 'about' as const, label: 'About', Icon: InfoIcon },
 ] as const;
 
@@ -142,6 +145,8 @@ export function SettingsModal({
           {activeSection === 'general' && <GeneralTab />}
 
           {activeSection === 'analysis' && <AnalysisTab />}
+
+          {activeSection === 'debug' && <DebugTab onClose={onClose} />}
 
           {activeSection === 'about' && (
             <AboutTab

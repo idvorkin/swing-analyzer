@@ -3,10 +3,11 @@
  *
  * Tests the settings modal functionality including:
  * - Opening/closing the modal
- * - Tab navigation (General, Analysis, About)
+ * - Tab navigation (General, Analysis, Debug, About)
  * - Display mode settings
  * - Pose model selection
  * - BlazePose variant selection
+ * - Debug tab with session recording
  */
 
 import { expect, test } from '@playwright/test';
@@ -63,7 +64,7 @@ test.describe('Settings Modal', () => {
     await expect(page.locator('.settings-modal')).not.toBeVisible();
   });
 
-  test('should display three tabs: General, Analysis, About', async ({
+  test('should display four tabs: General, Analysis, Debug, About', async ({
     page,
   }) => {
     // Open settings
@@ -71,7 +72,7 @@ test.describe('Settings Modal', () => {
 
     // Check tabs exist
     const tabs = page.locator('.settings-tab');
-    await expect(tabs).toHaveCount(3);
+    await expect(tabs).toHaveCount(4);
 
     // Check tab labels (visible on desktop)
     await expect(page.locator('.settings-tab-label').nth(0)).toContainText(
@@ -81,6 +82,9 @@ test.describe('Settings Modal', () => {
       'Analysis'
     );
     await expect(page.locator('.settings-tab-label').nth(2)).toContainText(
+      'Debug'
+    );
+    await expect(page.locator('.settings-tab-label').nth(3)).toContainText(
       'About'
     );
   });
@@ -161,15 +165,38 @@ test.describe('Settings Modal', () => {
     await expect(page.locator('input[value="lite"]')).not.toBeVisible();
   });
 
+  test('should switch to Debug tab and show session recording', async ({
+    page,
+  }) => {
+    // Open settings
+    await page.click('button[aria-label="Open settings"]');
+
+    // Click Debug tab
+    await page.locator('.settings-tab').nth(2).click();
+
+    // Debug tab should be active
+    await expect(page.locator('.settings-tab').nth(2)).toHaveClass(
+      /settings-tab--active/
+    );
+
+    // Session recording section should be visible
+    await expect(
+      page.getByText('Session Recording', { exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /Download Session Recording/ })
+    ).toBeVisible();
+  });
+
   test('should switch to About tab and show version info', async ({ page }) => {
     // Open settings
     await page.click('button[aria-label="Open settings"]');
 
     // Click About tab
-    await page.locator('.settings-tab').nth(2).click();
+    await page.locator('.settings-tab').nth(3).click();
 
     // About tab should be active
-    await expect(page.locator('.settings-tab').nth(2)).toHaveClass(
+    await expect(page.locator('.settings-tab').nth(3)).toHaveClass(
       /settings-tab--active/
     );
 
@@ -187,7 +214,7 @@ test.describe('Settings Modal', () => {
     await page.click('button[aria-label="Open settings"]');
 
     // Click About tab
-    await page.locator('.settings-tab').nth(2).click();
+    await page.locator('.settings-tab').nth(3).click();
 
     // Debug link should be visible
     const debugLink = page.locator('.settings-debug-link');
@@ -202,7 +229,7 @@ test.describe('Settings Modal', () => {
     await page.click('button[aria-label="Open settings"]');
 
     // Click About tab
-    await page.locator('.settings-tab').nth(2).click();
+    await page.locator('.settings-tab').nth(3).click();
 
     // Click debug link
     await page.click('.settings-debug-link');

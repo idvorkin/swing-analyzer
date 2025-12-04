@@ -32,12 +32,26 @@ const localStorageMock = {
 };
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
-// Mock the SwingAnalyzerContext for GeneralTab
+// Mock the SwingAnalyzerContext for GeneralTab and DebugTab
 vi.mock('../../contexts/SwingAnalyzerContext', () => ({
   useSwingAnalyzerContext: vi.fn(() => ({
     appState: { displayMode: 'both' },
     setDisplayMode: vi.fn(),
   })),
+}));
+
+// Mock SessionRecorder for DebugTab
+vi.mock('../../services/SessionRecorder', () => ({
+  sessionRecorder: {
+    getStats: vi.fn(() => ({
+      duration: 60000,
+      interactions: 5,
+      snapshots: 10,
+      stateChanges: 20,
+      errors: 0,
+    })),
+    downloadRecording: vi.fn(),
+  },
 }));
 
 const defaultProps = {
@@ -111,11 +125,19 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Display Mode')).toBeInTheDocument();
     });
 
-    it('has three tabs: General, Analysis, About', () => {
+    it('has four tabs: General, Analysis, Debug, About', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       expect(screen.getByText('General')).toBeInTheDocument();
       expect(screen.getByText('Analysis')).toBeInTheDocument();
+      expect(screen.getByText('Debug')).toBeInTheDocument();
       expect(screen.getByText('About')).toBeInTheDocument();
+    });
+
+    it('switches to Debug tab when clicked', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Debug'));
+      expect(screen.getByText('Session Recording')).toBeInTheDocument();
     });
 
     it('switches to Analysis tab when clicked', () => {
