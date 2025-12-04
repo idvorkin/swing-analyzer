@@ -16,8 +16,13 @@ import {
 // Map of session IDs to mock detector factories (supports parallel tests)
 const mockDetectorFactories = new Map<string, PoseDetectorFactory>();
 
-// Current session ID (set by test before extraction starts)
-let currentSessionId: string | undefined;
+// Session ID is stored on window (per-tab) to support parallel tests
+// Each browser tab has its own window, so tests are isolated
+declare global {
+  interface Window {
+    __mockSessionId?: string;
+  }
+}
 
 /**
  * Set up a mock pose detector using fixture data
@@ -39,7 +44,10 @@ export function setupMockPoseDetector(
     frameDelayMs,
   });
   mockDetectorFactories.set(id, factory);
-  currentSessionId = id;
+  // Store session ID on window (per-tab isolation for parallel tests)
+  if (typeof window !== 'undefined') {
+    window.__mockSessionId = id;
+  }
   console.log(
     `[Test] Mock pose detector set up with ${poseTrack.frames.length} frames (session: ${id})`
   );
@@ -49,10 +57,11 @@ export function setupMockPoseDetector(
  * Clear the mock pose detector for a session
  */
 export function clearMockPoseDetector(sessionId?: string): void {
-  const id = sessionId || currentSessionId || 'default';
+  const id = sessionId || (typeof window !== 'undefined' ? window.__mockSessionId : undefined) || 'default';
   mockDetectorFactories.delete(id);
-  if (currentSessionId === id) {
-    currentSessionId = undefined;
+  // Clear session ID from window if it matches
+  if (typeof window !== 'undefined' && window.__mockSessionId === id) {
+    window.__mockSessionId = undefined;
   }
   console.log(`[Test] Mock pose detector cleared (session: ${id})`);
 }
@@ -62,7 +71,9 @@ export function clearMockPoseDetector(sessionId?: string): void {
  */
 export function clearAllMockDetectors(): void {
   mockDetectorFactories.clear();
-  currentSessionId = undefined;
+  if (typeof window !== 'undefined') {
+    window.__mockSessionId = undefined;
+  }
   console.log('[Test] All mock pose detectors cleared');
 }
 
@@ -70,15 +81,17 @@ export function clearAllMockDetectors(): void {
  * Set the current session ID (used when extraction starts)
  */
 export function setCurrentSession(sessionId: string): void {
-  currentSessionId = sessionId;
+  if (typeof window !== 'undefined') {
+    window.__mockSessionId = sessionId;
+  }
 }
 
 /**
  * Get the current mock detector factory (if set)
- * Uses the current session ID, or falls back to 'default'
+ * Uses the session ID from window (per-tab), or falls back to 'default'
  */
 export function getMockDetectorFactory(): PoseDetectorFactory | undefined {
-  const id = currentSessionId || 'default';
+  const id = (typeof window !== 'undefined' ? window.__mockSessionId : undefined) || 'default';
   return mockDetectorFactories.get(id);
 }
 
