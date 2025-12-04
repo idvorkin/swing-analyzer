@@ -17,13 +17,13 @@ import { type FixtureName, loadFixture } from '../fixtures';
  *
  * @param page - Playwright page instance
  * @param fixtureName - Name of the fixture to load
- * @param frameDelayMs - Delay per frame to simulate extraction (default: 10ms)
+ * @param frameDelayMs - Delay per frame to simulate extraction (default: 0 for fast tests)
  * @param sessionId - Optional unique session ID for parallel test isolation
  */
 export async function setupMockPoseDetector(
   page: Page,
   fixtureName: FixtureName,
-  frameDelayMs = 10,
+  frameDelayMs = 0,
   sessionId?: string
 ): Promise<void> {
   const fixture = await loadFixture(fixtureName);
@@ -35,13 +35,13 @@ export async function setupMockPoseDetector(
  *
  * @param page - Playwright page instance
  * @param poseTrack - The pose track data to use for mock detection
- * @param frameDelayMs - Delay per frame to simulate extraction (default: 10ms)
+ * @param frameDelayMs - Delay per frame to simulate extraction (default: 0 for fast tests)
  * @param sessionId - Optional unique session ID for parallel test isolation
  */
 export async function setupMockPoseDetectorWithData(
   page: Page,
   poseTrack: PoseTrackFile,
-  frameDelayMs = 10,
+  frameDelayMs = 0,
   sessionId?: string
 ): Promise<void> {
   // Generate a random session ID if not provided (for parallel test isolation)

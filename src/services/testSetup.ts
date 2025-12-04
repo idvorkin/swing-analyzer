@@ -25,12 +25,12 @@ let currentSessionId: string | undefined;
  * Called from E2E tests via page.evaluate() to inject mock data
  *
  * @param poseTrack - The fixture data to use
- * @param frameDelayMs - Delay per frame to simulate extraction timing
+ * @param frameDelayMs - Delay per frame to simulate extraction timing (default: 0 for fast tests)
  * @param sessionId - Unique ID for this test session (allows parallel tests)
  */
 export function setupMockPoseDetector(
   poseTrack: PoseTrackFile,
-  frameDelayMs = 10,
+  frameDelayMs = 0,
   sessionId?: string
 ): void {
   const id = sessionId || 'default';

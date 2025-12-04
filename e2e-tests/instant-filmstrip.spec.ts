@@ -52,9 +52,9 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
       }
     });
 
-    // Configure mock pose detector - fast enough to see reps in test timeout
-    // 67ms = ~15 FPS (realistic but slow), 10ms = ~100 FPS (fast for testing)
-    await setupMockPoseDetector(page, 'swing-sample', 10);
+    // Configure mock pose detector - 0ms delay for fast test execution
+    // Real extraction timing is tested separately if needed
+    await setupMockPoseDetector(page, 'swing-sample', 0);
 
     // Verify mock was set up
     const mockAvailable = await page.evaluate(() => {
@@ -119,7 +119,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
     page,
   }) => {
     // Use fast delay for testing - 10ms per frame
-    await setupMockPoseDetector(page, 'swing-sample', 10);
+    await setupMockPoseDetector(page, 'swing-sample', 0);
 
     // Load video
     await page.click('#load-hardcoded-btn');
@@ -170,7 +170,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
     page,
   }) => {
     // Fast extraction for this test - 10ms per frame
-    await setupMockPoseDetector(page, 'swing-sample', 10);
+    await setupMockPoseDetector(page, 'swing-sample', 0);
 
     // Load video and wait for extraction to complete
     await page.click('#load-hardcoded-btn');
@@ -219,7 +219,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
   }) => {
     // This test validates that mock detector produces realistic results
     // Use 10ms delay for consistency with other tests
-    await setupMockPoseDetector(page, 'swing-sample', 10);
+    await setupMockPoseDetector(page, 'swing-sample', 0);
 
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
