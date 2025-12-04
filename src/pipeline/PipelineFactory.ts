@@ -2,10 +2,7 @@ import type { ModelConfig } from '../config/modelConfig';
 import { Skeleton } from '../models/Skeleton';
 import { CocoBodyParts, type PoseKeypoint } from '../types';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
-import {
-  CachedPoseSkeletonTransformer,
-  type CachedPoseSkeletonTransformerConfig,
-} from './CachedPoseSkeletonTransformer';
+import { CachedPoseSkeletonTransformer } from './CachedPoseSkeletonTransformer';
 import type { LivePoseCache } from './LivePoseCache';
 import { Pipeline } from './Pipeline';
 import type {
@@ -42,22 +39,6 @@ export interface CreatePipelineOptions {
    * Allows switching between MoveNet and BlazePose.
    */
   modelConfig?: ModelConfig;
-
-  /**
-   * Simulated frames per second for cached pose playback.
-   * When set, adds a delay between frames to simulate real-time processing.
-   * Default: 15 FPS (typical mobile device performance).
-   * Set to 0 to disable delay and process as fast as possible.
-   */
-  simulatedFps?: number;
-
-  /**
-   * Skip form/rep processing during playback.
-   * When true, the pipeline only emits skeleton events for rendering.
-   * Defaults to true when using cached poses (cachedPoseTrack or livePoseCache).
-   * Set to false to force full processing even with cached poses.
-   */
-  playbackOnly?: boolean;
 }
 
 /**
@@ -77,27 +58,17 @@ export function createPipeline(
 
   // Choose skeleton transformer based on available cache options
   let skeletonTransformer: SkeletonTransformer;
-  let usingCachedPoses = false;
-
-  // Build config for cached transformer (default 15 FPS simulation)
-  const cachedConfig: CachedPoseSkeletonTransformerConfig = {
-    simulatedFps: options.simulatedFps ?? 15,
-  };
 
   if (options.livePoseCache) {
-    // Streaming mode: use LivePoseCache with blocking waits
+    // Streaming mode: use LivePoseCache
     skeletonTransformer = new CachedPoseSkeletonTransformer(
-      options.livePoseCache,
-      cachedConfig
+      options.livePoseCache
     );
-    usingCachedPoses = true;
   } else if (options.cachedPoseTrack) {
     // Static mode: use pre-loaded PoseTrackFile
     skeletonTransformer = new CachedPoseSkeletonTransformer(
-      options.cachedPoseTrack,
-      cachedConfig
+      options.cachedPoseTrack
     );
-    usingCachedPoses = true;
   } else {
     // ML mode: use real-time ML inference
     skeletonTransformer = createSkeletonTransformer(options.modelConfig);
@@ -106,18 +77,12 @@ export function createPipeline(
   const formProcessor = createFormProcessor(videoElement, canvasElement);
   const repProcessor = createRepProcessor();
 
-  // Determine playback mode:
-  // - If explicitly set, use that value
-  // - Otherwise, default to playback-only when using cached poses
-  const playbackOnly = options.playbackOnly ?? usingCachedPoses;
-
   // Create the pipeline with all stages
   return new Pipeline(
     frameAcquisition,
     skeletonTransformer,
     formProcessor,
-    repProcessor,
-    playbackOnly
+    repProcessor
   );
 }
 
@@ -144,6 +109,17 @@ export function createSkeletonTransformer(
 }
 
 /**
+ * Create a cached skeleton transformer from a PoseTrackFile
+ *
+ * @param poseTrack - The pre-extracted pose data
+ */
+export function createCachedSkeletonTransformer(
+  poseTrack: PoseTrackFile
+): CachedPoseSkeletonTransformer {
+  return new CachedPoseSkeletonTransformer(poseTrack);
+}
+
+/**
  * Create a form processor component
  */
 export function createFormProcessor(
@@ -161,108 +137,66 @@ export function createRepProcessor(): RepProcessor {
 }
 
 /**
- * Create a cached skeleton transformer component
- * Uses pre-extracted pose data instead of ML inference
- *
- * @param poseTrack - Pre-extracted pose data
- * @param config - Optional configuration (default: 15 FPS simulation)
- */
-export function createCachedSkeletonTransformer(
-  poseTrack: PoseTrackFile,
-  config?: CachedPoseSkeletonTransformerConfig
-): SkeletonTransformer {
-  return new CachedPoseSkeletonTransformer(
-    poseTrack,
-    config ?? { simulatedFps: 15 }
-  );
-}
-
-/**
- * Build a SkeletonEvent from a PoseTrackFrame.
- * Used for batch/extraction mode to process extracted frames through the pipeline.
- *
- * @param frame - The extracted pose track frame
- * @returns A SkeletonEvent that can be passed to Pipeline.processSkeletonEvent()
+ * Build a SkeletonEvent from a PoseTrackFrame
+ * Useful for processing cached pose data
  */
 export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEvent {
-  const skeleton = buildSkeletonFromFrame(frame);
-
+  const skeleton = buildSkeletonFromFrame(frame.keypoints);
   return {
     skeleton,
     poseEvent: {
       pose: skeleton
-        ? { keypoints: frame.keypoints, score: frame.score }
+        ? {
+            keypoints: frame.keypoints,
+            score: frame.score,
+          }
         : null,
       frameEvent: {
-        frame: null as unknown as HTMLVideoElement, // Not used in batch mode
+        frame: null as unknown as HTMLCanvasElement, // Not needed for extraction
         timestamp: frame.timestamp,
-        videoTime: frame.videoTime, // Include video time for seeking
-        frameImage: frame.frameImage, // Pass through for thumbnail capture
+        videoTime: frame.videoTime,
+        frameImage: frame.frameImage,
       },
     },
   };
 }
 
 /**
- * Build a Skeleton from a PoseTrackFrame
+ * Build a Skeleton from keypoints
  */
-function buildSkeletonFromFrame(frame: PoseTrackFrame): Skeleton | null {
-  if (!frame.keypoints || frame.keypoints.length === 0) {
+function buildSkeletonFromFrame(keypoints: PoseKeypoint[]): Skeleton | null {
+  if (!keypoints || keypoints.length === 0) {
     return null;
   }
 
-  // Use pre-computed spine angle if available
-  const precomputed = frame.angles?.spineAngle;
-  const spineAngle =
-    precomputed && precomputed !== 0
-      ? precomputed
-      : calculateSpineAngle(frame.keypoints);
-
-  const hasVisibleKeypoints = hasRequiredKeypoints(frame.keypoints);
-
-  return new Skeleton(frame.keypoints, spineAngle, hasVisibleKeypoints);
-}
-
-/**
- * Calculate spine angle from keypoints
- */
-function calculateSpineAngle(keypoints: PoseKeypoint[]): number {
+  // Calculate spine angle
   const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
   const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
   const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
   const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
 
-  if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) {
-    return 0;
+  let spineAngle = 0;
+  if (leftShoulder && rightShoulder && leftHip && rightHip) {
+    const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
+    const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
+    const hipMidX = (leftHip.x + rightHip.x) / 2;
+    const hipMidY = (leftHip.y + rightHip.y) / 2;
+    const deltaX = shoulderMidX - hipMidX;
+    const deltaY = hipMidY - shoulderMidY;
+    spineAngle = Math.abs((Math.atan2(deltaX, deltaY) * 180) / Math.PI);
   }
 
-  // Calculate midpoints
-  const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
-  const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
-  const hipMidX = (leftHip.x + rightHip.x) / 2;
-  const hipMidY = (leftHip.y + rightHip.y) / 2;
+  // Check visibility
+  const requiredIndices = [
+    CocoBodyParts.LEFT_SHOULDER,
+    CocoBodyParts.RIGHT_SHOULDER,
+    CocoBodyParts.LEFT_HIP,
+    CocoBodyParts.RIGHT_HIP,
+  ];
+  const hasVisibleKeypoints = requiredIndices.every((index) => {
+    const point = keypoints[index];
+    return point && (point.score ?? point.visibility ?? 0) > 0.2;
+  });
 
-  // Calculate angle from vertical
-  const dx = shoulderMidX - hipMidX;
-  const dy = hipMidY - shoulderMidY; // Inverted for screen coordinates
-
-  return Math.atan2(dx, dy) * (180 / Math.PI);
-}
-
-/**
- * Check if frame has required keypoints for skeleton
- */
-function hasRequiredKeypoints(keypoints: PoseKeypoint[]): boolean {
-  const minScore = 0.3;
-  const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
-  const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
-  const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
-  const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
-
-  return (
-    (leftShoulder?.score ?? 0) >= minScore &&
-    (rightShoulder?.score ?? 0) >= minScore &&
-    (leftHip?.score ?? 0) >= minScore &&
-    (rightHip?.score ?? 0) >= minScore
-  );
+  return new Skeleton(keypoints, spineAngle, hasVisibleKeypoints);
 }

@@ -8,17 +8,12 @@
  * 1. Static mode: Pre-loaded PoseTrackFile (all frames available)
  * 2. Streaming mode: LivePoseCache (frames added progressively)
  *
- * In streaming mode, if a frame isn't cached yet, the transformer
- * waits for extraction to produce it (blocking behavior).
- *
- * This enables:
- * - Fast, deterministic E2E testing (pre-seeded data)
- * - Progressive playback during extraction (streaming)
- * - No WebGL/TensorFlow dependencies during playback
+ * Note: Skeleton rendering during playback is now handled by video event
+ * listeners (timeupdate/seeked), not by this transformer. This transformer
+ * is still used for form/rep processing during extraction batch mode.
  */
 
 import { type Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
 import { Skeleton } from '../models/Skeleton';
 import { CocoBodyParts, type PoseKeypoint } from '../types';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
@@ -31,52 +26,24 @@ import type {
 import type { PoseEvent } from './PoseSkeletonTransformer';
 
 /**
- * Configuration options for CachedPoseSkeletonTransformer
- */
-export interface CachedPoseSkeletonTransformerConfig {
-  /**
-   * Simulated frames per second for realistic timing.
-   * When set, adds a delay to each frame to simulate real-time processing.
-   * Set to 0 or undefined to disable delay (process as fast as possible).
-   * Default: 15 FPS (typical mobile device performance)
-   */
-  simulatedFps?: number;
-}
-
-/**
  * SkeletonTransformer that uses cached/streaming pose data
  */
 export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
   private cache: LivePoseCache;
   /** Max time difference (seconds) for frame lookup during streaming */
   private streamingTolerance = 0.1; // 100ms - about 3 frames at 30fps
-  /** Delay in ms between frames (0 = no delay) */
-  private frameDelayMs: number;
 
   /**
    * Create from LivePoseCache (streaming mode)
    */
-  constructor(
-    cache: LivePoseCache,
-    config?: CachedPoseSkeletonTransformerConfig
-  );
+  constructor(cache: LivePoseCache);
 
   /**
    * Create from static PoseTrackFile (static mode)
    */
-  constructor(
-    poseTrack: PoseTrackFile,
-    config?: CachedPoseSkeletonTransformerConfig
-  );
+  constructor(poseTrack: PoseTrackFile);
 
-  constructor(
-    cacheOrPoseTrack: LivePoseCache | PoseTrackFile,
-    config?: CachedPoseSkeletonTransformerConfig
-  ) {
-    // Calculate frame delay from FPS (default 15 FPS = ~67ms per frame)
-    const fps = config?.simulatedFps ?? 15;
-    this.frameDelayMs = fps > 0 ? Math.round(1000 / fps) : 0;
-
+  constructor(cacheOrPoseTrack: LivePoseCache | PoseTrackFile) {
     if (cacheOrPoseTrack instanceof LivePoseCache) {
       this.cache = cacheOrPoseTrack;
     } else {
@@ -85,8 +52,7 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
     }
 
     console.log(
-      `CachedPoseSkeletonTransformer: Initialized with ${this.cache.getFrameCount()} frames, ` +
-        `simulated ${fps} FPS (${this.frameDelayMs}ms delay)`
+      `CachedPoseSkeletonTransformer: Initialized with ${this.cache.getFrameCount()} frames`
     );
   }
 
@@ -97,22 +63,15 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
     console.log('CachedPoseSkeletonTransformer: Ready (using cached poses)');
   }
 
-  // Track frame usage stats for debugging
-  private frameStats = { used: 0, skipped: 0, lastLogTime: 0 };
-
   /**
    * Transform a frame event into a skeleton using cached pose data.
    *
    * During streaming (extraction in progress):
    * - Only uses frames within tolerance of requested time
    * - Returns null skeleton if no nearby frame exists (skips frame)
-   * - Does NOT wait for extraction (waiting gets cancelled by switchMap anyway)
    *
    * After extraction complete:
    * - Uses closest available frame regardless of distance
-   *
-   * When simulatedFps is configured, adds a delay to simulate real-time
-   * frame processing (helps catch timing bugs in UI like filmstrip rep counter).
    */
   transformToSkeleton(frameEvent: FrameEvent): Observable<SkeletonEvent> {
     const videoTime = frameEvent.videoTime ?? 0;
@@ -124,46 +83,14 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
     const cachedFrame = this.cache.getFrame(videoTime, tolerance);
 
     if (cachedFrame) {
-      // Frame available within tolerance
-      this.frameStats.used++;
-      const result = of(this.buildSkeletonEvent(cachedFrame, frameEvent));
-      // Apply simulated frame delay if configured
-      return this.frameDelayMs > 0
-        ? result.pipe(delay(this.frameDelayMs))
-        : result;
+      return of(this.buildSkeletonEvent(cachedFrame, frameEvent));
     }
 
-    // No frame within tolerance
-    this.frameStats.skipped++;
-
-    // Log stats periodically (every 2 seconds)
-    const now = Date.now();
-    if (now - this.frameStats.lastLogTime > 2000) {
-      console.log(
-        `CachedPoseSkeletonTransformer: Frames used=${this.frameStats.used}, ` +
-          `skipped=${this.frameStats.skipped}, cache size=${this.cache.getFrameCount()}, ` +
-          `extraction complete=${isComplete}`
-      );
-      this.frameStats.lastLogTime = now;
-    }
-
-    if (isComplete) {
-      // Extraction done but no frame found - return null skeleton
-      console.warn(
-        `CachedPoseSkeletonTransformer: No frame at ${videoTime}s (extraction complete)`
-      );
-    }
-    // During streaming, we just skip this frame - extraction hasn't caught up yet
-    // Don't wait because switchMap would cancel the wait anyway when new frames arrive
-
-    const nullResult = of({
+    // No frame within tolerance - return null skeleton
+    return of({
       skeleton: null,
       poseEvent: this.createPoseEvent(null, frameEvent),
     });
-    // Apply simulated frame delay even for null results to maintain consistent timing
-    return this.frameDelayMs > 0
-      ? nullResult.pipe(delay(this.frameDelayMs))
-      : nullResult;
   }
 
   /**
