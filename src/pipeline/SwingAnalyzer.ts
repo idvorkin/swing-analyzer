@@ -41,6 +41,31 @@ export interface SwingAnalysisResult {
 }
 
 /**
+ * Complete result from processFrame() - includes rep counting
+ */
+export interface SwingFrameResult {
+  /** The skeleton that was analyzed */
+  skeleton: Skeleton;
+  /** Current detected position (best match) */
+  position: SwingPositionName | null;
+  /** Current rep count */
+  repCount: number;
+  /** Whether a rep was just completed */
+  repCompleted: boolean;
+  /** Current angles */
+  angles: {
+    spine: number;
+    hip: number;
+    knee: number;
+    armToVertical: number;
+  };
+  /** Hinge vs squat score (-1 to 1) */
+  hingeScore: number;
+  /** Position candidates from completed cycle (if repCompleted) */
+  cyclePositions: Map<SwingPositionName, PositionCandidate> | null;
+}
+
+/**
  * Candidate data for a position within a swing cycle
  */
 export interface PositionCandidate {
@@ -112,8 +137,110 @@ export class SwingAnalyzer {
     PositionCandidate
   >();
 
+  // Rep counting state
+  private repCount = 0;
+  private detectedPositions = new Set<SwingPositionName>();
+  private lastPosition: SwingPositionName | null = null;
+
   constructor(config: Partial<SwingAnalyzerConfig> = {}) {
     this.config = { ...DEFAULT_SWING_CONFIG, ...config };
+  }
+
+  /**
+   * Process a skeleton frame and return complete analysis with rep counting.
+   * This is the simplified API - call this instead of analyzeFrame() for most use cases.
+   *
+   * @param skeleton - The skeleton to analyze
+   * @param timestamp - Frame timestamp in milliseconds
+   * @param videoTime - Optional video time in seconds
+   * @returns Complete frame result including position, rep count, and angles
+   */
+  processFrame(
+    skeleton: Skeleton,
+    timestamp: number = Date.now(),
+    videoTime?: number
+  ): SwingFrameResult {
+    // Run the core analysis
+    const analysis = this.analyzeFrame(skeleton, timestamp, videoTime);
+
+    // Determine current position based on angles
+    const currentPosition = this.detectCurrentPosition(analysis);
+
+    // Track positions and count reps
+    let repCompleted = false;
+    if (currentPosition) {
+      this.detectedPositions.add(currentPosition);
+
+      // Check for rep completion: Release → Top with all positions seen
+      if (
+        this.lastPosition === SwingPositionName.Release &&
+        currentPosition === SwingPositionName.Top &&
+        this.hasCompletedFullCycle()
+      ) {
+        this.repCount++;
+        repCompleted = true;
+        this.detectedPositions.clear();
+        this.detectedPositions.add(SwingPositionName.Top);
+      }
+
+      this.lastPosition = currentPosition;
+    }
+
+    return {
+      skeleton,
+      position: currentPosition,
+      repCount: this.repCount,
+      repCompleted,
+      angles: {
+        spine: analysis.spineAngle,
+        hip: analysis.hipAngle,
+        knee: analysis.kneeAngle,
+        armToVertical: skeleton.getArmToVerticalAngle(),
+      },
+      hingeScore: analysis.hingeScore,
+      cyclePositions: analysis.cyclePositions,
+    };
+  }
+
+  /**
+   * Detect the current position based on analysis results
+   */
+  private detectCurrentPosition(
+    analysis: SwingAnalysisResult
+  ): SwingPositionName | null {
+    const { spineAngle, isDownswing } = analysis;
+
+    // Simple position detection based on spine angle and phase
+    if (spineAngle < 20) {
+      return SwingPositionName.Top;
+    } else if (spineAngle > 70) {
+      return SwingPositionName.Bottom;
+    } else if (isDownswing && spineAngle > 30 && spineAngle < 60) {
+      return SwingPositionName.Connect;
+    } else if (!isDownswing && spineAngle > 25 && spineAngle < 50) {
+      return SwingPositionName.Release;
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if we've detected all positions for a complete rep
+   */
+  private hasCompletedFullCycle(): boolean {
+    return (
+      this.detectedPositions.has(SwingPositionName.Top) &&
+      this.detectedPositions.has(SwingPositionName.Connect) &&
+      this.detectedPositions.has(SwingPositionName.Bottom) &&
+      this.detectedPositions.has(SwingPositionName.Release)
+    );
+  }
+
+  /**
+   * Get the current rep count
+   */
+  getRepCount(): number {
+    return this.repCount;
   }
 
   /**
@@ -359,6 +486,10 @@ export class SwingAnalyzer {
     this.prevArmToVerticalAngle = 0;
     this.maxSpineAngleInCycle = 0;
     this.bestPositionCandidates.clear();
+    // Reset rep counting state
+    this.repCount = 0;
+    this.detectedPositions.clear();
+    this.lastPosition = null;
   }
 
   /**
