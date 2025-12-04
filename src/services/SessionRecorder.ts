@@ -73,6 +73,13 @@ class SessionRecorderImpl {
   private maxInteractions = 5000;
   private maxStateChanges = 2000;
 
+  // Event handler references for cleanup
+  private clickHandler: ((e: MouseEvent) => void) | null = null;
+  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
+  private errorHandler: ((e: ErrorEvent) => void) | null = null;
+  private rejectionHandler: ((e: PromiseRejectionEvent) => void) | null = null;
+  private originalConsoleError: ((...args: unknown[]) => void) | null = null;
+
   constructor() {
     this.recording = this.createNewRecording();
     this.setupEventListeners();
@@ -99,50 +106,44 @@ class SessionRecorderImpl {
     if (typeof window === 'undefined') return;
 
     // Capture clicks
-    window.addEventListener(
-      'click',
-      (e) => {
-        const target = e.target as HTMLElement;
-        this.recordInteraction({
-          type: 'click',
-          timestamp: Date.now(),
-          target: this.describeElement(target),
-          details: {
-            x: e.clientX,
-            y: e.clientY,
-            button: e.button,
-          },
-        });
-      },
-      { capture: true }
-    );
+    this.clickHandler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      this.recordInteraction({
+        type: 'click',
+        timestamp: Date.now(),
+        target: this.describeElement(target),
+        details: {
+          x: e.clientX,
+          y: e.clientY,
+          button: e.button,
+        },
+      });
+    };
+    window.addEventListener('click', this.clickHandler, { capture: true });
 
     // Capture key presses (for debugging keyboard shortcuts)
-    window.addEventListener(
-      'keydown',
-      (e) => {
-        // Only capture non-typing keys or modifier combos
-        if (e.key.length > 1 || e.ctrlKey || e.metaKey || e.altKey) {
-          this.recordInteraction({
-            type: 'keydown',
-            timestamp: Date.now(),
-            target: this.describeElement(e.target as HTMLElement),
-            details: {
-              key: e.key,
-              code: e.code,
-              ctrl: e.ctrlKey,
-              meta: e.metaKey,
-              alt: e.altKey,
-              shift: e.shiftKey,
-            },
-          });
-        }
-      },
-      { capture: true }
-    );
+    this.keydownHandler = (e: KeyboardEvent) => {
+      // Only capture non-typing keys or modifier combos
+      if (e.key.length > 1 || e.ctrlKey || e.metaKey || e.altKey) {
+        this.recordInteraction({
+          type: 'keydown',
+          timestamp: Date.now(),
+          target: this.describeElement(e.target as HTMLElement),
+          details: {
+            key: e.key,
+            code: e.code,
+            ctrl: e.ctrlKey,
+            meta: e.metaKey,
+            alt: e.altKey,
+            shift: e.shiftKey,
+          },
+        });
+      }
+    };
+    window.addEventListener('keydown', this.keydownHandler, { capture: true });
 
     // Capture console errors
-    const originalError = console.error;
+    this.originalConsoleError = console.error;
     console.error = (...args) => {
       this.recordStateChange({
         type: 'error',
@@ -151,11 +152,11 @@ class SessionRecorderImpl {
           message: args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '),
         },
       });
-      originalError.apply(console, args);
+      this.originalConsoleError?.apply(console, args);
     };
 
     // Capture unhandled errors
-    window.addEventListener('error', (e) => {
+    this.errorHandler = (e: ErrorEvent) => {
       this.recordStateChange({
         type: 'error',
         timestamp: Date.now(),
@@ -166,10 +167,11 @@ class SessionRecorderImpl {
           colno: e.colno,
         },
       });
-    });
+    };
+    window.addEventListener('error', this.errorHandler);
 
     // Capture unhandled promise rejections
-    window.addEventListener('unhandledrejection', (e) => {
+    this.rejectionHandler = (e: PromiseRejectionEvent) => {
       this.recordStateChange({
         type: 'error',
         timestamp: Date.now(),
@@ -177,7 +179,8 @@ class SessionRecorderImpl {
           message: `Unhandled rejection: ${e.reason}`,
         },
       });
-    });
+    };
+    window.addEventListener('unhandledrejection', this.rejectionHandler);
   }
 
   private describeElement(el: HTMLElement | null): string {
@@ -343,11 +346,37 @@ class SessionRecorderImpl {
   }
 
   /**
-   * Cleanup
+   * Cleanup - remove all event listeners and restore console.error
    */
   dispose(): void {
     if (this.snapshotInterval) {
       clearInterval(this.snapshotInterval);
+      this.snapshotInterval = null;
+    }
+
+    if (typeof window !== 'undefined') {
+      if (this.clickHandler) {
+        window.removeEventListener('click', this.clickHandler, { capture: true });
+        this.clickHandler = null;
+      }
+      if (this.keydownHandler) {
+        window.removeEventListener('keydown', this.keydownHandler, { capture: true });
+        this.keydownHandler = null;
+      }
+      if (this.errorHandler) {
+        window.removeEventListener('error', this.errorHandler);
+        this.errorHandler = null;
+      }
+      if (this.rejectionHandler) {
+        window.removeEventListener('unhandledrejection', this.rejectionHandler);
+        this.rejectionHandler = null;
+      }
+    }
+
+    // Restore original console.error
+    if (this.originalConsoleError) {
+      console.error = this.originalConsoleError;
+      this.originalConsoleError = null;
     }
   }
 }

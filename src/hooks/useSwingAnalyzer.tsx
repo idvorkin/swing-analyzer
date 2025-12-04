@@ -734,7 +734,6 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const loadHardcodedVideo = useCallback(async () => {
     if (!frameAcquisitionRef.current || !videoRef.current) return;
 
-    console.log('[DEBUG] loadHardcodedVideo: Function called');
     setStatus('Loading sample video...');
     try {
       // Reset state and stop current video
@@ -785,7 +784,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       // This ensures React effects have time to run and reinitialize
       // the pipeline with the live pose cache before playback starts.
     } catch (error) {
-      console.error('[DEBUG] loadHardcodedVideo: Error loading video:', error);
+      console.error('Error loading hardcoded video:', error);
       setStatus('Error: Could not load hardcoded video.');
     }
   }, [resetVideoAndState]);
