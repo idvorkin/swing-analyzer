@@ -175,7 +175,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     };
   }, []);
 
-  // Helper function to set up pipeline subscriptions
+  // Helper function to set up full pipeline subscriptions (for ML inference mode)
   const setupPipelineSubscriptions = useCallback((pipeline: Pipeline) => {
     // Clean up existing subscriptions
     for (const sub of pipelineSubscriptionsRef.current) {
@@ -231,6 +231,34 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
     // Mark pipeline as processing now
     setAppState((prev) => ({ ...prev, isProcessing: true }));
+  }, []);
+
+  // Helper function to set up subscriptions for batch processing mode (extraction)
+  // This only listens for rep count updates from processSkeletonEvent(), without
+  // starting the full streaming pipeline. Skeleton rendering is handled by video events.
+  const setupBatchSubscriptions = useCallback((pipeline: Pipeline) => {
+    // Clean up existing subscriptions
+    for (const sub of pipelineSubscriptionsRef.current) {
+      sub.unsubscribe();
+    }
+    pipelineSubscriptionsRef.current = [];
+
+    // Subscribe to pipeline results for rep counting (from batch processSkeletonEvent calls)
+    // Use getResults() instead of start() to avoid starting frame acquisition.
+    // This prevents the pipeline from processing frames during video playback,
+    // which would cause duplicate rep counting.
+    const resultSubscription = pipeline.getResults().subscribe({
+      next: (result: PipelineResult) => {
+        // Update rep count from batch processing
+        setRepCount(result.repCount);
+      },
+      error: (err) => {
+        console.error('Pipeline error:', err);
+      },
+    });
+
+    // Store subscription for cleanup
+    pipelineSubscriptionsRef.current = [resultSubscription];
   }, []);
 
   // Setup persistent subscriptions to pipeline events and start it once
@@ -927,7 +955,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       pipelineSubscriptionsRef.current = [];
 
       try {
-        // Create new pipeline with cached data
+        // Create new pipeline with cached data (for batch processing only)
         const pipeline = createPipeline(videoRef.current, canvasRef.current, {
           cachedPoseTrack,
         });
@@ -940,8 +968,9 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         // Initialize the new pipeline (no-op for cached transformer)
         await pipeline.initialize();
 
-        // Set up subscriptions for the new pipeline
-        setupPipelineSubscriptions(pipeline);
+        // Use batch subscriptions - just listen for rep count updates from processSkeletonEvent().
+        // Don't start full streaming pipeline (skeleton rendering is video-event driven).
+        setupBatchSubscriptions(pipeline);
 
         // Update state to indicate we're using cached poses
         setUsingCachedPoses(true);
@@ -954,7 +983,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         setStatus('Error: Failed to load cached poses');
       }
     },
-    [setupPipelineSubscriptions]
+    [setupBatchSubscriptions]
   );
 
   /**
@@ -983,7 +1012,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       pipelineSubscriptionsRef.current = [];
 
       try {
-        // Create new pipeline with live cache for streaming
+        // Create new pipeline with live cache (for batch processing only)
         const pipeline = createPipeline(videoRef.current, canvasRef.current, {
           livePoseCache: liveCache,
         });
@@ -995,8 +1024,10 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         // Initialize the new pipeline (no-op for cached transformer)
         await pipeline.initialize();
 
-        // Set up subscriptions for the new pipeline
-        setupPipelineSubscriptions(pipeline);
+        // Use batch subscriptions - just listen for rep count updates from processSkeletonEvent().
+        // Don't start full streaming pipeline (skeleton rendering is video-event driven).
+        // Running the full pipeline during playback would cause duplicate rep counting.
+        setupBatchSubscriptions(pipeline);
 
         // Update state to indicate we're using cached poses (streaming)
         setUsingCachedPoses(true);
@@ -1009,7 +1040,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
         setStatus('Error: Failed to initialize streaming');
       }
     },
-    [setupPipelineSubscriptions]
+    [setupBatchSubscriptions]
   );
 
   return {

@@ -15,12 +15,10 @@ import type {
 /**
  * Orchestrates the entire processing pipeline from frame to swing rep analysis using RxJS
  *
- * Supports two modes:
- * - Full mode (playbackOnly=false): Frame → Skeleton → Form → Rep processing
- * - Playback mode (playbackOnly=true): Frame → Skeleton only (for visualization)
+ * Pipeline flow: Frame → Skeleton → Form → Rep processing
  *
- * Playback mode is used when cached poses are available and reps were already
- * counted during extraction. This prevents duplicate rep counting.
+ * Note: Skeleton rendering during cached pose playback is handled separately
+ * by video event listeners (timeupdate/seeked), not by this pipeline.
  */
 export class Pipeline {
   // Latest data from the pipeline
@@ -36,19 +34,11 @@ export class Pipeline {
   private checkpointSubject = new Subject<FormEvent>();
   private skeletonSubject = new Subject<SkeletonEvent>();
 
-  /**
-   * @param frameAcquisition - Source of video frames
-   * @param skeletonTransformer - Transforms frames to skeletons (ML or cached)
-   * @param formProcessor - Detects swing positions (unused in playback mode)
-   * @param repProcessor - Counts reps (unused in playback mode)
-   * @param playbackOnly - When true, skip form/rep processing (for cached pose playback)
-   */
   constructor(
     private frameAcquisition: FrameAcquisition,
     private skeletonTransformer: SkeletonTransformer,
     private formProcessor: FormProcessor,
-    private repProcessor: RepProcessor,
-    private playbackOnly: boolean = false
+    private repProcessor: RepProcessor
   ) {}
 
   /**
@@ -68,52 +58,14 @@ export class Pipeline {
       return this.resultSubject.asObservable();
     }
 
-    console.log(`Starting pipeline... (playbackOnly=${this.playbackOnly})`);
+    console.log("Starting pipeline...");
     this.isActive = true;
 
     // Build the RxJS pipeline
     const frameStream = this.frameAcquisition.start();
     console.log("Frame acquisition started");
 
-    // In playback mode, only process skeleton events (no form/rep processing)
-    if (this.playbackOnly) {
-      this.pipelineSubscription = frameStream
-        .pipe(
-          // Stage 1: Skeleton Transformation only
-          switchMap((frameEvent) =>
-            this.skeletonTransformer.transformToSkeleton(frameEvent)
-          ),
-
-          // Emit skeleton events for rendering
-          tap((skeletonEvent) => {
-            this.skeletonSubject.next(skeletonEvent);
-            if (skeletonEvent.skeleton) {
-              this.latestSkeleton = skeletonEvent.skeleton;
-            }
-          }),
-
-          share()
-        )
-        .subscribe({
-          next: () => {
-            // Playback mode: just skeleton rendering, no rep counting
-          },
-          error: (error) => {
-            console.error('Error in playback pipeline:', error);
-            this.skeletonSubject.error(error);
-          },
-          complete: () => {
-            console.log('Playback pipeline complete');
-            this.skeletonSubject.complete();
-            this.isActive = false;
-          }
-        });
-
-      console.log("Playback pipeline (skeleton-only) set up and active");
-      return this.resultSubject.asObservable();
-    }
-
-    // Full mode: Frame → Skeleton → Form → Rep processing
+    // Full pipeline: Frame → Skeleton → Form → Rep processing
     this.pipelineSubscription = frameStream
       .pipe(
         // Stage 1: Skeleton Transformation (combined pose detection and skeleton construction)
@@ -191,6 +143,14 @@ export class Pipeline {
       });
 
     console.log("Full pipeline subscriptions set up and active");
+    return this.resultSubject.asObservable();
+  }
+
+  /**
+   * Get an observable for pipeline results without starting frame acquisition.
+   * Use this to listen for rep count updates from batch processing (processSkeletonEvent).
+   */
+  getResults(): Observable<PipelineResult> {
     return this.resultSubject.asObservable();
   }
 
