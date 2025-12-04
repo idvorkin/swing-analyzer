@@ -8,13 +8,14 @@ const MODEL_STORAGE_KEY = 'swing-analyzer-pose-model';
 const BLAZEPOSE_VARIANT_KEY = 'swing-analyzer-blazepose-variant';
 
 // Get saved model preference (with error handling for private browsing/quota issues)
+// Default: BlazePose Lite (33 keypoints, fast)
 export function getSavedModelPreference(): PoseModel {
   try {
     const saved = localStorage.getItem(MODEL_STORAGE_KEY);
-    return saved === 'blazepose' ? 'blazepose' : 'movenet';
+    return saved === 'movenet' ? 'movenet' : 'blazepose';
   } catch (error) {
     console.warn('Failed to read model preference from localStorage:', error);
-    return 'movenet';
+    return 'blazepose';
   }
 }
 
