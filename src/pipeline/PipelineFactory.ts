@@ -6,15 +6,11 @@ import { CachedPoseSkeletonTransformer } from './CachedPoseSkeletonTransformer';
 import type { LivePoseCache } from './LivePoseCache';
 import { Pipeline } from './Pipeline';
 import type {
-  FormProcessor,
   FrameAcquisition,
-  RepProcessor,
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
 import { PoseSkeletonTransformer } from './PoseSkeletonTransformer';
-import { SwingFormProcessor } from './SwingFormProcessor';
-import { SwingRepProcessor } from './SwingRepProcessor';
 import { VideoFrameAcquisition } from './VideoFrameAcquisition';
 
 /**
@@ -74,16 +70,8 @@ export function createPipeline(
     skeletonTransformer = createSkeletonTransformer(options.modelConfig);
   }
 
-  const formProcessor = createFormProcessor(videoElement, canvasElement);
-  const repProcessor = createRepProcessor();
-
-  // Create the pipeline with all stages
-  return new Pipeline(
-    frameAcquisition,
-    skeletonTransformer,
-    formProcessor,
-    repProcessor
-  );
+  // Create the simplified pipeline (SwingAnalyzer handles form + rep processing)
+  return new Pipeline(frameAcquisition, skeletonTransformer);
 }
 
 /**
@@ -117,23 +105,6 @@ export function createCachedSkeletonTransformer(
   poseTrack: PoseTrackFile
 ): CachedPoseSkeletonTransformer {
   return new CachedPoseSkeletonTransformer(poseTrack);
-}
-
-/**
- * Create a form processor component
- */
-export function createFormProcessor(
-  videoElement: HTMLVideoElement,
-  canvasElement: HTMLCanvasElement
-): FormProcessor {
-  return new SwingFormProcessor(videoElement, canvasElement);
-}
-
-/**
- * Create a rep processor component
- */
-export function createRepProcessor(): RepProcessor {
-  return new SwingRepProcessor();
 }
 
 /**
