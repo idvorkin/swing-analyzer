@@ -46,8 +46,6 @@ export class SwingRepProcessor implements RepProcessor {
     console.log(`SwingRepProcessor: Added position ${currentPosition}, detected positions now: ${Array.from(this.detectedPositions).join(', ')}`);
     
     // Check for rep completion
-    let repIncremented = false;
-    
     // If we've seen a Release position followed by a Top position, we've completed a rep
     if (this.lastPosition === SwingPositionName.Release && currentPosition === SwingPositionName.Top) {
       console.log(`SwingRepProcessor: Detected transition from Release to Top, checking for rep completion`);
@@ -55,7 +53,6 @@ export class SwingRepProcessor implements RepProcessor {
       if (this.hasCompletedFullCycle()) {
         console.log(`SwingRepProcessor: Full cycle detected, incrementing rep count`);
         this.incrementRepCount();
-        repIncremented = true;
         
         // Reset detected positions for next rep
         this.detectedPositions.clear();
@@ -116,11 +113,10 @@ export class SwingRepProcessor implements RepProcessor {
       }
     }
 
-    console.log(`SwingRepProcessor: Emitting RepEvent with repCount=${this.repCount}, repIncremented=${repIncremented}`);
+    console.log(`SwingRepProcessor: Emitting RepEvent with repCount=${this.repCount}`);
     return of({
       repCount: this.repCount,
       checkpointEvent,
-      repIncremented,
     });
   }
 

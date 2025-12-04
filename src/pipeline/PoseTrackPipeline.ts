@@ -154,7 +154,7 @@ export class PoseTrackPipeline {
     };
 
     // Emit events
-    this.emitEvents(frame, skeleton, position, repIncremented);
+    this.emitEvents(frame, skeleton, position);
 
     return result;
   }
@@ -424,8 +424,7 @@ export class PoseTrackPipeline {
   private emitEvents(
     frame: PoseTrackFrame,
     skeleton: Skeleton | null,
-    position: SwingPositionName | null,
-    repIncremented: boolean
+    position: SwingPositionName | null
   ): void {
     // Create frame event (minimal, since we don't have the actual frame)
     const frameEvent = {
@@ -462,7 +461,6 @@ export class PoseTrackPipeline {
     const repEvent: RepEvent = {
       repCount: this.repCount,
       checkpointEvent: formEvent,
-      repIncremented,
     };
     this.repSubject.next(repEvent);
   }

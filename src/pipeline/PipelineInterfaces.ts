@@ -124,5 +124,4 @@ export interface RepProcessor {
 export interface RepEvent {
   repCount: number;
   checkpointEvent: FormEvent;
-  repIncremented?: boolean;
 }
