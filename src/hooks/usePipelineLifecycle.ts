@@ -10,7 +10,6 @@ import {
   BLAZEPOSE_LITE_CONFIG,
   DEFAULT_MODEL_CONFIG,
 } from '../config/modelConfig';
-import type { Skeleton } from '../models/Skeleton';
 import type { LivePoseCache } from '../pipeline/LivePoseCache';
 import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
 import {

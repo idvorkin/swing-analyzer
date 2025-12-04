@@ -1,20 +1,22 @@
-import { type Observable, Subject, type Subscription, firstValueFrom, lastValueFrom } from 'rxjs';
-import { share, switchMap, tap, toArray } from 'rxjs/operators';
+import { type Observable, Subject, type Subscription } from 'rxjs';
+import { share, switchMap, tap } from 'rxjs/operators';
 import type { Skeleton } from '../models/Skeleton';
 import type { FormCheckpoint } from '../types';
 import type {
   FormEvent,
-  FormProcessor,
   FrameAcquisition,
-  RepProcessor,
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
+import { SwingAnalyzer } from './SwingAnalyzer';
 
 /**
  * Orchestrates the entire processing pipeline from frame to swing rep analysis using RxJS
  *
- * Pipeline flow: Frame → Skeleton → Form → Rep processing
+ * Pipeline flow: Frame → Skeleton → SwingAnalyzer.processFrame() → Results
+ *
+ * Simplified architecture: SwingAnalyzer handles both position detection and rep counting.
+ * The old FormProcessor and RepProcessor have been consolidated into SwingAnalyzer.
  *
  * Note: Skeleton rendering during cached pose playback is handled separately
  * by video event listeners (timeupdate/seeked), not by this pipeline.
@@ -33,11 +35,12 @@ export class Pipeline {
   private checkpointSubject = new Subject<FormEvent>();
   private skeletonSubject = new Subject<SkeletonEvent>();
 
+  // Swing analyzer for position detection and rep counting
+  private swingAnalyzer = new SwingAnalyzer();
+
   constructor(
     private frameAcquisition: FrameAcquisition,
-    private skeletonTransformer: SkeletonTransformer,
-    private formProcessor: FormProcessor,
-    private repProcessor: RepProcessor
+    private skeletonTransformer: SkeletonTransformer
   ) {}
 
   /**
@@ -61,7 +64,7 @@ export class Pipeline {
     // Build the RxJS pipeline
     const frameStream = this.frameAcquisition.start();
 
-    // Full pipeline: Frame → Skeleton → Form → Rep processing
+    // Simplified pipeline: Frame → Skeleton → SwingAnalyzer.processFrame()
     this.pipelineSubscription = frameStream
       .pipe(
         // Stage 1: Skeleton Transformation (combined pose detection and skeleton construction)
@@ -69,42 +72,30 @@ export class Pipeline {
           this.skeletonTransformer.transformToSkeleton(frameEvent)
         ),
 
-        // Emit every skeleton event regardless of whether it results in a checkpoint
+        // Stage 2: Process skeleton through SwingAnalyzer
         tap((skeletonEvent) => {
-          // Emit the skeleton event to subscribers
+          // Emit the skeleton event to subscribers (for rendering)
           this.skeletonSubject.next(skeletonEvent);
 
           // Store latest skeleton
           if (skeletonEvent.skeleton) {
             this.latestSkeleton = skeletonEvent.skeleton;
-          }
-        }),
 
-        // Stage 2: Form Processing
-        switchMap((skeletonEvent) => {
-          return this.formProcessor.processFrame(skeletonEvent);
-        }),
+            // Process through SwingAnalyzer for position detection and rep counting
+            const result = this.swingAnalyzer.processFrame(
+              skeletonEvent.skeleton,
+              skeletonEvent.poseEvent.frameEvent.timestamp,
+              skeletonEvent.poseEvent.frameEvent.videoTime
+            );
 
-        // Emit checkpoint events
-        tap((checkpointEvent) => {
-          this.checkpointSubject.next(checkpointEvent);
-        }),
+            // Update rep count
+            this.repCount = result.repCount;
 
-        // Stage 3: Rep Processing
-        switchMap((checkpointEvent) => {
-          return this.repProcessor.updateRepCount(checkpointEvent);
-        }),
-
-        // Update rep count and emit result
-        tap((repEvent) => {
-          this.repCount = repEvent.repCount;
-
-          // Pass result to observers
-          if (repEvent.checkpointEvent.skeletonEvent.skeleton) {
+            // Emit result
             this.resultSubject.next({
-              skeleton: repEvent.checkpointEvent.skeletonEvent.skeleton,
-              checkpoint: repEvent.checkpointEvent.checkpoint,
-              repCount: repEvent.repCount,
+              skeleton: skeletonEvent.skeleton,
+              checkpoint: null, // Simplified - no checkpoint capture in streaming mode
+              repCount: result.repCount,
             });
           }
         }),
@@ -171,8 +162,7 @@ export class Pipeline {
    * Reset the pipeline state
    */
   reset(): void {
-    this.repProcessor.reset();
-    this.formProcessor.reset();
+    this.swingAnalyzer.reset();
     this.latestSkeleton = null;
     this.repCount = 0;
   }
@@ -192,17 +182,10 @@ export class Pipeline {
   }
 
   /**
-   * Get the rep processor
+   * Get the swing analyzer (for external access if needed)
    */
-  getRepProcessor(): RepProcessor {
-    return this.repProcessor;
-  }
-
-  /**
-   * Get the form processor
-   */
-  getFormProcessor(): FormProcessor {
-    return this.formProcessor;
+  getSwingAnalyzer(): SwingAnalyzer {
+    return this.swingAnalyzer;
   }
 
   /**
@@ -212,49 +195,33 @@ export class Pipeline {
    *
    * Note: We don't emit skeleton events to subscribers here because
    * batch mode doesn't need real-time skeleton rendering. The skeleton
-   * events are only used for form/rep processing.
+   * events are only used for rep processing.
    *
    * @param skeletonEvent - The skeleton event to process
    * @returns The rep count after processing
    */
-  async processSkeletonEvent(skeletonEvent: SkeletonEvent): Promise<number> {
-    // Don't emit skeleton events during batch processing
-    // The video is at wrong position and we don't need rendering
-
+  processSkeletonEvent(skeletonEvent: SkeletonEvent): number {
     // Store latest skeleton
     if (skeletonEvent.skeleton) {
       this.latestSkeleton = skeletonEvent.skeleton;
-    }
 
-    // Process through form processor - collect ALL emitted form events
-    // The form processor emits multiple events per cycle (top, connect, bottom, release)
-    const formEventsArray = await lastValueFrom(
-      this.formProcessor.processFrame(skeletonEvent).pipe(toArray()),
-      { defaultValue: [] as FormEvent[] }
-    );
-
-    // Process each form event through the rep processor
-    for (const formEvent of formEventsArray) {
-      // Emit checkpoint event
-      this.checkpointSubject.next(formEvent);
-
-      // Process through rep processor
-      const repEvent = await firstValueFrom(
-        this.repProcessor.updateRepCount(formEvent),
-        { defaultValue: undefined }
+      // Process through SwingAnalyzer
+      const result = this.swingAnalyzer.processFrame(
+        skeletonEvent.skeleton,
+        skeletonEvent.poseEvent.frameEvent.timestamp,
+        skeletonEvent.poseEvent.frameEvent.videoTime
       );
 
-      if (repEvent) {
-        this.repCount = repEvent.repCount;
+      // Update rep count
+      this.repCount = result.repCount;
 
-        // Emit result
-        if (repEvent.checkpointEvent.skeletonEvent.skeleton) {
-          this.resultSubject.next({
-            skeleton: repEvent.checkpointEvent.skeletonEvent.skeleton,
-            checkpoint: repEvent.checkpointEvent.checkpoint,
-            repCount: repEvent.repCount,
-          });
-        }
+      // Emit result if rep completed
+      if (result.repCompleted) {
+        this.resultSubject.next({
+          skeleton: skeletonEvent.skeleton,
+          checkpoint: null,
+          repCount: result.repCount,
+        });
       }
     }
 
