@@ -200,6 +200,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   }, []);
 
   const navigateToNextRep = useCallback(() => {
+    if (repCount <= 0) return; // No reps to navigate
     setAppState((prev) => ({
       ...prev,
       currentRepIndex: Math.min(repCount - 1, prev.currentRepIndex + 1),
