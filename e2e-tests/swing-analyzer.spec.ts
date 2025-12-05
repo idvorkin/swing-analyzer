@@ -6,15 +6,18 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { SWING_SAMPLE_VIDEO_HASH } from './fixtures';
+import { SWING_SAMPLE_4REPS_VIDEO_HASH, SWING_SAMPLE_VIDEO_HASH } from './fixtures';
 import {
   clearPoseTrackDB,
   getPoseTrackFromDB,
   seedPoseTrackFixture,
+  useShortTestVideo,
 } from './helpers';
 
 test.describe('Swing Analyzer', () => {
   test.beforeEach(async ({ page }) => {
+    // Intercept GitHub video URL and serve short local video for faster tests
+    await useShortTestVideo(page);
     await page.goto('/');
     await clearPoseTrackDB(page);
   });
@@ -69,21 +72,21 @@ test.describe('Swing Analyzer', () => {
     page,
   }) => {
     // Seed fixture data
-    await seedPoseTrackFixture(page, 'swing-sample');
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Verify data was stored
-    const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_VIDEO_HASH);
+    const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
     expect(storedTrack).not.toBeNull();
-    expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample.webm');
+    expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample-4reps.webm');
     expect(storedTrack?.frames.length).toBeGreaterThan(0);
   });
 
   test('should have pose track with valid keypoints', async ({ page }) => {
     // Seed fixture data
-    await seedPoseTrackFixture(page, 'swing-sample');
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Get stored track and verify keypoints
-    const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_VIDEO_HASH);
+    const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
     expect(storedTrack).not.toBeNull();
 
     // Find first frame WITH keypoints (frame 0 may be empty if no pose detected)
@@ -96,10 +99,10 @@ test.describe('Swing Analyzer', () => {
 
   test('should have precomputed angles in pose track', async ({ page }) => {
     // Seed fixture data
-    await seedPoseTrackFixture(page, 'swing-sample');
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Get stored track
-    const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_VIDEO_HASH);
+    const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
     expect(storedTrack).not.toBeNull();
 
     // Find a frame with angles
@@ -109,7 +112,7 @@ test.describe('Swing Analyzer', () => {
   });
 
   test('should process single-rep fixture correctly', async ({ page }) => {
-    // Seed single-rep fixture
+    // Seed single-rep fixture (uses original video hash for generated fixtures)
     await seedPoseTrackFixture(page, 'single-rep');
 
     // Get stored track
@@ -121,7 +124,7 @@ test.describe('Swing Analyzer', () => {
   test('should handle three-reps fixture with more frames', async ({
     page,
   }) => {
-    // Seed both fixtures and compare
+    // Seed both fixtures and compare (generated fixtures use original video hash)
     await seedPoseTrackFixture(page, 'single-rep');
     const singleRepTrack = await getPoseTrackFromDB(
       page,
@@ -143,7 +146,7 @@ test.describe('Swing Analyzer', () => {
   });
 
   test('should handle poor detection fixture', async ({ page }) => {
-    // Seed poor detection fixture
+    // Seed poor detection fixture (generated fixtures use original video hash)
     await seedPoseTrackFixture(page, 'poor-detection');
 
     // Get stored track

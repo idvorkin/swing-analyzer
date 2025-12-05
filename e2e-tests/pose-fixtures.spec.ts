@@ -10,16 +10,19 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { SWING_SAMPLE_VIDEO_HASH } from './fixtures';
+import { SWING_SAMPLE_4REPS_VIDEO_HASH, SWING_SAMPLE_VIDEO_HASH } from './fixtures';
 import {
   clearPoseTrackDB,
   getPoseTrackFromDB,
   listPoseTrackHashes,
   seedPoseTrackFixture,
+  useShortTestVideo,
 } from './helpers';
 
 test.describe('Pose Track Fixtures', () => {
   test.beforeEach(async ({ page }) => {
+    // Intercept GitHub video URL and serve short local video for faster tests
+    await useShortTestVideo(page);
     // Clear any existing pose track data before each test
     await page.goto('/');
     await clearPoseTrackDB(page);
@@ -53,35 +56,35 @@ test.describe('Pose Track Fixtures', () => {
 
   test.describe('IndexedDB Seeding', () => {
     test('seeds pose track fixture into IndexedDB', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       const storedTrack = await getPoseTrackFromDB(
         page,
-        SWING_SAMPLE_VIDEO_HASH
+        SWING_SAMPLE_4REPS_VIDEO_HASH
       );
       expect(storedTrack).not.toBeNull();
-      expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample.webm');
+      expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample-4reps.webm');
       expect(storedTrack?.metadata.version).toBe('1.0');
       expect(storedTrack?.frames.length).toBeGreaterThan(0);
     });
 
     test('clears IndexedDB correctly', async ({ page }) => {
       // First seed data
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Verify it's there
-      let storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_VIDEO_HASH);
+      let storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
       expect(storedTrack).not.toBeNull();
 
       // Clear and verify it's gone
       await clearPoseTrackDB(page);
-      storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_VIDEO_HASH);
+      storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
       expect(storedTrack).toBeNull();
     });
 
     test('seeds multiple fixtures', async ({ page }) => {
       // Seed multiple fixtures
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await seedPoseTrackFixture(page, 'single-rep');
 
       // List all hashes
@@ -93,11 +96,11 @@ test.describe('Pose Track Fixtures', () => {
     });
 
     test('stores valid pose track metadata', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       const storedTrack = await getPoseTrackFromDB(
         page,
-        SWING_SAMPLE_VIDEO_HASH
+        SWING_SAMPLE_4REPS_VIDEO_HASH
       );
 
       // Verify metadata structure
@@ -109,11 +112,11 @@ test.describe('Pose Track Fixtures', () => {
     });
 
     test('stores pose frames with keypoints', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       const storedTrack = await getPoseTrackFromDB(
         page,
-        SWING_SAMPLE_VIDEO_HASH
+        SWING_SAMPLE_4REPS_VIDEO_HASH
       );
 
       // Verify frame structure - find first frame WITH keypoints
@@ -127,11 +130,11 @@ test.describe('Pose Track Fixtures', () => {
     });
 
     test('stores precomputed angles', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       const storedTrack = await getPoseTrackFromDB(
         page,
-        SWING_SAMPLE_VIDEO_HASH
+        SWING_SAMPLE_4REPS_VIDEO_HASH
       );
 
       // Check if angles are stored
@@ -145,6 +148,7 @@ test.describe('Pose Track Fixtures', () => {
 
   test.describe('Generated Fixtures', () => {
     test('single-rep fixture has correct structure', async ({ page }) => {
+      // Generated fixtures use the original video hash
       await seedPoseTrackFixture(page, 'single-rep');
 
       const storedTrack = await getPoseTrackFromDB(
@@ -161,6 +165,7 @@ test.describe('Pose Track Fixtures', () => {
     test('three-reps fixture has more frames than single-rep', async ({
       page,
     }) => {
+      // Generated fixtures use the original video hash
       // First get single-rep frame count
       await seedPoseTrackFixture(page, 'single-rep');
       const singleRepTrack = await getPoseTrackFromDB(
@@ -185,6 +190,7 @@ test.describe('Pose Track Fixtures', () => {
     test('poor-detection fixture has low confidence scores', async ({
       page,
     }) => {
+      // Generated fixtures use the original video hash
       await seedPoseTrackFixture(page, 'poor-detection');
 
       const storedTrack = await getPoseTrackFromDB(
@@ -205,7 +211,7 @@ test.describe('Pose Track Fixtures', () => {
       page,
     }) => {
       // Seed data before clicking
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Click sample button
       await page.click('#load-hardcoded-btn');
@@ -216,7 +222,7 @@ test.describe('Pose Track Fixtures', () => {
     });
 
     test('UI elements remain functional with seeded data', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
 
       // Wait for video element to appear instead of arbitrary timeout
@@ -240,7 +246,7 @@ test.describe('Pose Studio Page', () => {
   test('shows seeded pose tracks', async ({ page }) => {
     // Seed data first
     await page.goto('/');
-    await seedPoseTrackFixture(page, 'swing-sample');
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Navigate to poses page
     await page.goto('/poses');

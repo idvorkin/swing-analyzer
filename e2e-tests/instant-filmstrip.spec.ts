@@ -19,7 +19,7 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { clearPoseTrackDB, setupMockPoseDetector } from './helpers';
+import { clearPoseTrackDB, setupMockPoseDetector, useShortTestVideo } from './helpers';
 
 // SKIPPED: Filmstrip thumbnail feature is disabled
 // The filmstrip thumbnail capture was removed when consolidating
@@ -28,6 +28,8 @@ import { clearPoseTrackDB, setupMockPoseDetector } from './helpers';
 // These tests should be re-enabled when filmstrip thumbnails are reimplemented.
 test.describe.skip('Instant Filmstrip: Reps Appear During Extraction', () => {
   test.beforeEach(async ({ page }) => {
+    // Intercept GitHub video URL and serve short local video for faster tests
+    await useShortTestVideo(page);
     await page.goto('/');
 
     // Wait for test setup to be available (app fully initialized)

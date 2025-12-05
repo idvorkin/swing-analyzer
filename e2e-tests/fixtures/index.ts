@@ -13,6 +13,7 @@ import {
   createPoseTrackWithReps,
   createSinglePhasePoseTrack,
   SWING_SAMPLE_VIDEO_HASH,
+  SWING_SAMPLE_4REPS_VIDEO_HASH,
   SwingPhase,
 } from './pose-factory';
 
@@ -23,6 +24,7 @@ export {
   createSinglePhasePoseTrack,
   SwingPhase,
   SWING_SAMPLE_VIDEO_HASH,
+  SWING_SAMPLE_4REPS_VIDEO_HASH,
 };
 
 // ESM-compatible __dirname
@@ -58,6 +60,10 @@ export const FIXTURES = {
   /** Main swing sample fixture - matches swing-sample.webm hardcoded video */
   'swing-sample': () =>
     Promise.resolve(loadJsonFile('swing-sample.posetrack.json')),
+
+  /** Short 4-rep fixture for fast E2E tests (~5.5 seconds, 4 reps) */
+  'swing-sample-4reps': () =>
+    Promise.resolve(loadJsonFile('swing-sample-4reps.posetrack.json')),
 
   /** Generate fixture with exactly 1 complete rep */
   'single-rep': () =>
