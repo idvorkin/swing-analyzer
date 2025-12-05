@@ -1,15 +1,26 @@
 import type React from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 import { usePoseTrack } from '../hooks/usePoseTrack';
 import { buildSkeletonEventFromFrame } from '../pipeline/PipelineFactory';
 import type { LivePoseCache } from '../pipeline/LivePoseCache';
+import type { ThumbnailEvent } from '../pipeline/Pipeline';
 import {
   recordExtractionStart,
   recordPipelineReinit,
 } from '../services/SessionRecorder';
 import type { PoseTrackFrame } from '../types/posetrack';
+import type { PositionCandidate } from '../types/exercise';
 import { PoseTrackStatusBar } from './PoseTrackStatusBar';
+
+// Position display order for swing positions
+const POSITION_ORDER = ['top', 'connect', 'bottom', 'release'] as const;
+const POSITION_LABELS: Record<string, string> = {
+  top: 'Top',
+  connect: 'Connect',
+  bottom: 'Bottom',
+  release: 'Release',
+};
 
 const VideoSection: React.FC = () => {
   const {
@@ -39,6 +50,37 @@ const VideoSection: React.FC = () => {
   // Track the video file we're currently extracting to prevent duplicate extractions
   // This fixes infinite loop when startExtraction's identity changes mid-extraction
   const extractingVideoRef = useRef<File | null>(null);
+
+  // Accumulated thumbnails from completed reps, keyed by rep number
+  const [repThumbnails, setRepThumbnails] = useState<Map<number, Map<string, PositionCandidate>>>(new Map());
+
+  // Subscribe to thumbnail events from the pipeline
+  useEffect(() => {
+    const pipeline = pipelineRef.current;
+    if (!pipeline) return;
+
+    const subscription = pipeline.getThumbnailEvents().subscribe({
+      next: (event: ThumbnailEvent) => {
+        console.log(`[Filmstrip] Received thumbnails for rep ${event.repNumber}:`,
+          Array.from(event.positions.keys()));
+        setRepThumbnails(prev => {
+          const updated = new Map(prev);
+          updated.set(event.repNumber, event.positions);
+          return updated;
+        });
+      },
+      error: (err) => console.error('Thumbnail event error:', err),
+    });
+
+    return () => subscription.unsubscribe();
+  }, [pipelineRef]);
+
+  // Clear thumbnails when video changes
+  useEffect(() => {
+    if (currentVideoFile) {
+      setRepThumbnails(new Map());
+    }
+  }, [currentVideoFile]);
 
   // Called BEFORE extraction starts - reinitialize pipeline synchronously
   const handleExtractionStart = useCallback(
@@ -126,28 +168,72 @@ const VideoSection: React.FC = () => {
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);
 
-  // Render the filmstrip
-  // biome-ignore lint/correctness/useExhaustiveDependencies: positionOrder and positionNames are stable
+  // Render the filmstrip with actual thumbnails
   const renderFilmstrip = useCallback(() => {
     const container = filmstripRef.current;
-    if (!container || !pipelineRef.current) return;
+    if (!container) return;
 
     container.innerHTML = '';
 
-    if (repCount === 0) {
+    if (repCount === 0 || repThumbnails.size === 0) {
       container.innerHTML =
         '<div class="filmstrip-empty">Complete a rep to see checkpoints</div>';
       return;
     }
 
-    // Note: Filmstrip thumbnails are not currently captured in simplified pipeline.
-    // The SwingAnalyzer focuses on rep counting; thumbnail capture was removed
-    // when consolidating SwingFormProcessor + SwingRepProcessor into SwingAnalyzer.
-    // TODO: Re-implement thumbnail capture if needed for the filmstrip feature.
-    container.innerHTML = `<div class="filmstrip-empty">Rep ${repCount} completed</div>`;
-  }, [repCount, pipelineRef]);
+    // Get the current rep's thumbnails (using appState.currentRepIndex + 1 since repNumber is 1-indexed)
+    const currentRepNum = appState.currentRepIndex + 1;
+    const positions = repThumbnails.get(currentRepNum);
 
-  // Re-render filmstrip when rep changes
+    if (!positions || positions.size === 0) {
+      // No thumbnails for this rep - might be using cached poses without thumbnails
+      container.innerHTML = `<div class="filmstrip-empty">Rep ${currentRepNum} - no thumbnails</div>`;
+      return;
+    }
+
+    // Render thumbnails for each position in order
+    for (const positionName of POSITION_ORDER) {
+      const candidate = positions.get(positionName);
+      if (!candidate?.frameImage) continue;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'filmstrip-thumbnail';
+      wrapper.title = `${POSITION_LABELS[positionName] || positionName} at ${candidate.videoTime?.toFixed(2)}s`;
+
+      // Create canvas and draw the thumbnail
+      const canvas = document.createElement('canvas');
+      canvas.width = candidate.frameImage.width;
+      canvas.height = candidate.frameImage.height;
+      canvas.className = 'filmstrip-canvas';
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.putImageData(candidate.frameImage, 0, 0);
+      }
+
+      // Add click handler to seek video to this position
+      if (candidate.videoTime !== undefined && videoRef.current) {
+        canvas.style.cursor = 'pointer';
+        const seekTime = candidate.videoTime;
+        canvas.addEventListener('click', () => {
+          if (videoRef.current) {
+            videoRef.current.currentTime = seekTime;
+          }
+        });
+      }
+
+      // Add position label
+      const label = document.createElement('span');
+      label.className = 'filmstrip-label';
+      label.textContent = POSITION_LABELS[positionName] || positionName;
+
+      wrapper.appendChild(canvas);
+      wrapper.appendChild(label);
+      container.appendChild(wrapper);
+    }
+  }, [repCount, repThumbnails, appState.currentRepIndex, videoRef]);
+
+  // Re-render filmstrip when rep changes or thumbnails update
   useEffect(() => {
     renderFilmstrip();
   }, [renderFilmstrip]);

@@ -76,18 +76,20 @@ export class FormAnalyzer {
    * @param skeleton - The skeleton to analyze
    * @param timestamp - Frame timestamp in milliseconds
    * @param videoTime - Optional video time in seconds
+   * @param frameImage - Optional frame thumbnail for filmstrip
    * @returns Complete frame result including position, rep count, and angles
    */
   processFrame(
     skeleton: Skeleton,
     timestamp: number = Date.now(),
-    videoTime?: number
+    videoTime?: number,
+    frameImage?: ImageData
   ): FormAnalysisFrameResult {
     // Calculate all configured angles
     const angles = this.calculateAngles(skeleton);
 
     // Run the core analysis
-    const analysis = this.analyzeFrame(skeleton, timestamp, videoTime, angles);
+    const analysis = this.analyzeFrame(skeleton, timestamp, videoTime, angles, frameImage);
 
     // Determine current position based on angles
     const currentPosition = this.detectCurrentPosition(angles, analysis.phase);
@@ -180,7 +182,8 @@ export class FormAnalyzer {
     skeleton: Skeleton,
     timestamp: number,
     videoTime: number | undefined,
-    angles: Record<string, number>
+    angles: Record<string, number>,
+    frameImage?: ImageData
   ): FrameAnalysisResult {
     const { phaseDetection, cycleDetection } = this.exercise;
     const primaryAngle = angles[phaseDetection.primaryAngle] ?? 0;
@@ -228,7 +231,7 @@ export class FormAnalyzer {
       this.maxPrimaryAngleInCycle = 0;
     } else {
       // Update position candidates
-      this.updatePositionCandidates(skeleton, timestamp, videoTime, angles);
+      this.updatePositionCandidates(skeleton, timestamp, videoTime, angles, frameImage);
     }
 
     return {
@@ -247,7 +250,8 @@ export class FormAnalyzer {
     skeleton: Skeleton,
     timestamp: number,
     videoTime: number | undefined,
-    angles: Record<string, number>
+    angles: Record<string, number>,
+    frameImage?: ImageData
   ): void {
     const currentPhase = this.isDescending ? 'descend' : 'ascend';
 
@@ -268,6 +272,7 @@ export class FormAnalyzer {
           videoTime,
           angles: { ...angles },
           score,
+          frameImage,
         });
       }
     }

@@ -224,6 +224,8 @@ export interface PositionCandidate {
   angles: Record<string, number>;
   /** Score indicating how well this matches the ideal position (lower = better) */
   score: number;
+  /** Thumbnail image for filmstrip (runtime only, not persisted) */
+  frameImage?: ImageData;
 }
 
 /**

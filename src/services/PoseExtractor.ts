@@ -140,6 +140,18 @@ export async function extractPosesFromVideo(
       throw new Error('Failed to get canvas 2d context');
     }
 
+    // Create thumbnail canvas for filmstrip (downsampled to save memory)
+    // ~160x90 = ~57KB per frame in RGBA, manageable for typical videos
+    const THUMBNAIL_WIDTH = 160;
+    const thumbnailHeight = Math.round((videoHeight / videoWidth) * THUMBNAIL_WIDTH);
+    const thumbnailCanvas = document.createElement('canvas');
+    thumbnailCanvas.width = THUMBNAIL_WIDTH;
+    thumbnailCanvas.height = thumbnailHeight;
+    const thumbnailCtx = thumbnailCanvas.getContext('2d');
+    if (!thumbnailCtx) {
+      throw new Error('Failed to get thumbnail canvas 2d context');
+    }
+
     // Extract frames
     const frames: PoseTrackFrame[] = [];
     let frameIndex = 0;
@@ -159,18 +171,19 @@ export async function extractPosesFromVideo(
 
       // In mock mode, skip video seeking - poses come from fixture data
       // In real mode, seek video and draw frame
+      let frameImage: ImageData | undefined;
       if (!useMockDetector) {
         // Wait for seek to complete
         await seekToTime(video, frameIndex * frameInterval);
 
         // Draw frame to canvas
         ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
-      }
 
-      // NOTE: Previously captured frameImage here for filmstrip thumbnails,
-      // but it was never used and caused massive memory leaks (~8MB per frame).
-      // Removed in swing-iks. If thumbnails are needed in the future,
-      // capture only for keyframes or use a downsampled version.
+        // Capture downsampled thumbnail for filmstrip
+        // Drawing from main canvas preserves aspect ratio and current frame
+        thumbnailCtx.drawImage(canvas, 0, 0, THUMBNAIL_WIDTH, thumbnailHeight);
+        frameImage = thumbnailCtx.getImageData(0, 0, THUMBNAIL_WIDTH, thumbnailHeight);
+      }
 
       // Detect pose (mock detector ignores canvas and returns fixture data)
       const poses = await detector.estimatePoses(canvas);
@@ -195,6 +208,8 @@ export async function extractPosesFromVideo(
         videoTime,
         keypoints,
         score: poses.length > 0 ? poses[0].score : undefined,
+        // Include thumbnail for filmstrip (runtime only, not persisted)
+        frameImage,
       };
 
       // Pre-compute angles if requested
