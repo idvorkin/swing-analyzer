@@ -9,8 +9,6 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi, type Mock } from 'vitest';
 import type { RefObject } from 'react';
 import { usePipelineLifecycle } from './usePipelineLifecycle';
-import type { Pipeline } from '../pipeline/Pipeline';
-import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import type { LivePoseCache } from '../pipeline/LivePoseCache';
 import type { PoseTrackFile } from '../types/posetrack';
