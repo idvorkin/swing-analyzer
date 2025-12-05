@@ -3,11 +3,11 @@
  *
  * Tests the settings modal functionality including:
  * - Opening/closing the modal
- * - Tab navigation (General, Analysis, Debug, About)
+ * - Tab navigation (General, Analysis, Developer, About)
  * - Display mode settings
  * - Pose model selection
  * - BlazePose variant selection
- * - Debug tab with session recording
+ * - Developer tab with session recording
  */
 
 import { expect, test } from '@playwright/test';
@@ -64,7 +64,7 @@ test.describe('Settings Modal', () => {
     await expect(page.locator('.settings-modal')).not.toBeVisible();
   });
 
-  test('should display four tabs: General, Analysis, Debug, About', async ({
+  test('should display four tabs: General, Analysis, Developer, About', async ({
     page,
   }) => {
     // Open settings
@@ -82,7 +82,7 @@ test.describe('Settings Modal', () => {
       'Analysis'
     );
     await expect(page.locator('.settings-tab-label').nth(2)).toContainText(
-      'Debug'
+      'Developer'
     );
     await expect(page.locator('.settings-tab-label').nth(3)).toContainText(
       'About'
@@ -165,16 +165,16 @@ test.describe('Settings Modal', () => {
     await expect(page.locator('input[value="lite"]')).not.toBeVisible();
   });
 
-  test('should switch to Debug tab and show session recording', async ({
+  test('should switch to Developer tab and show session recording', async ({
     page,
   }) => {
     // Open settings
     await page.click('button[aria-label="Open settings"]');
 
-    // Click Debug tab
+    // Click Developer tab
     await page.locator('.settings-tab').nth(2).click();
 
-    // Debug tab should be active
+    // Developer tab should be active
     await expect(page.locator('.settings-tab').nth(2)).toHaveClass(
       /settings-tab--active/
     );
@@ -297,7 +297,7 @@ test.describe('Debug Page', () => {
     await page.goto('/debug');
 
     // Back link should exist
-    const backLink = page.locator('a[href="/"]');
+    const backLink = page.getByRole('link', { name: 'Back to Main App' });
     await expect(backLink).toBeVisible();
 
     // Click back link

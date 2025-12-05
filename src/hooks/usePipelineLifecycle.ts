@@ -306,20 +306,32 @@ export function usePipelineLifecycle(
   );
 
   /**
-   * Clean up subscriptions for batch/cached pose mode.
-   * In cached mode, skeleton processing happens via direct calls to SwingAnalyzer.processFrame()
-   * from video event handlers (onSkeletonUpdated callback), not through Observable subscriptions.
+   * Set up subscriptions for batch/cached pose mode.
+   * In batch mode, we need to listen for rep count updates from processSkeletonEvent()
+   * which is called during extraction. Skeleton/angle updates happen via direct
+   * processFrame() calls from video event handlers (onSkeletonUpdated callback).
    */
   const setupBatchSubscriptions = useCallback(
-    (_pipeline: Pipeline) => {
-      // Clean up existing subscriptions - no new ones needed for cached mode
-      // since rep count and angle updates happen via direct processFrame() calls
+    (pipeline: Pipeline) => {
+      // Clean up existing subscriptions
       for (const sub of pipelineSubscriptionsRef.current) {
         sub.unsubscribe();
       }
       pipelineSubscriptionsRef.current = [];
+
+      // Subscribe to rep count updates from extraction (processSkeletonEvent emits results)
+      const resultsSubscription = pipeline.getResults().subscribe({
+        next: (result: PipelineResult) => {
+          onRepCountUpdate?.(result.repCount);
+        },
+        error: (err) => {
+          console.error('Batch pipeline error:', err);
+        },
+      });
+
+      pipelineSubscriptionsRef.current = [resultsSubscription];
     },
-    []
+    [onRepCountUpdate]
   );
 
   /**
