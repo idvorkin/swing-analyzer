@@ -139,6 +139,7 @@ export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEven
         frame: null as unknown as HTMLCanvasElement, // Not needed for extraction
         timestamp: frame.timestamp,
         videoTime: frame.videoTime,
+        frameImage: frame.frameImage, // Pass through thumbnail for filmstrip
       },
     },
   };

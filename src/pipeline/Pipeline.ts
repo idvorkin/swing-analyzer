@@ -2,7 +2,7 @@ import { type Observable, Subject, type Subscription } from 'rxjs';
 import { share, switchMap, tap } from 'rxjs/operators';
 import type { Skeleton } from '../models/Skeleton';
 import type { FormCheckpoint } from '../types';
-import type { ExerciseDefinition } from '../types/exercise';
+import type { ExerciseDefinition, PositionCandidate } from '../types/exercise';
 import { FormAnalyzer } from './FormAnalyzer';
 import type {
   FormEvent,
@@ -11,6 +11,16 @@ import type {
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
+
+/**
+ * Event emitted when a rep/cycle completes with position thumbnails
+ */
+export interface ThumbnailEvent {
+  /** Rep number (1-indexed) */
+  repNumber: number;
+  /** Best position candidates for this cycle, keyed by position name */
+  positions: Map<string, PositionCandidate>;
+}
 
 /**
  * Orchestrates the processing pipeline from frame to rep analysis.
@@ -34,6 +44,7 @@ export class Pipeline {
   private resultSubject = new Subject<PipelineResult>();
   private checkpointSubject = new Subject<FormEvent>();
   private skeletonSubject = new Subject<SkeletonEvent>();
+  private thumbnailSubject = new Subject<ThumbnailEvent>();
 
   // Form analyzer for position detection and rep counting
   private formAnalyzer: FormAnalyzer;
@@ -151,6 +162,13 @@ export class Pipeline {
   }
 
   /**
+   * Get an observable for thumbnail events (emitted when a rep/cycle completes)
+   */
+  getThumbnailEvents(): Observable<ThumbnailEvent> {
+    return this.thumbnailSubject.asObservable();
+  }
+
+  /**
    * Stop the pipeline processing
    */
   stop(): void {
@@ -263,11 +281,12 @@ export class Pipeline {
       // Emit skeleton event for real-time rendering during extraction
       this.skeletonSubject.next(skeletonEvent);
 
-      // Process through FormAnalyzer
+      // Process through FormAnalyzer (pass frameImage for filmstrip thumbnails)
       const result = this.formAnalyzer.processFrame(
         skeletonEvent.skeleton,
         skeletonEvent.poseEvent.frameEvent.timestamp,
-        skeletonEvent.poseEvent.frameEvent.videoTime
+        skeletonEvent.poseEvent.frameEvent.videoTime,
+        skeletonEvent.poseEvent.frameEvent.frameImage
       );
 
       // Update rep count
@@ -280,6 +299,14 @@ export class Pipeline {
           checkpoint: null,
           repCount: result.repCount,
         });
+
+        // Emit thumbnail event with position candidates for filmstrip
+        if (result.cyclePositions && result.cyclePositions.size > 0) {
+          this.thumbnailSubject.next({
+            repNumber: result.repCount,
+            positions: result.cyclePositions,
+          });
+        }
       }
     }
 
