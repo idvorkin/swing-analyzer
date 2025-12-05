@@ -197,6 +197,20 @@ bd sync               # Commit any new beads changes
 git push              # Push to remote
 ```
 
+**Beads troubleshooting** - If beads isn't working:
+
+```bash
+bd doctor             # Diagnose issues (missing hooks, sync problems, etc.)
+bd doctor --fix       # Auto-fix common issues
+bd sync               # Force sync with remote
+bd init --force       # Nuclear option: rebuild database from JSONL
+```
+
+Common issues:
+- **"Database not found"**: Run `bd init --force --prefix=swing`
+- **"beads-metadata branch missing"**: `git fetch origin beads-metadata && git branch beads-metadata origin/beads-metadata`
+- **Sync permission errors**: `git branch --set-upstream-to=origin/beads-metadata beads-metadata`
+
 See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 
 ## PR Workflow
