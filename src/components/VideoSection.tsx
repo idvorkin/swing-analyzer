@@ -46,7 +46,7 @@ const VideoSection: React.FC = () => {
       console.log('Extraction starting, reinitializing pipeline with live cache...');
       recordExtractionStart();
       recordPipelineReinit({ mode: 'live_cache' });
-      reinitializeWithLiveCache(liveCache);
+      await reinitializeWithLiveCache(liveCache);
     },
     [reinitializeWithLiveCache]
   );
@@ -117,7 +117,9 @@ const VideoSection: React.FC = () => {
       poseTrackStatus.poseTrack
     ) {
       console.log('Cached pose data detected, reinitializing pipeline...');
-      reinitializeWithCachedPoses(poseTrackStatus.poseTrack);
+      reinitializeWithCachedPoses(poseTrackStatus.poseTrack).catch((error) => {
+        console.error('Failed to reinitialize with cached poses:', error);
+      });
     }
   }, [poseTrackStatus, reinitializeWithCachedPoses]);
 

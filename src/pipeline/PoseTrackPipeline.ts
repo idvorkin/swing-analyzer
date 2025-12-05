@@ -10,7 +10,7 @@
  */
 
 import { type Observable, Subject } from 'rxjs';
-import { getExerciseDefinition, kettlebellSwingDefinition } from '../exercises';
+import { getExerciseDefinition } from '../exercises';
 import { Skeleton } from '../models/Skeleton';
 import type { FormCheckpoint, PoseKeypoint } from '../types';
 import { SwingPositionName } from '../types';
