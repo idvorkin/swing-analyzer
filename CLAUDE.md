@@ -106,7 +106,17 @@ After cloning, run once:
 just setup
 ```
 
-This configures git hooks, installs dependencies, and sets up Playwright browsers.
+This configures git hooks and installs npm dependencies.
+
+**Playwright**: Use a global install since we have Playwright in many repos:
+
+```bash
+# One-time global setup (not per-repo)
+npm install -g playwright
+playwright install --with-deps
+```
+
+This avoids downloading browsers separately for each project.
 
 ### Git Hooks
 
@@ -327,13 +337,29 @@ Observable<Frame>    Observable<Skeleton>    Observable<Form>   Observable<Rep>
 - Create exercise-specific analyzers: `PullUpAnalyzer`, `PistolSquatAnalyzer`
 - Configuration-driven instead of code-driven thresholds
 
+## Tech Pack
+
+Project documentation lives in `docs/tech-pack/`:
+
+- **[TEST_STRATEGY.md](docs/tech-pack/TEST_STRATEGY.md)** - Test pyramid, when to use which test type
+- **[E2E_TESTING_PLAN.md](docs/E2E_TESTING_PLAN.md)** - Detailed E2E implementation
+
+**Core principle**: Tests are more important than code. Users should never find bugs that tests could have caught.
+
 ## Testing
+
+### Test Philosophy
+
+1. **Fast tests for CI** - Seeded data, run on every PR (~1-3s each)
+2. **Realistic tests for releases** - Mock detector with timing, simulates user experience (~30-60s each)
+3. **When debugging user issues** - Always write a realistic test first that reproduces the bug
 
 ### E2E Tests (Playwright)
 
-- `e2e-tests/swing-analyzer.spec.ts` - Main app tests
-- `e2e-tests/pose-fixtures.spec.ts` - Pose fixture integration
-- `e2e-tests/fixtures/pose-factory.ts` - Synthetic pose generation for testing
+- `e2e-tests/user-journey.spec.ts` - Fast: UI journey tests (seeded data)
+- `e2e-tests/extraction-flow.spec.ts` - Realistic: Full extraction with mock detector
+- `e2e-tests/swing-analyzer.spec.ts` - Fast: Core app functionality
+- `e2e-tests/fixtures/` - Pose data fixtures and factory
 
 ### Unit Tests (Vitest)
 

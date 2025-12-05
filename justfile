@@ -16,12 +16,11 @@ setup:
     npm install
     echo "✓ npm dependencies installed"
 
-    # Install Playwright browsers
-    npx playwright install
-    echo "✓ Playwright browsers installed"
-
     echo ""
     echo "✅ Setup complete! Run 'just dev' to start developing."
+    echo ""
+    echo "📝 Note: For Playwright, use a global install (shared across repos):"
+    echo "   npm install -g playwright && playwright install --with-deps"
 
 # Run the development server
 dev:
