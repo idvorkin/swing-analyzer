@@ -218,7 +218,7 @@ describe('useCameraControls', () => {
         await result.current.startCamera();
       });
 
-      expect(onStatusChange).toHaveBeenCalledWith('Error: Could not access camera.');
+      expect(onStatusChange).toHaveBeenCalledWith('Error: Could not access camera. Please check permissions.');
     });
 
     it('does nothing if frameAcquisitionRef is null', async () => {
@@ -365,7 +365,7 @@ describe('useCameraControls', () => {
         await result.current.switchCamera();
       });
 
-      expect(onStatusChange).toHaveBeenCalledWith('Error: Could not switch camera.');
+      expect(onStatusChange).toHaveBeenCalledWith('Error: Could not access camera. Please check permissions.');
     });
 
     it('does nothing if frameAcquisitionRef is null', async () => {

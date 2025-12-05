@@ -2,6 +2,29 @@ import { useCallback, type RefObject } from 'react';
 import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
 import type { Pipeline } from '../pipeline/Pipeline';
 
+/**
+ * Get a user-friendly error message for camera errors.
+ */
+function getCameraErrorMessage(error: unknown): string {
+  if (error instanceof DOMException) {
+    switch (error.name) {
+      case 'NotAllowedError':
+        return 'Error: Camera access denied. Please allow camera permissions.';
+      case 'NotFoundError':
+        return 'Error: No camera found. Please connect a camera.';
+      case 'NotReadableError':
+        return 'Error: Camera is in use by another app. Please close other apps.';
+      case 'OverconstrainedError':
+        return 'Error: Camera does not support required settings.';
+      case 'AbortError':
+        return 'Error: Camera access was interrupted. Please try again.';
+      case 'SecurityError':
+        return 'Error: Camera access blocked. Please check site permissions.';
+    }
+  }
+  return 'Error: Could not access camera. Please check permissions.';
+}
+
 export interface UseCameraControlsParams {
   frameAcquisitionRef: RefObject<VideoFrameAcquisition | null>;
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -55,7 +78,8 @@ export function useCameraControls({
       onUsingCameraChange(true);
     } catch (error) {
       console.error('Error accessing camera:', error);
-      onStatusChange('Error: Could not access camera.');
+      const errorMessage = getCameraErrorMessage(error);
+      onStatusChange(errorMessage);
     }
   }, [
     frameAcquisitionRef,
@@ -94,7 +118,8 @@ export function useCameraControls({
       onCameraModeChange(newMode);
     } catch (error) {
       console.error('Error switching camera:', error);
-      onStatusChange('Error: Could not switch camera.');
+      const errorMessage = getCameraErrorMessage(error);
+      onStatusChange(errorMessage);
     }
   }, [
     frameAcquisitionRef,
