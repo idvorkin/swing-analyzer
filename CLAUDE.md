@@ -52,28 +52,31 @@ git checkout dev && git merge agent/swing-N && git push
 
 ### Collaborative Feature Branches
 
-When a feature needs multiple agents, use a feature branch instead:
+When a feature needs multiple agents, use a feature branch and create beads issues:
 
 ```bash
 # Agent creates feature branch
 git checkout -b feature/skeleton-rendering
 git push -u origin feature/skeleton-rendering
 
-# Tell human: "I need help on feature/skeleton-rendering"
-# Human assigns another agent to same branch
+# Create beads issue for help needed (other agents will see it in bd ready)
+bd create --title="Help needed: optimize skeleton math on feature/skeleton-rendering" --type=task
 ```
 
-**Other agent joins:**
+**Other agent picks up work:**
 ```bash
+bd ready                                    # Sees the help request
+bd update swing-xyz --status=in_progress    # Claims it
 git fetch origin
-git checkout feature/skeleton-rendering
-git pull origin feature/skeleton-rendering --rebase
+git checkout feature/skeleton-rendering     # Joins the branch
+git pull --rebase
 # Work, commit, push to same branch
+bd close swing-xyz --reason="Done"
 ```
 
 **Naming convention:**
 - `agent/swing-N` - Solo work, one agent per branch
-- `feature/description` - Collaborative, multiple agents welcome
+- `feature/description` - Collaborative, multiple agents can join via beads
 - `fix/description` - Bug fix collaboration
 
 ### Agent Dashboard
