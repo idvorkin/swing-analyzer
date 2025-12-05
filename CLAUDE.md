@@ -42,6 +42,12 @@ Actions requiring explicit "YES" approval from user:
 
 This project uses [beads](https://github.com/steveyegge/beads) for issue tracking. Run `bd prime` at session start for workflow context.
 
+**IMPORTANT: Beads uses the `beads-metadata` branch for sync, NOT local files.**
+
+- `bd sync` pushes to the `beads-metadata` branch on `origin`
+- If `bd sync` fails with permission errors, ask the user: "Beads sync failed. Type YES if you want help fixing it."
+- Never rely on `.beads/issues.jsonl` in the working tree - always verify issues are in `beads-metadata` branch
+
 **AI-supervised workflow:**
 
 1. **Find ready work**: `bd ready` - shows unblocked tasks
