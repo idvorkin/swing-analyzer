@@ -369,5 +369,54 @@ describe('useSkeletonRendering', () => {
 
       expect(renderer?.renderSkeleton).not.toHaveBeenCalled();
     });
+
+    it('calls onSkeletonUpdated callback when skeleton is rendered', () => {
+      const keypoints = createTopKeypoints();
+      const mockCache = {
+        getFrame: vi.fn().mockReturnValue({ keypoints }),
+      } as unknown as LivePoseCache;
+      const onSkeletonUpdated = vi.fn();
+
+      videoElement.currentTime = 1.5;
+
+      renderHook(() =>
+        useSkeletonRendering({
+          videoRef: { current: videoElement },
+          canvasRef: { current: canvasElement },
+          livePoseCacheRef: { current: mockCache },
+          onSkeletonUpdated,
+        })
+      );
+
+      // Trigger timeupdate event
+      videoElement.dispatchEvent(new Event('timeupdate'));
+
+      expect(onSkeletonUpdated).toHaveBeenCalledTimes(1);
+      expect(onSkeletonUpdated).toHaveBeenCalledWith(
+        expect.any(Object), // Skeleton instance
+        1.5 // videoTime
+      );
+    });
+
+    it('does not call onSkeletonUpdated when skeleton is null', () => {
+      const mockCache = {
+        getFrame: vi.fn().mockReturnValue({ keypoints: [] }), // Empty keypoints
+      } as unknown as LivePoseCache;
+      const onSkeletonUpdated = vi.fn();
+
+      renderHook(() =>
+        useSkeletonRendering({
+          videoRef: { current: videoElement },
+          canvasRef: { current: canvasElement },
+          livePoseCacheRef: { current: mockCache },
+          onSkeletonUpdated,
+        })
+      );
+
+      // Trigger timeupdate event
+      videoElement.dispatchEvent(new Event('timeupdate'));
+
+      expect(onSkeletonUpdated).not.toHaveBeenCalled();
+    });
   });
 });

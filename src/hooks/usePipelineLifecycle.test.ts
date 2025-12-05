@@ -446,7 +446,9 @@ describe('usePipelineLifecycle', () => {
       expect(onStatusChange).toHaveBeenCalledWith('Ready (streaming poses)');
     });
 
-    it('uses batch subscriptions for live cache mode', async () => {
+    it('does not set up Observable subscriptions for live cache mode', async () => {
+      // In cached pose mode, skeleton processing happens via direct processFrame() calls
+      // from video event handlers (onSkeletonUpdated), not through Observable subscriptions.
       const liveCache = {
         getFrame: vi.fn(),
         addFrame: vi.fn(),
@@ -468,10 +470,9 @@ describe('usePipelineLifecycle', () => {
 
       await result.current.reinitializeWithLiveCache(liveCache);
 
-      // Should use getResults() not start() for batch subscriptions
-      expect(mockPipeline.getResults).toHaveBeenCalled();
-      // Should NOT start full streaming pipeline
+      // Should NOT start full streaming pipeline (no Observable subscriptions)
       expect(mockPipeline.start).not.toHaveBeenCalled();
+      // No need to call getResults() - updates happen via direct processFrame() calls
     });
   });
 
