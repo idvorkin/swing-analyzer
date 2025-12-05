@@ -102,6 +102,31 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   }, []);
 
   // ========================================
+  // Skeleton Processing (Direct Call, No Subscriptions)
+  // ========================================
+  // Handle skeleton updates from cached pose playback.
+  // This replaces Observable subscriptions with direct processFrame() calls.
+  const handleSkeletonUpdated = useCallback(
+    (skeleton: import('../models/Skeleton').Skeleton, videoTime: number) => {
+      const pipeline = pipelineRef.current;
+      if (!pipeline) return;
+
+      // Process through SwingAnalyzer directly (no Observable subscription)
+      const result = pipeline.getSwingAnalyzer().processFrame(
+        skeleton,
+        performance.now(),
+        videoTime
+      );
+
+      // Update state directly
+      setSpineAngle(Math.round(skeleton.getSpineAngle() || 0));
+      setArmToSpineAngle(Math.round(skeleton.getArmToVerticalAngle() || 0));
+      setRepCount(result.repCount);
+    },
+    [pipelineRef]
+  );
+
+  // ========================================
   // Skeleton Rendering Hook
   // ========================================
   const { setBodyPartDisplay, setDebugMode } =
@@ -111,6 +136,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       livePoseCacheRef,
       showBodyParts: appState.showBodyParts,
       bodyPartDisplayTime: appState.bodyPartDisplayTime,
+      onSkeletonUpdated: handleSkeletonUpdated,
     });
 
   // Wrap setBodyPartDisplay to also update appState

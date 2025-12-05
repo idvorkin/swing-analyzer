@@ -10,6 +10,12 @@ export interface UseSkeletonRenderingOptions {
   livePoseCacheRef: React.RefObject<LivePoseCache | null>;
   showBodyParts?: boolean;
   bodyPartDisplayTime?: number;
+  /**
+   * Callback when a skeleton is rendered from cache during video playback.
+   * Use this to process the skeleton (e.g., call SwingAnalyzer.processFrame())
+   * without Observable subscriptions.
+   */
+  onSkeletonUpdated?: (skeleton: Skeleton, videoTime: number) => void;
 }
 
 export interface SkeletonRenderingReturn {
@@ -35,6 +41,7 @@ export function useSkeletonRendering({
   livePoseCacheRef,
   showBodyParts = true,
   bodyPartDisplayTime = 0.5,
+  onSkeletonUpdated,
 }: UseSkeletonRenderingOptions): SkeletonRenderingReturn {
   const skeletonRendererRef = useRef<SkeletonRenderer | null>(null);
 
@@ -115,6 +122,8 @@ export function useSkeletonRendering({
       if (skeleton) {
         // Render skeleton
         skeletonRendererRef.current.renderSkeleton(skeleton, performance.now());
+        // Notify caller for processing (e.g., SwingAnalyzer.processFrame())
+        onSkeletonUpdated?.(skeleton, video.currentTime);
       }
     };
 
@@ -126,7 +135,7 @@ export function useSkeletonRendering({
       video.removeEventListener('timeupdate', renderSkeletonFromCache);
       video.removeEventListener('seeked', renderSkeletonFromCache);
     };
-  }, [videoRef, livePoseCacheRef, buildSkeletonFromFrame]);
+  }, [videoRef, livePoseCacheRef, buildSkeletonFromFrame, onSkeletonUpdated]);
 
   return {
     buildSkeletonFromFrame,
