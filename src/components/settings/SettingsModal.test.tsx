@@ -125,18 +125,18 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Display Mode')).toBeInTheDocument();
     });
 
-    it('has four tabs: General, Analysis, Debug, About', () => {
+    it('has four tabs: General, Analysis, Developer, About', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       expect(screen.getByText('General')).toBeInTheDocument();
       expect(screen.getByText('Analysis')).toBeInTheDocument();
-      expect(screen.getByText('Debug')).toBeInTheDocument();
+      expect(screen.getByText('Developer')).toBeInTheDocument();
       expect(screen.getByText('About')).toBeInTheDocument();
     });
 
-    it('switches to Debug tab when clicked', () => {
+    it('switches to Developer tab when clicked', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Debug'));
+      fireEvent.click(screen.getByText('Developer'));
       expect(screen.getByText('Session Recording')).toBeInTheDocument();
     });
 

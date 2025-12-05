@@ -81,10 +81,9 @@ export const kettlebellSwingDefinition: ExerciseDefinition = {
       name: 'top',
       displayName: 'Top',
       description: 'Standing tall with arms extended, glutes squeezed',
-      phase: 'ascend',
+      phase: 'any', // Can be at top during start, end of ascend, or ready to descend
       angleTargets: {
-        spine: { ideal: 0, tolerance: 15, weight: 0.5 },
-        hip: { ideal: 165, tolerance: 15, weight: 0.5 },
+        spine: { ideal: 10, tolerance: 20, weight: 1.0 },
       },
       captureThumbnail: true,
     },
@@ -94,8 +93,7 @@ export const kettlebellSwingDefinition: ExerciseDefinition = {
       description: 'Arms connecting with body during downswing',
       phase: 'descend',
       angleTargets: {
-        spine: { ideal: 45, tolerance: 15, weight: 0.6 },
-        hip: { ideal: 140, tolerance: 15, weight: 0.4 },
+        spine: { ideal: 45, tolerance: 20, weight: 1.0 },
       },
       captureThumbnail: true,
     },
@@ -103,10 +101,9 @@ export const kettlebellSwingDefinition: ExerciseDefinition = {
       name: 'bottom',
       displayName: 'Bottom',
       description: 'Deepest hinge position, hips back, chest forward',
-      phase: 'descend',
+      phase: 'any', // Bottom is a transition point between descend and ascend
       angleTargets: {
-        spine: { ideal: 85, tolerance: 10, weight: 0.5 },
-        hip: { ideal: 100, tolerance: 15, weight: 0.5 },
+        spine: { ideal: 75, tolerance: 25, weight: 1.0 },
       },
       captureThumbnail: true,
     },
@@ -116,8 +113,7 @@ export const kettlebellSwingDefinition: ExerciseDefinition = {
       description: 'Arms releasing during upswing, explosive hip extension',
       phase: 'ascend',
       angleTargets: {
-        spine: { ideal: 35, tolerance: 15, weight: 0.6 },
-        hip: { ideal: 130, tolerance: 15, weight: 0.4 },
+        spine: { ideal: 37, tolerance: 20, weight: 1.0 },
       },
       captureThumbnail: true,
     },
