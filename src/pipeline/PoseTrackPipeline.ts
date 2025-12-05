@@ -10,10 +10,14 @@
  */
 
 import { type Observable, Subject } from 'rxjs';
+import { getExerciseDefinition, kettlebellSwingDefinition } from '../exercises';
 import { Skeleton } from '../models/Skeleton';
 import type { FormCheckpoint, PoseKeypoint } from '../types';
 import { SwingPositionName } from '../types';
+import type { ExerciseDefinition } from '../types/exercise';
+import { ExerciseType } from '../types/exercise';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
+import { FormAnalyzer } from './FormAnalyzer';
 import type { FormEvent, RepEvent, SkeletonEvent } from './PipelineInterfaces';
 import type { PoseEvent } from './PoseSkeletonTransformer';
 
@@ -49,26 +53,46 @@ export interface PoseTrackPlaybackOptions {
 export type PoseTrackFrameCallback = (result: PoseTrackFrameResult) => void;
 
 /**
+ * Options for creating a PoseTrackPipeline
+ */
+export interface PoseTrackPipelineOptions {
+  /** Exercise type for analysis (defaults to KettlebellSwing) */
+  exerciseType?: ExerciseType;
+  /** Custom exercise definition (overrides exerciseType) */
+  exerciseDefinition?: ExerciseDefinition;
+}
+
+/**
  * CPU-only pipeline for analyzing pose track data
  */
 export class PoseTrackPipeline {
   private poseTrack: PoseTrackFile;
   private currentFrameIndex: number = 0;
-  private repCount: number = 0;
   private isPlaying: boolean = false;
   private playbackTimer: number | null = null;
 
-  // Position detection state (simplified from SwingFormProcessor)
-  private lastPosition: SwingPositionName | null = null;
-  private positionHistory: SwingPositionName[] = [];
+  // Form analyzer for position detection and rep counting
+  private formAnalyzer: FormAnalyzer;
+  private exerciseDefinition: ExerciseDefinition;
 
   // RxJS subjects for event streams
   private skeletonSubject = new Subject<SkeletonEvent>();
   private formSubject = new Subject<FormEvent>();
   private repSubject = new Subject<RepEvent>();
 
-  constructor(poseTrack: PoseTrackFile) {
+  constructor(poseTrack: PoseTrackFile, options: PoseTrackPipelineOptions = {}) {
     this.poseTrack = poseTrack;
+
+    // Determine exercise definition
+    if (options.exerciseDefinition) {
+      this.exerciseDefinition = options.exerciseDefinition;
+    } else {
+      const exerciseType = options.exerciseType ?? ExerciseType.KettlebellSwing;
+      this.exerciseDefinition = getExerciseDefinition(exerciseType);
+    }
+
+    // Create form analyzer
+    this.formAnalyzer = new FormAnalyzer(this.exerciseDefinition);
   }
 
   /**
@@ -96,7 +120,21 @@ export class PoseTrackPipeline {
    * Get current rep count
    */
   getRepCount(): number {
-    return this.repCount;
+    return this.formAnalyzer.getRepCount();
+  }
+
+  /**
+   * Get the exercise definition
+   */
+  getExerciseDefinition(): ExerciseDefinition {
+    return this.exerciseDefinition;
+  }
+
+  /**
+   * Get the form analyzer
+   */
+  getFormAnalyzer(): FormAnalyzer {
+    return this.formAnalyzer;
   }
 
   /**
@@ -134,13 +172,18 @@ export class PoseTrackPipeline {
     // Build skeleton from keypoints
     const skeleton = this.buildSkeleton(frame);
 
-    // Detect swing position
-    const position = skeleton ? this.detectPosition(skeleton) : null;
+    // Process through FormAnalyzer for position detection and rep counting
+    let position: SwingPositionName | null = null;
+    let repCount = this.formAnalyzer.getRepCount();
 
-    // Check for rep completion
-    const repIncremented = this.checkRepCompletion(position);
-    if (repIncremented) {
-      this.repCount++;
+    if (skeleton) {
+      const analysisResult = this.formAnalyzer.processFrame(
+        skeleton,
+        frame.timestamp,
+        frame.videoTime
+      );
+      position = analysisResult.position as SwingPositionName | null;
+      repCount = analysisResult.repCount;
     }
 
     // Create result
@@ -150,7 +193,7 @@ export class PoseTrackPipeline {
       skeleton,
       checkpoint: null, // TODO: Build checkpoint if at key position
       position,
-      repCount: this.repCount,
+      repCount,
     };
 
     // Emit events
@@ -206,9 +249,7 @@ export class PoseTrackPipeline {
       if (this.currentFrameIndex > endFrame) {
         if (loop) {
           this.currentFrameIndex = startFrame;
-          this.repCount = 0;
-          this.lastPosition = null;
-          this.positionHistory = [];
+          this.formAnalyzer.reset();
         } else {
           this.stopPlayback();
           return;
@@ -263,9 +304,7 @@ export class PoseTrackPipeline {
    */
   reset(): void {
     this.currentFrameIndex = 0;
-    this.repCount = 0;
-    this.lastPosition = null;
-    this.positionHistory = [];
+    this.formAnalyzer.reset();
     this.stopPlayback();
   }
 
@@ -348,77 +387,6 @@ export class PoseTrackPipeline {
   }
 
   /**
-   * Detect swing position from skeleton
-   * Simplified version of SwingFormProcessor logic
-   */
-  private detectPosition(skeleton: Skeleton): SwingPositionName | null {
-    const spineAngle = skeleton.getSpineAngle();
-    const armAngle = skeleton.getArmToVerticalAngle();
-
-    // Position detection thresholds (simplified)
-    const TOP_SPINE_MAX = 25;
-    const BOTTOM_SPINE_MIN = 40;
-    const CONNECT_ARM_MAX = 45;
-    const RELEASE_ARM_MIN = 120;
-
-    let position: SwingPositionName | null = null;
-
-    if (spineAngle >= BOTTOM_SPINE_MIN) {
-      // Check if at bottom position
-      position = SwingPositionName.Bottom;
-    } else if (spineAngle <= TOP_SPINE_MAX && armAngle > RELEASE_ARM_MIN) {
-      // Check if at release position
-      position = SwingPositionName.Release;
-    } else if (spineAngle <= TOP_SPINE_MAX && armAngle < CONNECT_ARM_MAX) {
-      // Check if at top position
-      position = SwingPositionName.Top;
-    } else if (spineAngle > TOP_SPINE_MAX && spineAngle < BOTTOM_SPINE_MIN) {
-      // Check if at connect position (transition)
-      if (armAngle < 90) {
-        position = SwingPositionName.Connect;
-      }
-    }
-
-    // Update position history
-    if (position && position !== this.lastPosition) {
-      this.positionHistory.push(position);
-      if (this.positionHistory.length > 10) {
-        this.positionHistory.shift();
-      }
-      this.lastPosition = position;
-    }
-
-    return position;
-  }
-
-  /**
-   * Check if a rep was completed
-   */
-  private checkRepCompletion(position: SwingPositionName | null): boolean {
-    if (!position) return false;
-
-    // A rep is complete when we see: top -> connect -> bottom -> release -> top
-    // Simplified: count a rep when we return to 'top' after seeing 'bottom'
-    const history = this.positionHistory;
-    const len = history.length;
-
-    if (len >= 3 && position === SwingPositionName.Top) {
-      // Check if we went through a full cycle
-      const recentPositions = history.slice(-4);
-      const hasBottom = recentPositions.includes(SwingPositionName.Bottom);
-      const hasConnect = recentPositions.includes(SwingPositionName.Connect);
-
-      if (hasBottom && hasConnect) {
-        // Clear history to start fresh for next rep
-        this.positionHistory = [position];
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
    * Emit RxJS events for compatibility with existing UI
    */
   private emitEvents(
@@ -459,7 +427,7 @@ export class PoseTrackPipeline {
 
     // Emit rep event
     const repEvent: RepEvent = {
-      repCount: this.repCount,
+      repCount: this.formAnalyzer.getRepCount(),
       checkpointEvent: formEvent,
     };
     this.repSubject.next(repEvent);
@@ -480,9 +448,10 @@ export class PoseTrackPipeline {
  * Create a pose track pipeline from a pose track file
  */
 export function createPoseTrackPipeline(
-  poseTrack: PoseTrackFile
+  poseTrack: PoseTrackFile,
+  options?: PoseTrackPipelineOptions
 ): PoseTrackPipeline {
-  return new PoseTrackPipeline(poseTrack);
+  return new PoseTrackPipeline(poseTrack, options);
 }
 
 /**
