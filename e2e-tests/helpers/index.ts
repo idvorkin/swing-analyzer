@@ -33,3 +33,9 @@ export {
   waitForCachedPoseTrack,
   waitForModelReady,
 } from './video';
+// Video route interception for fast tests
+export {
+  serveLocalVideos,
+  setupFastTestVideo,
+  useShortTestVideo,
+} from './video-route';

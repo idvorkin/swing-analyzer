@@ -15,16 +15,19 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { SWING_SAMPLE_VIDEO_HASH } from './fixtures';
+import { SWING_SAMPLE_4REPS_VIDEO_HASH } from './fixtures';
 import {
   clearPoseTrackDB,
   getPoseTrackFromDB,
   seedPoseTrackFixture,
   seekToTime,
+  useShortTestVideo,
 } from './helpers';
 
 test.describe('User Journey: Load and Analyze Sample Video', () => {
   test.beforeEach(async ({ page }) => {
+    // Intercept GitHub video URL and serve short local video for faster tests
+    await useShortTestVideo(page);
     await page.goto('/');
     await clearPoseTrackDB(page);
   });
@@ -89,7 +92,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       // Seed pose data first so cached path is used
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
 
       // Wait for video element to appear
@@ -119,7 +122,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       // Seed pose data first so cached path is used
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
 
       await page.waitForFunction(
@@ -144,7 +147,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     // WebM/VP9 codec IS supported in headless Chromium - this is NOT a codec issue
 
     test.skip('play button starts video playback', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -177,7 +180,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     });
 
     test.skip('pause button stops video playback', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -223,7 +226,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     });
 
     test.skip('stop button resets video to beginning', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -268,7 +271,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
   test.describe('Step 4-5: Rep Counting', () => {
     test('rep counter displays correctly', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
 
       // Rep counter should exist and show 0 initially
@@ -277,7 +280,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     });
 
     test('angle displays update during playback', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -305,7 +308,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     test.skip('rep counter increments after completing swing cycle', async ({
       page,
     }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -346,7 +349,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
   test.describe('Step 6: Frame-by-Frame Navigation', () => {
     test('next frame button advances video', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -386,7 +389,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     });
 
     test('prev frame button goes back in video', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -442,12 +445,12 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   test.describe('Pose Track Caching', () => {
     test('seeded pose data is found when loading video', async ({ page }) => {
       // Seed data first
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Verify it was stored
       const storedTrack = await getPoseTrackFromDB(
         page,
-        SWING_SAMPLE_VIDEO_HASH
+        SWING_SAMPLE_4REPS_VIDEO_HASH
       );
       expect(storedTrack).not.toBeNull();
       expect(storedTrack?.frames.length).toBeGreaterThan(0);
@@ -457,7 +460,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       // Seed data
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Load video
       await page.click('#load-hardcoded-btn');
@@ -481,12 +484,12 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       // Seed pose data first
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Verify data was seeded
       const storedTrack = await getPoseTrackFromDB(
         page,
-        SWING_SAMPLE_VIDEO_HASH
+        SWING_SAMPLE_4REPS_VIDEO_HASH
       );
       expect(storedTrack).not.toBeNull();
 
@@ -556,7 +559,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       // Seed pose data
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Load video
       await page.click('#load-hardcoded-btn');

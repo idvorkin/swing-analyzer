@@ -26,3 +26,9 @@ export const DEFAULT_SAMPLE_VIDEO: string = SAMPLE_VIDEOS.kettlebellSwing.good;
  * Local fallback path (for development/offline use).
  */
 export const LOCAL_SAMPLE_VIDEO: string = '/videos/swing-sample.webm';
+
+/**
+ * Short test video for E2E tests (4 reps, ~5.5 seconds).
+ * This is a trimmed version of swing-sample.webm for faster test execution.
+ */
+export const TEST_SAMPLE_VIDEO: string = '/videos/swing-sample-4reps.webm';
