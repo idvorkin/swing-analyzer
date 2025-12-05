@@ -193,10 +193,6 @@ export class Pipeline {
    * Used for batch/extraction mode where frames come from extraction
    * rather than video playback.
    *
-   * Note: We don't emit skeleton events to subscribers here because
-   * batch mode doesn't need real-time skeleton rendering. The skeleton
-   * events are only used for rep processing.
-   *
    * @param skeletonEvent - The skeleton event to process
    * @returns The rep count after processing
    */
@@ -204,6 +200,9 @@ export class Pipeline {
     // Store latest skeleton
     if (skeletonEvent.skeleton) {
       this.latestSkeleton = skeletonEvent.skeleton;
+
+      // Emit skeleton event for real-time rendering during extraction
+      this.skeletonSubject.next(skeletonEvent);
 
       // Process through SwingAnalyzer
       const result = this.swingAnalyzer.processFrame(
