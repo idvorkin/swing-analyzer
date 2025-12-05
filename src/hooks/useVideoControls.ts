@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { take } from 'rxjs';
 import {
   getSavedBlazePoseVariant,
   getSavedModelPreference,
@@ -200,8 +201,10 @@ export function useVideoControls({
     };
 
     // Use the direct transformer to process the frame
+    // Use take(1) to auto-complete subscription after one emission (prevents memory leak)
     directSkeletonTransformerRef.current
       .transformToSkeleton(frameEvent)
+      .pipe(take(1))
       .subscribe({
         next: (skeletonEvent: SkeletonEvent) => {
           if (skeletonEvent?.skeleton) {

@@ -2,7 +2,7 @@
  * SessionRecorder
  *
  * Records user interactions and pipeline state for debugging.
- * Always active, stores everything in memory, downloadable from Settings.
+ * Always active, stores in memory AND IndexedDB for crash recovery.
  *
  * Captures:
  * - User clicks/interactions with element info
@@ -10,7 +10,19 @@
  * - Start/stop events (extraction, playback, etc.)
  * - Console errors
  * - Key state changes (rep count, extraction progress)
+ *
+ * Persistence:
+ * - Auto-saves to IndexedDB every 5 seconds
+ * - Keeps last 10 sessions for crash debugging
+ * - Use getPersistedSessions() to retrieve after crash
  */
+
+// IndexedDB configuration
+const SESSION_DB_NAME = 'swing-analyzer-sessions';
+const SESSION_STORE_NAME = 'sessions';
+const SESSION_DB_VERSION = 1;
+const MAX_PERSISTED_SESSIONS = 10;
+const AUTO_SAVE_INTERVAL_MS = 5000;
 
 export interface InteractionEvent {
   type: 'click' | 'keydown' | 'keyup';
@@ -53,6 +65,19 @@ export interface StateChangeEvent {
   details?: Record<string, unknown>;
 }
 
+export interface MemorySnapshot {
+  timestamp: number;
+  // From performance.memory (Chrome only)
+  usedJSHeapSize?: number;      // JS heap currently in use (bytes)
+  totalJSHeapSize?: number;     // Total allocated JS heap (bytes)
+  jsHeapSizeLimit?: number;     // Max heap size (bytes)
+  // Calculated
+  usedMB?: number;              // usedJSHeapSize in MB
+  totalMB?: number;             // totalJSHeapSize in MB
+  limitMB?: number;             // jsHeapSizeLimit in MB
+  percentUsed?: number;         // usedJSHeapSize / jsHeapSizeLimit * 100
+}
+
 export interface SessionRecording {
   version: string;
   sessionId: string;
@@ -63,27 +88,204 @@ export interface SessionRecording {
   interactions: InteractionEvent[];
   pipelineSnapshots: PipelineSnapshot[];
   stateChanges: StateChangeEvent[];
+  memorySnapshots: MemorySnapshot[];
+}
+
+// IndexedDB helpers
+function openSessionDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(SESSION_DB_NAME, SESSION_DB_VERSION);
+
+    request.onerror = () => {
+      reject(new Error('Failed to open session database'));
+    };
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+
+      if (!db.objectStoreNames.contains(SESSION_STORE_NAME)) {
+        const store = db.createObjectStore(SESSION_STORE_NAME, {
+          keyPath: 'sessionId',
+        });
+        store.createIndex('startTime', 'startTime', { unique: false });
+      }
+    };
+  });
+}
+
+async function saveSessionToDB(recording: SessionRecording): Promise<void> {
+  try {
+    const db = await openSessionDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([SESSION_STORE_NAME], 'readwrite');
+
+      transaction.onerror = () => {
+        db.close();
+        reject(new Error('Failed to save session'));
+      };
+
+      const store = transaction.objectStore(SESSION_STORE_NAME);
+      const request = store.put(recording);
+
+      request.onerror = () => {
+        reject(new Error('Failed to save session record'));
+      };
+
+      request.onsuccess = () => {
+        resolve();
+      };
+
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (e) {
+    // Silently fail - don't break the app if IndexedDB fails
+    console.warn('[SessionRecorder] Failed to persist session:', e);
+  }
+}
+
+async function pruneOldSessions(): Promise<void> {
+  try {
+    const db = await openSessionDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([SESSION_STORE_NAME], 'readwrite');
+
+      transaction.onerror = () => {
+        db.close();
+        reject(new Error('Failed to prune sessions'));
+      };
+
+      const store = transaction.objectStore(SESSION_STORE_NAME);
+      const index = store.index('startTime');
+      const request = index.openCursor(null, 'prev'); // Newest first
+
+      let count = 0;
+      const toDelete: string[] = [];
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          count++;
+          if (count > MAX_PERSISTED_SESSIONS) {
+            toDelete.push(cursor.value.sessionId);
+          }
+          cursor.continue();
+        } else {
+          // Done iterating, delete old sessions
+          toDelete.forEach((id) => store.delete(id));
+        }
+      };
+
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+    });
+  } catch (e) {
+    console.warn('[SessionRecorder] Failed to prune old sessions:', e);
+  }
+}
+
+/**
+ * Retrieve all persisted sessions from IndexedDB.
+ * Use this after a crash to see what happened.
+ */
+export async function getPersistedSessions(): Promise<SessionRecording[]> {
+  try {
+    const db = await openSessionDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([SESSION_STORE_NAME], 'readonly');
+
+      transaction.onerror = () => {
+        db.close();
+        reject(new Error('Failed to load sessions'));
+      };
+
+      const store = transaction.objectStore(SESSION_STORE_NAME);
+      const index = store.index('startTime');
+      const request = index.getAll();
+
+      request.onerror = () => {
+        reject(new Error('Failed to load session records'));
+      };
+
+      request.onsuccess = () => {
+        // Return newest first
+        const sessions = (request.result || []).reverse();
+        resolve(sessions);
+      };
+
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (e) {
+    console.warn('[SessionRecorder] Failed to load persisted sessions:', e);
+    return [];
+  }
+}
+
+/**
+ * Clear all persisted sessions from IndexedDB.
+ */
+export async function clearPersistedSessions(): Promise<void> {
+  try {
+    const db = await openSessionDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([SESSION_STORE_NAME], 'readwrite');
+
+      transaction.onerror = () => {
+        db.close();
+        reject(new Error('Failed to clear sessions'));
+      };
+
+      const store = transaction.objectStore(SESSION_STORE_NAME);
+      store.clear();
+
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+    });
+  } catch (e) {
+    console.warn('[SessionRecorder] Failed to clear sessions:', e);
+  }
 }
 
 class SessionRecorderImpl {
   private recording: SessionRecording;
   private snapshotInterval: number | null = null;
+  private autoSaveInterval: number | null = null;
+  private memoryInterval: number | null = null;
   private pipelineStateGetter: (() => Partial<PipelineSnapshot>) | null = null;
   private maxSnapshots = 10000; // ~40 minutes at 4 FPS
   private maxInteractions = 5000;
   private maxStateChanges = 2000;
+  private maxMemorySnapshots = 1800; // ~1 hour at 2 second intervals
 
   // Event handler references for cleanup
   private clickHandler: ((e: MouseEvent) => void) | null = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private errorHandler: ((e: ErrorEvent) => void) | null = null;
   private rejectionHandler: ((e: PromiseRejectionEvent) => void) | null = null;
+  private beforeUnloadHandler: (() => void) | null = null;
   private originalConsoleError: ((...args: unknown[]) => void) | null = null;
 
   constructor() {
     this.recording = this.createNewRecording();
     this.setupEventListeners();
     this.startSnapshotting();
+    this.startAutoSave();
+    this.startMemoryTracking();
   }
 
   private createNewRecording(): SessionRecording {
@@ -99,6 +301,7 @@ class SessionRecorderImpl {
       interactions: [],
       pipelineSnapshots: [],
       stateChanges: [],
+      memorySnapshots: [],
     };
   }
 
@@ -220,6 +423,98 @@ class SessionRecorderImpl {
     this.snapshotInterval = window.setInterval(() => {
       this.captureSnapshot();
     }, 250);
+  }
+
+  private startAutoSave(): void {
+    if (typeof window === 'undefined') return;
+
+    // Auto-save to IndexedDB every 5 seconds
+    this.autoSaveInterval = window.setInterval(() => {
+      this.persistToStorage();
+    }, AUTO_SAVE_INTERVAL_MS);
+
+    // Also save on page unload (store reference for cleanup)
+    this.beforeUnloadHandler = () => {
+      this.persistToStorage();
+    };
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
+
+    // Initial save after setup
+    setTimeout(() => this.persistToStorage(), 1000);
+  }
+
+  private async persistToStorage(): Promise<void> {
+    const recording = this.getRecording();
+    await saveSessionToDB(recording);
+    await pruneOldSessions();
+  }
+
+  private startMemoryTracking(): void {
+    if (typeof window === 'undefined') return;
+
+    // Check if performance.memory is available (Chrome only)
+    const perf = performance as Performance & {
+      memory?: {
+        usedJSHeapSize: number;
+        totalJSHeapSize: number;
+        jsHeapSizeLimit: number;
+      };
+    };
+
+    if (!perf.memory) {
+      console.log('[SessionRecorder] Memory tracking not available (Chrome only)');
+      return;
+    }
+
+    // Track memory every 2 seconds
+    this.memoryInterval = window.setInterval(() => {
+      this.captureMemorySnapshot();
+    }, 2000);
+
+    // Initial capture
+    this.captureMemorySnapshot();
+    console.log('[SessionRecorder] Memory tracking started (2s intervals)');
+  }
+
+  private captureMemorySnapshot(): void {
+    const perf = performance as Performance & {
+      memory?: {
+        usedJSHeapSize: number;
+        totalJSHeapSize: number;
+        jsHeapSizeLimit: number;
+      };
+    };
+
+    if (!perf.memory) return;
+
+    const { usedJSHeapSize, totalJSHeapSize, jsHeapSizeLimit } = perf.memory;
+    const usedMB = Math.round(usedJSHeapSize / 1024 / 1024 * 100) / 100;
+    const totalMB = Math.round(totalJSHeapSize / 1024 / 1024 * 100) / 100;
+    const limitMB = Math.round(jsHeapSizeLimit / 1024 / 1024 * 100) / 100;
+    const percentUsed = Math.round(usedJSHeapSize / jsHeapSizeLimit * 10000) / 100;
+
+    const snapshot: MemorySnapshot = {
+      timestamp: Date.now(),
+      usedJSHeapSize,
+      totalJSHeapSize,
+      jsHeapSizeLimit,
+      usedMB,
+      totalMB,
+      limitMB,
+      percentUsed,
+    };
+
+    this.recording.memorySnapshots.push(snapshot);
+
+    // Trim old snapshots if over limit
+    if (this.recording.memorySnapshots.length > this.maxMemorySnapshots) {
+      this.recording.memorySnapshots = this.recording.memorySnapshots.slice(-this.maxMemorySnapshots);
+    }
+
+    // Log warning if memory usage is high
+    if (percentUsed > 80) {
+      console.warn(`[SessionRecorder] HIGH MEMORY: ${usedMB}MB / ${limitMB}MB (${percentUsed}%)`);
+    }
   }
 
   private captureSnapshot(): void {
@@ -354,6 +649,19 @@ class SessionRecorderImpl {
       this.snapshotInterval = null;
     }
 
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+      this.autoSaveInterval = null;
+    }
+
+    if (this.memoryInterval) {
+      clearInterval(this.memoryInterval);
+      this.memoryInterval = null;
+    }
+
+    // Final save before disposing
+    this.persistToStorage();
+
     if (typeof window !== 'undefined') {
       if (this.clickHandler) {
         window.removeEventListener('click', this.clickHandler, { capture: true });
@@ -370,6 +678,10 @@ class SessionRecorderImpl {
       if (this.rejectionHandler) {
         window.removeEventListener('unhandledrejection', this.rejectionHandler);
         this.rejectionHandler = null;
+      }
+      if (this.beforeUnloadHandler) {
+        window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+        this.beforeUnloadHandler = null;
       }
     }
 
@@ -474,4 +786,101 @@ export function recordCheckpointDetected(
     timestamp: Date.now(),
     details: { position, ...details },
   });
+}
+
+// Expose debug functions on window for easy console access
+// Available in all environments - crash logs are useful in production too
+if (typeof window !== 'undefined') {
+  const swingDebug = {
+    /**
+     * Get all persisted sessions from IndexedDB.
+     * Usage: await swingDebug.getCrashLogs()
+     */
+    getCrashLogs: getPersistedSessions,
+
+    /**
+     * Clear all persisted sessions from IndexedDB.
+     * Usage: await swingDebug.clearCrashLogs()
+     */
+    clearCrashLogs: clearPersistedSessions,
+
+    /**
+     * Get the current session recording (in memory).
+     * Usage: swingDebug.getCurrentSession()
+     */
+    getCurrentSession: () => sessionRecorder.getRecording(),
+
+    /**
+     * Download the current session as JSON file.
+     * Usage: swingDebug.downloadSession()
+     */
+    downloadSession: () => sessionRecorder.downloadRecording(),
+
+    /**
+     * Get session stats.
+     * Usage: swingDebug.getStats()
+     */
+    getStats: () => sessionRecorder.getStats(),
+
+    /**
+     * Get current memory usage (Chrome only).
+     * Usage: swingDebug.getMemory()
+     */
+    getMemory: () => {
+      const perf = performance as Performance & {
+        memory?: {
+          usedJSHeapSize: number;
+          totalJSHeapSize: number;
+          jsHeapSizeLimit: number;
+        };
+      };
+      if (!perf.memory) return { error: 'Memory API not available (Chrome only)' };
+      const { usedJSHeapSize, totalJSHeapSize, jsHeapSizeLimit } = perf.memory;
+      return {
+        usedMB: Math.round(usedJSHeapSize / 1024 / 1024 * 100) / 100,
+        totalMB: Math.round(totalJSHeapSize / 1024 / 1024 * 100) / 100,
+        limitMB: Math.round(jsHeapSizeLimit / 1024 / 1024 * 100) / 100,
+        percentUsed: Math.round(usedJSHeapSize / jsHeapSizeLimit * 10000) / 100,
+      };
+    },
+
+    /**
+     * Get memory history from current session.
+     * Usage: swingDebug.getMemoryHistory()
+     */
+    getMemoryHistory: () => sessionRecorder.getRecording().memorySnapshots,
+
+    /**
+     * Analyze memory trend (is it growing?).
+     * Usage: swingDebug.analyzeMemory()
+     */
+    analyzeMemory: () => {
+      const snapshots = sessionRecorder.getRecording().memorySnapshots;
+      if (snapshots.length < 10) {
+        return { error: 'Not enough data yet (need 10+ snapshots)' };
+      }
+      const recent = snapshots.slice(-30); // Last minute
+      const first = recent[0];
+      const last = recent[recent.length - 1];
+      const growthMB = (last.usedMB ?? 0) - (first.usedMB ?? 0);
+      const growthPercent = first.usedMB ? (growthMB / first.usedMB) * 100 : 0;
+      const durationSec = (last.timestamp - first.timestamp) / 1000;
+      const mbPerMinute = durationSec > 0 ? (growthMB / durationSec) * 60 : 0;
+
+      return {
+        currentMB: last.usedMB,
+        limitMB: last.limitMB,
+        percentUsed: last.percentUsed,
+        growthMB: Math.round(growthMB * 100) / 100,
+        growthPercent: Math.round(growthPercent * 100) / 100,
+        mbPerMinute: Math.round(mbPerMinute * 100) / 100,
+        trend: mbPerMinute > 1 ? 'GROWING (possible leak)' : mbPerMinute < -1 ? 'SHRINKING' : 'STABLE',
+        samples: recent.length,
+        durationSec: Math.round(durationSec),
+      };
+    },
+  };
+
+  (window as unknown as { swingDebug: typeof swingDebug }).swingDebug = swingDebug;
+  console.log('[SessionRecorder] Debug functions available at window.swingDebug');
 }
