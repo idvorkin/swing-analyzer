@@ -45,11 +45,30 @@ This project uses [beads](https://github.com/steveyegge/beads) for issue trackin
 **AI-supervised workflow:**
 
 1. **Find ready work**: `bd ready` - shows unblocked tasks
-2. **Claim task**: `bd update ID --status in_progress` - prevents duplicate work
+2. **Claim task**: `bd update ID --status in_progress --assignee claude` - prevents duplicate work
 3. **Do the work**: implement, test, document
-4. **Discover new work**: `bd create "title"` then link with `bd dep add`
+4. **Discover new work**: Use `discovered-from` dependency (see below)
 5. **Complete**: `bd close ID --reason "why"` - documents completion
 6. **Check unblocked**: `bd ready` - see what's now available
+
+**Discovered-from dependencies** (critical for agent workflows):
+
+When you find new work during implementation, link it back to maintain audit trails:
+
+```bash
+# Working on swing-48b, found a bug
+bd create --title="Found memory leak in cache" --type=bug
+bd dep add swing-new swing-48b --type discovered-from
+```
+
+**Dependency types:**
+
+| Type | Use When |
+|------|----------|
+| `blocks` | Work cannot start until blocker done |
+| `related` | Issues share context but don't block |
+| `parent-child` | Epic/subtask hierarchy |
+| `discovered-from` | Found during other work (agent audit trail) |
 
 **Quick reference:**
 
@@ -58,9 +77,10 @@ bd prime                   # Get workflow context (run at session start)
 bd ready                   # Show unblocked work
 bd list                    # List all issues
 bd show swing-abc          # View issue details
-bd update swing-abc --status in_progress
+bd update swing-abc --status in_progress --assignee claude
 bd close swing-abc --reason "Done in PR #42"
-bd dep add swing-def swing-abc  # swing-abc blocks swing-def
+bd dep add swing-def swing-abc                    # blocks (default)
+bd dep add swing-new swing-old --type discovered-from  # audit trail
 ```
 
 **Session close checklist** - Before ending a session, always run:

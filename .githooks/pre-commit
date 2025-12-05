@@ -1,0 +1,7 @@
+#!/bin/bash
+# Flush pending beads changes before commit
+# This ensures beads database is synced to JSONL before any commit
+
+if command -v bd &> /dev/null && [ -d ".beads" ]; then
+    bd sync --quiet 2>/dev/null || true
+fi
