@@ -126,7 +126,9 @@ The `.githooks/` directory contains:
 
 **📦 MINIMAL PRs**: When creating PRs to main, include ONLY the changes the user explicitly requested. Do not bundle unrelated changes from the branch. If unsure what to include, ask the user to confirm scope before creating the PR.
 
-**🚫 NO --no-verify**: Never use `git commit --no-verify` unless absolutely necessary. If pre-commit hooks fail due to linting issues, make a separate commit to fix the linting first, then make your actual change commit.
+**🚫 NO --no-verify**: Never use `git commit --no-verify` unless absolutely necessary.
+
+**🧹 LINT FIRST**: Before making code changes, run pre-commit on affected files to fix existing lint issues. Commit those fixes first, then make your actual change. This keeps your logic commits clean and focused.
 
 **🚫 NO FORCE PUSH**: Never use `git push --force` or `git push -f` unless the user explicitly types "yes" to confirm. If you have conflicts or diverged history, resolve them with rebase and regular push. Messy history on a branch is okay - losing other people's work is not.
 
@@ -220,7 +222,8 @@ When two PRs modify the same files:
 **Clean commits**:
 
 - Always run `git status` before committing to review staged files
-- Avoid mixing linting/formatting with logic changes - run pre-commit first, commit separately
+- Use `git add <specific-files>` not `git add -A` - prevents unrelated changes creeping in
+- Run pre-commit on affected files BEFORE making changes, commit lint fixes first
 - Split independent changes into logical commits
 - For complex commits, write message to COMMIT_MSG file and verify with user
 
