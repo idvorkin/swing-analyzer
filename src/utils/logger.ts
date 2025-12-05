@@ -16,7 +16,7 @@ interface LogContext {
  * Format a log message with context prefix.
  */
 function formatMessage(
-  level: LogLevel,
+  _level: LogLevel,
   context: LogContext,
   message: string
 ): string {
