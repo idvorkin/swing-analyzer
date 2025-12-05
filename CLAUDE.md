@@ -98,15 +98,22 @@ See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
 
 ## PR Workflow
 
-### Git Hooks Setup
+### First-Time Setup
 
-Run this at session start to enable shared hooks:
+After cloning, run once:
 
 ```bash
-git config core.hooksPath .githooks
+just setup
 ```
 
-This blocks direct pushes to `main` - all changes must go through PRs.
+This configures git hooks, installs dependencies, and sets up Playwright browsers.
+
+### Git Hooks
+
+The `.githooks/` directory contains:
+- `pre-commit` - Syncs beads before commits
+- `post-merge` - Syncs beads after pulls
+- `pre-push` - Blocks direct pushes to `main`
 
 ### Branch Strategy
 

@@ -3,6 +3,26 @@
 default:
     @just --list
 
+# One-time setup after clone (run this first!)
+setup:
+    #!/usr/bin/env bash
+    echo "🔧 Setting up development environment..."
+
+    # Configure git hooks
+    git config core.hooksPath .githooks
+    echo "✓ Git hooks configured (.githooks)"
+
+    # Install npm dependencies
+    npm install
+    echo "✓ npm dependencies installed"
+
+    # Install Playwright browsers
+    npx playwright install
+    echo "✓ Playwright browsers installed"
+
+    echo ""
+    echo "✅ Setup complete! Run 'just dev' to start developing."
+
 # Run the development server
 dev:
     npm run dev
