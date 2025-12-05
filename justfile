@@ -26,6 +26,17 @@ setup:
 dev:
     npm run dev
 
+# Start agent dashboard (monitors all agent clones)
+dashboard:
+    #!/usr/bin/env bash
+    DASHBOARD_DIR="$HOME/gits/agent-dashboard"
+    if [ ! -d "$DASHBOARD_DIR" ]; then
+        echo "📦 Cloning agent-dashboard..."
+        git clone https://github.com/idvorkin-ai-tools/agent-dashboard.git "$DASHBOARD_DIR"
+        cd "$DASHBOARD_DIR" && npm install
+    fi
+    cd "$DASHBOARD_DIR" && npm run dev
+
 # Build the project
 build:
     npm run build

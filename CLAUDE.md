@@ -19,6 +19,24 @@ Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) 
 - **Clone command**: `git clone https://github.com/idvorkin-ai-tools/swing-analyzer.git swing-N`
 - **After cloning**: `cd swing-N && just setup && git remote add upstream https://github.com/idvorkin/swing-analyzer.git && git checkout dev`
 
+### Agent Dashboard
+
+Monitor all running agents from a central portal: **http://localhost:9999** (or via Tailscale)
+
+Shows for each agent clone:
+- Branch and PR status
+- GitHub links (Diff, Commit, History)
+- Running servers (vite, playwright)
+- Beads status (open issues, work in progress)
+
+**Start dashboard:**
+```bash
+cd ~/gits/agent-dashboard && npm run dev
+# Or: just dashboard (from any swing clone)
+```
+
+**Repo:** https://github.com/idvorkin-ai-tools/agent-dashboard
+
 ## Guardrails
 
 Actions requiring explicit "YES" approval from user:
