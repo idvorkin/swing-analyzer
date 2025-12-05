@@ -36,6 +36,10 @@ const VideoSection: React.FC = () => {
     reinitializeWithLiveCache,
   } = useSwingAnalyzerContext();
 
+  // Track the video file we're currently extracting to prevent duplicate extractions
+  // This fixes infinite loop when startExtraction's identity changes mid-extraction
+  const extractingVideoRef = useRef<File | null>(null);
+
   // Called BEFORE extraction starts - reinitialize pipeline synchronously
   const handleExtractionStart = useCallback(
     async (liveCache: LivePoseCache): Promise<void> => {
@@ -85,11 +89,20 @@ const VideoSection: React.FC = () => {
   });
 
   // Start pose extraction when video file changes
+  // Use ref to prevent re-triggering extraction when startExtraction's identity changes
   useEffect(() => {
-    if (currentVideoFile) {
+    if (currentVideoFile && currentVideoFile !== extractingVideoRef.current) {
+      extractingVideoRef.current = currentVideoFile;
       startExtraction(currentVideoFile);
     }
   }, [currentVideoFile, startExtraction]);
+
+  // Clear extracting ref when extraction completes or is cancelled
+  useEffect(() => {
+    if (poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'error' || poseTrackStatus.type === 'none') {
+      extractingVideoRef.current = null;
+    }
+  }, [poseTrackStatus.type]);
 
   // Note: Pipeline reinitialization for live extraction now happens via onExtractionStart callback
   // This ensures the pipeline is ready BEFORE frames start arriving (fixes race condition)
