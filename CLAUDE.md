@@ -37,6 +37,21 @@ swing-3 → agent/swing-3
 git fetch origin
 git checkout agent/swing-N 2>/dev/null || git checkout -b agent/swing-N
 git pull origin agent/swing-N --rebase 2>/dev/null || true
+
+# Start the dev server for dashboard visibility and E2E tests
+just dev  # Runs vite dev server (auto-finds available port)
+```
+
+This ensures:
+1. **Dashboard visibility** - Your clone appears as "active" with a server link
+2. **E2E test speed** - Tests reuse the running server instead of starting a new one
+3. **Consistent testing** - Tests run against your current code changes
+
+**E2E tests automatically use your running server** via `reuseExistingServer: true` in playwright.config.ts. If no server is running, Playwright starts one temporarily.
+
+**Check your server is detected:**
+```bash
+curl -s http://localhost:9999/api/agents | jq '.agents[] | select(.id == "swing-N") | .servers'
 ```
 
 **During work (commit → push immediately):**
