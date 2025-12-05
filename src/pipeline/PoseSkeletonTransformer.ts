@@ -116,8 +116,8 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
   }
 
   /**
-   * Transform a frame event directly into a skeleton
-   * This combines pose detection and skeleton construction in a single pipeline stage
+   * Transform a frame event directly into a skeleton (Observable version)
+   * @deprecated Use transformToSkeletonAsync for video-event-driven processing
    */
   transformToSkeleton(frameEvent: FrameEvent): Observable<SkeletonEvent> {
     // First detect the pose
@@ -125,6 +125,63 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       // Then transform the pose result into a skeleton
       switchMap((poseEvent) => this.buildSkeleton(poseEvent))
     );
+  }
+
+  /**
+   * Transform a frame event directly into a skeleton (Promise version)
+   * Use this for video-event-driven processing without RxJS subscriptions.
+   */
+  async transformToSkeletonAsync(frameEvent: FrameEvent): Promise<SkeletonEvent> {
+    const poseEvent = await this.detectPoseAsync(frameEvent);
+    return this.buildSkeletonSync(poseEvent);
+  }
+
+  /**
+   * Detect pose from a frame event (Promise version)
+   */
+  private async detectPoseAsync(frameEvent: FrameEvent): Promise<PoseEvent> {
+    if (!this.detector) {
+      console.warn('Pose detector not initialized');
+      return { pose: null, frameEvent };
+    }
+
+    try {
+      const poses = await this.detector.estimatePoses(frameEvent.frame);
+
+      if (poses.length === 0) {
+        return { pose: null, frameEvent };
+      }
+
+      const pose = poses[0];
+      const keypoints =
+        this.keypointFormat === 'mediapipe'
+          ? normalizeToCocoFormat(pose.keypoints as PoseKeypoint[])
+          : (pose.keypoints as PoseKeypoint[]);
+
+      return {
+        pose: { keypoints, score: pose.score },
+        frameEvent,
+      };
+    } catch (error) {
+      console.error('Error detecting pose:', error);
+      return { pose: null, frameEvent };
+    }
+  }
+
+  /**
+   * Build skeleton from pose event (sync version)
+   */
+  private buildSkeletonSync(poseEvent: PoseEvent): SkeletonEvent {
+    if (!poseEvent.pose) {
+      return { skeleton: null, poseEvent };
+    }
+
+    const keypoints = poseEvent.pose.keypoints;
+    const spineAngle = this.calculateSpineVertical(keypoints);
+    const hasVisibleKeypoints = this.hasRequiredKeypoints(keypoints);
+    const skeleton = new Skeleton(keypoints, spineAngle, hasVisibleKeypoints);
+
+    return { skeleton, poseEvent };
   }
 
   /**
