@@ -48,6 +48,11 @@ This project uses [beads](https://github.com/steveyegge/beads) for issue trackin
 - If `bd sync` fails with permission errors, ask the user: "Beads sync failed. Type YES if you want help fixing it."
 - Never rely on `.beads/issues.jsonl` in the working tree - always verify issues are in `beads-metadata` branch
 
+**Fix for permission errors**: The `beads-metadata` branch must track `origin`, not `upstream`:
+```bash
+git branch --set-upstream-to=origin/beads-metadata beads-metadata
+```
+
 **AI-supervised workflow:**
 
 1. **Find ready work**: `bd ready` - shows unblocked tasks
