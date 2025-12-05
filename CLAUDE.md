@@ -17,7 +17,7 @@ Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) 
 - **Use full clones**, not worktrees - worktrees cause issues with parallel agents
 - **Remote setup**: `origin` = idvorkin-ai-tools fork (push here), `upstream` = idvorkin (fetch from here)
 - **Clone command**: `git clone https://github.com/idvorkin-ai-tools/swing-analyzer.git swing-N`
-- **After cloning**: `git remote add upstream https://github.com/idvorkin/swing-analyzer.git && git checkout dev`
+- **After cloning**: `cd swing-N && just setup && git remote add upstream https://github.com/idvorkin/swing-analyzer.git && git checkout dev`
 
 ## Guardrails
 
