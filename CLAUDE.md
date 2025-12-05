@@ -39,11 +39,25 @@ git checkout agent/swing-N 2>/dev/null || git checkout -b agent/swing-N
 git pull origin agent/swing-N --rebase 2>/dev/null || true
 ```
 
-**During work:**
+**During work (commit → push immediately):**
 ```bash
+git pull origin agent/swing-N --rebase  # Get any updates first
 git add . && git commit -m "..."
-git push origin agent/swing-N  # Never conflicts with other agents!
+git push origin agent/swing-N           # Push right after commit!
 ```
+Always push after every commit - keeps your work visible in dashboard.
+
+**Stay current (rebase often):**
+```bash
+git fetch origin dev && git rebase origin/dev
+git push origin agent/swing-N --force-with-lease
+```
+Rebase on dev:
+- Every 15 minutes during active work
+- Before starting any major new task
+- Before merging to dev
+
+This keeps your branch up-to-date with changes from other agents.
 
 **Human merges to dev** when ready:
 ```bash
