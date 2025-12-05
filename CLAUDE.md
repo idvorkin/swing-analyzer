@@ -2,7 +2,7 @@
 
 ## Convention Updates
 
-**Last reviewed:** 2025-12-05 (chop-conventions @ eb34d6e)
+**Last reviewed:** 2025-12-05 (chop-conventions @ 2a6b6e6)
 
 Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) should periodically:
 
