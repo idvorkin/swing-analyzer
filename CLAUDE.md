@@ -50,6 +50,35 @@ git push origin agent/swing-N  # Never conflicts with other agents!
 git checkout dev && git merge agent/swing-N && git push
 ```
 
+### Collaborative Feature Branches
+
+When a feature needs multiple agents, use a feature branch and create beads issues:
+
+```bash
+# Agent creates feature branch
+git checkout -b feature/skeleton-rendering
+git push -u origin feature/skeleton-rendering
+
+# Create beads issue for help needed (other agents will see it in bd ready)
+bd create --title="Help needed: optimize skeleton math on feature/skeleton-rendering" --type=task
+```
+
+**Other agent picks up work:**
+```bash
+bd ready                                    # Sees the help request
+bd update swing-xyz --status=in_progress    # Claims it
+git fetch origin
+git checkout feature/skeleton-rendering     # Joins the branch
+git pull --rebase
+# Work, commit, push to same branch
+bd close swing-xyz --reason="Done"
+```
+
+**Naming convention:**
+- `agent/swing-N` - Solo work, one agent per branch
+- `feature/description` - Collaborative, multiple agents can join via beads
+- `fix/description` - Bug fix collaboration
+
 ### Agent Dashboard
 
 Monitor all running agents from a central portal: **http://localhost:9999** (or via Tailscale)
@@ -104,10 +133,8 @@ git branch --set-upstream-to=origin/beads-metadata beads-metadata
 
 **AI-supervised workflow:**
 
-**Assignee naming**: When claiming tasks, use `claude-machinename-directoryname` format (e.g., `claude-orbstack-swing-2`). This identifies which agent instance is working on what, preventing conflicts when multiple agents run in parallel.
-
 1. **Find ready work**: `bd ready` - shows unblocked tasks
-2. **Claim task**: `bd update ID --status in_progress --assignee claude-machinename-directoryname` - prevents duplicate work
+2. **Claim task**: `bd update ID --status in_progress --assignee claude` - prevents duplicate work
 3. **Do the work**: implement, test, document
 4. **Discover new work**: Use `discovered-from` dependency (see below)
 5. **Complete**: `bd close ID --reason "why"` - documents completion
@@ -139,7 +166,7 @@ bd prime                   # Get workflow context (run at session start)
 bd ready                   # Show unblocked work
 bd list                    # List all issues
 bd show swing-abc          # View issue details
-bd update swing-abc --status in_progress --assignee claude-machinename-directoryname
+bd update swing-abc --status in_progress --assignee claude
 bd close swing-abc --reason "Done in PR #42"
 bd dep add swing-def swing-abc                    # blocks (default)
 bd dep add swing-new swing-old --type discovered-from  # audit trail
