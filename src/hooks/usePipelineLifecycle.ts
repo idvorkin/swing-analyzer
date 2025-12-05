@@ -432,41 +432,42 @@ export function usePipelineLifecycle(
   }, [onSpineAngleUpdate]);
 
   /**
-   * Reinitialize the pipeline with cached pose data.
-   * Call this when cached pose data becomes available to switch from ML inference
-   * to using pre-extracted poses.
+   * Shared logic for reinitializing pipeline with cached or live pose data.
    */
-  const reinitializeWithCachedPoses = useCallback(
-    async (cachedPoseTrack: PoseTrackFile) => {
+  const reinitializePipeline = useCallback(
+    async (
+      poseCache: LivePoseCache,
+      pipelineOptions: Parameters<typeof createPipeline>[2],
+      statusMessage: string,
+      errorMessage: string
+    ) => {
       if (!videoRef.current || !canvasRef.current) {
         console.warn('Cannot reinitialize: video or canvas not ready');
         return;
       }
 
-      console.log('Reinitializing pipeline with cached pose data...');
+      console.log(`Reinitializing pipeline: ${statusMessage}...`);
 
-      // Stop current pipeline
+      // Stop current pipeline and clean up subscriptions
       if (pipelineRef.current) {
         pipelineRef.current.stop();
       }
-
-      // Clean up existing subscriptions
       for (const sub of pipelineSubscriptionsRef.current) {
         sub.unsubscribe();
       }
       pipelineSubscriptionsRef.current = [];
 
       try {
-        // Create new pipeline with cached data (for batch processing only)
-        const pipeline = createPipeline(videoRef.current, canvasRef.current, {
-          cachedPoseTrack,
-        });
+        // Create new pipeline (for batch processing only)
+        const pipeline = createPipeline(
+          videoRef.current,
+          canvasRef.current,
+          pipelineOptions
+        );
         pipelineRef.current = pipeline;
 
         // Store the cache for video event-driven skeleton rendering
-        // Convert PoseTrackFile to LivePoseCache for consistent getFrame() API
-        const { LivePoseCache } = await import('../pipeline/LivePoseCache');
-        livePoseCacheRef.current = LivePoseCache.fromPoseTrackFile(cachedPoseTrack);
+        livePoseCacheRef.current = poseCache;
 
         // Initialize the new pipeline (no-op for cached transformer)
         await pipeline.initialize();
@@ -478,12 +479,12 @@ export function usePipelineLifecycle(
         // Update state to indicate we're using cached poses
         onUsingCachedPosesChange?.(true);
         onModelLoaded?.();
-        onStatusChange?.('Ready (using cached poses)');
+        onStatusChange?.(statusMessage);
 
-        console.log('Pipeline reinitialized with cached pose data');
+        console.log(`Pipeline reinitialized: ${statusMessage}`);
       } catch (error) {
-        console.error('Failed to reinitialize with cached poses:', error);
-        onStatusChange?.('Error: Failed to load cached poses');
+        console.error(`Failed to reinitialize pipeline:`, error);
+        onStatusChange?.(errorMessage);
       }
     },
     [
@@ -497,67 +498,41 @@ export function usePipelineLifecycle(
   );
 
   /**
+   * Reinitialize the pipeline with cached pose data.
+   * Call this when cached pose data becomes available to switch from ML inference
+   * to using pre-extracted poses.
+   */
+  const reinitializeWithCachedPoses = useCallback(
+    async (cachedPoseTrack: PoseTrackFile) => {
+      // Convert PoseTrackFile to LivePoseCache for consistent getFrame() API
+      const { LivePoseCache: LPC } = await import('../pipeline/LivePoseCache');
+      const poseCache = LPC.fromPoseTrackFile(cachedPoseTrack);
+
+      await reinitializePipeline(
+        poseCache,
+        { cachedPoseTrack },
+        'Ready (using cached poses)',
+        'Error: Failed to load cached poses'
+      );
+    },
+    [reinitializePipeline]
+  );
+
+  /**
    * Reinitialize the pipeline with a live pose cache for streaming mode.
    * Call this when extraction starts to enable playback using progressively
    * extracted frames instead of ML inference.
    */
   const reinitializeWithLiveCache = useCallback(
     async (liveCache: LivePoseCache) => {
-      if (!videoRef.current || !canvasRef.current) {
-        console.warn('Cannot reinitialize: video or canvas not ready');
-        return;
-      }
-
-      console.log('Reinitializing pipeline with live pose cache...');
-
-      // Stop current pipeline
-      if (pipelineRef.current) {
-        pipelineRef.current.stop();
-      }
-
-      // Clean up existing subscriptions
-      for (const sub of pipelineSubscriptionsRef.current) {
-        sub.unsubscribe();
-      }
-      pipelineSubscriptionsRef.current = [];
-
-      try {
-        // Create new pipeline with live cache (for batch processing only)
-        const pipeline = createPipeline(videoRef.current, canvasRef.current, {
-          livePoseCache: liveCache,
-        });
-        pipelineRef.current = pipeline;
-
-        // Store the cache for video event-driven skeleton rendering
-        livePoseCacheRef.current = liveCache;
-
-        // Initialize the new pipeline (no-op for cached transformer)
-        await pipeline.initialize();
-
-        // Use batch subscriptions - just listen for rep count updates from processSkeletonEvent().
-        // Don't start full streaming pipeline (skeleton rendering is video-event driven).
-        // Running the full pipeline during playback would cause duplicate rep counting.
-        setupBatchSubscriptions(pipeline);
-
-        // Update state to indicate we're using cached poses (streaming)
-        onUsingCachedPosesChange?.(true);
-        onModelLoaded?.();
-        onStatusChange?.('Ready (streaming poses)');
-
-        console.log('Pipeline reinitialized with live pose cache');
-      } catch (error) {
-        console.error('Failed to reinitialize with live cache:', error);
-        onStatusChange?.('Error: Failed to initialize streaming');
-      }
+      await reinitializePipeline(
+        liveCache,
+        { livePoseCache: liveCache },
+        'Ready (streaming poses)',
+        'Error: Failed to initialize streaming'
+      );
     },
-    [
-      videoRef,
-      canvasRef,
-      setupBatchSubscriptions,
-      onUsingCachedPosesChange,
-      onModelLoaded,
-      onStatusChange,
-    ]
+    [reinitializePipeline]
   );
 
   return {
