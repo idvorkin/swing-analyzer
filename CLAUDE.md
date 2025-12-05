@@ -73,8 +73,10 @@ git branch --set-upstream-to=origin/beads-metadata beads-metadata
 
 **AI-supervised workflow:**
 
+**Assignee naming**: When claiming tasks, use `claude-machinename-directoryname` format (e.g., `claude-orbstack-swing-2`). This identifies which agent instance is working on what, preventing conflicts when multiple agents run in parallel.
+
 1. **Find ready work**: `bd ready` - shows unblocked tasks
-2. **Claim task**: `bd update ID --status in_progress --assignee claude` - prevents duplicate work
+2. **Claim task**: `bd update ID --status in_progress --assignee claude-machinename-directoryname` - prevents duplicate work
 3. **Do the work**: implement, test, document
 4. **Discover new work**: Use `discovered-from` dependency (see below)
 5. **Complete**: `bd close ID --reason "why"` - documents completion
@@ -106,7 +108,7 @@ bd prime                   # Get workflow context (run at session start)
 bd ready                   # Show unblocked work
 bd list                    # List all issues
 bd show swing-abc          # View issue details
-bd update swing-abc --status in_progress --assignee claude
+bd update swing-abc --status in_progress --assignee claude-machinename-directoryname
 bd close swing-abc --reason "Done in PR #42"
 bd dep add swing-def swing-abc                    # blocks (default)
 bd dep add swing-new swing-old --type discovered-from  # audit trail
