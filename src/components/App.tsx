@@ -1,7 +1,7 @@
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Route, Routes } from 'react-router-dom';
+import { NavLink, Route, Routes } from 'react-router-dom';
 import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
 import { GIT_BRANCH } from '../generated_version';
 import AnalysisSection from './AnalysisSection';
@@ -73,6 +73,15 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         )}
       </h1>
       <nav>
+        <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
+          <span>Analyzer</span>
+        </NavLink>
+        <NavLink to="/poses" className={({ isActive }) => isActive ? 'active' : ''}>
+          <span>Poses</span>
+        </NavLink>
+        <NavLink to="/debug" className={({ isActive }) => isActive ? 'active' : ''}>
+          <span>Debug</span>
+        </NavLink>
         <button
           type="button"
           onClick={onOpenSettings}
