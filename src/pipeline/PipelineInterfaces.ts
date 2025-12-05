@@ -51,10 +51,16 @@ export interface SkeletonTransformer {
   initialize(): Promise<void>;
 
   /**
-   * Transform a frame event into a skeleton
-   * Returns an Observable that emits the skeleton event
+   * Transform a frame event into a skeleton (Observable - for streaming pipelines)
+   * @deprecated Use transformToSkeletonAsync for video-event-driven processing
    */
   transformToSkeleton(frameEvent: FrameEvent): Observable<SkeletonEvent>;
+
+  /**
+   * Transform a frame event into a skeleton (Promise-based)
+   * Use this for video-event-driven processing without RxJS subscriptions.
+   */
+  transformToSkeletonAsync(frameEvent: FrameEvent): Promise<SkeletonEvent>;
 }
 
 /**

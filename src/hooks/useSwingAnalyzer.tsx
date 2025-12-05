@@ -111,8 +111,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
       const pipeline = pipelineRef.current;
       if (!pipeline) return;
 
-      // Process through SwingAnalyzer directly (no Observable subscription)
-      const result = pipeline.getSwingAnalyzer().processFrame(
+      // Process through FormAnalyzer directly (no Observable subscription)
+      const result = pipeline.getFormAnalyzer().processFrame(
         skeleton,
         performance.now(),
         videoTime
