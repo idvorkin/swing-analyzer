@@ -511,5 +511,148 @@ describe('usePipelineLifecycle', () => {
       expect(() => result.current.stopProcessing()).not.toThrow();
       expect(() => result.current.reset()).not.toThrow();
     });
+
+    it('skips reinitializeWithCachedPoses when video ref is null', async () => {
+      const onStatusChange = vi.fn();
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // First initialize with valid refs
+      const { result, rerender } = renderHook(
+        ({ vRef, cRef }) =>
+          usePipelineLifecycle({
+            videoRef: vRef,
+            canvasRef: cRef,
+            onStatusChange,
+          }),
+        {
+          initialProps: {
+            vRef: videoRef,
+            cRef: canvasRef,
+          },
+        }
+      );
+
+      await waitFor(() => {
+        expect(result.current.pipelineRef.current).toBeTruthy();
+      });
+
+      // Clear mocks from initialization
+      onStatusChange.mockClear();
+      consoleSpy.mockClear();
+
+      // Now nullify the refs (simulating unmount scenario)
+      const nullVideoRef = { current: null } as RefObject<HTMLVideoElement>;
+      rerender({ vRef: nullVideoRef, cRef: canvasRef });
+
+      const cachedPoseTrack: PoseTrackFile = {
+        frames: [],
+        metadata: {
+          version: '1.0',
+          model: 'movenet-lightning',
+          modelVersion: '1.0.0',
+          sourceVideoHash: 'test-hash',
+          sourceVideoName: 'test.mp4',
+          sourceVideoDuration: 10,
+          extractedAt: new Date().toISOString(),
+          frameCount: 0,
+          fps: 30,
+          videoWidth: 640,
+          videoHeight: 480,
+        },
+      };
+
+      await result.current.reinitializeWithCachedPoses(cachedPoseTrack);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Cannot reinitialize: video or canvas not ready'
+      );
+      // Status should NOT have been updated since we returned early
+      expect(onStatusChange).not.toHaveBeenCalledWith('Ready (using cached poses)');
+
+      consoleSpy.mockRestore();
+    });
+
+    it('skips reinitializeWithLiveCache when canvas ref is null', async () => {
+      const onStatusChange = vi.fn();
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // First initialize with valid refs
+      const { result, rerender } = renderHook(
+        ({ vRef, cRef }) =>
+          usePipelineLifecycle({
+            videoRef: vRef,
+            canvasRef: cRef,
+            onStatusChange,
+          }),
+        {
+          initialProps: {
+            vRef: videoRef,
+            cRef: canvasRef,
+          },
+        }
+      );
+
+      await waitFor(() => {
+        expect(result.current.pipelineRef.current).toBeTruthy();
+      });
+
+      // Clear mocks from initialization
+      onStatusChange.mockClear();
+      consoleSpy.mockClear();
+
+      // Nullify canvas ref
+      const nullCanvasRef = { current: null } as RefObject<HTMLCanvasElement>;
+      rerender({ vRef: videoRef, cRef: nullCanvasRef });
+
+      const liveCache = {
+        getFrame: vi.fn(),
+        addFrame: vi.fn(),
+        getAllFrames: vi.fn(() => []),
+      } as unknown as LivePoseCache;
+
+      await result.current.reinitializeWithLiveCache(liveCache);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Cannot reinitialize: video or canvas not ready'
+      );
+      expect(onStatusChange).not.toHaveBeenCalledWith('Ready (streaming poses)');
+
+      consoleSpy.mockRestore();
+    });
+
+    it('handles error in reinitializeWithLiveCache gracefully', async () => {
+      const onStatusChange = vi.fn();
+
+      const liveCache = {
+        getFrame: vi.fn(),
+        addFrame: vi.fn(),
+        getAllFrames: vi.fn(() => []),
+      } as unknown as LivePoseCache;
+
+      const { result } = renderHook(() =>
+        usePipelineLifecycle({
+          videoRef,
+          canvasRef,
+          onStatusChange,
+        })
+      );
+
+      await waitFor(() => {
+        expect(result.current.pipelineRef.current).toBeTruthy();
+      });
+
+      onStatusChange.mockClear();
+
+      // Mock error for reinitialization
+      mockPipeline.initialize.mockRejectedValueOnce(
+        new Error('Streaming init failed')
+      );
+
+      await result.current.reinitializeWithLiveCache(liveCache);
+
+      expect(onStatusChange).toHaveBeenCalledWith(
+        'Error: Failed to initialize streaming'
+      );
+    });
   });
 });
