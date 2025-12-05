@@ -22,7 +22,12 @@ Actions requiring explicit "YES" approval from user:
 
 **Encouraged** (not losing work): Deleting unused functions/files, removing commented-out code, cleaning unused imports - these are preserved in git history.
 
-**End of session**: Review conversation for improvements - repeated corrections, workflow friction, missing context. Propose updates to CLAUDE.md.
+**End of session**: When user signals done or says "workflow review":
+
+1. Review session for patterns: repeated corrections, friction, missing context
+2. Create `.claude/workflow-recommendations/YYYY-MM-DD-HHMMSS-XXXX.md` (XXXX = random 4 chars)
+3. Ask user if they want to merge any immediately into CLAUDE.md
+4. For generalizable patterns, offer to PR to chop-conventions
 
 ## Task Tracking (Beads)
 
