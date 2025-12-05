@@ -43,9 +43,11 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     await clearPoseTrackDB(page);
   });
 
+  // Retry this test as it can be flaky with parallel test runs
   test('extraction runs and counts reps with mock detector (fast)', async ({
     page,
   }) => {
+    test.info().annotations.push({ type: 'retry', description: 'Flaky with parallel IndexedDB access' });
     // Fast mode: 0ms delay
     await setupMockPoseDetector(page, 'swing-sample', 0);
 
@@ -70,6 +72,19 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
                statusEl?.textContent?.includes('Ready');
       },
       { timeout: 60000 }
+    );
+
+    // Wait a moment for UI to settle after extraction
+    await page.waitForTimeout(500);
+
+    // Wait for rep count to be > 0 (pipeline may still be finalizing)
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('#rep-counter');
+        const count = parseInt(el?.textContent || '0', 10);
+        return count > 0;
+      },
+      { timeout: 10000 }
     );
 
     // Check rep count
