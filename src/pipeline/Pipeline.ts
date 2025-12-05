@@ -2,21 +2,22 @@ import { type Observable, Subject, type Subscription } from 'rxjs';
 import { share, switchMap, tap } from 'rxjs/operators';
 import type { Skeleton } from '../models/Skeleton';
 import type { FormCheckpoint } from '../types';
+import type { ExerciseDefinition } from '../types/exercise';
+import { FormAnalyzer } from './FormAnalyzer';
 import type {
   FormEvent,
   FrameAcquisition,
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
-import { SwingAnalyzer } from './SwingAnalyzer';
 
 /**
- * Orchestrates the entire processing pipeline from frame to swing rep analysis using RxJS
+ * Orchestrates the entire processing pipeline from frame to rep analysis using RxJS
  *
- * Pipeline flow: Frame → Skeleton → SwingAnalyzer.processFrame() → Results
+ * Pipeline flow: Frame → Skeleton → FormAnalyzer.processFrame() → Results
  *
- * Simplified architecture: SwingAnalyzer handles both position detection and rep counting.
- * The old FormProcessor and RepProcessor have been consolidated into SwingAnalyzer.
+ * Simplified architecture: FormAnalyzer handles both position detection and rep counting.
+ * Supports multiple exercises through ExerciseDefinition configuration.
  *
  * Note: Skeleton rendering during cached pose playback is handled separately
  * by video event listeners (timeupdate/seeked), not by this pipeline.
@@ -35,13 +36,20 @@ export class Pipeline {
   private checkpointSubject = new Subject<FormEvent>();
   private skeletonSubject = new Subject<SkeletonEvent>();
 
-  // Swing analyzer for position detection and rep counting
-  private swingAnalyzer = new SwingAnalyzer();
+  // Form analyzer for position detection and rep counting
+  private formAnalyzer: FormAnalyzer;
+
+  // Current exercise definition
+  private exerciseDefinition: ExerciseDefinition;
 
   constructor(
     private frameAcquisition: FrameAcquisition,
-    private skeletonTransformer: SkeletonTransformer
-  ) {}
+    private skeletonTransformer: SkeletonTransformer,
+    exerciseDefinition: ExerciseDefinition
+  ) {
+    this.exerciseDefinition = exerciseDefinition;
+    this.formAnalyzer = new FormAnalyzer(exerciseDefinition);
+  }
 
   /**
    * Initialize the pipeline
@@ -64,7 +72,7 @@ export class Pipeline {
     // Build the RxJS pipeline
     const frameStream = this.frameAcquisition.start();
 
-    // Simplified pipeline: Frame → Skeleton → SwingAnalyzer.processFrame()
+    // Pipeline: Frame → Skeleton → FormAnalyzer.processFrame()
     this.pipelineSubscription = frameStream
       .pipe(
         // Stage 1: Skeleton Transformation (combined pose detection and skeleton construction)
@@ -72,7 +80,7 @@ export class Pipeline {
           this.skeletonTransformer.transformToSkeleton(frameEvent)
         ),
 
-        // Stage 2: Process skeleton through SwingAnalyzer
+        // Stage 2: Process skeleton through FormAnalyzer
         tap((skeletonEvent) => {
           // Emit the skeleton event to subscribers (for rendering)
           this.skeletonSubject.next(skeletonEvent);
@@ -81,8 +89,8 @@ export class Pipeline {
           if (skeletonEvent.skeleton) {
             this.latestSkeleton = skeletonEvent.skeleton;
 
-            // Process through SwingAnalyzer for position detection and rep counting
-            const result = this.swingAnalyzer.processFrame(
+            // Process through FormAnalyzer for position detection and rep counting
+            const result = this.formAnalyzer.processFrame(
               skeletonEvent.skeleton,
               skeletonEvent.poseEvent.frameEvent.timestamp,
               skeletonEvent.poseEvent.frameEvent.videoTime
@@ -162,7 +170,7 @@ export class Pipeline {
    * Reset the pipeline state
    */
   reset(): void {
-    this.swingAnalyzer.reset();
+    this.formAnalyzer.reset();
     this.latestSkeleton = null;
     this.repCount = 0;
   }
@@ -182,10 +190,17 @@ export class Pipeline {
   }
 
   /**
-   * Get the swing analyzer (for external access if needed)
+   * Get the form analyzer (for external access if needed)
    */
-  getSwingAnalyzer(): SwingAnalyzer {
-    return this.swingAnalyzer;
+  getFormAnalyzer(): FormAnalyzer {
+    return this.formAnalyzer;
+  }
+
+  /**
+   * Get the current exercise definition
+   */
+  getExerciseDefinition(): ExerciseDefinition {
+    return this.exerciseDefinition;
   }
 
   /**
@@ -204,8 +219,8 @@ export class Pipeline {
       // Emit skeleton event for real-time rendering during extraction
       this.skeletonSubject.next(skeletonEvent);
 
-      // Process through SwingAnalyzer
-      const result = this.swingAnalyzer.processFrame(
+      // Process through FormAnalyzer
+      const result = this.formAnalyzer.processFrame(
         skeletonEvent.skeleton,
         skeletonEvent.poseEvent.frameEvent.timestamp,
         skeletonEvent.poseEvent.frameEvent.videoTime

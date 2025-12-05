@@ -1,6 +1,8 @@
 import type { ModelConfig } from '../config/modelConfig';
+import { getExerciseDefinition } from '../exercises';
 import { Skeleton } from '../models/Skeleton';
 import { CocoBodyParts, type PoseKeypoint } from '../types';
+import { ExerciseType } from '../types/exercise';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
 import { CachedPoseSkeletonTransformer } from './CachedPoseSkeletonTransformer';
 import type { LivePoseCache } from './LivePoseCache';
@@ -35,6 +37,13 @@ export interface CreatePipelineOptions {
    * Allows switching between MoveNet and BlazePose.
    */
   modelConfig?: ModelConfig;
+
+  /**
+   * Exercise type for form analysis.
+   * When provided, uses the generic FormAnalyzer with the appropriate
+   * exercise definition. Defaults to KettlebellSwing.
+   */
+  exerciseType?: ExerciseType;
 }
 
 /**
@@ -70,8 +79,12 @@ export function createPipeline(
     skeletonTransformer = createSkeletonTransformer(options.modelConfig);
   }
 
-  // Create the simplified pipeline (SwingAnalyzer handles form + rep processing)
-  return new Pipeline(frameAcquisition, skeletonTransformer);
+  // Get exercise definition (defaults to kettlebell swing)
+  const exerciseType = options.exerciseType ?? ExerciseType.KettlebellSwing;
+  const exerciseDefinition = getExerciseDefinition(exerciseType);
+
+  // Create the pipeline with exercise support
+  return new Pipeline(frameAcquisition, skeletonTransformer, exerciseDefinition);
 }
 
 /**
