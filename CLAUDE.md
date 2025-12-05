@@ -161,13 +161,23 @@ git fetch origin && git rebase origin/dev
 
 ### Merging Feature Branches to Dev
 
+**⚠️ MANDATORY: Run PR review agents before ANY merge to dev.**
+
 Before merging your feature branch to dev:
 
 1. **Rebase on dev**: `git fetch origin && git rebase origin/dev`
-2. **Run PR review agent locally**: Use code-reviewer subagent to check for issues
-3. **Fix any issues** found by the review
+2. **Run PR review agents**: `/code-review:code-review` or `/pr-review-toolkit:review-pr`
+3. **Fix all issues** found by the review - do NOT skip this
 4. **Run tests**: `npx playwright test && npx tsc --noEmit`
 5. **Merge to dev**: `git checkout dev && git merge feature-branch && git push`
+
+**📋 E2E TEST COVERAGE**: Any change affecting user experience MUST have E2E test coverage. This includes:
+- New UI components or buttons
+- Changed user flows or interactions
+- New features visible to users
+- Bug fixes for user-facing issues
+
+If E2E tests don't exist for the affected area, create them before merging.
 
 ### Splitting Dev Branch into Clean PRs
 
