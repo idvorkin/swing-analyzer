@@ -207,7 +207,7 @@ describe('useVideoControls', () => {
         result.current.togglePlayPause();
       });
 
-      expect(setStatus).toHaveBeenCalledWith('Error: Could not play video.');
+      expect(setStatus).toHaveBeenCalledWith('Error: Could not play video. Please try again.');
     });
 
     it('does nothing when video ref is null', async () => {
@@ -641,7 +641,7 @@ describe('useVideoControls', () => {
       });
 
       expect(setStatus).toHaveBeenCalledWith(
-        'Error: Could not load hardcoded video.'
+        'Error: Could not download video. Check your connection.'
       );
     });
 
@@ -789,7 +789,7 @@ describe('useVideoControls', () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
       });
 
-      expect(setStatus).toHaveBeenCalledWith('Error: Could not load video.');
+      expect(setStatus).toHaveBeenCalledWith('Error: Could not load video. Please try a different file.');
     });
   });
 

@@ -28,6 +28,44 @@ import {
 import type { AppState } from '../types';
 import type { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 
+/**
+ * Get a user-friendly error message for video playback errors.
+ */
+function getVideoPlaybackErrorMessage(error: unknown): string {
+  if (error instanceof DOMException) {
+    switch (error.name) {
+      case 'NotAllowedError':
+        return 'Error: Autoplay blocked. Click Play to start video.';
+      case 'NotSupportedError':
+        return 'Error: Video format not supported by this browser.';
+      case 'AbortError':
+        return 'Error: Video playback interrupted. Please try again.';
+    }
+  }
+  return 'Error: Could not play video. Please try again.';
+}
+
+/**
+ * Get a user-friendly error message for video loading errors.
+ */
+function getVideoLoadErrorMessage(error: unknown, isNetwork = false): string {
+  if (isNetwork) {
+    return 'Error: Network error loading video. Check your connection.';
+  }
+  if (error instanceof DOMException) {
+    switch (error.name) {
+      case 'NotSupportedError':
+        return 'Error: Video format not supported. Try MP4 or WebM.';
+      case 'AbortError':
+        return 'Error: Video loading was cancelled.';
+    }
+  }
+  if (error instanceof Error && error.message.includes('Failed to fetch')) {
+    return 'Error: Could not download video. Check your connection.';
+  }
+  return 'Error: Could not load video. Please try a different file.';
+}
+
 export interface UseVideoControlsParams {
   videoRef: React.RefObject<HTMLVideoElement>;
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -177,7 +215,7 @@ export function useVideoControls({
         })
         .catch((err) => {
           console.error('Error playing video:', err);
-          setStatus('Error: Could not play video.');
+          setStatus(getVideoPlaybackErrorMessage(err));
         });
     } else {
       videoRef.current.pause();
@@ -365,7 +403,7 @@ export function useVideoControls({
       // the pipeline with the live pose cache before playback starts.
     } catch (error) {
       console.error('Error loading hardcoded video:', error);
-      setStatus('Error: Could not load hardcoded video.');
+      setStatus(getVideoLoadErrorMessage(error));
     }
   }, [
     frameAcquisitionRef,
@@ -409,7 +447,7 @@ export function useVideoControls({
         })
         .catch((error) => {
           console.error('Error loading video:', error);
-          setStatus('Error: Could not load video.');
+          setStatus(getVideoLoadErrorMessage(error));
         });
     },
     [frameAcquisitionRef, videoRef, resetVideoAndState, setStatus, setAppState]
