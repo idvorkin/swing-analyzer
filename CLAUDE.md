@@ -1,5 +1,29 @@
 - Use PRs to do updates
 
+## Convention Updates
+
+**Last reviewed:** 2025-12-05 (chop-conventions @ eb34d6e)
+
+Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) should periodically:
+
+1. **Pull updates** - Check chop-conventions for new conventions or improvements
+2. **Push improvements** - If you've developed useful patterns locally, submit a PR to chop-conventions
+3. **Update this date** - After reviewing, update the "Last reviewed" date above
+
+## Guardrails
+
+Actions requiring explicit "YES" approval from user:
+
+- **Removing broken tests** - Fix the test or code, never delete failing tests
+- **Pushing to main** - Always use feature branches and PRs
+- **Force pushing** - Can destroy history
+- **Accepting/merging PRs** - Human must review and approve
+- **Any action that loses work** - Deleting branches with unmerged commits, hard resets
+
+**Encouraged** (not losing work): Deleting unused functions/files, removing commented-out code, cleaning unused imports - these are preserved in git history.
+
+**End of session**: Review conversation for improvements - repeated corrections, workflow friction, missing context. Propose updates to CLAUDE.md.
+
 ## Task Tracking (Beads)
 
 This project uses [beads](https://github.com/steveyegge/beads) for issue tracking. Run `bd prime` at session start for workflow context.
@@ -23,6 +47,17 @@ bd show swing-abc          # View issue details
 bd update swing-abc --status in_progress
 bd close swing-abc --reason "Done in PR #42"
 bd dep add swing-def swing-abc  # swing-abc blocks swing-def
+```
+
+**Session close checklist** - Before ending a session, always run:
+
+```bash
+git status            # Check what changed
+git add <files>       # Stage code changes
+bd sync               # Commit beads changes
+git commit -m "..."   # Commit code
+bd sync               # Commit any new beads changes
+git push              # Push to remote
 ```
 
 See `FULL_PR_PLAN.md` for the project roadmap (also tracked as beads issues).
@@ -130,6 +165,30 @@ When two PRs modify the same files:
 3. Create a beads task to merge unique changes: `bd create --title="Merge PR #X unique changes into PR #Y"`
 4. Cherry-pick or manually copy the unique improvements
 5. Close the superseded PR
+
+## Clean Code & Commits
+
+**Clean code principles** (for new code only, don't change unrelated areas):
+
+- Keep code DRY (Don't Repeat Yourself)
+- Use `const` whenever possible
+- Use types whenever possible
+- Avoid deep nesting - return early from functions
+- Use humble objects (managers) when interacting with external systems for easier testing
+
+**Clean commits**:
+
+- Always run `git status` before committing to review staged files
+- Avoid mixing linting/formatting with logic changes - run pre-commit first, commit separately
+- Split independent changes into logical commits
+- For complex commits, write message to COMMIT_MSG file and verify with user
+
+**CLI tips**:
+
+- If git output is truncated: `git --no-pager diff`
+- If head/cat errors: `unset PAGER`
+- Check justfile for existing commands before writing new ones
+- Auto-approved to run: `just test`, `just fast-test`
 
 ## Architecture Overview
 
