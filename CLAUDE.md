@@ -19,6 +19,37 @@ Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) 
 - **Clone command**: `git clone https://github.com/idvorkin-ai-tools/swing-analyzer.git swing-N`
 - **After cloning**: `cd swing-N && just setup && git remote add upstream https://github.com/idvorkin/swing-analyzer.git && git checkout dev`
 
+### Per-Clone Branches (Recommended)
+
+Each clone works on its own persistent branch for zero-conflict parallelization:
+
+```
+swing-1 → agent/swing-1
+swing-2 → agent/swing-2
+swing-3 → agent/swing-3
+```
+
+**Why:** Each agent pushes only to its own branch - no conflicts, no rebasing mid-work, full parallelization.
+
+**Session start:**
+```bash
+# Create or switch to your agent branch
+git fetch origin
+git checkout agent/swing-N 2>/dev/null || git checkout -b agent/swing-N
+git pull origin agent/swing-N --rebase 2>/dev/null || true
+```
+
+**During work:**
+```bash
+git add . && git commit -m "..."
+git push origin agent/swing-N  # Never conflicts with other agents!
+```
+
+**Human merges to dev** when ready:
+```bash
+git checkout dev && git merge agent/swing-N && git push
+```
+
 ### Agent Dashboard
 
 Monitor all running agents from a central portal: **http://localhost:9999** (or via Tailscale)
