@@ -2,8 +2,6 @@ import { execSync } from 'node:child_process';
 import { defineConfig, devices } from '@playwright/test';
 import { existsSync } from 'fs';
 
-const PORT = process.env.E2E_PORT || '5173';
-
 // Check if Tailscale is running (matches vite.config.ts logic)
 function isTailscaleRunning(): boolean {
   try {
@@ -18,12 +16,70 @@ function isTailscaleRunning(): boolean {
   }
 }
 
+// Find a running vite server in the current directory
+function findRunningViteServer(): { port: number; https: boolean } | null {
+  try {
+    const cwd = process.cwd();
+    // Use lsof to find listening ports and their PIDs, then check if the process cwd matches
+    const lsofOutput = execSync('lsof -i -P -n 2>/dev/null | grep LISTEN || true', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    for (const line of lsofOutput.split('\n')) {
+      const parts = line.split(/\s+/);
+      if (parts.length < 9) continue;
+
+      const pid = parts[1];
+      const portMatch = parts[8]?.match(/:(\d+)$/);
+      if (!portMatch) continue;
+
+      const port = parseInt(portMatch[1], 10);
+      if (port < 5000 || port > 6000) continue; // Only check typical vite ports
+
+      // Check if this process is running from our directory
+      try {
+        const processCwd = execSync(`readlink -f /proc/${pid}/cwd 2>/dev/null`, {
+          encoding: 'utf-8',
+        }).trim();
+        const cmdline = execSync(`cat /proc/${pid}/cmdline 2>/dev/null | tr '\\0' ' '`, {
+          encoding: 'utf-8',
+        });
+
+        if (processCwd === cwd && cmdline.includes('vite')) {
+          // Check if it's HTTPS
+          const isHttps =
+            execSync(
+              `timeout 1 bash -c "echo | openssl s_client -connect localhost:${port} 2>/dev/null | grep -q 'CONNECTED' && echo yes" || true`,
+              { encoding: 'utf-8' }
+            ).trim() === 'yes';
+          return { port, https: isHttps };
+        }
+      } catch {
+        // Process might have exited
+      }
+    }
+  } catch {
+    // lsof not available or other error
+  }
+  return null;
+}
+
 // Detect if running in container with Tailscale (HTTPS) - matches vite.config.ts
 const isContainer = existsSync('/.dockerenv');
 const hasTailscale = isTailscaleRunning();
 const useHttps = isContainer && hasTailscale;
-const PROTOCOL = useHttps ? 'https' : 'http';
+
+// Try to find an already-running vite server for this project
+const runningServer = findRunningViteServer();
+const PORT = process.env.E2E_PORT || (runningServer?.port.toString() ?? '5173');
+const PROTOCOL = runningServer?.https ? 'https' : useHttps ? 'https' : 'http';
 const BASE_URL = `${PROTOCOL}://localhost:${PORT}`;
+
+// Log detected server for debugging
+if (runningServer) {
+  console.log(`[Playwright] Using running vite server at ${BASE_URL}`);
+}
 
 export default defineConfig({
   testDir: './e2e-tests',
