@@ -93,7 +93,9 @@ const VideoSection: React.FC = () => {
   useEffect(() => {
     if (currentVideoFile && currentVideoFile !== extractingVideoRef.current) {
       extractingVideoRef.current = currentVideoFile;
-      startExtraction(currentVideoFile);
+      startExtraction(currentVideoFile).catch((error) => {
+        console.error('Failed to start pose extraction:', error);
+      });
     }
   }, [currentVideoFile, startExtraction]);
 
