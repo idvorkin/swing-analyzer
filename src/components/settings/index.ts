@@ -5,7 +5,7 @@ export {
   getSavedBlazePoseVariant,
   getSavedModelPreference,
 } from './AnalysisTab';
-export { DebugTab } from './DebugTab';
+export { DeveloperTab } from './DeveloperTab';
 export { GeneralTab } from './GeneralTab';
 export {
   ActivityIcon,

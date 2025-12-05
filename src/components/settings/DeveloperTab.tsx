@@ -4,11 +4,11 @@ import { sessionRecorder } from '../../services/SessionRecorder';
 import { SettingsRow } from './SettingsRow';
 import { VideoIcon, WrenchIcon, DownloadIcon } from './Icons';
 
-interface DebugTabProps {
+interface DeveloperTabProps {
   onClose?: () => void;
 }
 
-export function DebugTab({ onClose }: DebugTabProps) {
+export function DeveloperTab({ onClose }: DeveloperTabProps) {
   const [recordingStats, setRecordingStats] = useState(sessionRecorder.getStats());
 
   // Update stats every second
