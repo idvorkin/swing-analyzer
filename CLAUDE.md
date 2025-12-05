@@ -52,6 +52,8 @@ This blocks direct pushes to `main` - all changes must go through PRs.
 
 **🚫 NO --no-verify**: Never use `git commit --no-verify` unless absolutely necessary. If pre-commit hooks fail due to linting issues, make a separate commit to fix the linting first, then make your actual change commit.
 
+**🚫 NO FORCE PUSH**: Never use `git push --force` or `git push -f` unless the user explicitly types "yes" to confirm. If you have conflicts or diverged history, resolve them with rebase and regular push. Messy history on a branch is okay - losing other people's work is not.
+
 **🔄 REBASE OFTEN**: Multiple agents push to dev constantly. Always rebase before starting work:
 
 ```bash
