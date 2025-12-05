@@ -10,6 +10,15 @@ Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) 
 2. **Push improvements** - If you've developed useful patterns locally, submit a PR to chop-conventions
 3. **Update this date** - After reviewing, update the "Last reviewed" date above
 
+**Before reviewing external repos**: Always `git fetch upstream && git reset --hard upstream/main` first.
+
+## Multi-Agent Setup
+
+- **Use full clones**, not worktrees - worktrees cause issues with parallel agents
+- **Remote setup**: `origin` = idvorkin-ai-tools fork (push here), `upstream` = idvorkin (fetch from here)
+- **Clone command**: `git clone https://github.com/idvorkin-ai-tools/swing-analyzer.git swing-N`
+- **After cloning**: `git remote add upstream https://github.com/idvorkin/swing-analyzer.git && git checkout dev`
+
 ## Guardrails
 
 Actions requiring explicit "YES" approval from user:
