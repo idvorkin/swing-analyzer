@@ -50,6 +50,32 @@ git push origin agent/swing-N  # Never conflicts with other agents!
 git checkout dev && git merge agent/swing-N && git push
 ```
 
+### Collaborative Feature Branches
+
+When a feature needs multiple agents, use a feature branch instead:
+
+```bash
+# Agent creates feature branch
+git checkout -b feature/skeleton-rendering
+git push -u origin feature/skeleton-rendering
+
+# Tell human: "I need help on feature/skeleton-rendering"
+# Human assigns another agent to same branch
+```
+
+**Other agent joins:**
+```bash
+git fetch origin
+git checkout feature/skeleton-rendering
+git pull origin feature/skeleton-rendering --rebase
+# Work, commit, push to same branch
+```
+
+**Naming convention:**
+- `agent/swing-N` - Solo work, one agent per branch
+- `feature/description` - Collaborative, multiple agents welcome
+- `fix/description` - Bug fix collaboration
+
 ### Agent Dashboard
 
 Monitor all running agents from a central portal: **http://localhost:9999** (or via Tailscale)
