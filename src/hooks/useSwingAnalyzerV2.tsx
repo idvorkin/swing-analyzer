@@ -81,7 +81,63 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
   // Crop state for auto-centering on person in landscape videos
   const [cropRegion, setCropRegionState] = useState<CropRegion | null>(null);
-  const [isCropEnabled, setIsCropEnabled] = useState<boolean>(true); // Default to on
+  const [isCropEnabled, setIsCropEnabled] = useState<boolean>(false); // Default to off - doesn't work well
+
+  // ========================================
+  // Canvas Sync (for skeleton alignment)
+  // ========================================
+  // Syncs canvas position/size to match video's rendered area
+  // Required because canvas doesn't support object-fit: contain
+  const syncCanvasToVideo = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || video.videoWidth === 0) return;
+
+    // Set canvas internal dimensions to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Calculate video's rendered dimensions within its CSS box
+    const videoRect = video.getBoundingClientRect();
+    const videoAspect = video.videoWidth / video.videoHeight;
+    const containerAspect = videoRect.width / videoRect.height;
+
+    let renderedWidth: number;
+    let renderedHeight: number;
+    let offsetX: number;
+    let offsetY: number;
+
+    if (videoAspect > containerAspect) {
+      // Video is wider - letterbox top/bottom
+      renderedWidth = videoRect.width;
+      renderedHeight = videoRect.width / videoAspect;
+      offsetX = 0;
+      offsetY = (videoRect.height - renderedHeight) / 2;
+    } else {
+      // Video is taller - letterbox left/right
+      renderedHeight = videoRect.height;
+      renderedWidth = videoRect.height * videoAspect;
+      offsetX = (videoRect.width - renderedWidth) / 2;
+      offsetY = 0;
+    }
+
+    // Position canvas to overlay video content area
+    canvas.style.width = `${renderedWidth}px`;
+    canvas.style.height = `${renderedHeight}px`;
+    canvas.style.left = `${offsetX}px`;
+    canvas.style.top = `${offsetY}px`;
+
+    console.log(`[Canvas] Synced to video: ${canvas.width}x${canvas.height}, CSS: ${renderedWidth.toFixed(0)}x${renderedHeight.toFixed(0)} at (${offsetX.toFixed(0)},${offsetY.toFixed(0)})`);
+  }, []);
+
+  // Re-sync canvas on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      requestAnimationFrame(() => syncCanvasToVideo());
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [syncCanvasToVideo]);
 
   // ========================================
   // Pipeline Setup
@@ -143,12 +199,10 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setSpineAngle(spineAngle);
     setArmToSpineAngle(Math.round(event.skeleton.getArmToVerticalAngle() || 0));
 
-    // Render skeleton
+    // Always render skeleton when poses exist (per SKELETON_RENDERING_SPEC.md)
     if (skeletonRendererRef.current) {
       console.log('[DEBUG] Rendering skeleton, spineAngle:', spineAngle);
       skeletonRendererRef.current.renderSkeleton(event.skeleton, performance.now());
-    } else {
-      console.log('[DEBUG] processSkeletonEvent: no skeletonRenderer');
     }
   }, []);
 
@@ -203,10 +257,10 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
           const poseTrack = videoSource?.getPoseTrack();
           const crop = poseTrack?.metadata.cropRegion ?? null;
           setCropRegionState(crop);
-          // Apply crop to pipeline if enabled
+          // Apply crop region to pipeline (but don't enable - user must toggle)
           if (crop && pipelineRef.current) {
             pipelineRef.current.setCropRegion(crop);
-            pipelineRef.current.setCropEnabled(true);
+            // Don't auto-enable: pipelineRef.current.setCropEnabled(true);
           }
         } else if (state.sourceState.type === 'checking-cache') {
           setStatus('Checking cache...');
@@ -370,6 +424,8 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
       video.onloadedmetadata = () => {
         clearTimeout(timeoutId);
+        // Sync canvas to video after a small delay (wait for layout)
+        requestAnimationFrame(() => syncCanvasToVideo());
         resolve();
       };
 
@@ -388,7 +444,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       console.error('Failed to process video:', error);
       setStatus('Error: Could not process video');
     }
-  }, []);
+  }, [syncCanvasToVideo]);
 
   const loadHardcodedVideo = useCallback(async () => {
     const session = inputSessionRef.current;
@@ -436,6 +492,8 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
         video.onloadedmetadata = () => {
           clearTimeout(timeoutId);
+          // Sync canvas to video after a small delay (wait for layout)
+          requestAnimationFrame(() => syncCanvasToVideo());
           resolve();
         };
 
@@ -456,7 +514,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       console.error('Error loading hardcoded video:', error);
       setStatus('Error: Could not load sample video');
     }
-  }, []);
+  }, [syncCanvasToVideo]);
 
   // ========================================
   // Playback Controls
