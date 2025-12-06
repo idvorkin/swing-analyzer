@@ -28,8 +28,8 @@ import {
   useIgorTestVideo,
 } from './helpers';
 
-// Tests can run in parallel - each gets unique cache via test ID
-test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
+// Tests must run serially - mock detector and IndexedDB have shared state
+test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept GitHub video URL and serve short local video
     await useShortTestVideo(page);
@@ -105,6 +105,8 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
   test('extraction with realistic timing simulates user experience', async ({
     page,
   }) => {
+    // Video seeking is slow in headless Chrome (~500ms/frame), need 2+ minutes
+    test.setTimeout(150000);
 
     // Enable console logging to see extraction progress
     page.on('console', (msg) => {
@@ -137,7 +139,7 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
           const pageText = document.body.textContent || '';
           return pageText.includes('Ready') && pageText.includes('reps detected');
         },
-        { timeout: 30000 } // 1 minute timeout
+        { timeout: 120000 } // 2 minutes - video seeking is ~500ms/frame in headless Chrome
       );
     } catch (e) {
       // Dump session recorder state on failure
