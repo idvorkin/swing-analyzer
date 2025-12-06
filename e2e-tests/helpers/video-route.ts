@@ -89,3 +89,44 @@ export async function setupFastTestVideo(page: Page): Promise<void> {
   await useShortTestVideo(page);
   await seedPoseTrackFixture(page, 'swing-sample-4reps');
 }
+
+/**
+ * Set up route interception to serve the igor-1h-swing video
+ * (the current default sample video) instead of fetching from GitHub.
+ *
+ * Use this with the 'igor-1h-swing' fixture for realistic tests
+ * that match the actual production video.
+ *
+ * @param page - Playwright page instance
+ */
+export async function useIgorTestVideo(page: Page): Promise<void> {
+  const igorVideoPath = path.join(VIDEOS_DIR, 'igor-1h-swing.webm');
+
+  if (!fs.existsSync(igorVideoPath)) {
+    throw new Error(
+      `Igor test video not found at ${igorVideoPath}. ` +
+        'Copy igor-1h-swing.webm to public/videos/'
+    );
+  }
+
+  await page.route(GITHUB_VIDEO_PATTERN, async (route) => {
+    const videoBuffer = fs.readFileSync(igorVideoPath);
+    await route.fulfill({
+      status: 200,
+      contentType: 'video/webm',
+      body: videoBuffer,
+    });
+  });
+}
+
+/**
+ * Combined setup for realistic tests with igor-1h-swing:
+ * 1. Intercepts GitHub video URL → serves local igor-1h-swing video
+ * 2. Seeds matching posetrack fixture with correct hash
+ *
+ * @param page - Playwright page instance
+ */
+export async function setupIgorTestVideo(page: Page): Promise<void> {
+  await useIgorTestVideo(page);
+  await seedPoseTrackFixture(page, 'igor-1h-swing');
+}

@@ -5,7 +5,7 @@
     "modelVersion": "mediapipe-0.10.18",
     "keypointFormat": "coco-17",
     "keypointCount": 17,
-    "sourceVideoHash": "adbec80cafc0a6c30d2393c010aaa1a1aab6d7d866544e31320bd25c9157a18a",
+    "sourceVideoHash": "5a8dfd846aa6308bd5a4d1fb2b3db8fb02bbba16a6b801b04683b30299dff382",
     "sourceVideoName": "igor-1h-swing.webm",
     "sourceVideoDuration": 19.7667,
     "extractedAt": "2025-12-06T17:02:50.971441+00:00",

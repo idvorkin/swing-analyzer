@@ -42,5 +42,7 @@ export {
 export {
   serveLocalVideos,
   setupFastTestVideo,
+  setupIgorTestVideo,
+  useIgorTestVideo,
   useShortTestVideo,
 } from './video-route';
