@@ -39,14 +39,17 @@ git fetch origin
 git checkout agent/swing-N 2>/dev/null || git checkout -b agent/swing-N
 git pull origin agent/swing-N --rebase 2>/dev/null || true
 
-# Start the dev server for dashboard visibility and E2E tests
+# IMPORTANT: Each Claude instance MUST start its own dev server
 just dev  # Runs vite dev server (auto-finds available port)
 ```
+
+**⚠️ EVERY Claude instance runs its own server.** The dashboard detects servers by their working directory, so each clone (swing-1, swing-2, etc.) appears as a separate agent when its server is running. Vite auto-finds an available port (5173, 5174, etc.), so multiple servers can run simultaneously.
 
 This ensures:
 1. **Dashboard visibility** - Your clone appears as "active" with a server link
 2. **E2E test speed** - Tests reuse the running server instead of starting a new one
 3. **Consistent testing** - Tests run against your current code changes
+4. **Agent isolation** - Each agent's work is tested against its own code
 
 **E2E tests automatically use your running server** via `reuseExistingServer: true` in playwright.config.ts. If no server is running, Playwright starts one temporarily.
 
@@ -521,7 +524,22 @@ Project documentation lives in `docs/tech-pack/`:
 1. **Fast tests for CI** - Seeded data, run on every PR (~1-3s each)
 2. **Realistic tests for releases** - Mock detector with timing, simulates user experience (~30-60s each)
 3. **When debugging user issues** - Always write a realistic test first that reproduces the bug
-4. **Hard bugs signal architecture problems** - If a bug is difficult to fix, STOP and ask: is there an architectural issue? If so, create a beads issue (`bd create --title="Architecture: <problem>" --type=bug`) before continuing. Don't patch around bad architecture.
+
+### Bug Investigation Protocol
+
+**When you find a bug, STOP and answer these questions before fixing:**
+
+**Test Coverage Questions:**
+1. Why did tests not catch this?
+2. What level of our test pyramid could have caught this earliest? (unit → integration → E2E)
+3. Add the missing test BEFORE fixing the bug
+
+**Architecture Questions:**
+1. Is there an architectural problem that made this bug possible?
+2. If yes, create a beads issue: `bd create --title="Architecture: <problem>" --type=bug`
+3. **Ask the user**: "I found an architectural issue: [description]. Type YES to address it now, or I'll just fix the immediate bug."
+
+**Why this matters**: Bugs that are hard to test or hard to fix often signal deeper problems. Patching around bad architecture creates technical debt. Catching issues at the unit test level is 10x cheaper than E2E, and 100x cheaper than production.
 
 ### E2E Tests (Playwright)
 
