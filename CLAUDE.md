@@ -293,6 +293,20 @@ Before merging your feature branch to dev:
 4. **Run tests**: `npx playwright test && npx tsc --noEmit`
 5. **Merge to dev**: `git checkout dev && git merge feature-branch && git push`
 
+**🏗️ BIG ARCHITECTURAL CHANGES**: For refactoring or architecture changes (new state machines, new patterns, multiple new files), run comprehensive review:
+
+```bash
+/pr-review-toolkit:review-pr all
+```
+
+This runs multiple specialized agents in parallel:
+- **code-reviewer** - General code quality and CLAUDE.md compliance
+- **silent-failure-hunter** - Error handling and silent failures
+- **pr-test-analyzer** - Test coverage gaps
+- **type-design-analyzer** - Type design quality (for new types)
+
+Fix all critical and important issues before merging.
+
 **📋 E2E TEST COVERAGE**: Any change affecting user experience MUST have E2E test coverage. This includes:
 - New UI components or buttons
 - Changed user flows or interactions

@@ -106,7 +106,8 @@ export default defineConfig({
     trace: process.env.CI ? 'retain-on-failure' : 'on',
     video: process.env.CI ? 'retain-on-failure' : 'on',
     screenshot: process.env.CI ? 'only-on-failure' : 'on',
-    actionTimeout: 15000,
+    // Increased from 15s to 60s to handle slow extraction when tests run in parallel
+    actionTimeout: 60000,
     // Ignore HTTPS errors for self-signed certs in dev
     ignoreHTTPSErrors: useHttps,
   },

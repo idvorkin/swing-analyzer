@@ -1,15 +1,14 @@
+/**
+ * VideoSectionV2 - Simplified video section using InputSession
+ *
+ * This version removes the usePoseTrack hook and complex effect chains.
+ * All extraction/caching is handled internally by InputSession via
+ * the useSwingAnalyzerV2 hook.
+ */
+
 import type React from 'react';
 import { useCallback, useEffect, useRef } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
-import { usePoseTrack } from '../hooks/usePoseTrack';
-import { buildSkeletonEventFromFrame } from '../pipeline/PipelineFactory';
-import type { LivePoseCache } from '../pipeline/LivePoseCache';
-import {
-  recordExtractionStart,
-  recordPipelineReinit,
-} from '../services/SessionRecorder';
-import type { PoseTrackFrame } from '../types/posetrack';
-import { PoseTrackStatusBar } from './PoseTrackStatusBar';
 
 // Position display order for swing positions
 const POSITION_ORDER = ['top', 'connect', 'bottom', 'release'] as const;
@@ -20,7 +19,7 @@ const POSITION_LABELS: Record<string, string> = {
   release: 'Release',
 };
 
-const VideoSection: React.FC = () => {
+const VideoSectionV2: React.FC = () => {
   const {
     videoRef,
     canvasRef,
@@ -37,101 +36,14 @@ const VideoSection: React.FC = () => {
     nextFrame,
     previousFrame,
     getVideoContainerClass,
-    pipelineRef,
     navigateToPreviousRep,
     navigateToNextRep,
-    currentVideoFile,
-    reinitializeWithCachedPoses,
-    reinitializeWithLiveCache,
     repThumbnails,
+    extractionProgress,
+    isExtracting,
+    inputState,
+    currentVideoFile,
   } = useSwingAnalyzerContext();
-
-  // Track the video file we're currently extracting to prevent duplicate extractions
-  // This fixes infinite loop when startExtraction's identity changes mid-extraction
-  const extractingVideoRef = useRef<File | null>(null);
-
-  // Called BEFORE extraction starts - reinitialize pipeline synchronously
-  const handleExtractionStart = useCallback(
-    async (liveCache: LivePoseCache): Promise<void> => {
-      console.log('Extraction starting, reinitializing pipeline with live cache...');
-      recordExtractionStart();
-      recordPipelineReinit({ mode: 'live_cache' });
-      await reinitializeWithLiveCache(liveCache);
-    },
-    [reinitializeWithLiveCache]
-  );
-
-  // Handle frame extraction by streaming through the pipeline
-  const handleFrameExtracted = useCallback(
-    (frame: PoseTrackFrame) => {
-      // Log every 30 frames to avoid spam but show progress
-      if (frame.frameIndex % 30 === 0) {
-        console.log(`[Extraction] Frame ${frame.frameIndex} at ${frame.videoTime?.toFixed(2)}s → pipeline`);
-      }
-
-      if (!pipelineRef.current) {
-        // Pipeline not ready - this can happen during initialization
-        console.warn('Dropping extracted frame: pipeline not initialized');
-        return;
-      }
-
-      // Build skeleton event from the extracted frame
-      const skeletonEvent = buildSkeletonEventFromFrame(frame);
-
-      // Process through the pipeline (SwingAnalyzer handles position + rep counting)
-      // This updates rep count during extraction
-      pipelineRef.current.processSkeletonEvent(skeletonEvent);
-    },
-    [pipelineRef]
-  );
-
-  // Pose track extraction
-  const {
-    status: poseTrackStatus,
-    startExtraction,
-    cancelExtraction,
-    savePoseTrack,
-    downloadPoseTrack: downloadPoseTrackFile,
-  } = usePoseTrack({
-    autoExtract: true,
-    onExtractionStart: handleExtractionStart,
-    onFrameExtracted: handleFrameExtracted,
-  });
-
-  // Start pose extraction when video file changes
-  // Use ref to prevent re-triggering extraction when startExtraction's identity changes
-  useEffect(() => {
-    if (currentVideoFile && currentVideoFile !== extractingVideoRef.current) {
-      extractingVideoRef.current = currentVideoFile;
-      startExtraction(currentVideoFile).catch((error) => {
-        console.error('Failed to start pose extraction:', error);
-      });
-    }
-  }, [currentVideoFile, startExtraction]);
-
-  // Clear extracting ref when extraction completes or is cancelled
-  useEffect(() => {
-    if (poseTrackStatus.type === 'ready' || poseTrackStatus.type === 'error' || poseTrackStatus.type === 'none') {
-      extractingVideoRef.current = null;
-    }
-  }, [poseTrackStatus.type]);
-
-  // Note: Pipeline reinitialization for live extraction now happens via onExtractionStart callback
-  // This ensures the pipeline is ready BEFORE frames start arriving (fixes race condition)
-
-  // Reinitialize pipeline with cached poses when they become available from storage
-  useEffect(() => {
-    if (
-      poseTrackStatus.type === 'ready' &&
-      poseTrackStatus.fromCache &&
-      poseTrackStatus.poseTrack
-    ) {
-      console.log('Cached pose data detected, reinitializing pipeline...');
-      reinitializeWithCachedPoses(poseTrackStatus.poseTrack).catch((error) => {
-        console.error('Failed to reinitialize with cached poses:', error);
-      });
-    }
-  }, [poseTrackStatus, reinitializeWithCachedPoses]);
 
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);
@@ -154,7 +66,6 @@ const VideoSection: React.FC = () => {
     const positions = repThumbnails.get(currentRepNum);
 
     if (!positions || positions.size === 0) {
-      // No thumbnails for this rep - might be using cached poses without thumbnails
       container.innerHTML = `<div class="filmstrip-empty">Rep ${currentRepNum} - no thumbnails</div>`;
       return;
     }
@@ -205,6 +116,30 @@ const VideoSection: React.FC = () => {
   useEffect(() => {
     renderFilmstrip();
   }, [renderFilmstrip]);
+
+  // Get extraction status for display
+  const getExtractionStatus = () => {
+    if (!isExtracting || !extractionProgress) return null;
+
+    const { currentFrame, totalFrames, percentage } = extractionProgress;
+    return (
+      <div className="extraction-status pose-status-bar">
+        <div className="extraction-progress-bar">
+          <div
+            className="extraction-progress-fill"
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+        <span className="extraction-text">
+          Extracting: {currentFrame}/{totalFrames} ({Math.round(percentage)}%)
+        </span>
+      </div>
+    );
+  };
+
+  // Get ready status
+  const isReady = inputState.type === 'video-file' &&
+    inputState.sourceState.type === 'active';
 
   return (
     <section className="video-section">
@@ -374,13 +309,15 @@ const VideoSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Pose Track Status Bar */}
-      <PoseTrackStatusBar
-        status={poseTrackStatus}
-        onCancel={cancelExtraction}
-        onSave={savePoseTrack}
-        onDownload={downloadPoseTrackFile}
-      />
+      {/* Extraction Progress (replaces PoseTrackStatusBar) */}
+      {getExtractionStatus()}
+
+      {/* Ready indicator */}
+      {isReady && !isExtracting && currentVideoFile && (
+        <div className="ready-status">
+          Ready - {repCount} reps detected
+        </div>
+      )}
 
       {/* Checkpoint Filmstrip */}
       <div className="filmstrip-section">
@@ -431,4 +368,4 @@ const VideoSection: React.FC = () => {
   );
 };
 
-export default VideoSection;
+export default VideoSectionV2;

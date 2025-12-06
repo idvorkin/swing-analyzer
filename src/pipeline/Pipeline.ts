@@ -1,11 +1,9 @@
 import { type Observable, Subject, type Subscription } from 'rxjs';
 import { share, switchMap, tap } from 'rxjs/operators';
 import type { Skeleton } from '../models/Skeleton';
-import type { FormCheckpoint } from '../types';
 import type { ExerciseDefinition, PositionCandidate } from '../types/exercise';
 import { FormAnalyzer } from './FormAnalyzer';
 import type {
-  FormEvent,
   FrameAcquisition,
   FrameEvent,
   SkeletonEvent,
@@ -42,7 +40,6 @@ export class Pipeline {
 
   // Output subjects (for legacy RxJS streaming mode)
   private resultSubject = new Subject<PipelineResult>();
-  private checkpointSubject = new Subject<FormEvent>();
   private skeletonSubject = new Subject<SkeletonEvent>();
   private thumbnailSubject = new Subject<ThumbnailEvent>();
 
@@ -112,7 +109,6 @@ export class Pipeline {
             // Emit result
             this.resultSubject.next({
               skeleton: skeletonEvent.skeleton,
-              checkpoint: null, // Simplified - no checkpoint capture in streaming mode
               repCount: result.repCount,
             });
           }
@@ -125,12 +121,10 @@ export class Pipeline {
         error: (error) => {
           console.error('Error in pipeline:', error);
           this.resultSubject.error(error);
-          this.checkpointSubject.error(error);
           this.skeletonSubject.error(error);
         },
         complete: () => {
           this.resultSubject.complete();
-          this.checkpointSubject.complete();
           this.skeletonSubject.complete();
           this.isActive = false;
         }
@@ -145,13 +139,6 @@ export class Pipeline {
    */
   getResults(): Observable<PipelineResult> {
     return this.resultSubject.asObservable();
-  }
-
-  /**
-   * Get an observable for checkpoint events
-   */
-  getCheckpointEvents(): Observable<FormEvent> {
-    return this.checkpointSubject.asObservable();
   }
 
   /**
@@ -305,7 +292,6 @@ export class Pipeline {
       if (result.repCompleted) {
         this.resultSubject.next({
           skeleton: skeletonEvent.skeleton,
-          checkpoint: null,
           repCount: result.repCount,
         });
       }
@@ -320,7 +306,6 @@ export class Pipeline {
  */
 export interface PipelineResult {
   skeleton: Skeleton;
-  checkpoint: FormCheckpoint | null;
   repCount: number;
 }
 

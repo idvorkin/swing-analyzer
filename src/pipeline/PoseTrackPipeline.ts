@@ -12,7 +12,7 @@
 import { type Observable, Subject } from 'rxjs';
 import { getExerciseDefinition } from '../exercises';
 import { Skeleton } from '../models/Skeleton';
-import type { FormCheckpoint, PoseKeypoint } from '../types';
+import type { PoseKeypoint } from '../types';
 import { SwingPositionName } from '../types';
 import type { ExerciseDefinition } from '../types/exercise';
 import { ExerciseType } from '../types/exercise';
@@ -28,7 +28,6 @@ export interface PoseTrackFrameResult {
   frameIndex: number;
   videoTime: number;
   skeleton: Skeleton | null;
-  checkpoint: FormCheckpoint | null;
   position: SwingPositionName | null;
   repCount: number;
 }
@@ -191,7 +190,6 @@ export class PoseTrackPipeline {
       frameIndex,
       videoTime: frame.videoTime,
       skeleton,
-      checkpoint: null, // TODO: Build checkpoint if at key position
       position,
       repCount,
     };
@@ -419,7 +417,6 @@ export class PoseTrackPipeline {
 
     // Emit form event
     const formEvent: FormEvent = {
-      checkpoint: null, // TODO: Build checkpoint at key positions
       position,
       skeletonEvent,
     };
@@ -428,7 +425,7 @@ export class PoseTrackPipeline {
     // Emit rep event
     const repEvent: RepEvent = {
       repCount: this.formAnalyzer.getRepCount(),
-      checkpointEvent: formEvent,
+      formEvent,
     };
     this.repSubject.next(repEvent);
   }

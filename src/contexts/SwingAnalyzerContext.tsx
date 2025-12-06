@@ -1,12 +1,12 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useSwingAnalyzer } from '../hooks/useSwingAnalyzer';
+import { useSwingAnalyzerV2 } from '../hooks/useSwingAnalyzerV2';
 
 // Create the context
-const SwingAnalyzerContext = createContext<ReturnType<typeof useSwingAnalyzer> | null>(null);
+const SwingAnalyzerContext = createContext<ReturnType<typeof useSwingAnalyzerV2> | null>(null);
 
 // Provider component
 export const SwingAnalyzerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const swingAnalyzer = useSwingAnalyzer();
+  const swingAnalyzer = useSwingAnalyzerV2();
   
   return (
     <SwingAnalyzerContext.Provider value={swingAnalyzer}>

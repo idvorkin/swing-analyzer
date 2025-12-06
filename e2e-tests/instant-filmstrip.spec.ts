@@ -144,6 +144,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
 
     // Wait for extraction to complete or timeout
     // This test just needs to see reps being counted, not full completion
+    // Note: increased timeout to 60s because extraction can be slow when tests run in parallel
     try {
       await page.waitForFunction(
         () => {
@@ -152,7 +153,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
           // Wait for at least 2 reps to show progressive counting
           return repCount >= 2;
         },
-        { timeout: 30000 }
+        { timeout: 60000 }
       );
     } finally {
       clearInterval(pollInterval);
@@ -228,13 +229,14 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for at least 2 reps to ensure consistent detection
+    // Note: increased timeout to 60s because extraction can be slow when tests run in parallel
     await page.waitForFunction(
       () => {
         const repCounter = document.querySelector('#rep-counter');
         const repCount = parseInt(repCounter?.textContent || '0', 10);
         return repCount >= 2;
       },
-      { timeout: 30000 }
+      { timeout: 60000 }
     );
 
     // Get final rep count

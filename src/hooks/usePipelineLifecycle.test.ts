@@ -62,6 +62,7 @@ const mockPipeline = {
   getSkeletonEvents: vi.fn(() => new Subject()),
   getResults: vi.fn(() => new Subject()),
   getCheckpointEvents: vi.fn(() => new Subject()),
+  getThumbnailEvents: vi.fn(() => new Subject()),
 };
 
 const mockFrameAcquisition = {
