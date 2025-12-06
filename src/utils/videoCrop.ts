@@ -186,7 +186,15 @@ export function isLandscapeVideo(
 }
 
 /**
- * Transform a point from full video coordinates to cropped coordinates
+ * Transform a point from full video coordinates to cropped coordinates.
+ *
+ * NOTE: Currently unused because the CSS transform approach (in VideoFrameAcquisition)
+ * applies the same transform to both the video and canvas elements, automatically
+ * keeping the skeleton overlay aligned. These functions are retained for future use
+ * cases like:
+ * - Click/touch coordinate translation on cropped video
+ * - Exporting cropped keypoint data
+ * - Alternative crop implementations that don't use CSS transforms
  */
 export function transformPointToCropped(
   x: number,
