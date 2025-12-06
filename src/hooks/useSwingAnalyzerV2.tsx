@@ -291,6 +291,13 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       recordPlaybackPause({ videoTime: video.currentTime });
     };
 
+    const handleEnded = () => {
+      isPlayingRef.current = false;
+      setIsPlaying(false);
+      setAppState(prev => ({ ...prev, isProcessing: false }));
+      // Don't reset rep count when video ends - just stop processing
+    };
+
     const handleTimeUpdate = () => {
       // During playback, look up skeleton from cache
       const session = inputSessionRef.current;
@@ -321,12 +328,14 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
+    video.addEventListener('ended', handleEnded);
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('seeked', handleSeeked);
 
     return () => {
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
+      video.removeEventListener('ended', handleEnded);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('seeked', handleSeeked);
     };
