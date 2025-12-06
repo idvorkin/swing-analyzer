@@ -45,12 +45,14 @@ export interface FormQualityMetrics {
   overallScore: number; // 0-100, weighted composite
 }
 
+export type DisplayMode = 'both' | 'video' | 'overlay';
+
 export interface AppState {
   isModelLoaded: boolean;
   isProcessing: boolean;
   usingCamera: boolean;
   cameraMode: 'environment' | 'user'; // Track which camera is active (environment = back camera, user = front camera)
-  displayMode: 'both' | 'video' | 'overlay'; // Track the current display mode
+  displayMode: DisplayMode; // Track the current display mode
   repCounter: RepCounter;
   showBodyParts: boolean;
   bodyPartDisplayTime: number; // in seconds

@@ -1023,3 +1023,324 @@
   color: var(--settings-text-tertiary);
   text-align: center;
 }
+
+/* ==========================================================================
+   Compact Layout
+   ========================================================================== */
+
+.settings-section--compact {
+  gap: var(--settings-space-md);
+}
+
+.settings-compact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--settings-space-md);
+  padding: var(--settings-space-md) var(--settings-space-lg);
+  background: var(--settings-bg-elevated);
+  border-radius: var(--settings-radius-md);
+  border: 1px solid var(--settings-border);
+  min-height: 3rem;
+}
+
+.settings-compact-label {
+  display: flex;
+  align-items: center;
+  gap: var(--settings-space-sm);
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-sm);
+  font-weight: 500;
+  color: var(--settings-text-primary);
+}
+
+.settings-compact-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--settings-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-compact-icon svg {
+  width: 1rem;
+  height: 1rem;
+  color: white;
+}
+
+.settings-compact-icon--orange {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.settings-compact-icon--blue {
+  background: linear-gradient(
+    135deg,
+    var(--settings-accent-light) 0%,
+    var(--settings-accent) 100%
+  );
+}
+
+/* ==========================================================================
+   Segmented Control
+   ========================================================================== */
+
+.segmented-control {
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--settings-radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.segmented-control-option {
+  padding: var(--settings-space-xs) var(--settings-space-md);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--settings-radius-sm) - 2px);
+  color: var(--settings-text-secondary);
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--settings-transition-fast);
+  white-space: nowrap;
+}
+
+.segmented-control-option:hover:not(.segmented-control-option--active) {
+  color: var(--settings-text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.segmented-control-option--active {
+  background: var(--settings-accent);
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Compact reload banner */
+.settings-reload-banner--compact {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--settings-space-sm) var(--settings-space-md);
+}
+
+.settings-reload-banner--compact .settings-reload-text {
+  margin: 0;
+  font-size: var(--settings-text-xs);
+}
+
+.settings-reload-btn--compact {
+  width: auto;
+  padding: var(--settings-space-xs) var(--settings-space-md);
+  font-size: var(--settings-text-xs);
+}
+
+/* ==========================================================================
+   Ultra-Compact Info Rows
+   ========================================================================== */
+
+.settings-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--settings-space-md) var(--settings-space-lg);
+  background: var(--settings-bg-elevated);
+  border-radius: var(--settings-radius-md);
+  border: 1px solid var(--settings-border);
+  min-height: 2.5rem;
+}
+
+.settings-info-label {
+  font-size: var(--settings-text-sm);
+  color: var(--settings-text-secondary);
+  font-weight: 500;
+}
+
+.settings-info-value {
+  display: flex;
+  align-items: center;
+  gap: var(--settings-space-sm);
+  font-size: var(--settings-text-sm);
+  color: var(--settings-text-primary);
+  font-family: var(--settings-font-mono);
+}
+
+.settings-info-link {
+  color: var(--settings-accent-light);
+  text-decoration: none;
+}
+
+.settings-info-link:hover {
+  text-decoration: underline;
+}
+
+.settings-info-sep {
+  color: var(--settings-text-tertiary);
+  margin: 0 2px;
+}
+
+.settings-inline-btn {
+  padding: var(--settings-space-xs) var(--settings-space-md);
+  background: var(--settings-bg-tertiary);
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-sm);
+  color: var(--settings-text-secondary);
+  font-size: var(--settings-text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--settings-transition-fast);
+}
+
+.settings-inline-btn:hover {
+  background: var(--settings-bg-hover);
+  color: var(--settings-text-primary);
+}
+
+.settings-inline-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-inline-btn--green {
+  background: var(--settings-success-dark);
+  border-color: var(--settings-success);
+  color: white;
+}
+
+.settings-inline-btn--green:hover {
+  background: var(--settings-success);
+}
+
+.settings-inline-btn--red {
+  background: var(--settings-danger-dark);
+  border-color: var(--settings-danger);
+  color: white;
+}
+
+.settings-inline-btn--red:hover {
+  background: var(--settings-danger);
+}
+
+.settings-kbd-inline {
+  padding: 1px 6px;
+  background: var(--settings-bg-tertiary);
+  border-radius: 3px;
+  font-family: var(--settings-font-mono);
+  font-size: 0.65rem;
+  color: var(--settings-text-secondary);
+  border: 1px solid var(--settings-border);
+}
+
+.settings-update-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--settings-space-sm) var(--settings-space-md);
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--settings-radius-sm);
+  font-size: var(--settings-text-xs);
+  color: var(--settings-success);
+}
+
+/* ==========================================================================
+   Compact Links
+   ========================================================================== */
+
+.settings-links-compact {
+  display: flex;
+  gap: var(--settings-space-sm);
+}
+
+.settings-link-compact {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--settings-space-sm);
+  padding: var(--settings-space-md);
+  background: var(--settings-bg-elevated);
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-md);
+  color: var(--settings-text-secondary);
+  text-decoration: none;
+  font-size: var(--settings-text-sm);
+  transition: all var(--settings-transition-fast);
+}
+
+.settings-link-compact:hover {
+  background: var(--settings-bg-hover);
+  color: var(--settings-text-primary);
+  border-color: var(--settings-accent);
+}
+
+.settings-link-compact svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* ==========================================================================
+   Developer Tab Compact
+   ========================================================================== */
+
+.settings-actions-row {
+  display: flex;
+  gap: var(--settings-space-sm);
+}
+
+.settings-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--settings-space-sm);
+  padding: var(--settings-space-md) var(--settings-space-lg);
+  background: var(--settings-bg-elevated);
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-md);
+  color: var(--settings-text-primary);
+  text-decoration: none;
+  font-size: var(--settings-text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--settings-transition-fast);
+}
+
+.settings-action-btn:hover {
+  background: var(--settings-bg-hover);
+  border-color: var(--settings-accent);
+}
+
+.settings-action-btn svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.settings-action-btn--green {
+  background: var(--settings-success-dark);
+  border-color: var(--settings-success);
+  color: white;
+}
+
+.settings-action-btn--green:hover {
+  background: var(--settings-success);
+}
+
+.settings-stats-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--settings-space-lg);
+  padding: var(--settings-space-sm) 0;
+}
+
+.settings-stat {
+  font-size: var(--settings-text-sm);
+  color: var(--settings-text-tertiary);
+}
+
+.settings-stat--error {
+  color: var(--settings-danger);
+}

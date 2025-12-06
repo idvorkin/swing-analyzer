@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { sessionRecorder } from '../../services/SessionRecorder';
-import { SettingsRow } from './SettingsRow';
-import { VideoIcon, WrenchIcon, DownloadIcon } from './Icons';
+import { WrenchIcon, DownloadIcon } from './Icons';
 
 interface DeveloperTabProps {
   onClose?: () => void;
@@ -11,7 +10,6 @@ interface DeveloperTabProps {
 export function DeveloperTab({ onClose }: DeveloperTabProps) {
   const [recordingStats, setRecordingStats] = useState(sessionRecorder.getStats());
 
-  // Update stats every second
   useEffect(() => {
     const interval = setInterval(() => {
       setRecordingStats(sessionRecorder.getStats());
@@ -19,89 +17,37 @@ export function DeveloperTab({ onClose }: DeveloperTabProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const handleDownloadSession = () => {
-    sessionRecorder.downloadRecording();
-  };
-
   const formatDuration = (ms: number): string => {
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m`;
-    }
-    if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    }
+    if (minutes > 0) return `${minutes}m`;
     return `${seconds}s`;
   };
 
   return (
-    <div className="settings-section">
-      {/* Debug Tools Link */}
-      <Link
-        to="/debug"
-        className="settings-link"
-        onClick={onClose}
-      >
-        <WrenchIcon />
-        Debug Model Loader
-      </Link>
-
-      {/* Session Recording */}
-      <SettingsRow
-        icon={<VideoIcon />}
-        iconVariant="blue"
-        title="Session Recording"
-        subtitle="Download debug data for troubleshooting"
-      />
-
-      <div className="settings-session-card">
-        <div className="settings-session-stats">
-          <div className="settings-session-stat">
-            Duration:{' '}
-            <span className="settings-session-stat-value">
-              {formatDuration(recordingStats.duration)}
-            </span>
-          </div>
-          <div className="settings-session-stat">
-            Clicks:{' '}
-            <span className="settings-session-stat-value">
-              {recordingStats.interactions}
-            </span>
-          </div>
-          <div className="settings-session-stat">
-            Snapshots:{' '}
-            <span className="settings-session-stat-value">
-              {recordingStats.snapshots}
-            </span>
-          </div>
-          <div className="settings-session-stat">
-            Events:{' '}
-            <span className="settings-session-stat-value">
-              {recordingStats.stateChanges}
-            </span>
-          </div>
-          {recordingStats.errors > 0 && (
-            <div className="settings-session-stat--error">
-              Errors: {recordingStats.errors}
-            </div>
-          )}
-        </div>
-
+    <div className="settings-section settings-section--compact">
+      {/* Action buttons row */}
+      <div className="settings-actions-row">
+        <Link to="/debug" className="settings-action-btn" onClick={onClose}>
+          <WrenchIcon /> Debug
+        </Link>
         <button
           type="button"
-          className="settings-btn settings-btn--green"
-          onClick={handleDownloadSession}
-          style={{ width: '100%' }}
+          className="settings-action-btn settings-action-btn--green"
+          onClick={() => sessionRecorder.downloadRecording()}
         >
-          <DownloadIcon />
-          Download Session Recording
+          <DownloadIcon /> Download Log
         </button>
+      </div>
 
-        <p className="settings-session-hint">
-          Includes clicks, pipeline state, and events for debugging
-        </p>
+      {/* Session stats inline */}
+      <div className="settings-stats-row">
+        <span className="settings-stat">{formatDuration(recordingStats.duration)}</span>
+        <span className="settings-stat">{recordingStats.interactions} clicks</span>
+        <span className="settings-stat">{recordingStats.snapshots} snaps</span>
+        {recordingStats.errors > 0 && (
+          <span className="settings-stat settings-stat--error">{recordingStats.errors} errors</span>
+        )}
       </div>
     </div>
   );
