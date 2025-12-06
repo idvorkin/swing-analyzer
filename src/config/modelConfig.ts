@@ -1,14 +1,10 @@
 /**
  * Model Configuration for Pose Detection
  *
- * Supports multiple pose detection models:
- * - MoveNet (Lightning/Thunder variants)
- * - BlazePose (Lite/Full/Heavy variants)
+ * BlazePose is the only supported model (33 MediaPipe keypoints normalized to COCO-17)
  */
 
-export type PoseModel = 'movenet' | 'blazepose';
-
-export type MoveNetVariant = 'lightning' | 'thunder';
+export type PoseModel = 'blazepose';
 
 export type BlazePoseVariant = 'lite' | 'full' | 'heavy';
 
@@ -18,14 +14,11 @@ export interface ModelConfig {
   /** Which pose detection model to use */
   model: PoseModel;
 
-  /** MoveNet variant (only used when model='movenet') */
-  moveNetVariant?: MoveNetVariant;
-
-  /** BlazePose model complexity (only used when model='blazepose') */
+  /** BlazePose model complexity */
   blazePoseVariant?: BlazePoseVariant;
 
   /**
-   * BlazePose runtime (only used when model='blazepose')
+   * BlazePose runtime
    * - 'tfjs': Better for iOS/iPad, ~1MB smaller
    * - 'mediapipe': Better for desktop/Android
    */
@@ -39,11 +32,12 @@ export interface ModelConfig {
 }
 
 /**
- * Default configuration - MoveNet Lightning for backwards compatibility
+ * Default configuration - BlazePose Lite
  */
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  model: 'movenet',
-  moveNetVariant: 'lightning',
+  model: 'blazepose',
+  blazePoseVariant: 'lite',
+  blazePoseRuntime: 'tfjs',
   enableSmoothing: true,
 };
 
@@ -74,14 +68,5 @@ export const BLAZEPOSE_HEAVY_CONFIG: ModelConfig = {
   model: 'blazepose',
   blazePoseVariant: 'heavy',
   blazePoseRuntime: 'tfjs',
-  enableSmoothing: true,
-};
-
-/**
- * MoveNet Thunder configuration - more accurate than Lightning but slower
- */
-export const MOVENET_THUNDER_CONFIG: ModelConfig = {
-  model: 'movenet',
-  moveNetVariant: 'thunder',
   enableSmoothing: true,
 };

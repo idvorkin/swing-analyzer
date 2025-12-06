@@ -278,7 +278,7 @@ export function createPoseTrackWithReps(
   return {
     metadata: {
       version: '1.0',
-      model: 'movenet-lightning',
+      model: 'blazepose',
       modelVersion: '4.0.0',
       sourceVideoHash: videoHash,
       sourceVideoName: videoName,
@@ -317,7 +317,7 @@ export function createSinglePhasePoseTrack(
   return {
     metadata: {
       version: '1.0',
-      model: 'movenet-lightning',
+      model: 'blazepose',
       modelVersion: '4.0.0',
       sourceVideoHash: 'a'.repeat(64),
       sourceVideoName: `${phase}-only.mp4`,

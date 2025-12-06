@@ -224,8 +224,6 @@ export function PoseModelSelector({
         onChange={(e) => onChange(e.target.value as PoseModel)}
         disabled={disabled}
       >
-        <option value="movenet-lightning">MoveNet Lightning (Fast)</option>
-        <option value="movenet-thunder">MoveNet Thunder (Accurate)</option>
         <option value="blazepose">BlazePose (33 keypoints)</option>
       </select>
     </div>

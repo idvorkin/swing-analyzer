@@ -106,7 +106,7 @@ test.describe('Pose Track Fixtures', () => {
       // Verify metadata structure
       expect(storedTrack?.metadata).toMatchObject({
         version: '1.0',
-        model: 'movenet-lightning',
+        model: 'blazepose',
         fps: 30,
       });
     });

@@ -87,7 +87,7 @@ export function usePoseTrack(
 ): UsePoseTrackReturn {
   const {
     autoExtract = true,
-    defaultModel = 'movenet-lightning',
+    defaultModel = 'blazepose',
     precomputeAngles = true,
     onExtractionStart: onExtractionStartCallback,
     onFrameExtracted: onFrameExtractedCallback,

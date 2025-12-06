@@ -14,9 +14,5 @@ export {
   WrenchIcon,
 } from './Icons';
 export { SettingsRow } from './SettingsRow';
-export {
-  getSavedBlazePoseVariant,
-  getSavedModelPreference,
-  SettingsTab,
-} from './SettingsTab';
+export { getSavedBlazePoseVariant, SettingsTab } from './SettingsTab';
 export { Toggle } from './Toggle';
