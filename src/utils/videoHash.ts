@@ -3,7 +3,21 @@
  *
  * Computes SHA-256 hash of video files for pose track matching.
  * Uses Web Crypto API for efficient, streaming hash computation.
+ *
+ * For E2E tests: Set window.__VIDEO_TEST_ID__ to add a unique suffix to hashes,
+ * allowing parallel tests to avoid cache collisions while still testing the cache.
  */
+
+/**
+ * Get the test ID if running in E2E test mode.
+ * Tests set window.__VIDEO_TEST_ID__ to isolate their cache entries.
+ */
+function getTestId(): string | null {
+  if (typeof window !== 'undefined') {
+    return (window as unknown as { __VIDEO_TEST_ID__?: string }).__VIDEO_TEST_ID__ ?? null;
+  }
+  return null;
+}
 
 /**
  * Compute SHA-256 hash of a File or Blob
@@ -12,7 +26,22 @@
  */
 export async function computeVideoHash(file: File | Blob): Promise<string> {
   const buffer = await file.arrayBuffer();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+
+  // If test ID is set, include it in the hash for cache isolation
+  const testId = getTestId();
+  let dataToHash: ArrayBuffer;
+
+  if (testId) {
+    const testIdBytes = new TextEncoder().encode(testId);
+    const combined = new Uint8Array(buffer.byteLength + testIdBytes.byteLength);
+    combined.set(new Uint8Array(buffer), 0);
+    combined.set(testIdBytes, buffer.byteLength);
+    dataToHash = combined.buffer;
+  } else {
+    dataToHash = buffer;
+  }
+
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataToHash);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -52,9 +81,13 @@ export async function computeQuickVideoHash(
   const sizeView = new DataView(sizeBuffer);
   sizeView.setBigUint64(0, BigInt(size), true);
 
-  // Concatenate all buffers
+  // Check for test ID (E2E test isolation)
+  const testId = getTestId();
+  const testIdBytes = testId ? new TextEncoder().encode(testId) : new Uint8Array(0);
+
+  // Concatenate all buffers (including test ID if present)
   const combined = new Uint8Array(
-    firstBuffer.byteLength + lastBuffer.byteLength + 8
+    firstBuffer.byteLength + lastBuffer.byteLength + 8 + testIdBytes.byteLength
   );
   combined.set(new Uint8Array(firstBuffer), 0);
   combined.set(new Uint8Array(lastBuffer), firstBuffer.byteLength);
@@ -62,6 +95,9 @@ export async function computeQuickVideoHash(
     new Uint8Array(sizeBuffer),
     firstBuffer.byteLength + lastBuffer.byteLength
   );
+  if (testIdBytes.byteLength > 0) {
+    combined.set(testIdBytes, firstBuffer.byteLength + lastBuffer.byteLength + 8);
+  }
 
   // Hash the combined data
   const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
