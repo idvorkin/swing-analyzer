@@ -21,13 +21,14 @@
 
 import { expect, test } from '@playwright/test';
 import {
-  clearPoseTrackDB,
+  generateTestId,
+  setVideoTestId,
   setupMockPoseDetector,
   useShortTestVideo,
 } from './helpers';
 
-// Run serially to avoid IndexedDB interference between tests
-test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
+// Tests can run in parallel - each gets unique cache via test ID
+test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept GitHub video URL and serve short local video
     await useShortTestVideo(page);
@@ -39,8 +40,8 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
       { timeout: 10000 }
     );
 
-    // Clear any cached poses so extraction actually runs
-    await clearPoseTrackDB(page);
+    // Set unique test ID for cache isolation - allows parallel test execution
+    await setVideoTestId(page, generateTestId());
   });
 
   // Retry this test as it can be flaky with parallel test runs

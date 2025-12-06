@@ -19,9 +19,10 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { clearPoseTrackDB, setupMockPoseDetector, useShortTestVideo } from './helpers';
+import { generateTestId, setVideoTestId, setupMockPoseDetector, useShortTestVideo } from './helpers';
 
 // Filmstrip thumbnail tests - thumbnails appear during extraction
+// Tests can run in parallel - each gets unique cache via test ID
 test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept GitHub video URL and serve short local video for faster tests
@@ -34,8 +35,8 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
       { timeout: 10000 }
     );
 
-    // Clear any cached poses so extraction actually runs
-    await clearPoseTrackDB(page);
+    // Set unique test ID for cache isolation - allows parallel test execution
+    await setVideoTestId(page, generateTestId());
   });
 
   test('filmstrip shows rep thumbnails during extraction without pressing play', async ({
@@ -266,7 +267,8 @@ test.describe.skip('Playback Mode: No Duplicate Rep Counting', () => {
       { timeout: 10000 }
     );
 
-    await clearPoseTrackDB(page);
+    // Set unique test ID for cache isolation - allows parallel test execution
+    await setVideoTestId(page, generateTestId());
   });
 
   test('rep count stays stable after extraction when playing video', async ({
@@ -370,7 +372,8 @@ test.describe('Filmstrip Frame Capture During Extraction', () => {
       { timeout: 10000 }
     );
 
-    await clearPoseTrackDB(page);
+    // Set unique test ID for cache isolation - allows parallel test execution
+    await setVideoTestId(page, generateTestId());
   });
 
   test('captures 4 position thumbnails per rep (Top, Connect, Bottom, Release)', async ({
