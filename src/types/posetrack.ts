@@ -13,7 +13,7 @@ import type { PoseKeypoint } from '../types';
 /**
  * Supported pose detection models
  */
-export type PoseModel = 'movenet-lightning' | 'movenet-thunder' | 'blazepose';
+export type PoseModel = 'blazepose';
 
 /**
  * Metadata about the pose track file

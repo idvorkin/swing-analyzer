@@ -228,7 +228,7 @@ export class LivePoseCache {
     return {
       metadata: {
         version: '1.0',
-        model: this.metadata.model ?? 'movenet-lightning',
+        model: this.metadata.model ?? 'blazepose',
         modelVersion: this.metadata.modelVersion ?? '1.0.0',
         sourceVideoHash: this.videoHash ?? '',
         sourceVideoName: this.metadata.sourceVideoName,

@@ -1,8 +1,8 @@
 {
   "metadata": {
     "version": "1.0",
-    "model": "movenet-lightning",
-    "modelVersion": "4.0.0",
+    "model": "blazepose",
+    "modelVersion": "1.0.0",
     "sourceVideoHash": "2fbf38b42328d66e0c61f66fe490ebf1339e7448d53217a12ff0bdb0fa80dba1",
     "sourceVideoName": "swing-sample-4reps.webm",
     "sourceVideoDuration": 5.47,

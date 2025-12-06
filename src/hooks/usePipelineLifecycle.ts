@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
-import {
-  getSavedBlazePoseVariant,
-  getSavedModelPreference,
-} from '../components/settings/SettingsTab';
+import { getSavedBlazePoseVariant } from '../components/settings/SettingsTab';
 import {
   BLAZEPOSE_FULL_CONFIG,
   BLAZEPOSE_HEAVY_CONFIG,
@@ -183,25 +180,20 @@ export function usePipelineLifecycle(
   const initializePipeline = useCallback(async () => {
     try {
       if (videoRef.current && canvasRef.current) {
-        // Get model config based on saved preferences
-        const savedModel = getSavedModelPreference();
+        // Get model config based on saved BlazePose variant preference
         const blazePoseVariant = getSavedBlazePoseVariant();
         let modelConfig = DEFAULT_MODEL_CONFIG;
-        if (savedModel === 'blazepose') {
-          switch (blazePoseVariant) {
-            case 'full':
-              modelConfig = BLAZEPOSE_FULL_CONFIG;
-              break;
-            case 'heavy':
-              modelConfig = BLAZEPOSE_HEAVY_CONFIG;
-              break;
-            default:
-              modelConfig = BLAZEPOSE_LITE_CONFIG;
-          }
+        switch (blazePoseVariant) {
+          case 'full':
+            modelConfig = BLAZEPOSE_FULL_CONFIG;
+            break;
+          case 'heavy':
+            modelConfig = BLAZEPOSE_HEAVY_CONFIG;
+            break;
+          default:
+            modelConfig = BLAZEPOSE_LITE_CONFIG;
         }
-        console.log(
-          `Using pose model: ${savedModel}${savedModel === 'blazepose' ? ` (${blazePoseVariant})` : ''}`
-        );
+        console.log(`Using pose model: BlazePose (${blazePoseVariant})`);
 
         // Create pipeline components
         const pipeline = createPipeline(videoRef.current, canvasRef.current, {
@@ -227,7 +219,7 @@ export function usePipelineLifecycle(
 
         onModelLoaded?.();
         onStatusChange?.('Ready. Upload a video or start camera.');
-        recordPipelineInit({ model: savedModel });
+        recordPipelineInit({ model: 'blazepose' });
       }
     } catch (error) {
       console.error('Failed to initialize:', error);

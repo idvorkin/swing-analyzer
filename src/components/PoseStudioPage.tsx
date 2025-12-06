@@ -640,11 +640,7 @@ export function PoseStudioPage() {
                       {track.videoName || 'Unknown video'}
                     </div>
                     <div className="file-meta">
-                      <span className="model-badge">
-                        {track.model === 'movenet-thunder'
-                          ? 'Thunder'
-                          : 'Lightning'}
-                      </span>
+                      <span className="model-badge">BlazePose</span>
                       <span className="file-meta-item">
                         {track.frameCount} frames
                       </span>

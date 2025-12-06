@@ -16,11 +16,47 @@ setup:
     npm install
     echo "✓ npm dependencies installed"
 
+    # Download test videos for E2E tests
+    just download-test-videos
+
     echo ""
     echo "✅ Setup complete! Run 'just dev' to start developing."
     echo ""
     echo "📝 Note: For Playwright, use a global install (shared across repos):"
     echo "   npm install -g playwright && playwright install --with-deps"
+
+# Download test videos from form-analyzer-samples repo
+download-test-videos:
+    #!/usr/bin/env bash
+    echo "📥 Downloading test videos..."
+
+    VIDEOS_DIR="public/videos"
+    SAMPLES_REPO="idvorkin-ai-tools/form-analyzer-samples"
+    SAMPLES_PATH="exercises/kettlebell-swing/good"
+
+    mkdir -p "$VIDEOS_DIR"
+
+    # Download swing-sample.webm (full video, ~26s)
+    if [ ! -f "$VIDEOS_DIR/swing-sample.webm" ]; then
+        echo "  Downloading swing-sample.webm..."
+        gh api "repos/$SAMPLES_REPO/contents/$SAMPLES_PATH/swing-sample.webm" \
+            --jq '.download_url' | xargs curl -sL -o "$VIDEOS_DIR/swing-sample.webm"
+        echo "  ✓ swing-sample.webm"
+    else
+        echo "  ✓ swing-sample.webm (already exists)"
+    fi
+
+    # Download swing-sample-4reps.webm (short video, ~5.5s for fast E2E tests)
+    if [ ! -f "$VIDEOS_DIR/swing-sample-4reps.webm" ]; then
+        echo "  Downloading swing-sample-4reps.webm..."
+        gh api "repos/$SAMPLES_REPO/contents/$SAMPLES_PATH/swing-sample-4reps.webm" \
+            --jq '.download_url' | xargs curl -sL -o "$VIDEOS_DIR/swing-sample-4reps.webm"
+        echo "  ✓ swing-sample-4reps.webm"
+    else
+        echo "  ✓ swing-sample-4reps.webm (already exists)"
+    fi
+
+    echo "✓ Test videos ready in $VIDEOS_DIR"
 
 # Run the development server
 dev:

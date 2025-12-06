@@ -320,7 +320,7 @@ export function createMetadata(
 ): PoseTrackMetadata {
   return {
     version: '1.0',
-    model: 'movenet-lightning',
+    model: 'blazepose',
     modelVersion: '4.0.0',
     sourceVideoHash: videoHash,
     sourceVideoName: videoName,

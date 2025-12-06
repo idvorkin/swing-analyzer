@@ -27,9 +27,7 @@ import { createPoseTrackMetadata } from './PoseTrackService';
  * Model version strings for metadata
  */
 const MODEL_VERSIONS: Record<PoseModel, string> = {
-  'movenet-lightning': '4.0.0',
-  'movenet-thunder': '4.0.0',
-  blazepose: '0.5.0',
+  blazepose: '1.0.0',
 };
 
 /**
@@ -401,7 +399,7 @@ export async function extractPosesFromVideo(
  * In test mode, uses mock detector if configured via testSetup
  */
 async function createPoseDetector(
-  model: PoseModel
+  _model: PoseModel
 ): Promise<poseDetection.PoseDetector> {
   // Check for mock detector factory (set via E2E tests)
   const mockFactory = (
@@ -417,39 +415,15 @@ async function createPoseDetector(
 
   await tf.setBackend('webgl');
 
-  switch (model) {
-    case 'movenet-lightning':
-      return poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
-        {
-          modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-          modelUrl: '/models/movenet-lightning/model.json',
-          enableSmoothing: false, // No smoothing for offline extraction
-        }
-      );
-
-    case 'movenet-thunder':
-      return poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
-        {
-          modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
-          enableSmoothing: false,
-        }
-      );
-
-    case 'blazepose':
-      return poseDetection.createDetector(
-        poseDetection.SupportedModels.BlazePose,
-        {
-          runtime: 'tfjs',
-          modelType: 'lite',
-          enableSmoothing: false,
-        }
-      );
-
-    default:
-      throw new Error(`Unsupported model: ${model}`);
-  }
+  // BlazePose is the only supported model
+  return poseDetection.createDetector(
+    poseDetection.SupportedModels.BlazePose,
+    {
+      runtime: 'tfjs',
+      modelType: 'lite',
+      enableSmoothing: false,
+    }
+  );
 }
 
 /**
@@ -574,34 +548,22 @@ export function computeAngles(keypoints: PoseKeypoint[]): PrecomputedAngles {
 /**
  * Get model display name
  */
-export function getModelDisplayName(model: PoseModel): string {
-  switch (model) {
-    case 'movenet-lightning':
-      return 'MoveNet Lightning';
-    case 'movenet-thunder':
-      return 'MoveNet Thunder';
-    case 'blazepose':
-      return 'BlazePose';
-    default:
-      return model;
-  }
+export function getModelDisplayName(_model: PoseModel): string {
+  return 'BlazePose';
 }
 
 /**
  * Check if a model is supported in the current environment
  */
-export async function isModelSupported(model: PoseModel): Promise<boolean> {
+export async function isModelSupported(_model: PoseModel): Promise<boolean> {
   try {
     await tf.setBackend('webgl');
     // BlazePose requires WebGL 2
-    if (model === 'blazepose') {
-      const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl2');
-      return gl !== null;
-    }
-    return true;
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2');
+    return gl !== null;
   } catch (error) {
-    console.error(`Model support check failed for ${model}:`, error);
+    console.error('Model support check failed:', error);
     return false;
   }
 }

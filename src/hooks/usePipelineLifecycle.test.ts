@@ -121,10 +121,9 @@ describe('usePipelineLifecycle', () => {
     });
 
     it('initializes pipeline with BlazePose config', async () => {
-      const { getSavedModelPreference, getSavedBlazePoseVariant } = await import(
+      const { getSavedBlazePoseVariant } = await import(
         '../components/settings/SettingsTab'
       );
-      (getSavedModelPreference as Mock).mockReturnValue('blazepose');
       (getSavedBlazePoseVariant as Mock).mockReturnValue('heavy');
 
       const { createPipeline } = await import('../pipeline/PipelineFactory');
@@ -329,7 +328,7 @@ describe('usePipelineLifecycle', () => {
         frames: [],
         metadata: {
           version: '1.0',
-          model: 'movenet-lightning',
+          model: 'blazepose',
           modelVersion: '1.0.0',
           sourceVideoHash: 'test-hash',
           sourceVideoName: 'test.mp4',
@@ -372,7 +371,7 @@ describe('usePipelineLifecycle', () => {
         frames: [],
         metadata: {
           version: '1.0',
-          model: 'movenet-lightning',
+          model: 'blazepose',
           modelVersion: '1.0.0',
           sourceVideoHash: 'test-hash',
           sourceVideoName: 'test.mp4',
@@ -549,7 +548,7 @@ describe('usePipelineLifecycle', () => {
         frames: [],
         metadata: {
           version: '1.0',
-          model: 'movenet-lightning',
+          model: 'blazepose',
           modelVersion: '1.0.0',
           sourceVideoHash: 'test-hash',
           sourceVideoName: 'test.mp4',

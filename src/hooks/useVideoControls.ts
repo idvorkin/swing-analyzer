@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { take } from 'rxjs';
-import {
-  getSavedBlazePoseVariant,
-  getSavedModelPreference,
-} from '../components/settings/SettingsTab';
+import { getSavedBlazePoseVariant } from '../components/settings/SettingsTab';
 import {
   BLAZEPOSE_FULL_CONFIG,
   BLAZEPOSE_HEAVY_CONFIG,
@@ -164,21 +161,18 @@ export function useVideoControls({
         const { createSkeletonTransformer } = await import(
           '../pipeline/PipelineFactory'
         );
-        // Use saved model preference for consistency with main pipeline
-        const savedModel = getSavedModelPreference();
+        // Use saved BlazePose variant preference for consistency with main pipeline
         const blazePoseVariant = getSavedBlazePoseVariant();
         let modelConfig = DEFAULT_MODEL_CONFIG;
-        if (savedModel === 'blazepose') {
-          switch (blazePoseVariant) {
-            case 'full':
-              modelConfig = BLAZEPOSE_FULL_CONFIG;
-              break;
-            case 'heavy':
-              modelConfig = BLAZEPOSE_HEAVY_CONFIG;
-              break;
-            default:
-              modelConfig = BLAZEPOSE_LITE_CONFIG;
-          }
+        switch (blazePoseVariant) {
+          case 'full':
+            modelConfig = BLAZEPOSE_FULL_CONFIG;
+            break;
+          case 'heavy':
+            modelConfig = BLAZEPOSE_HEAVY_CONFIG;
+            break;
+          default:
+            modelConfig = BLAZEPOSE_LITE_CONFIG;
         }
         directSkeletonTransformerRef.current =
           createSkeletonTransformer(modelConfig);

@@ -120,10 +120,10 @@ describe('SettingsModal', () => {
   });
 
   describe('Tab Navigation', () => {
-    it('shows Settings tab by default with display mode and pose model options', () => {
+    it('shows Settings tab by default with display mode and BlazePose variant options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       expect(screen.getByText('Display Mode')).toBeInTheDocument();
-      expect(screen.getByText('Pose Detection Model')).toBeInTheDocument();
+      expect(screen.getByText('BlazePose Variant')).toBeInTheDocument();
     });
 
     it('has three tabs: Settings, Developer, About', () => {
@@ -160,10 +160,11 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Overlay Only')).toBeInTheDocument();
     });
 
-    it('shows pose model options', () => {
+    it('shows BlazePose variant options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
-      expect(screen.getByText('MoveNet Lightning')).toBeInTheDocument();
-      expect(screen.getByText('BlazePose')).toBeInTheDocument();
+      expect(screen.getByText('Lite')).toBeInTheDocument();
+      expect(screen.getByText('Full')).toBeInTheDocument();
+      expect(screen.getByText('Heavy')).toBeInTheDocument();
     });
   });
 

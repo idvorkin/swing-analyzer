@@ -54,7 +54,7 @@ function createTestPoseTrack(frameCount: number = 30): PoseTrackFile {
   return {
     metadata: {
       version: '1.0',
-      model: 'movenet-lightning',
+      model: 'blazepose',
       modelVersion: '4.0.0',
       sourceVideoHash: 'a'.repeat(64),
       sourceVideoName: 'test-video.mp4',
@@ -85,7 +85,7 @@ describe('PoseTrackPipeline', () => {
       const pipeline = new PoseTrackPipeline(poseTrack);
 
       const metadata = pipeline.getMetadata();
-      expect(metadata.model).toBe('movenet-lightning');
+      expect(metadata.model).toBe('blazepose');
       expect(metadata.fps).toBe(30);
     });
   });
