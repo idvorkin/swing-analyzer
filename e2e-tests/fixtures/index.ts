@@ -65,6 +65,10 @@ export const FIXTURES = {
   'swing-sample-4reps': () =>
     Promise.resolve(loadJsonFile('swing-sample-4reps.posetrack.json')),
 
+  /** Igor 1-handed swing fixture - matches igor-1h-swing.webm (current default sample) */
+  'igor-1h-swing': () =>
+    Promise.resolve(loadJsonFile('igor-1h-swing.posetrack.json')),
+
   /** Generate fixture with exactly 1 complete rep */
   'single-rep': () =>
     Promise.resolve(
