@@ -2,7 +2,13 @@
  * Kettlebell Swing Detector
  *
  * State machine-based detector for kettlebell swings using multiple bone angles.
- * Tracks phases: TOP → DESCENDING → BOTTOM → ASCENDING → TOP (rep complete)
+ * Tracks phases: TOP → CONNECT → BOTTOM → RELEASE → TOP (rep complete)
+ *
+ * Phase meanings:
+ * - TOP: Arms horizontal, standing upright (lockout position)
+ * - CONNECT: Hinge initiating, arms approaching body (when should hinge start?)
+ * - BOTTOM: Deepest hinge, arms behind body
+ * - RELEASE: Arms leaving body, should happen after vertical (hip snap)
  *
  * Uses three primary signals:
  * - Arm angle: shoulder-elbow angle from vertical (0=down, 90=horizontal)
@@ -21,7 +27,7 @@ import type {
 /**
  * Swing phases
  */
-export type SwingPhase = 'top' | 'descending' | 'bottom' | 'ascending';
+export type SwingPhase = 'top' | 'connect' | 'bottom' | 'release';
 
 /**
  * Thresholds for phase transitions (in degrees)
@@ -37,11 +43,13 @@ export interface SwingThresholds {
   bottomSpineMin: number; // Spine must be above this (hinged)
   bottomHipMax: number; // Hip must be below this (hinged)
 
-  // Transition thresholds
-  descendingArmMax: number; // Arm dropping
-  descendingSpineMin: number; // Spine tilting
-  ascendingArmMin: number; // Arm rising
-  ascendingSpineMax: number; // Spine straightening
+  // CONNECT thresholds (hinge initiation)
+  connectArmMax: number; // Arm dropping toward body
+  connectSpineMin: number; // Spine starting to tilt (hinge begins)
+
+  // RELEASE thresholds (arms leaving body)
+  releaseArmMin: number; // Arm starting to rise
+  releaseSpineMax: number; // Spine should be vertical
 }
 
 /**
@@ -58,11 +66,13 @@ const DEFAULT_THRESHOLDS: SwingThresholds = {
   bottomSpineMin: 35, // Spine at least 35° forward
   bottomHipMax: 140, // Hip angle < 140° (hinged)
 
-  // Transitions
-  descendingArmMax: 30, // Arm dropping below 30°
-  descendingSpineMin: 25, // Spine starting to tilt
-  ascendingArmMin: 10, // Arm starting to rise
-  ascendingSpineMax: 45, // Spine starting to straighten
+  // CONNECT: hinge should start after arms are low
+  connectArmMax: 30, // Arm should be below 30° (connected to body)
+  connectSpineMin: 20, // Spine starting to tilt (hinge begins)
+
+  // RELEASE: arms should stay connected until vertical
+  releaseArmMin: 10, // Arm starting to rise (disconnecting)
+  releaseSpineMax: 25, // Spine should be nearly vertical (<25°)
 };
 
 /**
@@ -91,12 +101,19 @@ export class KettlebellSwingDetector implements ExerciseDetector {
   // Peaks from current rep (cleared after rep completes)
   private currentRepPeaks: {
     top?: PhasePeak;
+    connect?: PhasePeak;
     bottom?: PhasePeak;
+    release?: PhasePeak;
   } = {};
 
   // Last emitted peaks
   private lastPhasePeak: PhasePeak | null = null;
-  private lastRepPeaks: { top?: PhasePeak; bottom?: PhasePeak } | null = null;
+  private lastRepPeaks: {
+    top?: PhasePeak;
+    connect?: PhasePeak;
+    bottom?: PhasePeak;
+    release?: PhasePeak;
+  } | null = null;
 
   // Debounce: minimum frames in a phase before transitioning
   private framesInPhase = 0;
@@ -129,36 +146,38 @@ export class KettlebellSwingDetector implements ExerciseDetector {
     // Check for phase transitions
     let repCompleted = false;
     let phasePeak: PhasePeak | undefined;
-    let repPeaks: { top?: PhasePeak; bottom?: PhasePeak } | undefined;
+    let repPeaks:
+      | { top?: PhasePeak; connect?: PhasePeak; bottom?: PhasePeak; release?: PhasePeak }
+      | undefined;
 
     switch (this.phase) {
       case 'top':
-        if (this.shouldTransitionToDescending(arm, spine)) {
+        if (this.shouldTransitionToConnect(arm, spine)) {
           phasePeak = this.finalizePhasePeak('top');
-          this.phase = 'descending';
+          this.phase = 'connect';
           this.framesInPhase = 0;
         }
         break;
 
-      case 'descending':
+      case 'connect':
         if (this.shouldTransitionToBottom(arm, spine, hip)) {
-          phasePeak = this.finalizePhasePeak('descending');
+          phasePeak = this.finalizePhasePeak('connect');
           this.phase = 'bottom';
           this.framesInPhase = 0;
         }
         break;
 
       case 'bottom':
-        if (this.shouldTransitionToAscending(arm, spine)) {
+        if (this.shouldTransitionToRelease(arm, spine)) {
           phasePeak = this.finalizePhasePeak('bottom');
-          this.phase = 'ascending';
+          this.phase = 'release';
           this.framesInPhase = 0;
         }
         break;
 
-      case 'ascending':
+      case 'release':
         if (this.shouldTransitionToTop(arm, spine, hip)) {
-          phasePeak = this.finalizePhasePeak('ascending');
+          phasePeak = this.finalizePhasePeak('release');
           this.phase = 'top';
           this.framesInPhase = 0;
           repCompleted = true;
@@ -199,37 +218,52 @@ export class KettlebellSwingDetector implements ExerciseDetector {
   /**
    * Update peak tracking for current phase
    * Peak criteria varies by phase:
-   * - TOP: highest arm angle (most horizontal)
+   * - TOP: highest arm angle (best lockout)
+   * - CONNECT: first frame where hinge begins (captures arm position at hinge start)
    * - BOTTOM: highest spine angle (deepest hinge)
-   * - DESCENDING/ASCENDING: not tracked (transition phases)
+   * - RELEASE: first frame where arms start rising while vertical (hip snap timing)
    */
   private updatePhasePeak(
     skeleton: Skeleton,
     timestamp: number,
     angles: { arm: number; spine: number; hip: number; knee: number }
   ): void {
-    // Only track peaks for TOP and BOTTOM phases
-    if (this.phase !== 'top' && this.phase !== 'bottom') {
-      return;
-    }
-
     // Calculate peak score based on phase
     const score = this.calculatePeakScore(this.phase, angles);
 
-    // Update if this is a better peak
-    if (!this.currentPhasePeak || score > this.currentPhasePeak.score) {
-      this.currentPhasePeak = {
-        phase: this.phase,
-        timestamp,
-        skeleton,
-        score,
-        angles: { ...angles },
-      };
+    // For CONNECT and RELEASE, we want the FIRST qualifying frame (timing matters)
+    // For TOP and BOTTOM, we want the BEST frame (extremes matter)
+    const isTimingPhase = this.phase === 'connect' || this.phase === 'release';
+
+    if (isTimingPhase) {
+      // First frame wins for timing phases
+      if (!this.currentPhasePeak) {
+        this.currentPhasePeak = {
+          phase: this.phase,
+          timestamp,
+          skeleton,
+          score,
+          angles: { ...angles },
+        };
+      }
+    } else {
+      // Best frame wins for extreme phases
+      if (!this.currentPhasePeak || score > this.currentPhasePeak.score) {
+        this.currentPhasePeak = {
+          phase: this.phase,
+          timestamp,
+          skeleton,
+          score,
+          angles: { ...angles },
+        };
+      }
     }
   }
 
   /**
    * Calculate how "peak" this frame is for the given phase
+   * For timing phases (CONNECT/RELEASE), score indicates quality of timing
+   * For extreme phases (TOP/BOTTOM), score indicates depth of position
    */
   private calculatePeakScore(
     phase: SwingPhase,
@@ -237,11 +271,19 @@ export class KettlebellSwingDetector implements ExerciseDetector {
   ): number {
     switch (phase) {
       case 'top':
-        // TOP peak: highest arm angle (most horizontal)
+        // TOP peak: highest arm angle (best lockout)
         return angles.arm;
+      case 'connect':
+        // CONNECT: lower arm = better (arms were down when hinge started)
+        // Score is inverted: lower arm angle = higher score
+        return 90 - angles.arm;
       case 'bottom':
         // BOTTOM peak: highest spine angle (deepest hinge)
         return angles.spine;
+      case 'release':
+        // RELEASE: lower spine = better (was vertical when arms released)
+        // Score is inverted: lower spine angle = higher score
+        return 90 - angles.spine;
       default:
         return 0;
     }
@@ -255,11 +297,15 @@ export class KettlebellSwingDetector implements ExerciseDetector {
     this.currentPhasePeak = null;
 
     if (peak) {
-      // Store in rep peaks for TOP and BOTTOM
+      // Store in rep peaks for all phases
       if (phase === 'top') {
         this.currentRepPeaks.top = peak;
+      } else if (phase === 'connect') {
+        this.currentRepPeaks.connect = peak;
       } else if (phase === 'bottom') {
         this.currentRepPeaks.bottom = peak;
+      } else if (phase === 'release') {
+        this.currentRepPeaks.release = peak;
       }
     }
 
@@ -276,23 +322,29 @@ export class KettlebellSwingDetector implements ExerciseDetector {
   /**
    * Get peaks from the last completed rep
    */
-  getLastRepPeaks(): { top?: PhasePeak; bottom?: PhasePeak } | null {
+  getLastRepPeaks(): {
+    top?: PhasePeak;
+    connect?: PhasePeak;
+    bottom?: PhasePeak;
+    release?: PhasePeak;
+  } | null {
     return this.lastRepPeaks;
   }
 
   /**
-   * Check if we should transition from TOP to DESCENDING
+   * Check if we should transition from TOP to CONNECT
+   * CONNECT phase begins when arms drop and hinge starts
    */
-  private shouldTransitionToDescending(arm: number, spine: number): boolean {
+  private shouldTransitionToConnect(arm: number, spine: number): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
     return (
-      arm < this.thresholds.descendingArmMax &&
-      spine > this.thresholds.descendingSpineMin
+      arm < this.thresholds.connectArmMax &&
+      spine > this.thresholds.connectSpineMin
     );
   }
 
   /**
-   * Check if we should transition from DESCENDING to BOTTOM
+   * Check if we should transition from CONNECT to BOTTOM
    */
   private shouldTransitionToBottom(
     arm: number,
@@ -308,18 +360,19 @@ export class KettlebellSwingDetector implements ExerciseDetector {
   }
 
   /**
-   * Check if we should transition from BOTTOM to ASCENDING
+   * Check if we should transition from BOTTOM to RELEASE
+   * RELEASE phase begins when arms start rising (hip snap)
    */
-  private shouldTransitionToAscending(arm: number, spine: number): boolean {
+  private shouldTransitionToRelease(arm: number, spine: number): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
     return (
-      arm > this.thresholds.ascendingArmMin &&
-      spine < this.thresholds.ascendingSpineMax
+      arm > this.thresholds.releaseArmMin &&
+      spine < this.thresholds.releaseSpineMax
     );
   }
 
   /**
-   * Check if we should transition from ASCENDING to TOP (rep complete)
+   * Check if we should transition from RELEASE to TOP (rep complete)
    */
   private shouldTransitionToTop(
     arm: number,
@@ -451,7 +504,7 @@ export class KettlebellSwingDetector implements ExerciseDetector {
 
     // Phase-specific coaching cues
     switch (this.phase) {
-      case 'descending':
+      case 'connect':
         if (spine < 30) {
           feedback.push('Push hips back');
         }
@@ -461,7 +514,7 @@ export class KettlebellSwingDetector implements ExerciseDetector {
           feedback.push('Deeper hinge');
         }
         break;
-      case 'ascending':
+      case 'release':
         if (arm < 40 && spine < 20) {
           feedback.push('Snap those hips!');
         }
@@ -508,6 +561,6 @@ export class KettlebellSwingDetector implements ExerciseDetector {
   }
 
   getPhases(): string[] {
-    return ['top', 'descending', 'bottom', 'ascending'];
+    return ['top', 'connect', 'bottom', 'release'];
   }
 }
