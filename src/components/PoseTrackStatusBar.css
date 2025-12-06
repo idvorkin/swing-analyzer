@@ -1,21 +1,30 @@
 /**
  * PoseTrack Status Bar Styles
  *
- * Subtle, non-intrusive status bar that appears below the video player.
- * Uses existing app color scheme with cyan accents for pose-specific UI.
+ * Matches the HUD aesthetic with dark background and cyan accents.
  */
 
 .pose-status-bar {
+  --status-bg: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0d1117 100%);
+  --status-accent: #00d4aa;
+  --status-accent-dim: rgba(0, 212, 170, 0.15);
+  --status-text: rgba(255, 255, 255, 0.7);
+  --status-text-dim: rgba(255, 255, 255, 0.5);
+  --status-border: rgba(255, 255, 255, 0.08);
+  --status-warning: #f59e0b;
+  --status-success: #34c759;
+  --status-error: #ef4444;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 212, 255, 0.08) 0%,
-    rgba(0, 212, 255, 0.02) 100%
-  );
-  border-top: 1px solid rgba(0, 212, 255, 0.15);
+  padding: 0.75rem 1rem;
+  background: var(--status-bg);
+  border-radius: 12px;
+  margin-top: 0.75rem;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--status-border);
   font-size: 0.8125rem;
   min-height: 44px;
 }
@@ -23,14 +32,17 @@
 .pose-status-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .pose-status-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #6c757d;
+  gap: 8px;
+  color: var(--status-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
 }
 
 .pose-status-indicator svg {
@@ -40,7 +52,7 @@
 }
 
 .pose-status-indicator.extracting {
-  color: #f59e0b;
+  color: var(--status-warning);
 }
 
 .pose-status-indicator.extracting svg {
@@ -48,51 +60,47 @@
 }
 
 .pose-status-indicator.ready {
-  color: #34c759;
+  color: var(--status-success);
 }
 
 .pose-status-indicator.loaded {
-  color: #00d4ff;
+  color: var(--status-accent);
 }
 
 .pose-status-indicator.error {
-  color: #dc3545;
+  color: var(--status-error);
 }
 
 .pose-status-indicator .subtle {
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 /* Spin animation */
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Mini progress bar */
 .mini-progress {
   width: 80px;
   height: 4px;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 9999px;
   overflow: hidden;
 }
 
 .mini-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #f59e0b 0%, #00d4ff 100%);
+  background: linear-gradient(90deg, var(--status-warning) 0%, var(--status-accent) 100%);
   border-radius: 9999px;
   transition: width 0.3s ease;
 }
 
 .progress-text {
-  color: #6c757d;
-  font-size: 0.75rem;
-  font-family: "SF Mono", "Fira Code", monospace;
+  color: var(--status-text-dim);
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* Right side actions */
@@ -104,21 +112,22 @@
 
 /* Cancel link */
 .cancel-link {
-  color: #6c757d;
+  color: var(--status-text-dim);
   text-decoration: none;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
   cursor: pointer;
   background: none;
   border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
   transition: all 0.2s;
+  letter-spacing: 0.02em;
 }
 
 .cancel-link:hover {
-  color: #333;
-  background: rgba(0, 0, 0, 0.05);
-  text-decoration: underline;
+  color: var(--status-text);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* Save button */
@@ -127,17 +136,20 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: transparent;
-  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: var(--status-accent-dim);
+  border: 1px solid rgba(0, 212, 170, 0.3);
   border-radius: 6px;
-  color: #00d4ff;
-  font-size: 0.75rem;
+  color: var(--status-accent);
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   opacity: 0;
   transform: translateX(10px);
   pointer-events: none;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .save-pose-btn.visible {
@@ -147,8 +159,8 @@
 }
 
 .save-pose-btn:hover {
-  background: rgba(0, 212, 255, 0.1);
-  border-color: #00d4ff;
+  background: rgba(0, 212, 170, 0.25);
+  border-color: var(--status-accent);
 }
 
 .save-pose-btn svg {
@@ -164,17 +176,17 @@
   width: 32px;
   height: 32px;
   background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--status-border);
   border-radius: 6px;
-  color: #6c757d;
+  color: var(--status-text-dim);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .download-pose-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.2);
-  color: #333;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--status-accent);
+  color: var(--status-accent);
 }
 
 .download-pose-btn svg {
@@ -190,39 +202,41 @@
 }
 
 .model-selector-label {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
-  color: #6c757d;
+  color: var(--status-text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.1em;
 }
 
 .model-selector-select {
   padding: 6px 28px 6px 10px;
-  background: #f8f9fa;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--status-border);
   border-radius: 6px;
-  font-size: 0.8125rem;
-  color: #333;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--status-text);
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
 }
 
 .model-selector-select:hover {
-  border-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .model-selector-select:focus {
   outline: none;
-  border-color: #00d4ff;
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+  border-color: var(--status-accent);
+  box-shadow: 0 0 0 3px var(--status-accent-dim);
 }
 
 .model-selector-select:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -231,7 +245,7 @@
   .pose-status-bar {
     flex-wrap: wrap;
     gap: 8px;
-    padding: 8px 12px;
+    padding: 10px 12px;
   }
 
   .pose-status-left {
@@ -255,63 +269,5 @@
 
   .save-pose-btn {
     padding: 6px;
-  }
-}
-
-/* Dark mode support (for debug page) */
-@media (prefers-color-scheme: dark) {
-  .pose-status-bar {
-    background: linear-gradient(
-      90deg,
-      rgba(0, 212, 255, 0.12) 0%,
-      rgba(0, 212, 255, 0.04) 100%
-    );
-    border-top-color: rgba(0, 212, 255, 0.2);
-  }
-
-  .pose-status-indicator {
-    color: #94a3b8;
-  }
-
-  .pose-status-indicator .subtle {
-    opacity: 0.6;
-  }
-
-  .mini-progress {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .progress-text {
-    color: #94a3b8;
-  }
-
-  .cancel-link {
-    color: #94a3b8;
-  }
-
-  .cancel-link:hover {
-    color: #f1f5f9;
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .download-pose-btn {
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #94a3b8;
-  }
-
-  .download-pose-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #f1f5f9;
-  }
-
-  .model-selector-select {
-    background-color: #1a2332;
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #f1f5f9;
-  }
-
-  .model-selector-select:hover {
-    border-color: rgba(255, 255, 255, 0.2);
   }
 }
