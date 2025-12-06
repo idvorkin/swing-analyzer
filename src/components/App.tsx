@@ -12,7 +12,6 @@ import { useShakeDetector } from '../hooks/useShakeDetector';
 import { useVersionCheck } from '../hooks/useVersionCheck';
 import { BugReportModal } from './BugReportModal';
 import { CrashFallback } from './CrashFallback';
-import DebugModelLoaderPage from './DebugModelLoaderPage';
 import { PoseStudioPage } from './PoseStudioPage';
 import { SettingsModal } from './SettingsModal';
 import { VersionNotification } from './VersionNotification';
@@ -79,9 +78,6 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         <NavLink to="/poses" className={({ isActive }) => isActive ? 'active' : ''}>
           <span>Poses</span>
         </NavLink>
-        <NavLink to="/debug" className={({ isActive }) => isActive ? 'active' : ''}>
-          <span>Debug</span>
-        </NavLink>
         <button
           type="button"
           onClick={onOpenSettings}
@@ -135,7 +131,6 @@ const AppContent: React.FC = () => {
       <Routes>
         <Route path="/" element={<MainApplication />} />
         <Route path="/poses" element={<PoseStudioPage />} />
-        <Route path="/debug" element={<DebugModelLoaderPage />} />
       </Routes>
       <VersionNotification />
       <BugReportModal
