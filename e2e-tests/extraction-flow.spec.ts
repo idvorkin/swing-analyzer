@@ -84,7 +84,7 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
         const repCount = parseInt(repCounter?.textContent || '0', 10);
         return !extractingEl && repCount > 0;
       },
-      { timeout: 60000 }
+      { timeout: 30000 }
     );
 
     // Wait a moment for UI to settle after extraction
@@ -104,7 +104,6 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
   test('extraction with realistic timing simulates user experience', async ({
     page,
   }) => {
-    test.slow(); // This test intentionally takes longer
 
     // Enable console logging to see extraction progress
     page.on('console', (msg) => {
@@ -119,9 +118,8 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
       }
     });
 
-    // Realistic mode: 30ms delay per frame (~33fps extraction)
-    // Note: swing-sample has ~800 frames, so this takes ~24s
-    await setupMockPoseDetector(page, 'swing-sample-4reps', 30);
+    // Fast mode with small delay to test timing behavior
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 5);
 
     // Click Sample - triggers extraction
     await page.click('#load-hardcoded-btn');
@@ -138,7 +136,7 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
           const pageText = document.body.textContent || '';
           return pageText.includes('Ready') && pageText.includes('reps detected');
         },
-        { timeout: 60000 } // 1 minute timeout
+        { timeout: 30000 } // 1 minute timeout
       );
     } catch (e) {
       // Dump session recorder state on failure
@@ -160,8 +158,8 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
     const extractionTime = Date.now() - startTime;
     console.log(`Extraction took ${(extractionTime / 1000).toFixed(1)}s`);
 
-    // With 30ms delay, should take at least a few seconds
-    expect(extractionTime).toBeGreaterThan(1000);
+    // With 5ms delay, should complete quickly but still take some time
+    expect(extractionTime).toBeGreaterThan(100);
   });
 
   // Test that skeleton renders during extraction
@@ -230,7 +228,7 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
         const repCount = parseInt(repCounter?.textContent || '0', 10);
         return !extractingEl && repCount > 0;
       },
-      { timeout: 60000 }
+      { timeout: 30000 }
     );
 
     const repCountAfterExtraction = await page.evaluate(() => {

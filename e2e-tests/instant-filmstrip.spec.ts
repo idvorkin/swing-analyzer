@@ -97,7 +97,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
         const repCount = parseInt(repCounter?.textContent || '0', 10);
         return repCount >= 1;
       },
-      { timeout: 60000 }
+      { timeout: 30000 }
     );
 
     // Double-check video is STILL paused
@@ -156,7 +156,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
           // Wait for at least 2 reps to show progressive counting
           return repCount >= 2;
         },
-        { timeout: 60000 }
+        { timeout: 30000 }
       );
     } finally {
       clearInterval(pollInterval);
@@ -192,7 +192,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
         const repCount = parseInt(repCounter?.textContent || '0', 10);
         return repCount >= 1;
       },
-      { timeout: 90000 }
+      { timeout: 30000 }
     );
 
     // Get initial video time
@@ -241,7 +241,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
         const repCount = parseInt(repCounter?.textContent || '0', 10);
         return repCount >= 2;
       },
-      { timeout: 60000 }
+      { timeout: 30000 }
     );
 
     // Get final rep count
@@ -292,7 +292,7 @@ test.describe('Playback Mode: No Duplicate Rep Counting', () => {
         const pageText = document.body.textContent || '';
         return pageText.includes('Ready') && pageText.includes('reps detected');
       },
-      { timeout: 60000 }
+      { timeout: 30000 }
     );
 
     // Get rep count after extraction completes
@@ -339,7 +339,7 @@ test.describe('Playback Mode: No Duplicate Rep Counting', () => {
         const pageText = document.body.textContent || '';
         return pageText.includes('Ready') && pageText.includes('reps detected');
       },
-      { timeout: 60000 }
+      { timeout: 30000 }
     );
 
     // Play the video
@@ -388,7 +388,7 @@ test.describe('Filmstrip Frame Capture During Extraction', () => {
         const el = document.querySelector('#rep-counter');
         return parseInt(el?.textContent || '0', 10) >= 1;
       },
-      { timeout: 60000 }
+      { timeout: 30000 }
     );
 
     // Check filmstrip has 4 thumbnails for the first rep

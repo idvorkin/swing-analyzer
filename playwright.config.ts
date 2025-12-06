@@ -83,7 +83,7 @@ if (runningServer) {
 
 export default defineConfig({
   testDir: './e2e-tests',
-  timeout: 60 * 1000, // 60 seconds for tests involving video playback
+  timeout: 30 * 1000, // 30 seconds max per test
   expect: {
     timeout: 10 * 1000, // 10 seconds for assertions
   },
@@ -102,12 +102,11 @@ export default defineConfig({
 
   use: {
     baseURL: BASE_URL,
-    // Enhanced artifact capture - full capture in dev, selective in CI
-    trace: process.env.CI ? 'retain-on-failure' : 'on',
-    video: process.env.CI ? 'retain-on-failure' : 'on',
-    screenshot: process.env.CI ? 'only-on-failure' : 'on',
-    // Increased from 15s to 60s to handle slow extraction when tests run in parallel
-    actionTimeout: 60000,
+    // Capture artifacts only on failure for speed
+    trace: 'retain-on-failure',
+    video: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    actionTimeout: 30000,
     // Ignore HTTPS errors for self-signed certs in dev
     ignoreHTTPSErrors: useHttps,
   },
