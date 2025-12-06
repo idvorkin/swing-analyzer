@@ -21,6 +21,8 @@ export {
 } from './mockPoseDetector';
 // Video helpers
 export {
+  clearVideoTestId,
+  generateTestId,
   getVideoState,
   loadHardcodedVideo,
   loadHardcodedVideoAndPlay,
@@ -28,6 +30,7 @@ export {
   playVideo,
   playVideoToEnd,
   seekToTime,
+  setVideoTestId,
   stopVideo,
   togglePlayPause,
   waitForCachedPoseTrack,

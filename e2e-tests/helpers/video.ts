@@ -7,6 +7,41 @@
 import type { Page } from '@playwright/test';
 
 /**
+ * Generate a unique test ID for cache isolation.
+ * Each test run gets a unique ID so cached poses don't collide.
+ */
+export function generateTestId(): string {
+  return `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * Set a test ID that will be appended to videos to create unique hashes.
+ * This allows parallel tests to avoid cache collisions while still testing
+ * the cache mechanism itself.
+ *
+ * Call this before loading any video in your test.
+ *
+ * @param page - Playwright page instance
+ * @param testId - Unique identifier for this test run
+ */
+export async function setVideoTestId(page: Page, testId: string): Promise<void> {
+  await page.evaluate((id) => {
+    (window as any).__VIDEO_TEST_ID__ = id;
+  }, testId);
+}
+
+/**
+ * Clear the video test ID (use cached poses normally)
+ *
+ * @param page - Playwright page instance
+ */
+export async function clearVideoTestId(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    delete (window as any).__VIDEO_TEST_ID__;
+  });
+}
+
+/**
  * Load the hardcoded sample video
  *
  * @param page - Playwright page instance
