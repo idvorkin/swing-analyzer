@@ -69,7 +69,9 @@ export interface DetectorResult {
   /** All peaks from the completed rep (emitted when repCompleted=true) */
   repPeaks?: {
     top?: PhasePeak;
+    connect?: PhasePeak;
     bottom?: PhasePeak;
+    release?: PhasePeak;
   };
 }
 
