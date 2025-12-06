@@ -496,6 +496,7 @@ Project documentation lives in `docs/tech-pack/`:
 1. **Fast tests for CI** - Seeded data, run on every PR (~1-3s each)
 2. **Realistic tests for releases** - Mock detector with timing, simulates user experience (~30-60s each)
 3. **When debugging user issues** - Always write a realistic test first that reproduces the bug
+4. **Hard bugs signal architecture problems** - If a bug is difficult to fix, STOP and ask: is there an architectural issue? If so, create a beads issue (`bd create --title="Architecture: <problem>" --type=bug`) before continuing. Don't patch around bad architecture.
 
 ### E2E Tests (Playwright)
 
