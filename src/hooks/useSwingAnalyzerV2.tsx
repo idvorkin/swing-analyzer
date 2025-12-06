@@ -63,6 +63,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const [extractionProgress, setExtractionProgress] = useState<ExtractionProgress | null>(null);
   const [inputState, setInputState] = useState<InputSessionState>({ type: 'idle' });
 
+  // Track if we've recorded extraction start for current session (to avoid spam)
+  const hasRecordedExtractionStartRef = useRef<boolean>(false);
+
   // Refs for elements
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -120,22 +123,32 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
   // Process a skeleton event through the pipeline and update UI
   const processSkeletonEvent = useCallback((event: SkeletonEvent) => {
-    if (!event.skeleton) return;
+    if (!event.skeleton) {
+      console.log('[DEBUG] processSkeletonEvent: no skeleton in event', event);
+      return;
+    }
 
     const pipeline = pipelineRef.current;
-    if (!pipeline) return;
+    if (!pipeline) {
+      console.log('[DEBUG] processSkeletonEvent: no pipeline');
+      return;
+    }
 
     // Process through pipeline
     const result = pipeline.processSkeletonEvent(event);
 
     // Update UI state
     setRepCount(result);
-    setSpineAngle(Math.round(event.skeleton.getSpineAngle() || 0));
+    const spineAngle = Math.round(event.skeleton.getSpineAngle() || 0);
+    setSpineAngle(spineAngle);
     setArmToSpineAngle(Math.round(event.skeleton.getArmToVerticalAngle() || 0));
 
     // Render skeleton
     if (skeletonRendererRef.current) {
+      console.log('[DEBUG] Rendering skeleton, spineAngle:', spineAngle);
       skeletonRendererRef.current.renderSkeleton(event.skeleton, performance.now());
+    } else {
+      console.log('[DEBUG] processSkeletonEvent: no skeletonRenderer');
     }
   }, []);
 
@@ -165,12 +178,19 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       if (state.type === 'video-file') {
         if (state.sourceState.type === 'extracting') {
           setStatus('Extracting poses...');
-          // Record extraction start for debugging
-          recordExtractionStart({ fileName: state.fileName });
+          // Record extraction start only once per extraction session
+          if (!hasRecordedExtractionStartRef.current) {
+            hasRecordedExtractionStartRef.current = true;
+            recordExtractionStart({ fileName: state.fileName });
+            console.log('[DEBUG] Extraction started for:', state.fileName);
+          }
         } else if (state.sourceState.type === 'active') {
           setStatus('Ready');
-          // Record extraction complete for debugging
-          recordExtractionComplete({ fileName: state.fileName });
+          // Record extraction complete for debugging (only if we recorded start)
+          if (hasRecordedExtractionStartRef.current) {
+            recordExtractionComplete({ fileName: state.fileName });
+            console.log('[DEBUG] Extraction complete for:', state.fileName);
+          }
           // Check for crop region in posetrack metadata
           const videoSource = session.getVideoFileSource();
           const poseTrack = videoSource?.getPoseTrack();
@@ -198,7 +218,13 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     // Subscribe to skeleton events - use processSkeletonEvent via ref for stable access
     skeletonHandlerRef.current = processSkeletonEvent;
+    let skeletonEventCount = 0;
     const skeletonSubscription = session.skeletons$.subscribe((event) => {
+      skeletonEventCount++;
+      // Log first 5 events and then every 100th
+      if (skeletonEventCount <= 5 || skeletonEventCount % 100 === 0) {
+        console.log('[DEBUG] Received skeleton event from extraction:', skeletonEventCount, 'hasSkeleton:', !!event.skeleton);
+      }
       // Use the ref to access the latest handler (avoids stale closure)
       skeletonHandlerRef.current?.(event);
     });
@@ -266,6 +292,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       const skeleton = session.getSkeletonAtTime(video.currentTime);
       if (skeleton) {
         skeletonHandlerRef.current?.(skeleton);
+      } else {
+        // Debug: log when we can't find a skeleton for the current time
+        console.log('[DEBUG] handleTimeUpdate: no skeleton at time', video.currentTime);
       }
     };
 
@@ -276,7 +305,10 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
       const skeleton = session.getSkeletonAtTime(video.currentTime);
       if (skeleton) {
+        console.log('[DEBUG] handleSeeked: found skeleton at time', video.currentTime);
         skeletonHandlerRef.current?.(skeleton);
+      } else {
+        console.log('[DEBUG] handleSeeked: no skeleton at time', video.currentTime);
       }
     };
 
@@ -308,6 +340,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setRepCount(0);
     setRepThumbnails(new Map());
     pipelineRef.current?.reset();
+    hasRecordedExtractionStartRef.current = false; // Reset for new video
 
     // Load video into element
     const url = URL.createObjectURL(file);
@@ -353,6 +386,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setRepCount(0);
       setRepThumbnails(new Map());
       pipelineRef.current?.reset();
+      hasRecordedExtractionStartRef.current = false; // Reset for new video
 
       // Try remote URL first, fall back to local
       let videoURL = DEFAULT_SAMPLE_VIDEO;
@@ -439,6 +473,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const video = videoRef.current;
     if (!video) return;
 
+    // Guard against NaN when video metadata isn't loaded
+    if (!isFinite(video.duration) || !isFinite(video.currentTime)) return;
+
     video.pause();
     video.currentTime = Math.min(video.duration, video.currentTime + frameStep);
     // Skeleton will be rendered via 'seeked' event handler
@@ -447,6 +484,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const previousFrame = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
+
+    // Guard against NaN when video metadata isn't loaded
+    if (!isFinite(video.currentTime)) return;
 
     video.pause();
     video.currentTime = Math.max(0, video.currentTime - frameStep);
