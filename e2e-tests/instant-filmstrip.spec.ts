@@ -21,12 +21,8 @@
 import { expect, test } from '@playwright/test';
 import { clearPoseTrackDB, setupMockPoseDetector, useShortTestVideo } from './helpers';
 
-// SKIPPED: Filmstrip thumbnail feature is disabled
-// The filmstrip thumbnail capture was removed when consolidating
-// SwingFormProcessor + SwingRepProcessor into SwingAnalyzer.
-// See VideoSection.tsx lines 126-130 for the TODO.
-// These tests should be re-enabled when filmstrip thumbnails are reimplemented.
-test.describe.skip('Instant Filmstrip: Reps Appear During Extraction', () => {
+// Filmstrip thumbnail tests - thumbnails appear during extraction
+test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept GitHub video URL and serve short local video for faster tests
     await useShortTestVideo(page);
@@ -52,7 +48,9 @@ test.describe.skip('Instant Filmstrip: Reps Appear During Extraction', () => {
           text.includes('Pipeline') || text.includes('Form processor') ||
           text.includes('Rep processor') || text.includes('checkpoint') ||
           text.includes('CYCLE') || text.includes('Found') ||
-          text.includes('Emitting') || text.includes('position')) {
+          text.includes('Emitting') || text.includes('position') ||
+          text.includes('FormAnalyzer') || text.includes('Filmstrip') ||
+          text.includes('frameImage')) {
         console.log(`[BROWSER] ${text}`);
       }
     });
@@ -362,7 +360,7 @@ test.describe.skip('Playback Mode: No Duplicate Rep Counting', () => {
   });
 });
 
-test.describe.skip('Filmstrip Frame Capture During Extraction', () => {
+test.describe('Filmstrip Frame Capture During Extraction', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
 
