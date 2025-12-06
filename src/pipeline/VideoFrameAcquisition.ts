@@ -56,6 +56,7 @@ export class VideoFrameAcquisition implements FrameAcquisition {
    */
   stop(): void {
     this.stop$.next();
+    this.stop$.complete();
   }
 
   /**
@@ -86,11 +87,14 @@ export class VideoFrameAcquisition implements FrameAcquisition {
 
       // Wait for video to be ready
       return new Promise<void>((resolve) => {
-        this.videoElement.onloadedmetadata = () => {
+        const handleMetadata = () => {
+          // Clean up listener
+          this.videoElement.removeEventListener('loadedmetadata', handleMetadata);
           // Update canvas dimensions
           this.updateCanvasDimensions();
           resolve();
         };
+        this.videoElement.addEventListener('loadedmetadata', handleMetadata);
       });
     } catch (error) {
       console.error('Error starting camera:', error);
@@ -129,22 +133,26 @@ export class VideoFrameAcquisition implements FrameAcquisition {
         URL.revokeObjectURL(this.videoElement.src);
       }
 
+      // Cleanup function to remove listeners
+      const cleanup = () => {
+        this.videoElement.removeEventListener('error', handleError);
+        this.videoElement.removeEventListener('loadedmetadata', handleLoaded);
+      };
+
       // Set up event listeners
       const handleError = () => {
+        cleanup();
         URL.revokeObjectURL(videoURL);
         reject(new Error('Failed to load video file'));
       };
 
       const handleLoaded = () => {
+        cleanup();
         this.updateCanvasDimensions();
         console.log(
           `Video loaded: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`
         );
         resolve();
-
-        // Remove listeners
-        this.videoElement.removeEventListener('error', handleError);
-        this.videoElement.removeEventListener('loadedmetadata', handleLoaded);
       };
 
       // Set up listeners
@@ -176,8 +184,15 @@ export class VideoFrameAcquisition implements FrameAcquisition {
       // Stop camera if running
       this.stopCamera();
 
+      // Cleanup function to remove listeners
+      const cleanup = () => {
+        this.videoElement.removeEventListener('error', handleError);
+        this.videoElement.removeEventListener('loadedmetadata', handleLoaded);
+      };
+
       // Set up event listeners
       const handleError = () => {
+        cleanup();
         console.error(
           `[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Error event triggered for ${url}`
         );
@@ -185,6 +200,7 @@ export class VideoFrameAcquisition implements FrameAcquisition {
       };
 
       const handleLoaded = () => {
+        cleanup();
         console.log(
           '[DEBUG] VideoFrameAcquisition.loadVideoFromURL: loadedmetadata event triggered'
         );
@@ -193,10 +209,6 @@ export class VideoFrameAcquisition implements FrameAcquisition {
           `[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Video loaded: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`
         );
         resolve();
-
-        // Remove listeners
-        this.videoElement.removeEventListener('error', handleError);
-        this.videoElement.removeEventListener('loadedmetadata', handleLoaded);
       };
 
       // Set up listeners

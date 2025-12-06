@@ -65,12 +65,18 @@ export async function extractPosesFromVideo(
     await new Promise<void>((resolve, reject) => {
       const METADATA_TIMEOUT_MS = 30000; // 30 second timeout
       let settled = false;
+      let abortHandler: (() => void) | null = null;
 
       const cleanup = () => {
+        if (settled) return;
         settled = true;
         clearTimeout(timeoutId);
         video.onloadedmetadata = null;
         video.onerror = null;
+        // Remove abort handler if it was added
+        if (abortHandler) {
+          options.signal?.removeEventListener('abort', abortHandler);
+        }
       };
 
       const timeoutId = setTimeout(() => {
@@ -105,20 +111,20 @@ export async function extractPosesFromVideo(
         }
       };
 
-      // Handle abort
+      // Handle abort signal
       if (options.signal?.aborted) {
         cleanup();
         reject(new DOMException('Aborted', 'AbortError'));
         return;
       }
 
-      const abortHandler = () => {
+      abortHandler = () => {
         if (!settled) {
           cleanup();
           reject(new DOMException('Aborted', 'AbortError'));
         }
       };
-      options.signal?.addEventListener('abort', abortHandler, { once: true });
+      options.signal?.addEventListener('abort', abortHandler);
     });
 
     // Get video properties

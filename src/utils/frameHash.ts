@@ -53,6 +53,8 @@ export function computeFrameHash(
   // Draw scaled-down grayscale version
   ctx.filter = 'grayscale(100%)';
   ctx.drawImage(video, 0, 0, hashSize, hashSize);
+  // Reset filter to prevent affecting subsequent canvas operations
+  ctx.filter = 'none';
 
   // Get pixel data
   const imageData = ctx.getImageData(0, 0, hashSize, hashSize);
