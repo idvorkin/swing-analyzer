@@ -153,7 +153,7 @@ export async function extractPosesFromVideo(
     const thumbnailCanvas = document.createElement('canvas');
     thumbnailCanvas.width = THUMBNAIL_WIDTH;
     thumbnailCanvas.height = thumbnailHeight;
-    const thumbnailCtx = thumbnailCanvas.getContext('2d');
+    const thumbnailCtx = thumbnailCanvas.getContext('2d', { willReadFrequently: true });
     if (!thumbnailCtx) {
       throw new Error('Failed to get thumbnail canvas 2d context');
     }
