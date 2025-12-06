@@ -4,9 +4,9 @@
   "type": "module",
   "description": "Web-based swing analyzer using MediaPipe",
   "scripts": {
-    "predev": "./tools/generate-version.sh",
+    "predev": "./scripts/generate-version.sh",
     "dev": "vite",
-    "prebuild": "./tools/generate-version.sh",
+    "prebuild": "./scripts/generate-version.sh",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "playwright test",
