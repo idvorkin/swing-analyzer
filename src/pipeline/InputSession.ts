@@ -186,7 +186,7 @@ export class InputSession {
       videoElement: this.videoElement,
       canvasElement: this.canvasElement,
       autoExtract: true,
-      model: 'movenet-lightning', // TODO: make configurable
+      model: 'blazepose', // TODO: make configurable
     });
 
     this.source = videoSource;

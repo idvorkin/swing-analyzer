@@ -8,7 +8,6 @@
 
 import { describe, expect, it } from 'vitest';
 import type { PoseKeypoint } from '../types';
-import type { PoseModel } from '../types/posetrack';
 import {
   calculateSpineAngle,
   computeAngles,
