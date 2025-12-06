@@ -543,3 +543,87 @@ The HTML report includes:
 - Test results with pass/fail status
 - Videos and screenshots (captured automatically in dev)
 - Trace viewer with timeline, DOM snapshots, network requests, and console logs
+
+### Testing Architecture: SessionRecorder
+
+The app includes a **SessionRecorder** (`src/services/SessionRecorder.ts`) that captures detailed logs of user interactions and pipeline state. This is the foundation of our debugging strategy.
+
+**What SessionRecorder captures:**
+- User interactions (clicks, keypresses with element info)
+- Pipeline state snapshots at 4 FPS (rep count, video time, skeleton angles, form position)
+- State change events (extraction start/complete, playback start/pause, rep detected)
+- Console errors and unhandled exceptions
+- Memory usage (Chrome only)
+
+**Why E2E tests should use SessionRecorder:**
+
+1. **Same data format as production** - Customer bug reports include SessionRecorder logs. Writing tests that emit the same events means you can:
+   - Replay customer sessions to reproduce bugs
+   - Compare test runs with production behavior
+   - Build tooling that works for both debugging and testing
+
+2. **Rich debugging context** - When a test fails, the SessionRecorder log shows exactly what happened:
+   - Which buttons were clicked
+   - What the pipeline state was at each moment
+   - Where extraction/playback started and stopped
+
+3. **Deterministic debugging** - SessionRecorder logs are JSON, making them:
+   - Easy to diff between runs
+   - Searchable for specific events
+   - Version-controllable as test fixtures
+
+**Using SessionRecorder in E2E tests:**
+
+```typescript
+// In your E2E test
+test('should detect reps during extraction', async ({ page }) => {
+  // SessionRecorder is auto-active in the app
+  // Access it via window.swingDebug
+
+  // ... perform test actions ...
+
+  // Get the session recording for debugging
+  const session = await page.evaluate(() =>
+    (window as any).swingDebug.getCurrentSession()
+  );
+
+  // Check state changes
+  const repEvents = session.stateChanges.filter(
+    (e: any) => e.type === 'rep_detected'
+  );
+  expect(repEvents).toHaveLength(4);
+
+  // Save session on failure for analysis
+  if (testFailed) {
+    await page.evaluate(() =>
+      (window as any).swingDebug.downloadSession()
+    );
+  }
+});
+```
+
+**Debugging with customer SessionRecorder logs:**
+
+When a customer reports a bug, ask them to download their session log from Settings → Developer → Download Session Recording. Then:
+
+1. Load the JSON and inspect `stateChanges` for the sequence of events
+2. Check `pipelineSnapshots` for state at specific timestamps
+3. Look at `interactions` to see what the user clicked
+4. Check `memorySnapshots` for memory leaks
+
+```bash
+# Quick analysis in console
+cat session.json | jq '.stateChanges | .[] | select(.type == "error")'
+cat session.json | jq '.pipelineSnapshots | last(10) | .[].repCount'
+```
+
+**Console debugging (in browser):**
+
+```javascript
+// Available on window.swingDebug in all environments
+swingDebug.getCurrentSession()  // Get current recording
+swingDebug.getCrashLogs()       // Get persisted sessions (after crash)
+swingDebug.getStats()           // Recording stats
+swingDebug.analyzeMemory()      // Memory trend analysis
+swingDebug.downloadSession()    // Download as JSON
+```
