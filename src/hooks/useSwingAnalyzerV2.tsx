@@ -21,6 +21,14 @@ import type { Pipeline, ThumbnailEvent } from '../pipeline/Pipeline';
 import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { ExtractionProgress } from '../pipeline/SkeletonSource';
+import {
+  recordExtractionStart,
+  recordExtractionComplete,
+  recordVideoLoad,
+  recordPlaybackStart,
+  recordPlaybackPause,
+  sessionRecorder,
+} from '../services/SessionRecorder';
 import type { PositionCandidate } from '../types/exercise';
 import type { CropRegion } from '../types/posetrack';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
@@ -157,8 +165,12 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       if (state.type === 'video-file') {
         if (state.sourceState.type === 'extracting') {
           setStatus('Extracting poses...');
+          // Record extraction start for debugging
+          recordExtractionStart({ fileName: state.fileName });
         } else if (state.sourceState.type === 'active') {
           setStatus('Ready');
+          // Record extraction complete for debugging
+          recordExtractionComplete({ fileName: state.fileName });
           // Check for crop region in posetrack metadata
           const videoSource = session.getVideoFileSource();
           const poseTrack = videoSource?.getPoseTrack();
@@ -200,6 +212,22 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setAppState(prev => ({ ...prev, isModelLoaded: true }));
     setStatus('Ready');
 
+    // Set up session recorder pipeline state getter for debugging
+    const video = videoRef.current;
+    sessionRecorder.setPipelineStateGetter(() => ({
+      repCount: pipelineRef.current?.getRepCount() ?? 0,
+      isPlaying: video ? !video.paused : false,
+      videoTime: video?.currentTime ?? 0,
+      skeletonAngles: pipelineRef.current?.getLatestSkeleton()
+        ? {
+            spine: pipelineRef.current.getLatestSkeleton()?.getSpineAngle() ?? 0,
+            arm: pipelineRef.current.getLatestSkeleton()?.getArmToSpineAngle() ?? 0,
+            hip: pipelineRef.current.getLatestSkeleton()?.getHipAngle() ?? 0,
+            knee: pipelineRef.current.getLatestSkeleton()?.getKneeAngle() ?? 0,
+          }
+        : undefined,
+    }));
+
     return () => {
       stateSubscription.unsubscribe();
       skeletonSubscription.unsubscribe();
@@ -220,12 +248,14 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       isPlayingRef.current = true;
       setIsPlaying(true);
       setAppState(prev => ({ ...prev, isProcessing: true }));
+      recordPlaybackStart({ videoTime: video.currentTime });
     };
 
     const handlePause = () => {
       isPlayingRef.current = false;
       setIsPlaying(false);
       setAppState(prev => ({ ...prev, isProcessing: false }));
+      recordPlaybackPause({ videoTime: video.currentTime });
     };
 
     const handleTimeUpdate = () => {
@@ -366,6 +396,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       });
 
       setCurrentVideoFile(videoFile);
+      recordVideoLoad({ source: 'hardcoded', fileName: 'swing-sample.webm' });
 
       // Start extraction/cache lookup
       await session.startVideoFile(videoFile);
