@@ -1,4 +1,5 @@
 - Use PRs to do updates
+- When reporting dev server URLs, always use the **Tailscale URL** (e.g., `https://c-5001.squeaker-teeth.ts.net:5174`), not localhost
 
 ## Convention Updates
 
