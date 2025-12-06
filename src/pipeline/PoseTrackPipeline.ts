@@ -59,6 +59,22 @@ export interface PoseTrackPipelineOptions {
   exerciseType?: ExerciseType;
   /** Custom exercise definition (overrides exerciseType) */
   exerciseDefinition?: ExerciseDefinition;
+  /** Use adaptive thresholds based on user's actual movement range (default: false) */
+  adaptiveThresholds?: boolean;
+}
+
+/**
+ * Result of calibration - the user's actual movement range
+ */
+export interface CalibrationResult {
+  /** Minimum spine angle observed (user's "top" position) */
+  minSpineAngle: number;
+  /** Maximum spine angle observed (user's "bottom" position) */
+  maxSpineAngle: number;
+  /** Number of frames analyzed */
+  framesAnalyzed: number;
+  /** Whether calibration found sufficient range for rep detection */
+  isValid: boolean;
 }
 
 /**
@@ -74,6 +90,9 @@ export class PoseTrackPipeline {
   private formAnalyzer: FormAnalyzer;
   private exerciseDefinition: ExerciseDefinition;
 
+  // Calibration result (if adaptive thresholds enabled)
+  private calibrationResult: CalibrationResult | null = null;
+
   // RxJS subjects for event streams
   private skeletonSubject = new Subject<SkeletonEvent>();
   private formSubject = new Subject<FormEvent>();
@@ -82,16 +101,141 @@ export class PoseTrackPipeline {
   constructor(poseTrack: PoseTrackFile, options: PoseTrackPipelineOptions = {}) {
     this.poseTrack = poseTrack;
 
-    // Determine exercise definition
+    // Determine base exercise definition
+    let baseDefinition: ExerciseDefinition;
     if (options.exerciseDefinition) {
-      this.exerciseDefinition = options.exerciseDefinition;
+      baseDefinition = options.exerciseDefinition;
     } else {
       const exerciseType = options.exerciseType ?? ExerciseType.KettlebellSwing;
-      this.exerciseDefinition = getExerciseDefinition(exerciseType);
+      baseDefinition = getExerciseDefinition(exerciseType);
+    }
+
+    // If adaptive thresholds enabled, calibrate and create custom definition
+    if (options.adaptiveThresholds) {
+      this.calibrationResult = this.calibrate();
+      this.exerciseDefinition = this.createCalibratedDefinition(
+        baseDefinition,
+        this.calibrationResult
+      );
+    } else {
+      this.exerciseDefinition = baseDefinition;
     }
 
     // Create form analyzer
     this.formAnalyzer = new FormAnalyzer(this.exerciseDefinition);
+  }
+
+  /**
+   * Calibrate by scanning all frames to find user's actual movement range.
+   * This determines the user's personal "top" and "bottom" positions.
+   */
+  calibrate(): CalibrationResult {
+    const spineAngles: number[] = [];
+
+    // Scan all frames to collect spine angles
+    for (const frame of this.poseTrack.frames) {
+      if (frame.keypoints && frame.keypoints.length > 0) {
+        const spineAngle = this.calculateSpineAngle(frame.keypoints);
+        if (spineAngle > 0) {
+          spineAngles.push(spineAngle);
+        }
+      }
+    }
+
+    if (spineAngles.length === 0) {
+      return {
+        minSpineAngle: 0,
+        maxSpineAngle: 0,
+        framesAnalyzed: 0,
+        isValid: false,
+      };
+    }
+
+    const minSpineAngle = Math.min(...spineAngles);
+    const maxSpineAngle = Math.max(...spineAngles);
+    const range = maxSpineAngle - minSpineAngle;
+
+    // Need at least 20° range to detect meaningful reps
+    const isValid = range >= 20;
+
+    return {
+      minSpineAngle,
+      maxSpineAngle,
+      framesAnalyzed: spineAngles.length,
+      isValid,
+    };
+  }
+
+  /**
+   * Create a calibrated exercise definition based on user's actual range.
+   * Maps their personal min/max to the position thresholds.
+   */
+  private createCalibratedDefinition(
+    base: ExerciseDefinition,
+    calibration: CalibrationResult
+  ): ExerciseDefinition {
+    if (!calibration.isValid) {
+      return base;
+    }
+
+    const { minSpineAngle, maxSpineAngle } = calibration;
+    const range = maxSpineAngle - minSpineAngle;
+
+    // Create calibrated position thresholds based on user's range
+    // top: user's minimum angle (most upright)
+    // bottom: user's maximum angle (deepest hinge)
+    // connect/release: interpolated positions
+    const calibratedPositions = base.positions.map((pos) => {
+      const newPos = { ...pos, angleTargets: { ...pos.angleTargets } };
+
+      if (pos.angleTargets.spine) {
+        let idealAngle: number;
+        switch (pos.name) {
+          case 'top':
+            // Top is user's most upright position
+            idealAngle = minSpineAngle + range * 0.1;
+            break;
+          case 'bottom':
+            // Bottom is user's deepest hinge
+            idealAngle = maxSpineAngle - range * 0.1;
+            break;
+          case 'connect':
+            // Connect is ~60% of the way down
+            idealAngle = minSpineAngle + range * 0.6;
+            break;
+          case 'release':
+            // Release is ~40% of the way up
+            idealAngle = minSpineAngle + range * 0.4;
+            break;
+          default:
+            idealAngle = pos.angleTargets.spine.ideal;
+        }
+
+        newPos.angleTargets = {
+          ...pos.angleTargets,
+          spine: {
+            ...pos.angleTargets.spine,
+            ideal: idealAngle,
+            // Tolerance is proportional to user's range
+            tolerance: Math.max(15, range * 0.25),
+          },
+        };
+      }
+
+      return newPos;
+    });
+
+    return {
+      ...base,
+      positions: calibratedPositions,
+    };
+  }
+
+  /**
+   * Get calibration result (null if adaptive thresholds not enabled)
+   */
+  getCalibrationResult(): CalibrationResult | null {
+    return this.calibrationResult;
   }
 
   /**
