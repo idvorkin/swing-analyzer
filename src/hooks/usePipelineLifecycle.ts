@@ -218,7 +218,7 @@ export function usePipelineLifecycle(
         await pipeline.initialize();
 
         onModelLoaded?.();
-        onStatusChange?.('Ready. Upload a video or start camera.');
+        onStatusChange?.('Ready. Upload a video.');
         recordPipelineInit({ model: 'blazepose' });
       }
     } catch (error) {

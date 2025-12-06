@@ -1,9 +1,8 @@
 /**
  * SkeletonSource - Unified interface for skeleton data sources
  *
- * Both camera (real-time ML) and video file (batch extraction + cache) sources
- * implement this interface, allowing the pipeline to consume skeletons
- * without knowing the source type.
+ * Video file sources (batch extraction + cache) implement this interface,
+ * allowing the pipeline to consume skeletons without knowing the source details.
  */
 
 import type { Observable } from 'rxjs';
@@ -12,7 +11,7 @@ import type { SkeletonEvent } from './PipelineInterfaces';
 /**
  * Source type discriminator
  */
-export type SkeletonSourceType = 'camera' | 'video-file';
+export type SkeletonSourceType = 'video-file';
 
 /**
  * Progress information during extraction (video-file only)
@@ -37,12 +36,10 @@ export type SkeletonSourceState =
   | { type: 'error'; message: string };
 
 /**
- * Unified interface for skeleton data sources
+ * Interface for skeleton data sources
  *
- * Both camera and video file sources produce Observable<SkeletonEvent>,
- * but differ in:
- * - Camera: real-time ML inference, no caching
- * - Video file: batch extraction with caching, fast playback lookup
+ * Video file sources produce Observable<SkeletonEvent> from
+ * batch extraction with caching for fast playback lookup.
  */
 export interface SkeletonSource {
   /** Source type discriminator */
@@ -53,8 +50,7 @@ export interface SkeletonSource {
 
   /**
    * Observable stream of skeleton events
-   * - Camera: emits in real-time as frames are processed
-   * - Video file: emits during extraction, then from cache during playback
+   * Emits during extraction, then from cache during playback
    */
   readonly skeletons$: Observable<SkeletonEvent>;
 
@@ -65,15 +61,13 @@ export interface SkeletonSource {
 
   /**
    * Start the source
-   * - Camera: begins capturing and ML inference
-   * - Video file: checks cache, then extracts if needed
+   * Checks cache, then extracts if needed
    */
   start(): Promise<void>;
 
   /**
    * Stop the source
-   * - Camera: stops capture
-   * - Video file: cancels extraction if in progress
+   * Cancels extraction if in progress
    */
   stop(): void;
 
@@ -84,8 +78,7 @@ export interface SkeletonSource {
 
   /**
    * Get skeleton at a specific video time (for seeking/stepping)
-   * - Camera: returns null (no caching)
-   * - Video file: returns cached skeleton if available
+   * Returns cached skeleton if available
    *
    * @param videoTime - The video time in seconds
    * @returns The skeleton event at that time, or null if not cached
@@ -94,22 +87,9 @@ export interface SkeletonSource {
 
   /**
    * Check if skeleton data is available for a given time
-   * - Camera: always false
-   * - Video file: true if frame is cached
+   * Returns true if frame is cached
    */
   hasSkeletonAtTime(videoTime: number): boolean;
-}
-
-/**
- * Configuration for creating a camera source
- */
-export interface CameraSourceConfig {
-  /** Camera facing mode */
-  facingMode: 'user' | 'environment';
-  /** Video element to attach stream to */
-  videoElement: HTMLVideoElement;
-  /** Canvas element for frame capture */
-  canvasElement: HTMLCanvasElement;
 }
 
 /**

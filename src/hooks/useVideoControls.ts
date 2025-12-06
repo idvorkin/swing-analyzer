@@ -378,7 +378,6 @@ export function useVideoControls({
       // Use blob URL to avoid double-fetching the video
       const blobUrl = URL.createObjectURL(blob);
       await frameAcquisitionRef.current.loadVideoFromURL(blobUrl);
-      setAppState((prev) => ({ ...prev, usingCamera: false }));
       setStatus('Video loaded. Press Play to start.');
       recordVideoLoad({ source: 'hardcoded', fileName: 'sample-video.mp4' });
 
@@ -433,7 +432,6 @@ export function useVideoControls({
         .loadVideoFromURL(fileURL)
         .then(() => {
           setStatus(`Loaded: ${file.name}. Press Play to start.`);
-          setAppState((prev) => ({ ...prev, usingCamera: false }));
 
           // Don't auto-play - let user press Play button manually.
           // This ensures React effects have time to run and reinitialize

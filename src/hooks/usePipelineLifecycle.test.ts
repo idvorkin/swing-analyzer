@@ -69,7 +69,6 @@ const mockFrameAcquisition = {
   start: vi.fn(() => new Subject()),
   stop: vi.fn(),
   getCurrentFrame: vi.fn(),
-  stopCamera: vi.fn(),
 };
 
 vi.mock('../pipeline/PipelineFactory', () => ({
@@ -114,9 +113,7 @@ describe('usePipelineLifecycle', () => {
       });
 
       expect(onModelLoaded).toHaveBeenCalled();
-      expect(onStatusChange).toHaveBeenCalledWith(
-        'Ready. Upload a video or start camera.'
-      );
+      expect(onStatusChange).toHaveBeenCalledWith('Ready. Upload a video.');
       expect(result.current.pipelineRef.current).toBeTruthy();
     });
 

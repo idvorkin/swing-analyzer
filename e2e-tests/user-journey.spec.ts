@@ -48,9 +48,6 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
       // Sample button
       await expect(page.locator('#load-hardcoded-btn')).toBeVisible();
-
-      // Camera button
-      await expect(page.locator('#camera-btn')).toBeVisible();
     });
 
     test('analysis section shows initial metrics at 0', async ({ page }) => {

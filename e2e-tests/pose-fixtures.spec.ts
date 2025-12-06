@@ -35,7 +35,6 @@ test.describe('Pose Track Fixtures', () => {
     test('app loads and displays UI', async ({ page }) => {
       await expect(page.locator('h1')).toContainText('Swing Analyzer');
       await expect(page.locator('#load-hardcoded-btn')).toBeVisible();
-      await expect(page.locator('#camera-btn')).toBeVisible();
     });
 
     test('sample button clicks and video element appears', async ({ page }) => {
