@@ -140,7 +140,7 @@ export function SettingsModal({
         <div className="settings-content">
           {activeSection === 'settings' && <SettingsTab />}
 
-          {activeSection === 'developer' && <DeveloperTab onClose={onClose} />}
+          {activeSection === 'developer' && <DeveloperTab />}
 
           {activeSection === 'about' && (
             <AboutTab

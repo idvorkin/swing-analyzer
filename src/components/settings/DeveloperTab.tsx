@@ -1,13 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { sessionRecorder } from '../../services/SessionRecorder';
-import { WrenchIcon, DownloadIcon } from './Icons';
+import { DownloadIcon } from './Icons';
 
-interface DeveloperTabProps {
-  onClose?: () => void;
-}
-
-export function DeveloperTab({ onClose }: DeveloperTabProps) {
+export function DeveloperTab() {
   const [recordingStats, setRecordingStats] = useState(sessionRecorder.getStats());
 
   useEffect(() => {
@@ -28,9 +23,6 @@ export function DeveloperTab({ onClose }: DeveloperTabProps) {
     <div className="settings-section settings-section--compact">
       {/* Action buttons row */}
       <div className="settings-actions-row">
-        <Link to="/debug" className="settings-action-btn" onClick={onClose}>
-          <WrenchIcon /> Debug
-        </Link>
         <button
           type="button"
           className="settings-action-btn settings-action-btn--green"

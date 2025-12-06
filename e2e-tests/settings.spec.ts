@@ -6,7 +6,7 @@
  * - Tab navigation (Settings, Developer, About)
  * - Display mode settings (segmented control)
  * - BlazePose variant selection (segmented control)
- * - Developer tab with debug and download buttons
+ * - Developer tab with download button
  */
 
 import { expect, test } from '@playwright/test';
@@ -145,7 +145,7 @@ test.describe('Settings Modal', () => {
   });
 
   test.describe('Developer Tab', () => {
-    test('should show debug and download buttons', async ({ page }) => {
+    test('should show download button', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
 
       await page.locator('.settings-tab').nth(1).click();
@@ -153,7 +153,6 @@ test.describe('Settings Modal', () => {
       await expect(page.locator('.settings-tab').nth(1)).toHaveClass(
         /settings-tab--active/
       );
-      await expect(page.locator('.settings-action-btn', { hasText: 'Debug' })).toBeVisible();
       await expect(page.locator('.settings-action-btn', { hasText: 'Download Log' })).toBeVisible();
     });
 
@@ -164,18 +163,6 @@ test.describe('Settings Modal', () => {
 
       // Stats row shows duration, clicks, snaps
       await expect(page.locator('.settings-stats-row')).toBeVisible();
-    });
-
-    test('should navigate to debug page when clicking debug link', async ({
-      page,
-    }) => {
-      await page.click('button[aria-label="Open settings"]');
-
-      await page.locator('.settings-tab').nth(1).click();
-
-      await page.locator('.settings-action-btn', { hasText: 'Debug' }).click();
-
-      await expect(page).toHaveURL(/\/debug/);
     });
   });
 
@@ -193,26 +180,5 @@ test.describe('Settings Modal', () => {
         'Version'
       );
     });
-  });
-});
-
-test.describe('Debug Page', () => {
-  test('should load debug page', async ({ page }) => {
-    await page.goto('/debug');
-
-    await expect(
-      page.getByRole('heading', { name: /Debug MoveNet Loader/ })
-    ).toBeVisible();
-  });
-
-  test('should have back link to main app', async ({ page }) => {
-    await page.goto('/debug');
-
-    const backLink = page.getByRole('link', { name: 'Back to Main App' });
-    await expect(backLink).toBeVisible();
-
-    await backLink.click();
-
-    await expect(page).toHaveURL('/');
   });
 });
