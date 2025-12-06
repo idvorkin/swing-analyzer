@@ -8,7 +8,9 @@
 import { useCallback, useRef, useState } from 'react';
 import type { AppState } from '../types';
 import type { LivePoseCache } from '../pipeline/LivePoseCache';
+import type { ThumbnailEvent } from '../pipeline/Pipeline';
 import type { PoseTrackFile } from '../types/posetrack';
+import type { PositionCandidate } from '../types/exercise';
 import { usePipelineLifecycle } from './usePipelineLifecycle';
 import { useVideoControls } from './useVideoControls';
 import { useCameraControls } from './useCameraControls';
@@ -43,12 +45,26 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
   const [spineAngle, setSpineAngle] = useState<number>(0);
   const [armToSpineAngle, setArmToSpineAngle] = useState<number>(0);
   const [usingCachedPoses, setUsingCachedPoses] = useState<boolean>(false);
+  const [repThumbnails, setRepThumbnails] = useState<Map<number, Map<string, PositionCandidate>>>(new Map());
 
   // Refs for elements
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const checkpointGridRef = useRef<HTMLDivElement>(null);
+
+  // ========================================
+  // Thumbnail Event Handler
+  // ========================================
+  const handleThumbnailEvent = useCallback((event: ThumbnailEvent) => {
+    console.log(`[Filmstrip] Received thumbnails for rep ${event.repNumber}:`,
+      Array.from(event.positions.keys()));
+    setRepThumbnails(prev => {
+      const updated = new Map(prev);
+      updated.set(event.repNumber, event.positions);
+      return updated;
+    });
+  }, []);
 
   // ========================================
   // Pipeline Lifecycle Hook
@@ -77,6 +93,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     onSpineAngleUpdate: setSpineAngle,
     onArmToSpineAngleUpdate: setArmToSpineAngle,
     onUsingCachedPosesChange: setUsingCachedPoses,
+    onThumbnailEvent: handleThumbnailEvent,
   });
 
   // ========================================
@@ -259,6 +276,8 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
 
   const reinitializeWithLiveCache = useCallback(
     async (liveCache: LivePoseCache) => {
+      // Clear thumbnails when starting new extraction
+      setRepThumbnails(new Map());
       await pipelineReinitializeWithLive(liveCache);
       setUsingCachedPoses(true);
     },
@@ -289,6 +308,7 @@ export function useSwingAnalyzer(initialState?: Partial<AppState>) {
     isFullscreen,
     currentVideoFile,
     usingCachedPoses,
+    repThumbnails,
 
     // Refs
     videoRef,
