@@ -43,6 +43,10 @@ const VideoSectionV2: React.FC = () => {
     isExtracting,
     inputState,
     currentVideoFile,
+    // Crop controls
+    hasCropRegion,
+    isCropEnabled,
+    toggleCrop,
   } = useSwingAnalyzerContext();
 
   // Ref for the filmstrip container
@@ -306,6 +310,35 @@ const VideoSectionV2: React.FC = () => {
             </svg>
             <span className="button-text">Stop</span>
           </button>
+
+          {/* Crop toggle button - only show when crop region is available */}
+          {hasCropRegion && (
+            <button
+              id="crop-btn"
+              className={`toggle-button ${isCropEnabled ? 'active' : ''}`}
+              onClick={toggleCrop}
+              type="button"
+              title={isCropEnabled ? 'Show full frame' : 'Zoom to person'}
+            >
+              <svg
+                className="icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                {isCropEnabled ? (
+                  // Zoom out icon (show full frame)
+                  <path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z" />
+                ) : (
+                  // Zoom in / crop icon (zoom to person)
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-2h2v-4h4v-2h-4V7h-2v4H7v2h4z" />
+                )}
+              </svg>
+              <span className="button-text">{isCropEnabled ? 'Full' : 'Crop'}</span>
+            </button>
+          )}
         </div>
       </div>
 

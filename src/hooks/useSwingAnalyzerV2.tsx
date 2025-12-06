@@ -22,6 +22,7 @@ import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { ExtractionProgress } from '../pipeline/SkeletonSource';
 import type { PositionCandidate } from '../types/exercise';
+import type { CropRegion } from '../types/posetrack';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 
@@ -68,6 +69,10 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const isPlayingRef = useRef<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentVideoFile, setCurrentVideoFile] = useState<File | null>(null);
+
+  // Crop state for auto-centering on person in landscape videos
+  const [cropRegion, setCropRegionState] = useState<CropRegion | null>(null);
+  const [isCropEnabled, setIsCropEnabled] = useState<boolean>(true); // Default to on
 
   // ========================================
   // Pipeline Setup
@@ -154,12 +159,24 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       if (state.type === 'camera') {
         setAppState(prev => ({ ...prev, usingCamera: true }));
         setStatus(state.sourceState.type === 'active' ? 'Camera active' : 'Starting camera...');
+        // Clear crop region for camera (not applicable)
+        setCropRegionState(null);
       } else if (state.type === 'video-file') {
         setAppState(prev => ({ ...prev, usingCamera: false }));
         if (state.sourceState.type === 'extracting') {
           setStatus('Extracting poses...');
         } else if (state.sourceState.type === 'active') {
           setStatus('Ready');
+          // Check for crop region in posetrack metadata
+          const videoSource = session.getVideoFileSource();
+          const poseTrack = videoSource?.getPoseTrack();
+          const crop = poseTrack?.metadata.cropRegion ?? null;
+          setCropRegionState(crop);
+          // Apply crop to pipeline if enabled
+          if (crop && pipelineRef.current) {
+            pipelineRef.current.setCropRegion(crop);
+            pipelineRef.current.setCropEnabled(true);
+          }
         } else if (state.sourceState.type === 'checking-cache') {
           setStatus('Checking cache...');
         }
@@ -499,6 +516,18 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   }, []);
 
   // ========================================
+  // Crop Toggle
+  // ========================================
+  const toggleCrop = useCallback(() => {
+    const pipeline = pipelineRef.current;
+    if (!pipeline || !cropRegion) return;
+
+    const newEnabled = !isCropEnabled;
+    setIsCropEnabled(newEnabled);
+    pipeline.setCropEnabled(newEnabled);
+  }, [cropRegion, isCropEnabled]);
+
+  // ========================================
   // Reset
   // ========================================
   const reset = useCallback(() => {
@@ -583,5 +612,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     // V2-specific
     getSkeletonAtTime: (time: number) => inputSessionRef.current?.getSkeletonAtTime(time) ?? null,
+
+    // Crop controls
+    cropRegion,
+    isCropEnabled,
+    toggleCrop,
+    hasCropRegion: cropRegion !== null,
   };
 }

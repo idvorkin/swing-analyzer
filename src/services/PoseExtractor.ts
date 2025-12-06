@@ -21,6 +21,10 @@ import type {
   PrecomputedAngles,
 } from '../types/posetrack';
 import { computeQuickVideoHash } from '../utils/videoHash';
+import {
+  calculateStableCropRegion,
+  isLandscapeVideo,
+} from '../utils/videoCrop';
 import { createPoseTrackMetadata } from './PoseTrackService';
 
 /**
@@ -357,6 +361,27 @@ export async function extractPosesFromVideo(
       }
     }
 
+    // Calculate crop region for landscape videos
+    let cropRegion = undefined;
+    if (isLandscapeVideo(videoWidth, videoHeight)) {
+      // Use first 5 seconds of frames for crop detection
+      const detectionDuration = Math.min(5, duration);
+      const detectionFrameCount = Math.ceil(detectionDuration * fps);
+      const detectionFrames = frames.slice(0, detectionFrameCount);
+
+      cropRegion = calculateStableCropRegion(
+        detectionFrames,
+        videoWidth,
+        videoHeight
+      ) ?? undefined;
+
+      if (cropRegion) {
+        console.log(
+          `[PoseExtractor] Auto-crop detected for landscape video: ${cropRegion.width}x${cropRegion.height} at (${cropRegion.x}, ${cropRegion.y})`
+        );
+      }
+    }
+
     // Create pose track metadata
     const metadata = createPoseTrackMetadata({
       model: options.model,
@@ -368,6 +393,7 @@ export async function extractPosesFromVideo(
       fps,
       videoWidth,
       videoHeight,
+      cropRegion,
     });
 
     // Build pose track file

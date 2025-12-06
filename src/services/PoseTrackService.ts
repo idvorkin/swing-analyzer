@@ -6,6 +6,7 @@
  */
 
 import type {
+  CropRegion,
   PoseModel,
   PoseTrackFile,
   PoseTrackMetadata,
@@ -500,6 +501,7 @@ export function createPoseTrackMetadata(params: {
   fps: number;
   videoWidth: number;
   videoHeight: number;
+  cropRegion?: CropRegion;
 }): PoseTrackMetadata {
   return {
     version: '1.0',
@@ -513,6 +515,7 @@ export function createPoseTrackMetadata(params: {
     fps: params.fps,
     videoWidth: params.videoWidth,
     videoHeight: params.videoHeight,
+    cropRegion: params.cropRegion,
   };
 }
 
