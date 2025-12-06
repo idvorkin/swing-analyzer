@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { BlazePoseVariant } from '../../config/modelConfig';
 import { useSwingAnalyzerContext } from '../../contexts/SwingAnalyzerContext';
+import type { DisplayMode } from '../../types';
 import { MonitorIcon, SparklesIcon } from './Icons';
-import { SettingsRow } from './SettingsRow';
+import { SegmentedControl } from './SegmentedControl';
 
 // Storage key for BlazePose variant
 const BLAZEPOSE_VARIANT_KEY = 'swing-analyzer-blazepose-variant';
@@ -28,6 +29,18 @@ function saveBlazePoseVariant(variant: BlazePoseVariant): void {
   }
 }
 
+const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
+  { value: 'both', label: 'Both' },
+  { value: 'video', label: 'Video' },
+  { value: 'overlay', label: 'Skeleton' },
+];
+
+const BLAZEPOSE_OPTIONS: { value: BlazePoseVariant; label: string }[] = [
+  { value: 'lite', label: 'Lite' },
+  { value: 'full', label: 'Full' },
+  { value: 'heavy', label: 'Heavy' },
+];
+
 export function SettingsTab() {
   const { appState, setDisplayMode } = useSwingAnalyzerContext();
   const [blazePoseVariant, setBlazePoseVariant] = useState<BlazePoseVariant>(
@@ -45,114 +58,49 @@ export function SettingsTab() {
   };
 
   return (
-    <div className="settings-section">
+    <div className="settings-section settings-section--compact">
       {/* Display Mode */}
-      <SettingsRow
-        icon={<MonitorIcon />}
-        iconVariant="blue"
-        title="Display Mode"
-        subtitle="Choose what to show on the video"
-      />
-
-      <div className="settings-radio-group">
-        <label className="settings-radio-option">
-          <input
-            type="radio"
-            name="display-mode"
-            value="both"
-            checked={appState.displayMode === 'both'}
-            onChange={() => setDisplayMode('both')}
-          />
-          <span className="settings-radio-label">Both</span>
-          <span className="settings-radio-desc">Video + skeleton overlay</span>
-        </label>
-
-        <label className="settings-radio-option">
-          <input
-            type="radio"
-            name="display-mode"
-            value="video"
-            checked={appState.displayMode === 'video'}
-            onChange={() => setDisplayMode('video')}
-          />
-          <span className="settings-radio-label">Video Only</span>
-          <span className="settings-radio-desc">Hide skeleton overlay</span>
-        </label>
-
-        <label className="settings-radio-option">
-          <input
-            type="radio"
-            name="display-mode"
-            value="overlay"
-            checked={appState.displayMode === 'overlay'}
-            onChange={() => setDisplayMode('overlay')}
-          />
-          <span className="settings-radio-label">Overlay Only</span>
-          <span className="settings-radio-desc">Show only skeleton</span>
-        </label>
+      <div className="settings-compact-row">
+        <div className="settings-compact-label">
+          <div className="settings-compact-icon settings-compact-icon--blue">
+            <MonitorIcon />
+          </div>
+          <span>Display</span>
+        </div>
+        <SegmentedControl
+          options={DISPLAY_MODE_OPTIONS}
+          value={appState.displayMode}
+          onChange={setDisplayMode}
+          name="display-mode"
+        />
       </div>
 
-      {/* Divider */}
-      <div className="settings-divider" />
-
-      {/* BlazePose Variant Selection */}
-      <SettingsRow
-        icon={<SparklesIcon />}
-        iconVariant="orange"
-        title="BlazePose Variant"
-        subtitle="Trade-off between speed and accuracy"
-      />
-
-      <div className="settings-radio-group">
-        <label className="settings-radio-option">
-          <input
-            type="radio"
-            name="blazepose-variant"
-            value="lite"
-            checked={blazePoseVariant === 'lite'}
-            onChange={() => handleVariantChange('lite')}
-          />
-          <span className="settings-radio-label">Lite</span>
-          <span className="settings-radio-desc">Fastest, good accuracy</span>
-        </label>
-
-        <label className="settings-radio-option">
-          <input
-            type="radio"
-            name="blazepose-variant"
-            value="full"
-            checked={blazePoseVariant === 'full'}
-            onChange={() => handleVariantChange('full')}
-          />
-          <span className="settings-radio-label">Full</span>
-          <span className="settings-radio-desc">Balanced speed/accuracy</span>
-        </label>
-
-        <label className="settings-radio-option">
-          <input
-            type="radio"
-            name="blazepose-variant"
-            value="heavy"
-            checked={blazePoseVariant === 'heavy'}
-            onChange={() => handleVariantChange('heavy')}
-          />
-          <span className="settings-radio-label">Heavy</span>
-          <span className="settings-radio-desc">Best accuracy, slower</span>
-        </label>
+      {/* BlazePose Variant */}
+      <div className="settings-compact-row">
+        <div className="settings-compact-label">
+          <div className="settings-compact-icon settings-compact-icon--orange">
+            <SparklesIcon />
+          </div>
+          <span>Model</span>
+        </div>
+        <SegmentedControl
+          options={BLAZEPOSE_OPTIONS}
+          value={blazePoseVariant}
+          onChange={handleVariantChange}
+          name="blazepose-variant"
+        />
       </div>
 
       {/* Reload Banner */}
       {needsReload && (
-        <div className="settings-reload-banner">
-          <p className="settings-reload-text">
-            Reload required to apply model change
-          </p>
+        <div className="settings-reload-banner settings-reload-banner--compact">
+          <span className="settings-reload-text">Reload to apply</span>
           <button
             type="button"
-            className="settings-reload-btn"
+            className="settings-reload-btn settings-reload-btn--compact"
             onClick={() => window.location.reload()}
           >
-            Reload Now
+            Reload
           </button>
         </div>
       )}

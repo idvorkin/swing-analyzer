@@ -4,10 +4,9 @@
  * Tests the settings modal functionality including:
  * - Opening/closing the modal
  * - Tab navigation (Settings, Developer, About)
- * - Display mode settings
- * - Pose model selection
- * - BlazePose variant selection
- * - Developer tab with session recording
+ * - Display mode settings (segmented control)
+ * - BlazePose variant selection (segmented control)
+ * - Developer tab with debug and download buttons
  */
 
 import { expect, test } from '@playwright/test';
@@ -89,25 +88,27 @@ test.describe('Settings Modal', () => {
     test('should show display mode options', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
 
-      await expect(page.locator('input[value="both"]')).toBeVisible();
-      await expect(page.locator('input[value="video"]')).toBeVisible();
-      await expect(page.locator('input[value="overlay"]')).toBeVisible();
+      // Segmented control with Both, Video, Skeleton options
+      await expect(page.locator('.segmented-control-option', { hasText: 'Both' })).toBeVisible();
+      await expect(page.locator('.segmented-control-option', { hasText: 'Video' })).toBeVisible();
+      await expect(page.locator('.segmented-control-option', { hasText: 'Skeleton' })).toBeVisible();
     });
 
     test('should show BlazePose variant options', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
 
-      // BlazePose is the only supported model, variants should be visible
-      await expect(page.locator('input[value="lite"]')).toBeVisible();
-      await expect(page.locator('input[value="full"]')).toBeVisible();
-      await expect(page.locator('input[value="heavy"]')).toBeVisible();
+      // Segmented control with Lite, Full, Heavy options
+      await expect(page.locator('.segmented-control-option', { hasText: 'Lite' })).toBeVisible();
+      await expect(page.locator('.segmented-control-option', { hasText: 'Full' })).toBeVisible();
+      await expect(page.locator('.segmented-control-option', { hasText: 'Heavy' })).toBeVisible();
     });
 
     test('should persist display mode selection', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
       await expect(page.locator('.settings-modal')).toBeVisible();
 
-      await page.click('input[value="video"]');
+      // Click Video option in segmented control
+      await page.locator('.segmented-control-option', { hasText: 'Video' }).click();
 
       await page.click('button[aria-label="Close settings"]');
       await expect(page.locator('.settings-modal')).not.toBeVisible();
@@ -115,7 +116,8 @@ test.describe('Settings Modal', () => {
       await page.click('button[aria-label="Open settings"]');
       await expect(page.locator('.settings-modal')).toBeVisible();
 
-      await expect(page.locator('input[value="video"]')).toBeChecked();
+      // Video button should be active
+      await expect(page.locator('.segmented-control-option', { hasText: 'Video' })).toHaveClass(/segmented-control-option--active/);
     });
 
     test('should show reload banner when changing BlazePose variant', async ({
@@ -123,24 +125,27 @@ test.describe('Settings Modal', () => {
     }) => {
       await page.click('button[aria-label="Open settings"]');
 
-      // Get current variant and switch to a different one
-      const isLite = await page.locator('input[value="lite"]').isChecked();
+      // Check if Lite is active, click Full; otherwise click Lite
+      const liteBtn = page.locator('.segmented-control-option', { hasText: 'Lite' });
+      const fullBtn = page.locator('.segmented-control-option', { hasText: 'Full' });
 
-      if (isLite) {
-        await page.click('input[value="full"]');
+      const isLiteActive = await liteBtn.evaluate(el => el.classList.contains('segmented-control-option--active'));
+
+      if (isLiteActive) {
+        await fullBtn.click();
       } else {
-        await page.click('input[value="lite"]');
+        await liteBtn.click();
       }
 
       await expect(page.locator('.settings-reload-banner')).toBeVisible();
       await expect(page.locator('.settings-reload-text')).toContainText(
-        'Reload required'
+        'Reload'
       );
     });
   });
 
   test.describe('Developer Tab', () => {
-    test('should show session recording section', async ({ page }) => {
+    test('should show debug and download buttons', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
 
       await page.locator('.settings-tab').nth(1).click();
@@ -148,22 +153,17 @@ test.describe('Settings Modal', () => {
       await expect(page.locator('.settings-tab').nth(1)).toHaveClass(
         /settings-tab--active/
       );
-      await expect(
-        page.getByText('Session Recording', { exact: true })
-      ).toBeVisible();
-      await expect(
-        page.getByRole('button', { name: /Download Session Recording/ })
-      ).toBeVisible();
+      await expect(page.locator('.settings-action-btn', { hasText: 'Debug' })).toBeVisible();
+      await expect(page.locator('.settings-action-btn', { hasText: 'Download Log' })).toBeVisible();
     });
 
-    test('should have debug tools link', async ({ page }) => {
+    test('should show session stats', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
 
       await page.locator('.settings-tab').nth(1).click();
 
-      const debugLink = page.locator('.settings-link');
-      await expect(debugLink).toBeVisible();
-      await expect(debugLink).toContainText('Debug Model Loader');
+      // Stats row shows duration, clicks, snaps
+      await expect(page.locator('.settings-stats-row')).toBeVisible();
     });
 
     test('should navigate to debug page when clicking debug link', async ({
@@ -173,7 +173,7 @@ test.describe('Settings Modal', () => {
 
       await page.locator('.settings-tab').nth(1).click();
 
-      await page.click('.settings-link');
+      await page.locator('.settings-action-btn', { hasText: 'Debug' }).click();
 
       await expect(page).toHaveURL(/\/debug/);
     });
@@ -188,12 +188,10 @@ test.describe('Settings Modal', () => {
       await expect(page.locator('.settings-tab').nth(2)).toHaveClass(
         /settings-tab--active/
       );
-      await expect(page.locator('.settings-about-title')).toContainText(
-        'Swing Analyzer'
+      // Version row with label
+      await expect(page.locator('.settings-info-label').first()).toContainText(
+        'Version'
       );
-      await expect(
-        page.locator('.settings-version-label').first()
-      ).toContainText('Version');
     });
   });
 });

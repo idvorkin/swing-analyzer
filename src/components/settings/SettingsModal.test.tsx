@@ -120,10 +120,10 @@ describe('SettingsModal', () => {
   });
 
   describe('Tab Navigation', () => {
-    it('shows Settings tab by default with display mode and BlazePose variant options', () => {
+    it('shows Settings tab by default with display and model options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
-      expect(screen.getByText('Display Mode')).toBeInTheDocument();
-      expect(screen.getByText('BlazePose Variant')).toBeInTheDocument();
+      expect(screen.getByText('Display')).toBeInTheDocument();
+      expect(screen.getByText('Model')).toBeInTheDocument();
     });
 
     it('has three tabs: Settings, Developer, About', () => {
@@ -141,26 +141,26 @@ describe('SettingsModal', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('Developer'));
-      expect(screen.getByText('Session Recording')).toBeInTheDocument();
+      expect(screen.getByText('Debug')).toBeInTheDocument();
     });
 
     it('switches to About tab when clicked', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('Swing Analyzer')).toBeInTheDocument();
+      expect(screen.getByText('Version')).toBeInTheDocument();
     });
   });
 
   describe('Settings Tab', () => {
-    it('shows display mode options', () => {
+    it('shows display mode options in segmented control', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       expect(screen.getByText('Both')).toBeInTheDocument();
-      expect(screen.getByText('Video Only')).toBeInTheDocument();
-      expect(screen.getByText('Overlay Only')).toBeInTheDocument();
+      expect(screen.getByText('Video')).toBeInTheDocument();
+      expect(screen.getByText('Skeleton')).toBeInTheDocument();
     });
 
-    it('shows BlazePose variant options', () => {
+    it('shows BlazePose variant options in segmented control', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       expect(screen.getByText('Lite')).toBeInTheDocument();
       expect(screen.getByText('Full')).toBeInTheDocument();
@@ -174,15 +174,15 @@ describe('SettingsModal', () => {
 
       fireEvent.click(screen.getByText('About'));
       expect(screen.getByText('abc123')).toBeInTheDocument();
-      expect(screen.getByText('main')).toBeInTheDocument();
+      expect(screen.getByText(/main/)).toBeInTheDocument();
     });
 
     it('displays external links', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('GitHub')).toBeInTheDocument();
-      expect(screen.getByText(/Learn More/)).toBeInTheDocument();
+      expect(screen.getByText(/GitHub/)).toBeInTheDocument();
+      expect(screen.getByText(/Docs/)).toBeInTheDocument();
     });
 
     it('displays keyboard shortcut for bug report', () => {
@@ -191,7 +191,7 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Cmd+I')).toBeInTheDocument();
     });
 
-    it('calls onOpenBugReporter and onClose when Report a Bug is clicked', () => {
+    it('calls onOpenBugReporter and onClose when Report button is clicked', () => {
       const onClose = vi.fn();
       const onOpenBugReporter = vi.fn();
       renderWithRouter(
@@ -203,7 +203,7 @@ describe('SettingsModal', () => {
       );
 
       fireEvent.click(screen.getByText('About'));
-      fireEvent.click(screen.getByText(/Report a Bug/));
+      fireEvent.click(screen.getByText('Report'));
       expect(onClose).toHaveBeenCalledTimes(1);
       expect(onOpenBugReporter).toHaveBeenCalledTimes(1);
     });
@@ -233,10 +233,10 @@ describe('SettingsModal', () => {
       );
 
       fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('New Version Available!')).toBeInTheDocument();
+      expect(screen.getByText(/Update available/)).toBeInTheDocument();
     });
 
-    it('calls onReload when Reload to Update is clicked', () => {
+    it('calls onReload when Reload button is clicked', () => {
       const onReload = vi.fn();
       renderWithRouter(
         <SettingsModal
@@ -247,38 +247,39 @@ describe('SettingsModal', () => {
       );
 
       fireEvent.click(screen.getByText('About'));
-      fireEvent.click(screen.getByText('Reload to Update'));
+      fireEvent.click(screen.getByText('Reload'));
       expect(onReload).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onCheckForUpdate when Check for Updates is clicked', async () => {
+    it('calls onCheckForUpdate when Check button is clicked', async () => {
       const onCheckForUpdate = vi.fn().mockResolvedValue(undefined);
       renderWithRouter(
         <SettingsModal {...defaultProps} onCheckForUpdate={onCheckForUpdate} />
       );
 
       fireEvent.click(screen.getByText('About'));
-      fireEvent.click(screen.getByText(/Check for Updates/));
+      fireEvent.click(screen.getByText('Check'));
       expect(onCheckForUpdate).toHaveBeenCalledTimes(1);
     });
 
-    it('shows Checking... when isCheckingUpdate is true', () => {
+    it('shows ... when isCheckingUpdate is true', () => {
       renderWithRouter(
         <SettingsModal {...defaultProps} isCheckingUpdate={true} />
       );
 
       fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('Checking...')).toBeInTheDocument();
+      expect(screen.getByText('...')).toBeInTheDocument();
     });
 
   });
 
   describe('Developer Tab', () => {
-    it('has debug tools link', () => {
+    it('has debug and download buttons', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('Developer'));
-      expect(screen.getByText('Debug Model Loader')).toBeInTheDocument();
+      expect(screen.getByText('Debug')).toBeInTheDocument();
+      expect(screen.getByText('Download Log')).toBeInTheDocument();
     });
   });
 });
