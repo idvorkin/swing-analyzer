@@ -43,12 +43,41 @@ export async function seedPoseTrackFixture(
 }
 
 /**
- * Seed a pose track directly into IndexedDB
+ * Seed a pose track using the app's storage service via testSetup.
+ * This respects the current storage mode (memory or indexeddb).
  *
  * @param page - Playwright page instance
  * @param poseTrack - The pose track data to seed
  */
 export async function seedPoseTrackData(
+  page: Page,
+  poseTrack: PoseTrackFile
+): Promise<void> {
+  // First check if testSetup exposes a seeding function
+  const hasTestSetup = await page.evaluate(() => {
+    return !!(window as unknown as { __testSetup?: { seedPoseTrack?: unknown } }).__testSetup?.seedPoseTrack;
+  });
+
+  if (hasTestSetup) {
+    // Use testSetup's seeding function (respects storage mode)
+    await page.evaluate((data) => {
+      const testSetup = (window as unknown as { __testSetup: { seedPoseTrack: (data: unknown) => Promise<void> } }).__testSetup;
+      return testSetup.seedPoseTrack(data);
+    }, poseTrack);
+  } else {
+    // Fallback to direct IndexedDB seeding
+    await seedPoseTrackToIndexedDB(page, poseTrack);
+  }
+}
+
+/**
+ * Seed a pose track directly into IndexedDB (bypasses storage mode).
+ * Use this only when you specifically need IndexedDB persistence.
+ *
+ * @param page - Playwright page instance
+ * @param poseTrack - The pose track data to seed
+ */
+export async function seedPoseTrackToIndexedDB(
   page: Page,
   poseTrack: PoseTrackFile
 ): Promise<void> {

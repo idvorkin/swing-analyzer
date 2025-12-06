@@ -16,6 +16,7 @@ import {
   getPoseTrackFromDB,
   listPoseTrackHashes,
   seedPoseTrackFixture,
+  setPoseTrackStorageMode,
   useShortTestVideo,
 } from './helpers';
 
@@ -25,6 +26,8 @@ test.describe('Pose Track Fixtures', () => {
     await useShortTestVideo(page);
     // Clear any existing pose track data before each test
     await page.goto('/');
+    // These tests specifically test IndexedDB functionality, so set IndexedDB mode
+    await setPoseTrackStorageMode(page, 'indexeddb');
     await clearPoseTrackDB(page);
   });
 

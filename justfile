@@ -89,6 +89,14 @@ test-unit:
 e2e:
     npx playwright test
 
+# Run fast E2E tests (seeded data, no extraction) - good for CI
+e2e-fast:
+    npx playwright test user-journey.spec.ts swing-analyzer.spec.ts pose-fixtures.spec.ts settings.spec.ts
+
+# Run extraction E2E tests (mock detector, longer tests)
+e2e-extraction:
+    npx playwright test extraction-flow.spec.ts instant-filmstrip.spec.ts
+
 # Run E2E tests (desktop chromium only - same as 'e2e' until mobile is enabled)
 e2e-desktop:
     npx playwright test --project=chromium

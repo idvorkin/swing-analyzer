@@ -11,6 +11,7 @@ import {
   clearPoseTrackDB,
   getPoseTrackFromDB,
   seedPoseTrackFixture,
+  setPoseTrackStorageMode,
   useShortTestVideo,
 } from './helpers';
 
@@ -19,6 +20,8 @@ test.describe('Swing Analyzer', () => {
     // Intercept GitHub video URL and serve short local video for faster tests
     await useShortTestVideo(page);
     await page.goto('/');
+    // These tests use getPoseTrackFromDB which reads from IndexedDB
+    await setPoseTrackStorageMode(page, 'indexeddb');
     await clearPoseTrackDB(page);
   });
 

@@ -11,6 +11,8 @@ export {
   listPoseTrackHashes,
   seedPoseTrackData,
   seedPoseTrackFixture,
+  seedPoseTrackToIndexedDB,
+  setPoseTrackStorageMode,
 } from './indexeddb';
 // Mock pose detector helpers
 export {

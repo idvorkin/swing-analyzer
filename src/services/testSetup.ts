@@ -14,6 +14,7 @@ import {
 } from './MockPoseDetector';
 import {
   setPoseTrackStorageMode as setStorageMode,
+  savePoseTrackToStorage,
   type PoseTrackStorageMode,
 } from './PoseTrackService';
 
@@ -116,6 +117,14 @@ export function setPoseTrackStorageMode(mode: PoseTrackStorageMode): void {
   console.log(`[Test] Pose track storage mode set to: ${mode}`);
 }
 
+/**
+ * Seed a pose track into storage (respects current storage mode)
+ */
+export async function seedPoseTrack(poseTrack: PoseTrackFile): Promise<void> {
+  await savePoseTrackToStorage(poseTrack);
+  console.log(`[Test] Seeded pose track: ${poseTrack.metadata.sourceVideoHash}`);
+}
+
 // Expose to window for E2E tests (only in development)
 // Check both Vite's DEV flag and MODE to ensure we're in dev mode
 // @ts-expect-error Vite-specific import.meta.env
@@ -129,6 +138,7 @@ if (typeof window !== 'undefined' && isDev) {
     getMockDetectorFactory,
     getMockDetectorFactoryBySession,
     setPoseTrackStorageMode,
+    seedPoseTrack,
   };
   console.log('[Test] Test setup exposed on window.__testSetup');
 }
@@ -141,6 +151,7 @@ const testSetup = {
   getMockDetectorFactory,
   getMockDetectorFactoryBySession,
   setPoseTrackStorageMode,
+  seedPoseTrack,
 };
 
 export default testSetup;
