@@ -528,68 +528,7 @@ main {
   }
 }
 
-/* Analysis Section */
-.analysis-section {
-  margin-bottom: 30px;
-}
-
-/* Metrics */
-.metrics {
-  background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-}
-
-.metrics-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.metrics-header h2 {
-  margin: 0;
-  color: #1a2a6c;
-  font-size: 20px;
-}
-
-.status-indicator {
-  color: #6c757d;
-  font-size: 14px;
-  background-color: #f8f9fa;
-  padding: 6px 12px;
-  border-radius: 20px;
-}
-
-.metrics-inline {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.metric-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: linear-gradient(135deg, #1a73e8, #1557b0);
-  border-radius: 2rem;
-  padding: 0.5rem 1rem;
-  color: white;
-}
-
-.metric-pill .metric-label {
-  font-size: 0.75rem;
-  opacity: 0.85;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.metric-pill .metric-value {
-  font-size: 1rem;
-  font-weight: 600;
-}
+/* Analysis Section - Styles moved to AnalysisSection.css */
 
 /* Form Checkpoints */
 .form-checkpoints {

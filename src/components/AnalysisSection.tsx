@@ -1,37 +1,45 @@
 import type React from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import './AnalysisSection.css';
 
 const AnalysisSection: React.FC = () => {
   const { status, repCount, spineAngle, armToSpineAngle } =
     useSwingAnalyzerContext();
 
   return (
-    <section className="analysis-section">
-      <div className="metrics">
-        <div className="metrics-header">
-          <h2>Analysis Results</h2>
-          <div className="status-indicator">{status}</div>
+    <section className="hud-section">
+      <div className="hud-container">
+        {/* Rep Counter - The Hero */}
+        <div className="hud-reps">
+          <div className="hud-reps-value" id="rep-counter">
+            {repCount}
+          </div>
+          <div className="hud-reps-label">REPS</div>
         </div>
 
-        <div className="metrics-inline">
-          <span className="metric-pill">
-            <span className="metric-label">Reps</span>
-            <span className="metric-value" id="rep-counter">
-              {repCount}
-            </span>
-          </span>
-          <span className="metric-pill">
-            <span className="metric-label">Spine</span>
-            <span className="metric-value" id="spine-angle">
-              {spineAngle}°
-            </span>
-          </span>
-          <span className="metric-pill">
-            <span className="metric-label">Arm</span>
-            <span className="metric-value" id="arm-angle">
-              {armToSpineAngle}°
-            </span>
-          </span>
+        {/* Divider */}
+        <div className="hud-divider" />
+
+        {/* Angle Gauges */}
+        <div className="hud-gauges">
+          <div className="hud-gauge">
+            <div className="hud-gauge-label">SPINE</div>
+            <div className="hud-gauge-value" id="spine-angle">
+              {spineAngle}<span className="hud-gauge-unit">°</span>
+            </div>
+          </div>
+          <div className="hud-gauge">
+            <div className="hud-gauge-label">ARM</div>
+            <div className="hud-gauge-value" id="arm-angle">
+              {armToSpineAngle}<span className="hud-gauge-unit">°</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Badge */}
+        <div className="hud-status">
+          <div className="hud-status-dot" />
+          <div className="hud-status-text">{status}</div>
         </div>
       </div>
     </section>
