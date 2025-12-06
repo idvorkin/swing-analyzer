@@ -141,7 +141,7 @@ describe('SettingsModal', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('Developer'));
-      expect(screen.getByText('Debug')).toBeInTheDocument();
+      expect(screen.getByText('Download Log')).toBeInTheDocument();
     });
 
     it('switches to About tab when clicked', () => {
@@ -274,12 +274,14 @@ describe('SettingsModal', () => {
   });
 
   describe('Developer Tab', () => {
-    it('has debug and download buttons', () => {
+    it('has download log button and session stats', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('Developer'));
-      expect(screen.getByText('Debug')).toBeInTheDocument();
       expect(screen.getByText('Download Log')).toBeInTheDocument();
+      // Session stats are shown (clicks, snaps)
+      expect(screen.getByText(/clicks/)).toBeInTheDocument();
+      expect(screen.getByText(/snaps/)).toBeInTheDocument();
     });
   });
 });

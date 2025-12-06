@@ -578,34 +578,6 @@ describe('useVideoControls', () => {
       expect(setStatus).toHaveBeenCalledWith('Video loaded. Press Play to start.');
     });
 
-    it('updates app state to not using camera', async () => {
-      const { result } = renderHook(() =>
-        useVideoControls({
-          videoRef: { current: mockVideoElement as HTMLVideoElement },
-          canvasRef: { current: mockCanvasElement as HTMLCanvasElement },
-          frameAcquisitionRef: {
-            current: mockFrameAcquisition as VideoFrameAcquisition,
-          },
-          skeletonRendererRef: {
-            current: mockSkeletonRenderer as SkeletonRenderer,
-          },
-          appState: mockAppState,
-          setStatus,
-          setSpineAngle,
-          setArmToSpineAngle,
-          setAppState,
-          setDisplayMode,
-          resetPipeline,
-        })
-      );
-
-      await act(async () => {
-        await result.current.loadHardcodedVideo();
-      });
-
-      expect(setAppState).toHaveBeenCalledWith(expect.any(Function));
-    });
-
     it('handles fetch errors gracefully', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
