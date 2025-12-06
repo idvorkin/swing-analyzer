@@ -163,9 +163,6 @@ export async function extractPosesFromVideo(
     let frameIndex = 0;
     const frameInterval = 1 / fps;
 
-    // Check if we're in mock mode - skip video seeking if so
-    const useMockDetector = isMockDetectorEnabled();
-
     // Seek to start
     video.currentTime = 0;
 
@@ -175,23 +172,16 @@ export async function extractPosesFromVideo(
         throw new DOMException('Aborted', 'AbortError');
       }
 
-      // In mock mode, skip video seeking - poses come from fixture data
-      // In real mode, seek video and draw frame
-      let frameImage: ImageData | undefined;
-      if (!useMockDetector) {
-        // Wait for seek to complete
-        await seekToTime(video, frameIndex * frameInterval);
+      // Always seek and capture video frames (even in mock mode)
+      // Only the ML detector is mocked - video frame capture must run for filmstrip thumbnails
+      await seekToTime(video, frameIndex * frameInterval);
+      ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
 
-        // Draw frame to canvas
-        ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+      // Capture downsampled thumbnail for filmstrip
+      thumbnailCtx.drawImage(canvas, 0, 0, THUMBNAIL_WIDTH, thumbnailHeight);
+      const frameImage = thumbnailCtx.getImageData(0, 0, THUMBNAIL_WIDTH, thumbnailHeight);
 
-        // Capture downsampled thumbnail for filmstrip
-        // Drawing from main canvas preserves aspect ratio and current frame
-        thumbnailCtx.drawImage(canvas, 0, 0, THUMBNAIL_WIDTH, thumbnailHeight);
-        frameImage = thumbnailCtx.getImageData(0, 0, THUMBNAIL_WIDTH, thumbnailHeight);
-      }
-
-      // Detect pose (mock detector ignores canvas and returns fixture data)
+      // Detect pose (mock detector returns fixture data, real detector runs ML inference)
       const poses = await detector.estimatePoses(canvas);
 
       // Get keypoints and normalize to COCO format if using BlazePose
@@ -202,10 +192,8 @@ export async function extractPosesFromVideo(
         keypoints = normalizeToCocoFormat(rawKeypoints);
       }
 
-      // Calculate video time (in mock mode, video.currentTime doesn't update)
-      const videoTime = useMockDetector
-        ? frameIndex * frameInterval
-        : video.currentTime;
+      // Get video time from actual video position (works in both mock and real modes)
+      const videoTime = video.currentTime;
 
       // Create frame data
       const frame: PoseTrackFrame = {
@@ -254,8 +242,8 @@ export async function extractPosesFromVideo(
 
       frameIndex++;
 
-      // In real mode, also check video.currentTime for early exit
-      if (!useMockDetector && video.currentTime + frameInterval >= duration) {
+      // Check video.currentTime for early exit (works in both mock and real modes)
+      if (video.currentTime + frameInterval >= duration) {
         break;
       }
     }
@@ -295,18 +283,6 @@ export async function extractPosesFromVideo(
       detector.dispose();
     }
   }
-}
-
-/**
- * Check if we're using a mock pose detector (for tests)
- */
-function isMockDetectorEnabled(): boolean {
-  const mockFactory = (
-    window as unknown as {
-      __testSetup?: { getMockDetectorFactory?: () => (() => Promise<poseDetection.PoseDetector>) | undefined };
-    }
-  ).__testSetup?.getMockDetectorFactory?.();
-  return !!mockFactory;
 }
 
 /**
