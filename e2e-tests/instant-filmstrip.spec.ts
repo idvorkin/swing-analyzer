@@ -22,8 +22,8 @@ import { expect, test } from '@playwright/test';
 import { generateTestId, setVideoTestId, setupMockPoseDetector, useShortTestVideo } from './helpers';
 
 // Filmstrip thumbnail tests - thumbnails appear during extraction
-// Tests can run in parallel - each gets unique cache via test ID
-test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
+// Tests must run serially - mock detector and IndexedDB have shared state
+test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept GitHub video URL and serve short local video for faster tests
     await useShortTestVideo(page);
@@ -256,7 +256,7 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
 });
 
 // Tests for playback mode after extraction
-test.describe('Playback Mode: No Duplicate Rep Counting', () => {
+test.describe.serial('Playback Mode: No Duplicate Rep Counting', () => {
   test.beforeEach(async ({ page }) => {
     // Use short test video for faster tests
     await useShortTestVideo(page);
@@ -357,8 +357,10 @@ test.describe('Playback Mode: No Duplicate Rep Counting', () => {
   });
 });
 
-test.describe('Filmstrip Frame Capture During Extraction', () => {
+test.describe.serial('Filmstrip Frame Capture During Extraction', () => {
   test.beforeEach(async ({ page }) => {
+    // Intercept GitHub video URL and serve short local video for faster tests
+    await useShortTestVideo(page);
     await page.goto('/');
 
     // Wait for test setup to be available (app fully initialized)
@@ -374,8 +376,8 @@ test.describe('Filmstrip Frame Capture During Extraction', () => {
   test('captures 4 position thumbnails per rep (Top, Connect, Bottom, Release)', async ({
     page,
   }) => {
-    // Fast extraction with mock pose detector
-    await setupMockPoseDetector(page, 'swing-sample', 0);
+    // Fast extraction with mock pose detector (use swing-sample-4reps to match useShortTestVideo)
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });

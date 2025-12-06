@@ -22,7 +22,7 @@ export const SWING_SAMPLE_VIDEO_HASH =
 // Video hash for swing-sample-4reps.webm (short test video, ~5.5 seconds)
 // This is a trimmed version for faster E2E tests
 export const SWING_SAMPLE_4REPS_VIDEO_HASH =
-  '2fbf38b42328d66e0c61f66fe490ebf1339e7448d53217a12ff0bdb0fa80dba1';
+  '932384ff9a5f4a50441619281af77a047486087fe4981d6390494fdbd561d8eb';
 
 /**
  * COCO keypoint indices for reference

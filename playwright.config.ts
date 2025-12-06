@@ -92,7 +92,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   // Reduced workers to avoid race conditions with shared IndexedDB state
   // Tests that clear IndexedDB can interfere with tests that seed data
-  workers: process.env.CI ? 1 : 4,
+  // Mock detector tests share state across files, so keep parallelism low
+  workers: process.env.CI ? 1 : 2,
 
   // HTML report with console output
   reporter: [
