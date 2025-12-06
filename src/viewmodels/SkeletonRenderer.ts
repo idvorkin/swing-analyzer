@@ -41,14 +41,11 @@ export class SkeletonRenderer {
     // Get keypoints from skeleton
     const keypoints = skeleton.getKeypoints();
 
-    // Get normalized keypoints
-    const normalizedKeypoints = this.normalizeKeypoints(keypoints);
-
     // Draw connections first (so they appear behind the points)
-    this.drawConnections(ctx, normalizedKeypoints);
+    this.drawConnections(ctx, keypoints);
 
     // Draw keypoints
-    this.drawKeypoints(ctx, normalizedKeypoints, timestamp);
+    this.drawKeypoints(ctx, keypoints, timestamp);
 
     // Always draw the arm-to-vertical angle visualization
     this.visualizeArmToVerticalAngle(ctx, skeleton);
@@ -64,28 +61,6 @@ export class SkeletonRenderer {
       ctx.textAlign = 'left';
       ctx.fillText(`Arm-Vertical Angle: ${armToVerticalAngle}°`, 10, 40);
     }
-  }
-
-  /**
-   * Normalize keypoints to match canvas dimensions
-   * This ensures the skeleton is properly scaled and positioned on different screen sizes
-   */
-  private normalizeKeypoints(keypoints: PoseKeypoint[]): PoseKeypoint[] {
-    // On mobile devices, the canvas display dimensions might be different from its internal dimensions
-    // We need to scale the keypoints from the original video dimensions to the displayed canvas dimensions
-    
-    return keypoints.map(point => {
-      if (!point) return point;
-      
-      // Create a copy of the point with normalized coordinates
-      return {
-        ...point,
-        // The original coordinates are in the internal canvas dimensions
-        // We need to keep them as is and let the browser handle the scaling
-        x: point.x,
-        y: point.y
-      };
-    });
   }
 
   /**

@@ -211,4 +211,78 @@ test.describe('Swing Analyzer', () => {
     expect(canvasDimensions.width).toBeGreaterThan(300);
     expect(canvasDimensions.height).toBeGreaterThan(150);
   });
+
+  test('canvas CSS position should align with video content area', async ({ page }) => {
+    // This test catches skeleton offset bugs where canvas CSS doesn't match
+    // video's rendered area (accounting for object-fit: contain letterboxing)
+
+    // Load video
+    await page.click('#load-hardcoded-btn');
+    await page.waitForSelector('video', { timeout: 5000 });
+
+    // Wait for video metadata to load
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video && video.videoWidth > 0 && video.videoHeight > 0;
+      },
+      { timeout: 10000 }
+    );
+
+    // Give canvas sync time to run
+    await page.waitForTimeout(100);
+
+    // Get video and canvas bounding rects
+    const alignment = await page.evaluate(() => {
+      const video = document.querySelector('video') as HTMLVideoElement;
+      const canvas = document.querySelector('#output-canvas') as HTMLCanvasElement;
+
+      const videoRect = video.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+
+      // Calculate video's actual content area (accounting for object-fit: contain)
+      const videoAspect = video.videoWidth / video.videoHeight;
+      const containerAspect = videoRect.width / videoRect.height;
+
+      let contentLeft: number;
+      let contentTop: number;
+      let contentWidth: number;
+      let contentHeight: number;
+
+      if (videoAspect > containerAspect) {
+        // Video is wider - letterbox top/bottom
+        contentWidth = videoRect.width;
+        contentHeight = videoRect.width / videoAspect;
+        contentLeft = videoRect.left;
+        contentTop = videoRect.top + (videoRect.height - contentHeight) / 2;
+      } else {
+        // Video is taller - letterbox left/right
+        contentHeight = videoRect.height;
+        contentWidth = videoRect.height * videoAspect;
+        contentLeft = videoRect.left + (videoRect.width - contentWidth) / 2;
+        contentTop = videoRect.top;
+      }
+
+      return {
+        canvas: {
+          left: canvasRect.left,
+          top: canvasRect.top,
+          width: canvasRect.width,
+          height: canvasRect.height,
+        },
+        videoContent: {
+          left: contentLeft,
+          top: contentTop,
+          width: contentWidth,
+          height: contentHeight,
+        },
+      };
+    });
+
+    // Canvas should overlay video content area exactly (within 2px tolerance for rounding)
+    expect(alignment.canvas.left).toBeCloseTo(alignment.videoContent.left, 0);
+    expect(alignment.canvas.top).toBeCloseTo(alignment.videoContent.top, 0);
+    expect(alignment.canvas.width).toBeCloseTo(alignment.videoContent.width, 0);
+    expect(alignment.canvas.height).toBeCloseTo(alignment.videoContent.height, 0);
+  });
 });
