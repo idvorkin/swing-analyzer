@@ -604,13 +604,17 @@ class SessionRecorderImpl {
   downloadRecording(): void {
     const blob = this.getRecordingAsBlob();
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `swing-session-${this.recording.sessionId}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `swing-session-${this.recording.sessionId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      // Always revoke URL, even if click/remove fails
+      URL.revokeObjectURL(url);
+    }
   }
 
   /**
