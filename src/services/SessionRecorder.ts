@@ -10,12 +10,15 @@
  * - Start/stop events (extraction, playback, etc.)
  * - Console errors
  * - Key state changes (rep count, extraction progress)
+ * - Environment info (browser, WebGL, codecs, build version)
  *
  * Persistence:
  * - Auto-saves to IndexedDB every 5 seconds
  * - Keeps last 10 sessions for crash debugging
  * - Use getPersistedSessions() to retrieve after crash
  */
+
+import { GIT_SHA_SHORT, BUILD_TIMESTAMP, GIT_BRANCH } from '../generated_version';
 
 // IndexedDB configuration
 const SESSION_DB_NAME = 'swing-analyzer-sessions';
@@ -78,13 +81,60 @@ export interface MemorySnapshot {
   percentUsed?: number;         // usedJSHeapSize / jsHeapSizeLimit * 100
 }
 
+/**
+ * Environment/debug info captured at session start
+ * Useful for bug reports to understand the user's setup
+ */
+export interface EnvironmentInfo {
+  // Build info
+  buildVersion?: string;        // App version from package.json
+  buildCommit?: string;         // Git commit hash
+  buildTime?: string;           // When the build was created
+
+  // Browser/OS
+  userAgent: string;
+  platform: string;             // navigator.platform
+  language: string;             // navigator.language
+  cookiesEnabled: boolean;
+  onLine: boolean;
+
+  // Display
+  screenWidth: number;
+  screenHeight: number;
+  windowWidth: number;
+  windowHeight: number;
+  devicePixelRatio: number;
+  colorDepth: number;
+
+  // Hardware/Performance
+  hardwareConcurrency?: number; // CPU cores
+  deviceMemory?: number;        // RAM in GB (Chrome only)
+
+  // WebGL (for ML model debugging)
+  webglRenderer?: string;
+  webglVendor?: string;
+  webglVersion?: string;
+
+  // Video codec support
+  videoCodecs: {
+    h264: boolean;
+    h265: boolean;
+    vp8: boolean;
+    vp9: boolean;
+    av1: boolean;
+    webm: boolean;
+  };
+
+  // App settings (set by the app)
+  appSettings?: Record<string, unknown>;
+}
+
 export interface SessionRecording {
   version: string;
   sessionId: string;
   startTime: number;
   endTime?: number;
-  userAgent: string;
-  screenSize: { width: number; height: number };
+  environment: EnvironmentInfo;
   interactions: InteractionEvent[];
   pipelineSnapshots: PipelineSnapshot[];
   stateChanges: StateChangeEvent[];
@@ -293,16 +343,109 @@ class SessionRecorderImpl {
       version: '1.0.0',
       sessionId: `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       startTime: Date.now(),
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-      screenSize:
-        typeof window !== 'undefined'
-          ? { width: window.innerWidth, height: window.innerHeight }
-          : { width: 0, height: 0 },
+      environment: this.captureEnvironment(),
       interactions: [],
       pipelineSnapshots: [],
       stateChanges: [],
       memorySnapshots: [],
     };
+  }
+
+  /**
+   * Capture environment/debug info at session start
+   */
+  private captureEnvironment(): EnvironmentInfo {
+    const nav = typeof navigator !== 'undefined' ? navigator : null;
+    const win = typeof window !== 'undefined' ? window : null;
+    const screen = typeof window !== 'undefined' ? window.screen : null;
+
+    // Get WebGL info for ML debugging
+    const webglInfo = this.getWebGLInfo();
+
+    // Check video codec support
+    const videoCodecs = this.checkVideoCodecs();
+
+    // Get build info from generated version file
+    const buildVersion = `1.0.0-${GIT_BRANCH}`;
+    const buildCommit = GIT_SHA_SHORT;
+    const buildTime = BUILD_TIMESTAMP;
+
+    return {
+      // Build info
+      buildVersion,
+      buildCommit,
+      buildTime,
+
+      // Browser/OS
+      userAgent: nav?.userAgent ?? 'unknown',
+      platform: nav?.platform ?? 'unknown',
+      language: nav?.language ?? 'unknown',
+      cookiesEnabled: nav?.cookieEnabled ?? false,
+      onLine: nav?.onLine ?? true,
+
+      // Display
+      screenWidth: screen?.width ?? 0,
+      screenHeight: screen?.height ?? 0,
+      windowWidth: win?.innerWidth ?? 0,
+      windowHeight: win?.innerHeight ?? 0,
+      devicePixelRatio: win?.devicePixelRatio ?? 1,
+      colorDepth: screen?.colorDepth ?? 24,
+
+      // Hardware
+      hardwareConcurrency: nav?.hardwareConcurrency,
+      deviceMemory: (nav as Navigator & { deviceMemory?: number })?.deviceMemory,
+
+      // WebGL
+      ...webglInfo,
+
+      // Video codecs
+      videoCodecs,
+    };
+  }
+
+  /**
+   * Get WebGL renderer info for debugging ML model issues
+   */
+  private getWebGLInfo(): { webglRenderer?: string; webglVendor?: string; webglVersion?: string } {
+    if (typeof document === 'undefined') return {};
+
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      if (!gl) return {};
+
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      return {
+        webglRenderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : undefined,
+        webglVendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : undefined,
+        webglVersion: gl.getParameter(gl.VERSION),
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Check which video codecs are supported
+   */
+  private checkVideoCodecs(): EnvironmentInfo['videoCodecs'] {
+    if (typeof document === 'undefined') {
+      return { h264: false, h265: false, vp8: false, vp9: false, av1: false, webm: false };
+    }
+
+    try {
+      const video = document.createElement('video');
+      return {
+        h264: video.canPlayType('video/mp4; codecs="avc1.42E01E"') !== '',
+        h265: video.canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"') !== '',
+        vp8: video.canPlayType('video/webm; codecs="vp8"') !== '',
+        vp9: video.canPlayType('video/webm; codecs="vp9"') !== '',
+        av1: video.canPlayType('video/mp4; codecs="av01.0.01M.08"') !== '',
+        webm: video.canPlayType('video/webm') !== '',
+      };
+    } catch {
+      return { h264: false, h265: false, vp8: false, vp9: false, av1: false, webm: false };
+    }
   }
 
   private setupEventListeners(): void {
@@ -550,6 +693,21 @@ class SessionRecorderImpl {
    */
   setPipelineStateGetter(getter: () => Partial<PipelineSnapshot>): void {
     this.pipelineStateGetter = getter;
+  }
+
+  /**
+   * Set app settings for debugging (e.g., model type, exercise type)
+   * Called by the app to include current settings in bug reports
+   */
+  setAppSettings(settings: Record<string, unknown>): void {
+    this.recording.environment.appSettings = settings;
+  }
+
+  /**
+   * Get current environment info
+   */
+  getEnvironment(): EnvironmentInfo {
+    return this.recording.environment;
   }
 
   /**
@@ -883,6 +1041,18 @@ if (typeof window !== 'undefined') {
         durationSec: Math.round(durationSec),
       };
     },
+
+    /**
+     * Get environment/debug info (browser, WebGL, codecs, etc.).
+     * Usage: swingDebug.getEnvironment()
+     */
+    getEnvironment: () => sessionRecorder.getEnvironment(),
+
+    /**
+     * Set app settings for bug reports.
+     * Usage: swingDebug.setAppSettings({ model: 'blazepose', exercise: 'swing' })
+     */
+    setAppSettings: (settings: Record<string, unknown>) => sessionRecorder.setAppSettings(settings),
   };
 
   (window as unknown as { swingDebug: typeof swingDebug }).swingDebug = swingDebug;
