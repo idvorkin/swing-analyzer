@@ -222,7 +222,6 @@ describe('usePipelineLifecycle', () => {
       unmount();
 
       expect(mockPipeline.stop).toHaveBeenCalled();
-      expect(mockFrameAcquisition.stopCamera).toHaveBeenCalled();
     });
   });
 

@@ -8,7 +8,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ModelConfig } from '../config/modelConfig';
 import {
   InputSession,
   type InputSessionState,
@@ -24,8 +23,6 @@ export interface UseInputSessionOptions {
   videoElement: HTMLVideoElement | null;
   /** Canvas element ref */
   canvasElement: HTMLCanvasElement | null;
-  /** Model configuration */
-  modelConfig?: ModelConfig;
   /** Callback when skeleton is detected */
   onSkeleton?: (skeleton: SkeletonEvent) => void;
   /** Callback when extraction progress updates */
@@ -48,10 +45,6 @@ export interface UseInputSessionReturn {
   errorMessage: string | null;
   /** Current extraction progress (if extracting) */
   extractionProgress: ExtractionProgress | null;
-  /** Start camera input */
-  startCamera: (facingMode?: 'user' | 'environment') => Promise<void>;
-  /** Switch camera facing mode */
-  switchCamera: () => Promise<void>;
   /** Start video file input */
   startVideoFile: (file: File) => Promise<void>;
   /** Stop current input */
@@ -67,7 +60,7 @@ export interface UseInputSessionReturn {
 }
 
 /**
- * React hook for managing video/camera input
+ * React hook for managing video input
  */
 export function useInputSession(
   options: UseInputSessionOptions
@@ -75,7 +68,6 @@ export function useInputSession(
   const {
     videoElement,
     canvasElement,
-    modelConfig,
     onSkeleton,
     onExtractionProgress,
   } = options;
@@ -97,7 +89,6 @@ export function useInputSession(
     const session = new InputSession({
       videoElement,
       canvasElement,
-      modelConfig,
     });
 
     sessionRef.current = session;
@@ -126,26 +117,7 @@ export function useInputSession(
       session.dispose();
       sessionRef.current = null;
     };
-  }, [videoElement, canvasElement, modelConfig, onSkeleton, onExtractionProgress]);
-
-  // Start camera
-  const startCamera = useCallback(
-    async (facingMode: 'user' | 'environment' = 'environment') => {
-      if (!sessionRef.current) {
-        throw new Error('Session not initialized');
-      }
-      await sessionRef.current.startCamera(facingMode);
-    },
-    []
-  );
-
-  // Switch camera
-  const switchCamera = useCallback(async () => {
-    if (!sessionRef.current) {
-      throw new Error('Session not initialized');
-    }
-    await sessionRef.current.switchCamera();
-  }, []);
+  }, [videoElement, canvasElement, onSkeleton, onExtractionProgress]);
 
   // Start video file
   const startVideoFile = useCallback(async (file: File) => {
@@ -187,9 +159,6 @@ export function useInputSession(
   }, [state]);
 
   const isReady = useMemo(() => {
-    if (state.type === 'camera') {
-      return state.sourceState.type === 'active';
-    }
     if (state.type === 'video-file') {
       return state.sourceState.type === 'active';
     }
@@ -206,8 +175,6 @@ export function useInputSession(
     hasError,
     errorMessage,
     extractionProgress: isExtracting ? extractionProgress : null,
-    startCamera,
-    switchCamera,
     startVideoFile,
     stop,
     getSkeletonAtTime,
