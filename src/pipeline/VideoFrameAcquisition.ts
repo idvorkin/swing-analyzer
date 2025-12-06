@@ -11,7 +11,7 @@ import type { CropRegion } from '../types/posetrack';
 import type { FrameAcquisition, FrameEvent } from './PipelineInterfaces';
 
 /**
- * Video frame acquisition - handles frame acquisition from video element or camera
+ * Video frame acquisition - handles frame acquisition from video element
  */
 export class VideoFrameAcquisition implements FrameAcquisition {
   private stop$ = new Subject<void>();
@@ -152,70 +152,10 @@ export class VideoFrameAcquisition implements FrameAcquisition {
   }
 
   /**
-   * Start camera with specified mode
-   * @param mode 'user' for front camera, 'environment' for back camera
-   */
-  async startCamera(
-    mode: 'user' | 'environment' = 'environment'
-  ): Promise<void> {
-    try {
-      const constraints = {
-        video: {
-          facingMode: mode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      };
-
-      // Get camera stream
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      // Stop any existing stream
-      this.stopCamera();
-
-      // Connect stream to video element
-      this.videoElement.srcObject = stream;
-      this.videoElement.play();
-
-      // Wait for video to be ready
-      return new Promise<void>((resolve) => {
-        const handleMetadata = () => {
-          // Clean up listener
-          this.videoElement.removeEventListener('loadedmetadata', handleMetadata);
-          // Update canvas dimensions
-          this.updateCanvasDimensions();
-          resolve();
-        };
-        this.videoElement.addEventListener('loadedmetadata', handleMetadata);
-      });
-    } catch (error) {
-      console.error('Error starting camera:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Stop camera stream
-   */
-  stopCamera(): void {
-    const stream = this.videoElement.srcObject as MediaStream;
-
-    if (stream) {
-      const tracks = stream.getTracks();
-      for (const track of tracks) {
-        track.stop();
-      }
-      this.videoElement.srcObject = null;
-    }
-  }
-
-  /**
    * Load a video file
    */
   loadVideo(file: File): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      // Stop camera if running
-      this.stopCamera();
 
       // Create object URL for the file
       const videoURL = URL.createObjectURL(file);
@@ -273,9 +213,6 @@ export class VideoFrameAcquisition implements FrameAcquisition {
     }
 
     return new Promise<void>((resolve, reject) => {
-      // Stop camera if running
-      this.stopCamera();
-
       // Cleanup function to remove listeners
       const cleanup = () => {
         this.videoElement.removeEventListener('error', handleError);

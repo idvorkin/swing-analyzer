@@ -78,8 +78,6 @@ describe('useVideoControls', () => {
     // Create mock frame acquisition
     mockFrameAcquisition = {
       loadVideoFromURL: vi.fn().mockResolvedValue(undefined),
-      stopCamera: vi.fn().mockResolvedValue(undefined),
-      startCamera: vi.fn().mockResolvedValue(undefined),
     };
 
     // Create mock skeleton renderer
@@ -93,8 +91,6 @@ describe('useVideoControls', () => {
     mockAppState = {
       isModelLoaded: true,
       isProcessing: false,
-      usingCamera: false,
-      cameraMode: 'environment',
       displayMode: 'both',
       repCounter: {
         count: 0,

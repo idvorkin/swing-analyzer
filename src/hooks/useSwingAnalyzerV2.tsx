@@ -2,7 +2,7 @@
  * useSwingAnalyzerV2 - Refactored swing analyzer hook using InputSession
  *
  * This is a rewrite of useSwingAnalyzer that uses the unified InputSession
- * state machine for managing video/camera input. Key improvements:
+ * state machine for managing video input. Key improvements:
  *
  * 1. Single source of truth for input state (InputSession)
  * 2. Cache lookup for frame stepping (no redundant ML inference)
@@ -31,8 +31,6 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   // Core State
   // ========================================
   const [appState, setAppState] = useState<AppState>({
-    usingCamera: false,
-    cameraMode: 'environment',
     displayMode: 'both',
     isModelLoaded: false,
     isProcessing: false,
@@ -156,13 +154,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setInputState(state);
 
       // Update app state based on session state
-      if (state.type === 'camera') {
-        setAppState(prev => ({ ...prev, usingCamera: true }));
-        setStatus(state.sourceState.type === 'active' ? 'Camera active' : 'Starting camera...');
-        // Clear crop region for camera (not applicable)
-        setCropRegionState(null);
-      } else if (state.type === 'video-file') {
-        setAppState(prev => ({ ...prev, usingCamera: false }));
+      if (state.type === 'video-file') {
         if (state.sourceState.type === 'extracting') {
           setStatus('Extracting poses...');
         } else if (state.sourceState.type === 'active') {
@@ -187,8 +179,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       }
 
       // Mark model as loaded once we have an active source
-      if ((state.type === 'camera' || state.type === 'video-file') &&
-          state.sourceState.type === 'active') {
+      if (state.type === 'video-file' && state.sourceState.type === 'active') {
         setAppState(prev => ({ ...prev, isModelLoaded: true }));
       }
     });
@@ -271,37 +262,6 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       video.removeEventListener('seeked', handleSeeked);
     };
   }, []); // No dependencies needed - uses refs for stable access
-
-  // ========================================
-  // Camera Controls
-  // ========================================
-  const startCamera = useCallback(async () => {
-    const session = inputSessionRef.current;
-    if (!session) return;
-
-    try {
-      await session.startCamera(appState.cameraMode);
-    } catch (error) {
-      console.error('Failed to start camera:', error);
-      setStatus('Error: Could not access camera');
-    }
-  }, [appState.cameraMode]);
-
-  const switchCamera = useCallback(async () => {
-    const session = inputSessionRef.current;
-    if (!session) return;
-
-    try {
-      await session.switchCamera();
-      setAppState(prev => ({
-        ...prev,
-        cameraMode: prev.cameraMode === 'user' ? 'environment' : 'user',
-      }));
-    } catch (error) {
-      console.error('Failed to switch camera:', error);
-      setStatus('Error: Could not switch camera');
-    }
-  }, []);
 
   // ========================================
   // Video File Controls
@@ -589,8 +549,6 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     pipelineRef,
 
     // Actions
-    startCamera,
-    switchCamera,
     handleVideoUpload,
     loadHardcodedVideo,
     togglePlayPause,

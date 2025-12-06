@@ -373,11 +373,6 @@ export function usePipelineLifecycle(
       }
 
       if (frameAcquisitionRef.current) {
-        try {
-          frameAcquisitionRef.current.stopCamera();
-        } catch (err) {
-          console.error('Error stopping camera:', err);
-        }
         frameAcquisitionRef.current = null;
       }
     };

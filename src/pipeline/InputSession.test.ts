@@ -1,33 +1,12 @@
 /**
  * InputSession Tests
  *
- * Tests for the InputSession state machine that manages video/camera input.
- * These are pure unit tests - no React, no actual video/camera.
+ * Tests for the InputSession state machine that manages video input.
+ * These are pure unit tests - no React, no actual video.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { InputSession, type InputSessionState } from './InputSession';
-
-// Mock the source modules
-vi.mock('./CameraSkeletonSource', () => ({
-  CameraSkeletonSource: vi.fn().mockImplementation(() => ({
-    type: 'camera',
-    state: { type: 'idle' },
-    state$: {
-      pipe: vi.fn().mockReturnThis(),
-      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
-    },
-    skeletons$: {
-      pipe: vi.fn().mockReturnThis(),
-      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
-    },
-    start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn(),
-    dispose: vi.fn(),
-    getSkeletonAtTime: vi.fn().mockReturnValue(null),
-    hasSkeletonAtTime: vi.fn().mockReturnValue(false),
-  })),
-}));
 
 vi.mock('./VideoFileSkeletonSource', () => ({
   VideoFileSkeletonSource: vi.fn().mockImplementation(() => ({
@@ -98,40 +77,6 @@ describe('InputSession', () => {
     });
   });
 
-  describe('startCamera', () => {
-    it('creates a camera source', async () => {
-      await session.startCamera('environment');
-
-      const source = session.getSource();
-      expect(source).not.toBeNull();
-      expect(source?.type).toBe('camera');
-    });
-
-    it('calls start on the camera source', async () => {
-      await session.startCamera('user');
-
-      const source = session.getCameraSource();
-      expect(source?.start).toHaveBeenCalled();
-    });
-
-    it('cleans up previous source when starting new camera', async () => {
-      await session.startCamera('environment');
-      const firstSource = session.getSource();
-
-      await session.startCamera('user');
-
-      expect(firstSource?.dispose).toHaveBeenCalled();
-    });
-  });
-
-  describe('switchCamera', () => {
-    it('throws if not in camera mode', async () => {
-      await expect(session.switchCamera()).rejects.toThrow(
-        'Cannot switch camera: not in camera mode'
-      );
-    });
-  });
-
   describe('startVideoFile', () => {
     it('creates a video file source', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
@@ -150,20 +95,22 @@ describe('InputSession', () => {
       expect(source?.start).toHaveBeenCalled();
     });
 
-    it('cleans up previous source when starting video file', async () => {
-      await session.startCamera('environment');
-      const cameraSource = session.getSource();
+    it('cleans up previous source when starting new video file', async () => {
+      const mockFile1 = new File(['test1'], 'test1.mp4', { type: 'video/mp4' });
+      await session.startVideoFile(mockFile1);
+      const firstSource = session.getSource();
 
-      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const mockFile2 = new File(['test2'], 'test2.mp4', { type: 'video/mp4' });
+      await session.startVideoFile(mockFile2);
 
-      expect(cameraSource?.dispose).toHaveBeenCalled();
+      expect(firstSource?.dispose).toHaveBeenCalled();
     });
   });
 
   describe('stop', () => {
     it('stops the current source', async () => {
-      await session.startCamera('environment');
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      await session.startVideoFile(mockFile);
       const source = session.getSource();
 
       session.stop();
@@ -172,7 +119,8 @@ describe('InputSession', () => {
     });
 
     it('transitions to idle state', async () => {
-      await session.startCamera('environment');
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      await session.startVideoFile(mockFile);
       session.stop();
 
       expect(session.state).toEqual({ type: 'idle' });
@@ -233,7 +181,8 @@ describe('InputSession', () => {
 
   describe('dispose', () => {
     it('cleans up current source', async () => {
-      await session.startCamera('environment');
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      await session.startVideoFile(mockFile);
       const source = session.getSource();
 
       session.dispose();
@@ -249,15 +198,14 @@ describe('InputSession', () => {
   });
 
   describe('source type getters', () => {
-    it('getVideoFileSource returns null when camera is active', async () => {
-      await session.startCamera('environment');
-      expect(session.getVideoFileSource()).toBeNull();
-    });
-
-    it('getCameraSource returns null when video file is active', async () => {
+    it('getVideoFileSource returns source when video file is active', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       await session.startVideoFile(mockFile);
-      expect(session.getCameraSource()).toBeNull();
+      expect(session.getVideoFileSource()).not.toBeNull();
+    });
+
+    it('getVideoFileSource returns null when no source is active', () => {
+      expect(session.getVideoFileSource()).toBeNull();
     });
   });
 });

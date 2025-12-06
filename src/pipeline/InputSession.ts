@@ -1,8 +1,7 @@
 /**
- * InputSession - State machine for managing video/camera input
+ * InputSession - State machine for managing video input
  *
  * This is the single source of truth for input state. It manages:
- * - Which input source is active (camera or video file)
  * - State transitions (idle → starting → active, etc.)
  * - Cleanup when switching sources
  *
@@ -12,8 +11,6 @@
 
 import { BehaviorSubject, type Observable, Subject, type Subscription } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import type { ModelConfig } from '../config/modelConfig';
-import { CameraSkeletonSource } from './CameraSkeletonSource';
 import type { SkeletonEvent } from './PipelineInterfaces';
 import type {
   ExtractionProgress,
@@ -27,7 +24,6 @@ import { VideoFileSkeletonSource } from './VideoFileSkeletonSource';
  */
 export type InputSessionState =
   | { type: 'idle' }
-  | { type: 'camera'; facingMode: 'user' | 'environment'; sourceState: SkeletonSourceState }
   | { type: 'video-file'; fileName: string; sourceState: SkeletonSourceState }
   | { type: 'error'; message: string };
 
@@ -49,11 +45,10 @@ export interface InputSessionEvents {
 export interface InputSessionConfig {
   videoElement: HTMLVideoElement;
   canvasElement: HTMLCanvasElement;
-  modelConfig?: ModelConfig;
 }
 
 /**
- * Manages input sources (camera or video file) as a state machine
+ * Manages video input as a state machine
  */
 export class InputSession {
   private readonly stateSubject: BehaviorSubject<InputSessionState>;
@@ -67,12 +62,10 @@ export class InputSession {
 
   private readonly videoElement: HTMLVideoElement;
   private readonly canvasElement: HTMLCanvasElement;
-  private readonly modelConfig?: ModelConfig;
 
   constructor(config: InputSessionConfig) {
     this.videoElement = config.videoElement;
     this.canvasElement = config.canvasElement;
-    this.modelConfig = config.modelConfig;
     this.stateSubject = new BehaviorSubject<InputSessionState>({ type: 'idle' });
   }
 
@@ -119,58 +112,6 @@ export class InputSession {
       return this.source as VideoFileSkeletonSource;
     }
     return null;
-  }
-
-  /**
-   * Get the camera source (if current source is a camera)
-   */
-  getCameraSource(): CameraSkeletonSource | null {
-    if (this.source?.type === 'camera') {
-      return this.source as CameraSkeletonSource;
-    }
-    return null;
-  }
-
-  /**
-   * Start camera input
-   */
-  async startCamera(facingMode: 'user' | 'environment' = 'environment'): Promise<void> {
-    // Clean up previous source
-    await this.cleanup();
-
-    // Create camera source
-    const cameraSource = new CameraSkeletonSource(
-      {
-        facingMode,
-        videoElement: this.videoElement,
-        canvasElement: this.canvasElement,
-      },
-      this.modelConfig
-    );
-
-    this.source = cameraSource;
-    this.subscribeToSource(cameraSource, { type: 'camera', facingMode });
-
-    try {
-      await cameraSource.start();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to start camera';
-      this.stateSubject.next({ type: 'error', message });
-      throw error;
-    }
-  }
-
-  /**
-   * Switch camera facing mode
-   */
-  async switchCamera(): Promise<void> {
-    const currentState = this.state;
-    if (currentState.type !== 'camera') {
-      throw new Error('Cannot switch camera: not in camera mode');
-    }
-
-    const newFacingMode = currentState.facingMode === 'user' ? 'environment' : 'user';
-    await this.startCamera(newFacingMode);
   }
 
   /**
@@ -278,7 +219,7 @@ export class InputSession {
    */
   private subscribeToSource(
     source: SkeletonSource,
-    sessionType: { type: 'camera'; facingMode: 'user' | 'environment' } | { type: 'video-file'; fileName: string }
+    sessionType: { type: 'video-file'; fileName: string }
   ): void {
     // Subscribe to skeleton events
     this.sourceSubscription = source.skeletons$
@@ -305,19 +246,11 @@ export class InputSession {
           }
 
           // Map source state to session state
-          if (sessionType.type === 'camera') {
-            this.stateSubject.next({
-              type: 'camera',
-              facingMode: sessionType.facingMode,
-              sourceState,
-            });
-          } else {
-            this.stateSubject.next({
-              type: 'video-file',
-              fileName: sessionType.fileName,
-              sourceState,
-            });
-          }
+          this.stateSubject.next({
+            type: 'video-file',
+            fileName: sessionType.fileName,
+            sourceState,
+          });
         },
         error: (err) => {
           console.error('Error in state stream:', err);
