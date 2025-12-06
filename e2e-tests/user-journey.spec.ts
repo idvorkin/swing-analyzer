@@ -21,6 +21,7 @@ import {
   getPoseTrackFromDB,
   seedPoseTrackFixture,
   seekToTime,
+  setPoseTrackStorageMode,
   useShortTestVideo,
 } from './helpers';
 
@@ -442,6 +443,8 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
   test.describe('Pose Track Caching', () => {
     test('seeded pose data is found when loading video', async ({ page }) => {
+      // These tests read from IndexedDB directly with getPoseTrackFromDB
+      await setPoseTrackStorageMode(page, 'indexeddb');
       // Seed data first
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
@@ -479,6 +482,8 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     test('skeleton redraws when video is seeked manually', async ({
       page,
     }) => {
+      // These tests read from IndexedDB directly with getPoseTrackFromDB
+      await setPoseTrackStorageMode(page, 'indexeddb');
       // Seed pose data first
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
