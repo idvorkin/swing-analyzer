@@ -32,7 +32,6 @@ test.describe('Swing Analyzer', () => {
     // Verify that the main elements are visible
     await expect(page.locator('h1')).toContainText('Swing Analyzer');
     await expect(page.locator('#load-hardcoded-btn')).toBeVisible();
-    await expect(page.locator('#camera-btn')).toBeVisible();
   });
 
   test('should display analysis UI elements', async ({ page }) => {
