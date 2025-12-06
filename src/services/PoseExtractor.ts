@@ -79,9 +79,9 @@ function capturePersonCenteredThumbnail(
     personCenterX = (minX + maxX) / 2;
     personCenterY = (minY + maxY) / 2;
 
-    // Person dimensions with padding
-    const personWidth = (maxX - minX) * 1.4; // 40% padding
-    const personHeight = (maxY - minY) * 1.3; // 30% padding
+    // Person dimensions with padding (ensure minimum of 1px to avoid division by zero)
+    const personWidth = Math.max((maxX - minX) * 1.4, 1); // 40% padding
+    const personHeight = Math.max((maxY - minY) * 1.3, 1); // 30% padding
 
     // Determine crop size to fit person while maintaining aspect ratio
     if (personWidth / personHeight > targetAspect) {
@@ -106,9 +106,15 @@ function capturePersonCenteredThumbnail(
     cropWidth = cropHeight * targetAspect;
   }
 
-  // Ensure crop doesn't exceed video bounds
-  cropWidth = Math.min(cropWidth, videoWidth);
-  cropHeight = Math.min(cropHeight, videoHeight);
+  // Ensure crop doesn't exceed video bounds while maintaining aspect ratio
+  if (cropWidth > videoWidth) {
+    cropWidth = videoWidth;
+    cropHeight = cropWidth / targetAspect;
+  }
+  if (cropHeight > videoHeight) {
+    cropHeight = videoHeight;
+    cropWidth = cropHeight * targetAspect;
+  }
 
   // Center crop on person, but clamp to video bounds
   cropX = Math.max(0, Math.min(personCenterX - cropWidth / 2, videoWidth - cropWidth));
