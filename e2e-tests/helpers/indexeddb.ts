@@ -12,6 +12,23 @@ const POSETRACK_DB_NAME = 'swing-analyzer-posetracks';
 const POSETRACK_STORE_NAME = 'posetracks';
 
 /**
+ * Set the app's pose track storage mode.
+ * Call this before seeding data if you need IndexedDB persistence.
+ */
+export async function setPoseTrackStorageMode(
+  page: Page,
+  mode: 'memory' | 'indexeddb'
+): Promise<void> {
+  await page.evaluate((storageMode) => {
+    // Access the service through the test setup
+    const testSetup = (window as unknown as { __testSetup?: { setPoseTrackStorageMode?: (mode: string) => void } }).__testSetup;
+    if (testSetup?.setPoseTrackStorageMode) {
+      testSetup.setPoseTrackStorageMode(storageMode);
+    }
+  }, mode);
+}
+
+/**
  * Seed a pose track fixture into IndexedDB
  *
  * @param page - Playwright page instance
