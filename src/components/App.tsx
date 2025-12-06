@@ -5,7 +5,7 @@ import { NavLink, Route, Routes } from 'react-router-dom';
 import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
 import { GIT_BRANCH } from '../generated_version';
 import AnalysisSection from './AnalysisSection';
-import VideoSection from './VideoSection';
+import VideoSectionV2 from './VideoSectionV2';
 import './App.css';
 import { useBugReporter } from '../hooks/useBugReporter';
 import { useShakeDetector } from '../hooks/useShakeDetector';
@@ -37,7 +37,7 @@ const SettingsIconSmall = () => (
 const MainApplication: React.FC = () => {
   return (
     <main>
-      <VideoSection />
+      <VideoSectionV2 />
       <AnalysisSection />
     </main>
   );

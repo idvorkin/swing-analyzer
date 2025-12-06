@@ -64,28 +64,30 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
       { timeout: 10000 }
     );
 
-    // Wait for extraction to complete
+    // Wait for extraction to complete - check both old (.pose-status-bar) and new (.ready-status) UI
     await page.waitForFunction(
       () => {
+        // Old UI used .pose-status-bar for ready state
         const statusEl = document.querySelector('.pose-status-bar');
-        return statusEl?.textContent?.includes('ready') ||
-               statusEl?.textContent?.includes('Ready');
+        if (statusEl?.textContent?.includes('ready') || statusEl?.textContent?.includes('Ready')) {
+          return true;
+        }
+        // New UI shows .ready-status after extraction completes (no .pose-status-bar when ready)
+        const readyEl = document.querySelector('.ready-status');
+        if (readyEl?.textContent?.includes('Ready')) {
+          return true;
+        }
+        // Or check that extraction progress bar is gone and rep count > 0
+        const extractingEl = document.querySelector('.extraction-status');
+        const repCounter = document.querySelector('#rep-counter');
+        const repCount = parseInt(repCounter?.textContent || '0', 10);
+        return !extractingEl && repCount > 0;
       },
       { timeout: 60000 }
     );
 
     // Wait a moment for UI to settle after extraction
     await page.waitForTimeout(500);
-
-    // Wait for rep count to be > 0 (pipeline may still be finalizing)
-    await page.waitForFunction(
-      () => {
-        const el = document.querySelector('#rep-counter');
-        const count = parseInt(el?.textContent || '0', 10);
-        return count > 0;
-      },
-      { timeout: 10000 }
-    );
 
     // Check rep count
     const repCount = await page.evaluate(() => {
@@ -194,12 +196,24 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete
+    // Wait for extraction to complete - check both old (.pose-status-bar) and new (.ready-status) UI
     await page.waitForFunction(
       () => {
+        // Old UI used .pose-status-bar for ready state
         const statusEl = document.querySelector('.pose-status-bar');
-        return statusEl?.textContent?.includes('ready') ||
-               statusEl?.textContent?.includes('Ready');
+        if (statusEl?.textContent?.includes('ready') || statusEl?.textContent?.includes('Ready')) {
+          return true;
+        }
+        // New UI shows .ready-status after extraction completes
+        const readyEl = document.querySelector('.ready-status');
+        if (readyEl?.textContent?.includes('Ready')) {
+          return true;
+        }
+        // Or check that extraction progress bar is gone and rep count > 0
+        const extractingEl = document.querySelector('.extraction-status');
+        const repCounter = document.querySelector('#rep-counter');
+        const repCount = parseInt(repCounter?.textContent || '0', 10);
+        return !extractingEl && repCount > 0;
       },
       { timeout: 60000 }
     );
