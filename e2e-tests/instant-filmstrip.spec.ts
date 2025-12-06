@@ -219,9 +219,11 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
     }
   });
 
+  // Retry - can be flaky with parallel IndexedDB access
   test('extraction with mock detector produces same rep count as real detector', async ({
     page,
   }) => {
+    test.info().annotations.push({ type: 'retry', description: 'Flaky with parallel IndexedDB access' });
     // This test validates that mock detector produces realistic results
     // Use 10ms delay for consistency with other tests
     await setupMockPoseDetector(page, 'swing-sample', 0);
@@ -253,12 +255,11 @@ test.describe('Instant Filmstrip: Reps Appear During Extraction', () => {
   });
 });
 
-// SKIPPED: These tests depend on mock extraction + playback flow
-// which is flaky due to timing issues with video seeking and WebGL initialization.
-// The underlying feature (rep count stability during playback) should be
-// tested via unit tests on the pipeline components instead.
-test.describe.skip('Playback Mode: No Duplicate Rep Counting', () => {
+// Tests for playback mode after extraction
+test.describe('Playback Mode: No Duplicate Rep Counting', () => {
   test.beforeEach(async ({ page }) => {
+    // Use short test video for faster tests
+    await useShortTestVideo(page);
     await page.goto('/');
 
     // Wait for test setup to be available (app fully initialized)
@@ -271,18 +272,11 @@ test.describe.skip('Playback Mode: No Duplicate Rep Counting', () => {
     await setVideoTestId(page, generateTestId());
   });
 
+  // Retry - can be flaky with parallel IndexedDB access
   test('rep count stays stable after extraction when playing video', async ({
     page,
   }) => {
-    // Capture console logs
-    page.on('console', (msg) => {
-      const text = msg.text();
-      if (text.includes('playbackOnly') || text.includes('Pipeline') ||
-          text.includes('Rep processor') || text.includes('Playback')) {
-        console.log(`[BROWSER] ${text}`);
-      }
-    });
-
+    test.info().annotations.push({ type: 'retry', description: 'Flaky with parallel IndexedDB access' });
     // Configure mock pose detector - fast extraction (0ms delay for speed)
     await setupMockPoseDetector(page, 'swing-sample', 0);
 
@@ -290,14 +284,13 @@ test.describe.skip('Playback Mode: No Duplicate Rep Counting', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete (status bar shows "Pose track ready")
-    // This confirms all poses have been extracted before we start playback
+    // Wait for extraction to complete - UI shows "Ready - X reps detected"
     await page.waitForFunction(
       () => {
-        const statusEl = document.querySelector('.pose-status-bar');
-        return statusEl?.textContent?.includes('Pose track ready');
+        const pageText = document.body.textContent || '';
+        return pageText.includes('Ready') && pageText.includes('reps detected');
       },
-      { timeout: 120000 }
+      { timeout: 60000 }
     );
 
     // Get rep count after extraction completes
@@ -326,9 +319,11 @@ test.describe.skip('Playback Mode: No Duplicate Rep Counting', () => {
     expect(repCountAfterPlayback).toBe(repCountAfterExtraction);
   });
 
+  // Retry - can be flaky with parallel IndexedDB access
   test('skeleton still renders during playback after extraction', async ({
     page,
   }) => {
+    test.info().annotations.push({ type: 'retry', description: 'Flaky with parallel IndexedDB access' });
     // Configure mock pose detector (0ms delay for speed)
     await setupMockPoseDetector(page, 'swing-sample', 0);
 
@@ -336,13 +331,13 @@ test.describe.skip('Playback Mode: No Duplicate Rep Counting', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete (status bar shows "Pose track ready")
+    // Wait for extraction to complete - UI shows "Ready - X reps detected"
     await page.waitForFunction(
       () => {
-        const statusEl = document.querySelector('.pose-status-bar');
-        return statusEl?.textContent?.includes('Pose track ready');
+        const pageText = document.body.textContent || '';
+        return pageText.includes('Ready') && pageText.includes('reps detected');
       },
-      { timeout: 120000 }
+      { timeout: 60000 }
     );
 
     // Play the video

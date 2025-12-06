@@ -143,10 +143,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   });
 
   test.describe('Step 3: Video Playback Controls', () => {
-    // SKIPPED: App bug - play button click doesn't start video playback (swing-o6o)
-    // WebM/VP9 codec IS supported in headless Chromium - this is NOT a codec issue
-
-    test.skip('play button starts video playback', async ({ page }) => {
+    test('play button starts video playback', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
@@ -179,7 +176,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(isPlaying).toBe(true);
     });
 
-    test.skip('pause button stops video playback', async ({ page }) => {
+    test('pause button stops video playback', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
@@ -225,7 +222,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(isPaused).toBe(true);
     });
 
-    test.skip('stop button resets video to beginning', async ({ page }) => {
+    test('stop button resets video to beginning', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
@@ -263,7 +260,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
       const currentTime = await page.evaluate(() => {
         const video = document.querySelector('video');
-        return video?.currentTime || -1;
+        return video?.currentTime ?? -1;
       });
       expect(currentTime).toBe(0);
     });
@@ -306,8 +303,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await expect(page.locator('#arm-angle')).toBeVisible();
     });
 
-    // SKIPPED: Depends on video playback working (blocked by swing-o6o)
-    test.skip('rep counter increments after completing swing cycle', async ({
+    test('rep counter increments after completing swing cycle', async ({
       page,
     }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
@@ -480,9 +476,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   });
 
   test.describe('Skeleton Redraw on Seek', () => {
-    // Skip: Canvas drawing requires ML model which isn't available in headless browser
-    // The spine angle updates work from cached poses, but canvas overlay requires live model
-    test.skip('skeleton redraws when video is seeked manually', async ({
+    test('skeleton redraws when video is seeked manually', async ({
       page,
     }) => {
       // Seed pose data first
