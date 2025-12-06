@@ -136,6 +136,7 @@ Actions requiring explicit "YES" approval from user:
 - **Force pushing** - Can destroy history
 - **Accepting/merging PRs** - Human must review and approve
 - **Any action that loses work** - Deleting branches with unmerged commits, hard resets
+- **`bd init --force`** - Erases the beads database and rebuilds from JSONL. The database should already exist from clone.
 
 **Encouraged** (not losing work): Deleting unused functions/files, removing commented-out code, cleaning unused imports - these are preserved in git history.
 
@@ -219,11 +220,10 @@ git push              # Push to remote
 bd doctor             # Diagnose issues (missing hooks, sync problems, etc.)
 bd doctor --fix       # Auto-fix common issues
 bd sync               # Force sync with remote
-bd init --force       # Nuclear option: rebuild database from JSONL
 ```
 
 Common issues:
-- **"Database not found"**: Run `bd init --force --prefix=swing`
+- **"Database not found"**: The database should exist from clone. Run `bd sync` to pull from remote. If truly missing, ask user for permission to run `bd init --force --prefix=swing` (this erases local data).
 - **"beads-metadata branch missing"**: `git fetch origin beads-metadata && git branch beads-metadata origin/beads-metadata`
 - **Sync permission errors**: `git branch --set-upstream-to=origin/beads-metadata beads-metadata`
 
