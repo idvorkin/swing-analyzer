@@ -273,10 +273,12 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     test('rep counter displays correctly', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
 
-      // Rep counter should exist and show 0 initially
+      // Rep counter should exist and show reps from seeded pose data
       await expect(page.locator('#rep-counter')).toBeVisible();
-      await expect(page.locator('#rep-counter')).toHaveText('0');
+      // Seeded fixture contains ~4 swings which produces 3 detected reps
+      await expect(page.locator('#rep-counter')).toHaveText('3', { timeout: 5000 });
     });
 
     test('angle displays update during playback', async ({ page }) => {
