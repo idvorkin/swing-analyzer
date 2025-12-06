@@ -172,4 +172,43 @@ test.describe('Swing Analyzer', () => {
     await expect(playPauseBtn).toBeVisible();
     await expect(stopBtn).toBeVisible();
   });
+
+  test('canvas dimensions should match video dimensions after loading', async ({ page }) => {
+    // This test catches the bug where canvas internal dimensions weren't synced
+    // to video dimensions, causing skeleton to render outside visible area
+
+    // Load video
+    await page.click('#load-hardcoded-btn');
+    await page.waitForSelector('video', { timeout: 5000 });
+
+    // Wait for video metadata to load
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video && video.videoWidth > 0 && video.videoHeight > 0;
+      },
+      { timeout: 10000 }
+    );
+
+    // Get video dimensions
+    const videoDimensions = await page.evaluate(() => {
+      const video = document.querySelector('video') as HTMLVideoElement;
+      return { width: video.videoWidth, height: video.videoHeight };
+    });
+
+    // Get canvas dimensions
+    const canvasDimensions = await page.evaluate(() => {
+      const canvas = document.querySelector('#output-canvas') as HTMLCanvasElement;
+      return { width: canvas.width, height: canvas.height };
+    });
+
+    // Canvas internal dimensions must match video dimensions
+    // (Otherwise skeleton keypoints will render outside visible area)
+    expect(canvasDimensions.width).toBe(videoDimensions.width);
+    expect(canvasDimensions.height).toBe(videoDimensions.height);
+
+    // Also verify they're not default canvas size (300x150)
+    expect(canvasDimensions.width).toBeGreaterThan(300);
+    expect(canvasDimensions.height).toBeGreaterThan(150);
+  });
 });
