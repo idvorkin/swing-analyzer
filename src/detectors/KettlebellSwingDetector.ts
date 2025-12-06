@@ -14,6 +14,7 @@ import type { Skeleton } from '../models/Skeleton';
 import type {
   DetectorResult,
   ExerciseDetector,
+  PhasePeak,
   RepQuality,
 } from './ExerciseDetector';
 
@@ -84,6 +85,19 @@ export class KettlebellSwingDetector implements ExerciseDetector {
   // Last completed rep quality
   private lastRepQuality: RepQuality | null = null;
 
+  // Peak tracking for current phase
+  private currentPhasePeak: PhasePeak | null = null;
+
+  // Peaks from current rep (cleared after rep completes)
+  private currentRepPeaks: {
+    top?: PhasePeak;
+    bottom?: PhasePeak;
+  } = {};
+
+  // Last emitted peaks
+  private lastPhasePeak: PhasePeak | null = null;
+  private lastRepPeaks: { top?: PhasePeak; bottom?: PhasePeak } | null = null;
+
   // Debounce: minimum frames in a phase before transitioning
   private framesInPhase = 0;
   private readonly minFramesInPhase = 2;
@@ -95,25 +109,32 @@ export class KettlebellSwingDetector implements ExerciseDetector {
   /**
    * Process a skeleton frame through the state machine
    */
-  processFrame(skeleton: Skeleton, _timestamp?: number): DetectorResult {
+  processFrame(skeleton: Skeleton, timestamp: number = Date.now()): DetectorResult {
     // Get all angles
     const arm = skeleton.getArmToVerticalAngle();
     const spine = skeleton.getSpineAngle();
     const hip = skeleton.getHipAngle();
     const knee = skeleton.getKneeAngle();
+    const angles = { arm, spine, hip, knee };
 
     // Track metrics for quality scoring
     this.updateMetrics(arm, spine, hip, knee);
+
+    // Update peak tracking for current phase
+    this.updatePhasePeak(skeleton, timestamp, angles);
 
     // Increment frames in current phase
     this.framesInPhase++;
 
     // Check for phase transitions
     let repCompleted = false;
+    let phasePeak: PhasePeak | undefined;
+    let repPeaks: { top?: PhasePeak; bottom?: PhasePeak } | undefined;
 
     switch (this.phase) {
       case 'top':
         if (this.shouldTransitionToDescending(arm, spine)) {
+          phasePeak = this.finalizePhasePeak('top');
           this.phase = 'descending';
           this.framesInPhase = 0;
         }
@@ -121,6 +142,7 @@ export class KettlebellSwingDetector implements ExerciseDetector {
 
       case 'descending':
         if (this.shouldTransitionToBottom(arm, spine, hip)) {
+          phasePeak = this.finalizePhasePeak('descending');
           this.phase = 'bottom';
           this.framesInPhase = 0;
         }
@@ -128,6 +150,7 @@ export class KettlebellSwingDetector implements ExerciseDetector {
 
       case 'bottom':
         if (this.shouldTransitionToAscending(arm, spine)) {
+          phasePeak = this.finalizePhasePeak('bottom');
           this.phase = 'ascending';
           this.framesInPhase = 0;
         }
@@ -135,14 +158,26 @@ export class KettlebellSwingDetector implements ExerciseDetector {
 
       case 'ascending':
         if (this.shouldTransitionToTop(arm, spine, hip)) {
+          phasePeak = this.finalizePhasePeak('ascending');
           this.phase = 'top';
           this.framesInPhase = 0;
           repCompleted = true;
           this.repCount++;
           this.lastRepQuality = this.calculateRepQuality();
+
+          // Capture rep peaks before resetting
+          repPeaks = { ...this.currentRepPeaks };
+          this.lastRepPeaks = repPeaks;
+
           this.resetMetrics();
+          this.currentRepPeaks = {};
         }
         break;
+    }
+
+    // Store last phase peak for queries
+    if (phasePeak) {
+      this.lastPhasePeak = phasePeak;
     }
 
     // Build feedback for current frame
@@ -155,8 +190,94 @@ export class KettlebellSwingDetector implements ExerciseDetector {
       repCompleted,
       repCount: this.repCount,
       quality,
-      angles: { arm, spine, hip, knee },
+      angles,
+      phasePeak,
+      repPeaks,
     };
+  }
+
+  /**
+   * Update peak tracking for current phase
+   * Peak criteria varies by phase:
+   * - TOP: highest arm angle (most horizontal)
+   * - BOTTOM: highest spine angle (deepest hinge)
+   * - DESCENDING/ASCENDING: not tracked (transition phases)
+   */
+  private updatePhasePeak(
+    skeleton: Skeleton,
+    timestamp: number,
+    angles: { arm: number; spine: number; hip: number; knee: number }
+  ): void {
+    // Only track peaks for TOP and BOTTOM phases
+    if (this.phase !== 'top' && this.phase !== 'bottom') {
+      return;
+    }
+
+    // Calculate peak score based on phase
+    const score = this.calculatePeakScore(this.phase, angles);
+
+    // Update if this is a better peak
+    if (!this.currentPhasePeak || score > this.currentPhasePeak.score) {
+      this.currentPhasePeak = {
+        phase: this.phase,
+        timestamp,
+        skeleton,
+        score,
+        angles: { ...angles },
+      };
+    }
+  }
+
+  /**
+   * Calculate how "peak" this frame is for the given phase
+   */
+  private calculatePeakScore(
+    phase: SwingPhase,
+    angles: { arm: number; spine: number; hip: number; knee: number }
+  ): number {
+    switch (phase) {
+      case 'top':
+        // TOP peak: highest arm angle (most horizontal)
+        return angles.arm;
+      case 'bottom':
+        // BOTTOM peak: highest spine angle (deepest hinge)
+        return angles.spine;
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Finalize the current phase peak and store it
+   */
+  private finalizePhasePeak(phase: SwingPhase): PhasePeak | undefined {
+    const peak = this.currentPhasePeak;
+    this.currentPhasePeak = null;
+
+    if (peak) {
+      // Store in rep peaks for TOP and BOTTOM
+      if (phase === 'top') {
+        this.currentRepPeaks.top = peak;
+      } else if (phase === 'bottom') {
+        this.currentRepPeaks.bottom = peak;
+      }
+    }
+
+    return peak ?? undefined;
+  }
+
+  /**
+   * Get the last detected phase peak
+   */
+  getLastPhasePeak(): PhasePeak | null {
+    return this.lastPhasePeak;
+  }
+
+  /**
+   * Get peaks from the last completed rep
+   */
+  getLastRepPeaks(): { top?: PhasePeak; bottom?: PhasePeak } | null {
+    return this.lastRepPeaks;
   }
 
   /**
@@ -375,6 +496,10 @@ export class KettlebellSwingDetector implements ExerciseDetector {
     this.repCount = 0;
     this.framesInPhase = 0;
     this.lastRepQuality = null;
+    this.currentPhasePeak = null;
+    this.currentRepPeaks = {};
+    this.lastPhasePeak = null;
+    this.lastRepPeaks = null;
     this.resetMetrics();
   }
 
