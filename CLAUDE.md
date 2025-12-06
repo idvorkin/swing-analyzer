@@ -527,6 +527,11 @@ Project documentation lives in `docs/tech-pack/`:
 
 **When you find a bug, STOP and answer these questions before fixing:**
 
+**Spec Questions:**
+1. Is this actually a bug, or is my understanding of the spec wrong?
+2. Is there a missing or unclear spec that led to this?
+3. **Ask the user** if there's any ambiguity: "The behavior is X, but I expected Y. Which is correct?"
+
 **Test Coverage Questions:**
 1. Why did tests not catch this?
 2. What level of our test pyramid could have caught this earliest? (unit → integration → E2E)
