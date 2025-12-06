@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { BlazePoseVariant, PoseModel } from '../../config/modelConfig';
-import { CpuIcon, SparklesIcon } from './Icons';
+import { useSwingAnalyzerContext } from '../../contexts/SwingAnalyzerContext';
+import { CpuIcon, MonitorIcon, SparklesIcon } from './Icons';
 import { SettingsRow } from './SettingsRow';
 
 // Storage keys for model preferences
@@ -49,7 +50,8 @@ function saveBlazePoseVariant(variant: BlazePoseVariant): void {
   }
 }
 
-export function AnalysisTab() {
+export function SettingsTab() {
+  const { appState, setDisplayMode } = useSwingAnalyzerContext();
   const [selectedModel, setSelectedModel] = useState<PoseModel>(
     getSavedModelPreference()
   );
@@ -76,6 +78,55 @@ export function AnalysisTab() {
 
   return (
     <div className="settings-section">
+      {/* Display Mode */}
+      <SettingsRow
+        icon={<MonitorIcon />}
+        iconVariant="blue"
+        title="Display Mode"
+        subtitle="Choose what to show on the video"
+      />
+
+      <div className="settings-radio-group">
+        <label className="settings-radio-option">
+          <input
+            type="radio"
+            name="display-mode"
+            value="both"
+            checked={appState.displayMode === 'both'}
+            onChange={() => setDisplayMode('both')}
+          />
+          <span className="settings-radio-label">Both</span>
+          <span className="settings-radio-desc">Video + skeleton overlay</span>
+        </label>
+
+        <label className="settings-radio-option">
+          <input
+            type="radio"
+            name="display-mode"
+            value="video"
+            checked={appState.displayMode === 'video'}
+            onChange={() => setDisplayMode('video')}
+          />
+          <span className="settings-radio-label">Video Only</span>
+          <span className="settings-radio-desc">Hide skeleton overlay</span>
+        </label>
+
+        <label className="settings-radio-option">
+          <input
+            type="radio"
+            name="display-mode"
+            value="overlay"
+            checked={appState.displayMode === 'overlay'}
+            onChange={() => setDisplayMode('overlay')}
+          />
+          <span className="settings-radio-label">Overlay Only</span>
+          <span className="settings-radio-desc">Show only skeleton</span>
+        </label>
+      </div>
+
+      {/* Divider */}
+      <div className="settings-divider" />
+
       {/* Pose Model Selection */}
       <SettingsRow
         icon={<CpuIcon />}

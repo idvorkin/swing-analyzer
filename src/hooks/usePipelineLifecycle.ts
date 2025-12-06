@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 import {
   getSavedBlazePoseVariant,
   getSavedModelPreference,
-} from '../components/settings/AnalysisTab';
+} from '../components/settings/SettingsTab';
 import {
   BLAZEPOSE_FULL_CONFIG,
   BLAZEPOSE_HEAVY_CONFIG,

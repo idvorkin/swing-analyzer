@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import {
   BUILD_TIMESTAMP,
   GIT_BRANCH,
@@ -7,7 +6,7 @@ import {
 } from '../../generated_version';
 import { DeviceService } from '../../services/DeviceService';
 import { ActionButton } from './ActionButton';
-import { ClockIcon, GitHubIcon, KeyboardIcon, WrenchIcon } from './Icons';
+import { ClockIcon, GitHubIcon, KeyboardIcon } from './Icons';
 import { SettingsRow } from './SettingsRow';
 import { Toggle } from './Toggle';
 
@@ -42,8 +41,6 @@ interface AboutTabProps {
   isCheckingUpdate?: boolean;
   onCheckForUpdate?: () => void;
   onReload?: () => void;
-  // Modal control
-  onClose?: () => void;
 }
 
 export function AboutTab({
@@ -57,7 +54,6 @@ export function AboutTab({
   isCheckingUpdate = false,
   onCheckForUpdate,
   onReload,
-  onClose,
 }: AboutTabProps) {
   const buildDate = formatBuildDate(BUILD_TIMESTAMP);
   const isMobile = DeviceService.isMobileDevice();
@@ -205,12 +201,6 @@ export function AboutTab({
           📖 Learn More
         </a>
       </div>
-
-      {/* Debug Tools Link */}
-      <Link to="/debug" className="settings-debug-link" onClick={onClose}>
-        <WrenchIcon />
-        Debug Tools
-      </Link>
     </div>
   );
 }

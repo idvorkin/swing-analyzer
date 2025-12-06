@@ -15,7 +15,7 @@ import type { PoseTrackFile } from '../types/posetrack';
 import { Subject } from 'rxjs';
 
 // Mock dependencies
-vi.mock('../components/settings/AnalysisTab', () => ({
+vi.mock('../components/settings/SettingsTab', () => ({
   getSavedModelPreference: vi.fn(() => 'movenet'),
   getSavedBlazePoseVariant: vi.fn(() => 'lite'),
 }));
@@ -121,7 +121,7 @@ describe('usePipelineLifecycle', () => {
 
     it('initializes pipeline with BlazePose config', async () => {
       const { getSavedModelPreference, getSavedBlazePoseVariant } = await import(
-        '../components/settings/AnalysisTab'
+        '../components/settings/SettingsTab'
       );
       (getSavedModelPreference as Mock).mockReturnValue('blazepose');
       (getSavedBlazePoseVariant as Mock).mockReturnValue('heavy');

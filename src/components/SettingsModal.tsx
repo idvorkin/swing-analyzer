@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AboutTab } from './settings/AboutTab';
-import { AnalysisTab } from './settings/AnalysisTab';
 import { DeveloperTab } from './settings/DeveloperTab';
-import { GeneralTab } from './settings/GeneralTab';
+import { SettingsTab } from './settings/SettingsTab';
 import {
-  ActivityIcon,
   CloseIcon,
   InfoIcon,
-  MonitorIcon,
   SettingsIcon,
   WrenchIcon,
 } from './settings/Icons';
 import './settings/Settings.css';
 
 const TABS = [
-  { id: 'general' as const, label: 'General', Icon: MonitorIcon },
-  { id: 'analysis' as const, label: 'Analysis', Icon: ActivityIcon },
-  { id: 'debug' as const, label: 'Developer', Icon: WrenchIcon },
+  { id: 'settings' as const, label: 'Settings', Icon: SettingsIcon },
+  { id: 'developer' as const, label: 'Developer', Icon: WrenchIcon },
   { id: 'about' as const, label: 'About', Icon: InfoIcon },
 ] as const;
 
@@ -55,7 +51,7 @@ export function SettingsModal({
   updateAvailable,
   onReload,
 }: SettingsModalProps) {
-  const [activeSection, setActiveSection] = useState<TabId>('general');
+  const [activeSection, setActiveSection] = useState<TabId>('settings');
 
   const handleShakeToggle = useCallback(async () => {
     if (!shakeEnabled) {
@@ -142,11 +138,9 @@ export function SettingsModal({
 
         {/* Content */}
         <div className="settings-content">
-          {activeSection === 'general' && <GeneralTab />}
+          {activeSection === 'settings' && <SettingsTab />}
 
-          {activeSection === 'analysis' && <AnalysisTab />}
-
-          {activeSection === 'debug' && <DeveloperTab onClose={onClose} />}
+          {activeSection === 'developer' && <DeveloperTab onClose={onClose} />}
 
           {activeSection === 'about' && (
             <AboutTab
@@ -160,7 +154,6 @@ export function SettingsModal({
               isCheckingUpdate={isCheckingUpdate}
               onCheckForUpdate={onCheckForUpdate}
               onReload={onReload}
-              onClose={onClose}
             />
           )}
         </div>
