@@ -100,10 +100,8 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
     expect(repCount).toBeGreaterThan(0);
   });
 
-  // KNOWN BUG: With frameDelayMs > 0, extraction triggers infinite loop
-  // of "reinitializing pipeline" calls. Needs investigation.
-  // The bug only manifests with mock detector delay, not in real usage.
-  test.skip('extraction with realistic timing simulates user experience', async ({
+  // Realistic timing test - validates mock detector with delays works correctly
+  test('extraction with realistic timing simulates user experience', async ({
     page,
   }) => {
     test.slow(); // This test intentionally takes longer
@@ -114,7 +112,8 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
       if (
         text.includes('[Extraction]') ||
         text.includes('Mock') ||
-        text.includes('reinitializ')
+        text.includes('reinitializ') ||
+        text.includes('Pipeline')
       ) {
         console.log(`[BROWSER] ${text}`);
       }
@@ -131,15 +130,32 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
     // Track extraction progress
     const startTime = Date.now();
 
-    // Wait for extraction to complete
-    await page.waitForFunction(
-      () => {
-        const statusEl = document.querySelector('.pose-status-bar');
-        return statusEl?.textContent?.includes('ready') ||
-               statusEl?.textContent?.includes('Ready');
-      },
-      { timeout: 120000 } // 2 minutes for realistic extraction
-    );
+    // Wait for extraction to complete with session recorder debugging
+    try {
+      await page.waitForFunction(
+        () => {
+          // Check for ready status anywhere on page
+          const pageText = document.body.textContent || '';
+          return pageText.includes('Ready') && pageText.includes('reps detected');
+        },
+        { timeout: 60000 } // 1 minute timeout
+      );
+    } catch (e) {
+      // Dump session recorder state on failure
+      const sessionData = await page.evaluate(() => {
+        const debug = (window as unknown as { swingDebug?: { getCurrentSession?: () => unknown } }).swingDebug;
+        if (debug?.getCurrentSession) {
+          const session = debug.getCurrentSession() as { stateChanges?: unknown[]; pipelineSnapshots?: unknown[] };
+          return {
+            stateChanges: session?.stateChanges?.slice(-20),
+            lastSnapshots: session?.pipelineSnapshots?.slice(-5),
+          };
+        }
+        return null;
+      });
+      console.log('SessionRecorder state on failure:', JSON.stringify(sessionData, null, 2));
+      throw e;
+    }
 
     const extractionTime = Date.now() - startTime;
     console.log(`Extraction took ${(extractionTime / 1000).toFixed(1)}s`);
@@ -148,10 +164,8 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
     expect(extractionTime).toBeGreaterThan(1000);
   });
 
-  // KNOWN ISSUE: Skeleton does not render during extraction
-  // This test documents the expected behavior once the bug is fixed
-  // Related: flashing issue when clicking Sample
-  test.skip('skeleton renders during extraction', async ({ page }) => {
+  // Test that skeleton renders during extraction
+  test('skeleton renders during extraction', async ({ page }) => {
     await setupMockPoseDetector(page, 'swing-sample', 10);
 
     await page.click('#load-hardcoded-btn');
