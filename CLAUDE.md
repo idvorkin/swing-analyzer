@@ -55,6 +55,15 @@ This ensures:
 curl -s http://localhost:9999/api/agents | jq '.agents[] | select(.id == "swing-N") | .servers'
 ```
 
+**Verify server is from YOUR directory before reusing:**
+```bash
+# Multiple clones may have servers running - verify the port serves YOUR code
+for pid in $(lsof -ti :5173 -ti :5174 2>/dev/null); do
+  echo "PID $pid port $(lsof -p $pid -i -P | grep LISTEN | awk '{print $9}'): $(readlink -f /proc/$pid/cwd)"
+done
+```
+Only reuse a server if its cwd matches your working directory. Otherwise, start a new one with `just dev`.
+
 **During work (commit → push immediately):**
 ```bash
 git pull origin agent/swing-N --rebase  # Get any updates first
