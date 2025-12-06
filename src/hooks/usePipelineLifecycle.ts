@@ -11,7 +11,7 @@ import {
   DEFAULT_MODEL_CONFIG,
 } from '../config/modelConfig';
 import type { LivePoseCache } from '../pipeline/LivePoseCache';
-import type { Pipeline, PipelineResult } from '../pipeline/Pipeline';
+import type { Pipeline, PipelineResult, ThumbnailEvent } from '../pipeline/Pipeline';
 import {
   createFrameAcquisition,
   createPipeline,
@@ -83,6 +83,11 @@ export interface UsePipelineLifecycleOptions {
    * Callback when using cached poses state changes
    */
   onUsingCachedPosesChange?: (usingCachedPoses: boolean) => void;
+
+  /**
+   * Callback when thumbnail event is received (for filmstrip)
+   */
+  onThumbnailEvent?: (event: ThumbnailEvent) => void;
 }
 
 /**
@@ -162,6 +167,7 @@ export function usePipelineLifecycle(
     onSpineAngleUpdate,
     onArmToSpineAngleUpdate,
     onUsingCachedPosesChange,
+    onThumbnailEvent,
   } = options;
 
   // Pipeline references
@@ -329,9 +335,19 @@ export function usePipelineLifecycle(
         },
       });
 
-      pipelineSubscriptionsRef.current = [resultsSubscription];
+      // Subscribe to thumbnail events for filmstrip (emitted when rep completes with position candidates)
+      const thumbnailSubscription = pipeline.getThumbnailEvents().subscribe({
+        next: (event: ThumbnailEvent) => {
+          onThumbnailEvent?.(event);
+        },
+        error: (err) => {
+          console.error('Thumbnail event error:', err);
+        },
+      });
+
+      pipelineSubscriptionsRef.current = [resultsSubscription, thumbnailSubscription];
     },
-    [onRepCountUpdate]
+    [onRepCountUpdate, onThumbnailEvent]
   );
 
   /**

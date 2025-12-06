@@ -1,16 +1,14 @@
 import type React from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 import { usePoseTrack } from '../hooks/usePoseTrack';
 import { buildSkeletonEventFromFrame } from '../pipeline/PipelineFactory';
 import type { LivePoseCache } from '../pipeline/LivePoseCache';
-import type { ThumbnailEvent } from '../pipeline/Pipeline';
 import {
   recordExtractionStart,
   recordPipelineReinit,
 } from '../services/SessionRecorder';
 import type { PoseTrackFrame } from '../types/posetrack';
-import type { PositionCandidate } from '../types/exercise';
 import { PoseTrackStatusBar } from './PoseTrackStatusBar';
 
 // Position display order for swing positions
@@ -45,42 +43,12 @@ const VideoSection: React.FC = () => {
     currentVideoFile,
     reinitializeWithCachedPoses,
     reinitializeWithLiveCache,
+    repThumbnails,
   } = useSwingAnalyzerContext();
 
   // Track the video file we're currently extracting to prevent duplicate extractions
   // This fixes infinite loop when startExtraction's identity changes mid-extraction
   const extractingVideoRef = useRef<File | null>(null);
-
-  // Accumulated thumbnails from completed reps, keyed by rep number
-  const [repThumbnails, setRepThumbnails] = useState<Map<number, Map<string, PositionCandidate>>>(new Map());
-
-  // Subscribe to thumbnail events from the pipeline
-  useEffect(() => {
-    const pipeline = pipelineRef.current;
-    if (!pipeline) return;
-
-    const subscription = pipeline.getThumbnailEvents().subscribe({
-      next: (event: ThumbnailEvent) => {
-        console.log(`[Filmstrip] Received thumbnails for rep ${event.repNumber}:`,
-          Array.from(event.positions.keys()));
-        setRepThumbnails(prev => {
-          const updated = new Map(prev);
-          updated.set(event.repNumber, event.positions);
-          return updated;
-        });
-      },
-      error: (err) => console.error('Thumbnail event error:', err),
-    });
-
-    return () => subscription.unsubscribe();
-  }, [pipelineRef]);
-
-  // Clear thumbnails when video changes
-  useEffect(() => {
-    if (currentVideoFile) {
-      setRepThumbnails(new Map());
-    }
-  }, [currentVideoFile]);
 
   // Called BEFORE extraction starts - reinitialize pipeline synchronously
   const handleExtractionStart = useCallback(
