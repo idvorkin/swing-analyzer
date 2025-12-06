@@ -55,7 +55,7 @@ export class VideoFileSkeletonSource implements SkeletonSource {
     // because extraction creates its own hidden video element.
     // They're kept in the config interface for API consistency with CameraSkeletonSource.
     this.autoExtract = config.autoExtract ?? true;
-    this.model = config.model ?? 'movenet-lightning';
+    this.model = config.model ?? 'blazepose';
     this.stateSubject = new BehaviorSubject<SkeletonSourceState>({
       type: 'idle',
     });

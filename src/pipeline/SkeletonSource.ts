@@ -125,5 +125,5 @@ export interface VideoFileSourceConfig {
   /** Whether to auto-extract if not cached (default: true) */
   autoExtract?: boolean;
   /** Model to use for extraction */
-  model?: 'movenet-lightning' | 'movenet-thunder' | 'blazepose';
+  model?: 'blazepose';
 }

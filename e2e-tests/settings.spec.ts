@@ -94,40 +94,13 @@ test.describe('Settings Modal', () => {
       await expect(page.locator('input[value="overlay"]')).toBeVisible();
     });
 
-    test('should show pose model options', async ({ page }) => {
+    test('should show BlazePose variant options', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
 
-      await expect(page.locator('input[value="movenet"]')).toBeVisible();
-      await expect(page.locator('input[value="blazepose"]')).toBeVisible();
-    });
-
-    test('should show BlazePose variant options when BlazePose selected', async ({
-      page,
-    }) => {
-      await page.click('button[aria-label="Open settings"]');
-
-      await page.click('input[value="blazepose"]');
-
+      // BlazePose is the only supported model, variants should be visible
       await expect(page.locator('input[value="lite"]')).toBeVisible();
       await expect(page.locator('input[value="full"]')).toBeVisible();
       await expect(page.locator('input[value="heavy"]')).toBeVisible();
-    });
-
-    test('should hide BlazePose variants when MoveNet selected', async ({
-      page,
-    }) => {
-      await page.evaluate(() => {
-        localStorage.setItem('swing-analyzer-pose-model', 'blazepose');
-      });
-      await page.reload();
-
-      await page.click('button[aria-label="Open settings"]');
-
-      await expect(page.locator('input[value="lite"]')).toBeVisible();
-
-      await page.click('input[value="movenet"]');
-
-      await expect(page.locator('input[value="lite"]')).not.toBeVisible();
     });
 
     test('should persist display mode selection', async ({ page }) => {
@@ -145,17 +118,18 @@ test.describe('Settings Modal', () => {
       await expect(page.locator('input[value="video"]')).toBeChecked();
     });
 
-    test('should show reload banner when changing pose model', async ({
+    test('should show reload banner when changing BlazePose variant', async ({
       page,
     }) => {
       await page.click('button[aria-label="Open settings"]');
 
-      const isMovenet = await page.locator('input[value="movenet"]').isChecked();
+      // Get current variant and switch to a different one
+      const isLite = await page.locator('input[value="lite"]').isChecked();
 
-      if (isMovenet) {
-        await page.click('input[value="blazepose"]');
+      if (isLite) {
+        await page.click('input[value="full"]');
       } else {
-        await page.click('input[value="movenet"]');
+        await page.click('input[value="lite"]');
       }
 
       await expect(page.locator('.settings-reload-banner')).toBeVisible();
