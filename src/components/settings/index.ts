@@ -1,12 +1,6 @@
 export { AboutTab } from './AboutTab';
 export { ActionButton } from './ActionButton';
-export {
-  AnalysisTab,
-  getSavedBlazePoseVariant,
-  getSavedModelPreference,
-} from './AnalysisTab';
 export { DeveloperTab } from './DeveloperTab';
-export { GeneralTab } from './GeneralTab';
 export {
   ActivityIcon,
   ClockIcon,
@@ -20,4 +14,9 @@ export {
   WrenchIcon,
 } from './Icons';
 export { SettingsRow } from './SettingsRow';
+export {
+  getSavedBlazePoseVariant,
+  getSavedModelPreference,
+  SettingsTab,
+} from './SettingsTab';
 export { Toggle } from './Toggle';

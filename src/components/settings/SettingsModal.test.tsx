@@ -79,7 +79,7 @@ describe('SettingsModal', () => {
   it('renders when isOpen is true', () => {
     renderWithRouter(<SettingsModal {...defaultProps} />);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
   });
 
   it('does not render when isOpen is false', () => {
@@ -120,15 +120,19 @@ describe('SettingsModal', () => {
   });
 
   describe('Tab Navigation', () => {
-    it('shows General tab by default with display mode options', () => {
+    it('shows Settings tab by default with display mode and pose model options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       expect(screen.getByText('Display Mode')).toBeInTheDocument();
+      expect(screen.getByText('Pose Detection Model')).toBeInTheDocument();
     });
 
-    it('has four tabs: General, Analysis, Developer, About', () => {
+    it('has three tabs: Settings, Developer, About', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
-      expect(screen.getByText('General')).toBeInTheDocument();
-      expect(screen.getByText('Analysis')).toBeInTheDocument();
+      // Get all tab buttons
+      const tabs = screen.getAllByRole('button').filter(btn =>
+        btn.classList.contains('settings-tab')
+      );
+      expect(tabs).toHaveLength(3);
       expect(screen.getByText('Developer')).toBeInTheDocument();
       expect(screen.getByText('About')).toBeInTheDocument();
     });
@@ -140,13 +144,6 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Session Recording')).toBeInTheDocument();
     });
 
-    it('switches to Analysis tab when clicked', () => {
-      renderWithRouter(<SettingsModal {...defaultProps} />);
-
-      fireEvent.click(screen.getByText('Analysis'));
-      expect(screen.getByText('Pose Detection Model')).toBeInTheDocument();
-    });
-
     it('switches to About tab when clicked', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
@@ -155,20 +152,16 @@ describe('SettingsModal', () => {
     });
   });
 
-  describe('General Tab', () => {
+  describe('Settings Tab', () => {
     it('shows display mode options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       expect(screen.getByText('Both')).toBeInTheDocument();
       expect(screen.getByText('Video Only')).toBeInTheDocument();
       expect(screen.getByText('Overlay Only')).toBeInTheDocument();
     });
-  });
 
-  describe('Analysis Tab', () => {
     it('shows pose model options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
-
-      fireEvent.click(screen.getByText('Analysis'));
       expect(screen.getByText('MoveNet Lightning')).toBeInTheDocument();
       expect(screen.getByText('BlazePose')).toBeInTheDocument();
     });
@@ -277,11 +270,14 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Checking...')).toBeInTheDocument();
     });
 
+  });
+
+  describe('Developer Tab', () => {
     it('has debug tools link', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('Debug Tools')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Developer'));
+      expect(screen.getByText('Debug Model Loader')).toBeInTheDocument();
     });
   });
 });

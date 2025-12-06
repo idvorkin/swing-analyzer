@@ -32,7 +32,7 @@ vi.mock('../pipeline/PipelineFactory', () => ({
 }));
 
 // Mock the settings
-vi.mock('../components/settings/AnalysisTab', () => ({
+vi.mock('../components/settings/SettingsTab', () => ({
   getSavedModelPreference: vi.fn(() => 'movenet-lightning'),
   getSavedBlazePoseVariant: vi.fn(() => 'lite'),
 }));

@@ -299,6 +299,12 @@
   gap: var(--settings-space-lg);
 }
 
+.settings-divider {
+  height: 1px;
+  background: var(--settings-border);
+  margin: var(--settings-space-sm) 0;
+}
+
 /* Section Headers */
 .settings-section-header {
   display: flex;
