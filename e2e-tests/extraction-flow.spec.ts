@@ -25,6 +25,7 @@ import {
   setVideoTestId,
   setupMockPoseDetector,
   useShortTestVideo,
+  useIgorTestVideo,
 } from './helpers';
 
 // Tests can run in parallel - each gets unique cache via test ID
@@ -251,5 +252,166 @@ test.describe('Extraction Flow: Mock Detector + Real Pipeline', () => {
 
     // Allow small difference due to video position, but should not double
     expect(repCountAfterPlayback).toBeLessThanOrEqual(repCountAfterExtraction + 1);
+  });
+});
+
+/**
+ * Igor 1H Swing Tests - uses the actual default sample video
+ *
+ * SKIPPED: These tests take 5+ minutes due to video seeking in headless Chrome.
+ * Video seeking requires ~500ms per frame without GPU acceleration.
+ *
+ * To run manually: npx playwright test --grep "Igor 1H Swing" --headed
+ */
+test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
+  test.beforeEach(async ({ page }) => {
+    // Intercept GitHub video URL and serve igor-1h-swing video
+    await useIgorTestVideo(page);
+    await page.goto('/');
+
+    // Wait for test setup to be available
+    await page.waitForFunction(
+      () => !!(window as unknown as { __testSetup?: unknown }).__testSetup,
+      { timeout: 10000 }
+    );
+
+    // Set unique test ID for cache isolation
+    await setVideoTestId(page, generateTestId());
+  });
+
+  test('full extraction with igor-1h-swing video reproduces user experience', async ({
+    page,
+  }) => {
+    // Igor video has 593 frames, give it 6 minutes to extract (slow in headless Chrome)
+    test.setTimeout(360000);
+    // Enable console logging to capture debug info
+    page.on('console', (msg) => {
+      const text = msg.text();
+      if (
+        text.includes('[DEBUG]') ||
+        text.includes('[Extraction]') ||
+        text.includes('skeleton') ||
+        text.includes('Skeleton') ||
+        text.includes('Rendering')
+      ) {
+        console.log(`[BROWSER] ${text}`);
+      }
+    });
+
+    // Use igor-1h-swing fixture (593 frames, ~20s video)
+    // Note: 0ms delay but video seeking still takes ~30-60s in headless Chrome
+    await setupMockPoseDetector(page, 'igor-1h-swing', 0);
+
+    // Click Sample - triggers extraction
+    await page.click('#load-hardcoded-btn');
+    await page.waitForSelector('video', { timeout: 10000 });
+
+    // Wait for extraction to start
+    await page.waitForFunction(
+      () => {
+        const statusEl = document.querySelector('.pose-status-bar');
+        return statusEl?.textContent?.includes('Extracting');
+      },
+      { timeout: 10000 }
+    );
+
+    console.log('Extraction started...');
+
+    // Wait for extraction to complete (594 frames takes ~3-5 minutes in headless Chrome)
+    try {
+      await page.waitForFunction(
+        () => {
+          const pageText = document.body.textContent || '';
+          return pageText.includes('Ready') && pageText.includes('reps detected');
+        },
+        { timeout: 300000 } // 5 minutes for full video extraction
+      );
+    } catch (e) {
+      // Dump state on failure
+      const sessionData = await page.evaluate(() => {
+        const debug = (window as unknown as { swingDebug?: { getCurrentSession?: () => unknown } }).swingDebug;
+        if (debug?.getCurrentSession) {
+          const session = debug.getCurrentSession() as { stateChanges?: unknown[]; pipelineSnapshots?: unknown[] };
+          return {
+            stateChanges: session?.stateChanges?.slice(-20),
+            lastSnapshots: session?.pipelineSnapshots?.slice(-5),
+          };
+        }
+        return null;
+      });
+      console.log('SessionRecorder state on failure:', JSON.stringify(sessionData, null, 2));
+      throw e;
+    }
+
+    // Check extraction completed
+    const repCount = await page.evaluate(() => {
+      const el = document.querySelector('#rep-counter');
+      return parseInt(el?.textContent || '0', 10);
+    });
+
+    console.log(`Igor-1h-swing extraction completed: ${repCount} reps detected`);
+
+    // Igor video should have ~20+ reps
+    expect(repCount).toBeGreaterThan(15);
+  });
+
+  test('skeleton renders after extraction and during playback', async ({ page }) => {
+    test.setTimeout(120000);
+    let renderLogs: string[] = [];
+
+    page.on('console', (msg) => {
+      const text = msg.text();
+      if (text.includes('[DEBUG] Rendering skeleton')) {
+        renderLogs.push(text);
+      }
+      if (text.includes('[DEBUG]')) {
+        console.log(`[BROWSER] ${text}`);
+      }
+    });
+
+    await setupMockPoseDetector(page, 'igor-1h-swing', 0);
+
+    await page.click('#load-hardcoded-btn');
+    await page.waitForSelector('video', { timeout: 10000 });
+
+    // Wait for extraction to complete
+    await page.waitForFunction(
+      () => {
+        const pageText = document.body.textContent || '';
+        return pageText.includes('Ready') && pageText.includes('reps detected');
+      },
+      { timeout: 60000 }
+    );
+
+    console.log(`Render logs during extraction: ${renderLogs.length}`);
+
+    // Now test playback - this is where users report skeleton not showing
+    renderLogs = []; // Reset for playback test
+
+    // Play video for 3 seconds
+    await page.click('#play-pause-btn');
+    await page.waitForTimeout(3000);
+    await page.click('#play-pause-btn'); // Pause
+
+    console.log(`Render logs during playback: ${renderLogs.length}`);
+
+    // Should have skeleton renders during playback
+    expect(renderLogs.length).toBeGreaterThan(0);
+
+    // Check canvas has content
+    const hasCanvasContent = await page.evaluate(() => {
+      const canvas = document.querySelector('#output-canvas') as HTMLCanvasElement;
+      if (!canvas) return false;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      for (let i = 3; i < imageData.data.length; i += 4) {
+        if (imageData.data[i] > 0) return true;
+      }
+      return false;
+    });
+
+    expect(hasCanvasContent).toBe(true);
+    console.log('Skeleton rendered successfully during playback');
   });
 });
