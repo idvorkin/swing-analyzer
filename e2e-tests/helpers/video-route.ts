@@ -16,9 +16,9 @@ const __dirname = path.dirname(__filename);
 // Path to public/videos relative to this file
 const VIDEOS_DIR = path.join(__dirname, '../../public/videos');
 
-// GitHub URLs that we intercept
+// GitHub URLs that we intercept - matches any .webm from form-analyzer-samples
 const GITHUB_VIDEO_PATTERN =
-  /raw\.githubusercontent\.com\/.*\/swing-sample\.webm/;
+  /raw\.githubusercontent\.com\/.*form-analyzer-samples.*\.webm/;
 
 /**
  * Set up route interception to serve the short 4-rep test video
