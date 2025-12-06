@@ -7,6 +7,7 @@ import {
   Subject,
 } from 'rxjs';
 import { map, startWith, switchMap, takeUntil } from 'rxjs/operators';
+import type { CropRegion } from '../types/posetrack';
 import type { FrameAcquisition, FrameEvent } from './PipelineInterfaces';
 
 /**
@@ -15,11 +16,102 @@ import type { FrameAcquisition, FrameEvent } from './PipelineInterfaces';
 export class VideoFrameAcquisition implements FrameAcquisition {
   private stop$ = new Subject<void>();
   private frameRate = 30; // Default frame rate in fps
+  private cropRegion: CropRegion | null = null;
+  private cropEnabled = false;
 
   constructor(
     private videoElement: HTMLVideoElement,
     private canvasElement: HTMLCanvasElement
   ) {}
+
+  /**
+   * Set the crop region for auto-centering on person
+   * @param crop The crop region, or null to disable cropping
+   */
+  setCropRegion(crop: CropRegion | null): void {
+    this.cropRegion = crop;
+    if (crop) {
+      console.log(
+        `[VideoFrameAcquisition] Crop region set: ${crop.width}x${crop.height} at (${crop.x}, ${crop.y})`
+      );
+    }
+    this.applyCropTransform();
+  }
+
+  /**
+   * Get the current crop region
+   */
+  getCropRegion(): CropRegion | null {
+    return this.cropRegion;
+  }
+
+  /**
+   * Enable or disable crop mode
+   */
+  setCropEnabled(enabled: boolean): void {
+    this.cropEnabled = enabled;
+    this.applyCropTransform();
+  }
+
+  /**
+   * Check if crop is currently enabled
+   */
+  isCropEnabled(): boolean {
+    return this.cropEnabled && this.cropRegion !== null;
+  }
+
+  /**
+   * Apply CSS transform to video and canvas for cropping
+   */
+  private applyCropTransform(): void {
+    const crop = this.cropRegion;
+    const video = this.videoElement;
+    const canvas = this.canvasElement;
+
+    if (!crop || !this.cropEnabled) {
+      // Reset transforms
+      video.style.transform = '';
+      video.style.transformOrigin = '';
+      canvas.style.transform = '';
+      canvas.style.transformOrigin = '';
+      return;
+    }
+
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+
+    if (!videoWidth || !videoHeight) {
+      return;
+    }
+
+    // Calculate scale to fill the display area
+    // For square crop, scale based on the larger dimension fill
+    const scaleX = videoWidth / crop.width;
+    const scaleY = videoHeight / crop.height;
+    const scale = Math.min(scaleX, scaleY);
+
+    // Calculate translation to center the crop region
+    // Transform origin is at top-left, so we translate to move crop center to view center
+    const cropCenterX = crop.x + crop.width / 2;
+    const cropCenterY = crop.y + crop.height / 2;
+    const viewCenterX = videoWidth / 2;
+    const viewCenterY = videoHeight / 2;
+
+    const translateX = (viewCenterX - cropCenterX * scale) / scale;
+    const translateY = (viewCenterY - cropCenterY * scale) / scale;
+
+    const transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+    const transformOrigin = '0 0';
+
+    video.style.transform = transform;
+    video.style.transformOrigin = transformOrigin;
+    canvas.style.transform = transform;
+    canvas.style.transformOrigin = transformOrigin;
+
+    console.log(
+      `[VideoFrameAcquisition] Applied crop transform: scale=${scale.toFixed(2)}, translate=(${translateX.toFixed(0)}, ${translateY.toFixed(0)})`
+    );
+  }
 
   /**
    * Get the current frame
@@ -291,6 +383,8 @@ export class VideoFrameAcquisition implements FrameAcquisition {
           videoContainer.classList.add('landscape-video');
           videoContainer.classList.remove('portrait-video');
         }
+        // Ensure video container has overflow hidden for crop to work
+        videoContainer.style.overflow = 'hidden';
       }
 
       // Log dimensions for debugging
@@ -304,6 +398,9 @@ export class VideoFrameAcquisition implements FrameAcquisition {
       this.canvasElement.style.left = '0';
       this.canvasElement.style.width = '100%';
       this.canvasElement.style.height = '100%';
+
+      // Re-apply crop transform if enabled
+      this.applyCropTransform();
     }
   }
 }

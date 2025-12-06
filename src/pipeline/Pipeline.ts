@@ -2,6 +2,7 @@ import { type Observable, Subject, type Subscription } from 'rxjs';
 import { share, switchMap, tap } from 'rxjs/operators';
 import type { Skeleton } from '../models/Skeleton';
 import type { ExerciseDefinition, PositionCandidate } from '../types/exercise';
+import type { CropRegion } from '../types/posetrack';
 import { FormAnalyzer } from './FormAnalyzer';
 import type {
   FrameAcquisition,
@@ -9,6 +10,7 @@ import type {
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
+import { VideoFrameAcquisition } from './VideoFrameAcquisition';
 
 /**
  * Event emitted when a rep/cycle completes with position thumbnails
@@ -298,6 +300,49 @@ export class Pipeline {
     }
 
     return this.repCount;
+  }
+
+  // ========================================
+  // Crop Region Support
+  // ========================================
+
+  /**
+   * Set the crop region for auto-centering on person
+   * Only works if frameAcquisition is a VideoFrameAcquisition
+   */
+  setCropRegion(crop: CropRegion | null): void {
+    if (this.frameAcquisition instanceof VideoFrameAcquisition) {
+      this.frameAcquisition.setCropRegion(crop);
+    }
+  }
+
+  /**
+   * Get the current crop region
+   */
+  getCropRegion(): CropRegion | null {
+    if (this.frameAcquisition instanceof VideoFrameAcquisition) {
+      return this.frameAcquisition.getCropRegion();
+    }
+    return null;
+  }
+
+  /**
+   * Enable or disable crop mode
+   */
+  setCropEnabled(enabled: boolean): void {
+    if (this.frameAcquisition instanceof VideoFrameAcquisition) {
+      this.frameAcquisition.setCropEnabled(enabled);
+    }
+  }
+
+  /**
+   * Check if crop is currently enabled
+   */
+  isCropEnabled(): boolean {
+    if (this.frameAcquisition instanceof VideoFrameAcquisition) {
+      return this.frameAcquisition.isCropEnabled();
+    }
+    return false;
   }
 }
 
