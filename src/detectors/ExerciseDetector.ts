@@ -25,6 +25,27 @@ export interface RepQuality {
 }
 
 /**
+ * Peak (best frame) detected within a phase
+ */
+export interface PhasePeak {
+  /** Phase this peak was detected in */
+  phase: string;
+  /** Timestamp when peak occurred */
+  timestamp: number;
+  /** The skeleton at the peak */
+  skeleton: Skeleton;
+  /** Score indicating how "peak" this frame is (higher = better) */
+  score: number;
+  /** Angles at the peak */
+  angles: {
+    arm: number;
+    spine: number;
+    hip: number;
+    knee: number;
+  };
+}
+
+/**
  * Result from processing a single frame
  */
 export interface DetectorResult {
@@ -42,6 +63,13 @@ export interface DetectorResult {
     spine: number;
     hip: number;
     knee: number;
+  };
+  /** Peak detected in previous phase (emitted on phase transition) */
+  phasePeak?: PhasePeak;
+  /** All peaks from the completed rep (emitted when repCompleted=true) */
+  repPeaks?: {
+    top?: PhasePeak;
+    bottom?: PhasePeak;
   };
 }
 
