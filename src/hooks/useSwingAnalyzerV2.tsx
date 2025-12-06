@@ -190,6 +190,13 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
           if (hasRecordedExtractionStartRef.current) {
             recordExtractionComplete({ fileName: state.fileName });
             console.log('[DEBUG] Extraction complete for:', state.fileName);
+            // Log cache state for debugging
+            const videoSource = session.getVideoFileSource();
+            const cache = videoSource?.getLiveCache();
+            console.log('[DEBUG] Cache state:', {
+              frameCount: cache?.getFrameCount() ?? 0,
+              isComplete: cache?.isExtractionComplete() ?? false,
+            });
           }
           // Check for crop region in posetrack metadata
           const videoSource = session.getVideoFileSource();
