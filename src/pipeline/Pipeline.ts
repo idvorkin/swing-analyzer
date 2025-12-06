@@ -292,21 +292,22 @@ export class Pipeline {
       // Update rep count
       this.repCount = result.repCount;
 
-      // Emit result if rep completed
+      // Emit thumbnail event when cycle completes (has position candidates)
+      // This is based on angle thresholds and may happen BEFORE rep completes
+      if (result.cyclePositions && result.cyclePositions.size > 0) {
+        this.thumbnailSubject.next({
+          repNumber: result.repCount + 1, // Next rep number since cycle just completed
+          positions: result.cyclePositions,
+        });
+      }
+
+      // Emit result when rep completes (position sequence detected)
       if (result.repCompleted) {
         this.resultSubject.next({
           skeleton: skeletonEvent.skeleton,
           checkpoint: null,
           repCount: result.repCount,
         });
-
-        // Emit thumbnail event with position candidates for filmstrip
-        if (result.cyclePositions && result.cyclePositions.size > 0) {
-          this.thumbnailSubject.next({
-            repNumber: result.repCount,
-            positions: result.cyclePositions,
-          });
-        }
       }
     }
 

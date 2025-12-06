@@ -335,7 +335,7 @@ export function usePipelineLifecycle(
         },
       });
 
-      // Subscribe to thumbnail events for filmstrip (emitted when rep completes with position candidates)
+      // Subscribe to thumbnail events for filmstrip (emitted when cycle completes with position candidates)
       const thumbnailSubscription = pipeline.getThumbnailEvents().subscribe({
         next: (event: ThumbnailEvent) => {
           onThumbnailEvent?.(event);
