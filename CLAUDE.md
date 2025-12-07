@@ -481,7 +481,7 @@ Observable<Frame>    Observable<Skeleton>    Observable<Form>   Observable<Rep>
 
 ### Current Model: BlazePose
 
-- MediaPipe-33 keypoint format (normalized to COCO-17 via `KeypointAdapter`)
+- MediaPipe BlazePose-33 keypoint format (33 keypoints)
 - Variants: Lite (default), Full, Heavy
 - Configured in `src/config/modelConfig.ts`
 

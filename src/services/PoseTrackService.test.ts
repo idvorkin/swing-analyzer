@@ -267,13 +267,13 @@ describe('PoseTrackService', () => {
       // 10 second video at 30fps = 300 frames
       const size = estimatePoseTrackSize(300);
 
-      // Should be roughly 300-600KB uncompressed (17 keypoints * ~100 bytes each + overhead)
+      // Should be roughly 300-600KB uncompressed (33 keypoints * ~100 bytes each + overhead)
       expect(size).toBeGreaterThan(100000);
       expect(size).toBeLessThan(1000000);
     });
 
     it('accounts for custom keypoint count', () => {
-      const size17 = estimatePoseTrackSize(100, 17); // COCO
+      const size17 = estimatePoseTrackSize(100, 17); // Legacy COCO (for comparison)
       const size33 = estimatePoseTrackSize(100, 33); // BlazePose
 
       // More keypoints = larger file

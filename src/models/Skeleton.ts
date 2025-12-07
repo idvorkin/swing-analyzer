@@ -1,4 +1,4 @@
-import { CocoBodyParts, MediaPipeBodyParts, type PoseKeypoint } from '../types';
+import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
 
 /**
  * Represents a skeleton constructed from keypoints
@@ -67,26 +67,10 @@ export class Skeleton {
 
   /**
    * Initialize keypoint name -> index mapping
-   * Note: MediaPipe mappings are added AFTER COCO so they take precedence
-   * (since MediaPipe-33 is now the default keypoint format)
+   * Uses MediaPipe-33 keypoint format only.
    */
   private initKeypointMapping(): void {
     // Create a mapping from all body part names to their indices
-    // Add COCO first so it can be overwritten by MediaPipe
-    Object.entries(CocoBodyParts).forEach(([name, index]) => {
-      const lowerName = name.toLowerCase();
-      this.keypointMapping[lowerName] = index;
-      // Add without prefix for easier lookup
-      const withoutPrefix = lowerName
-        .replace('left_', '')
-        .replace('right_', '');
-      if (withoutPrefix !== lowerName) {
-        this.keypointMapping[withoutPrefix] = index;
-      }
-    });
-
-    // Add MediaPipe AFTER COCO so MediaPipe indices take precedence
-    // (since MediaPipe-33 is now the default keypoint format)
     Object.entries(MediaPipeBodyParts).forEach(([name, index]) => {
       const lowerName = name.toLowerCase();
       this.keypointMapping[lowerName] = index;
@@ -381,28 +365,21 @@ export class Skeleton {
   /**
    * Get a specific keypoint by name
    * This supports names like "rightShoulder", "leftElbow", etc.
+   * Uses MediaPipe-33 keypoint format.
    */
   getKeypointByName(name: string): PoseKeypoint | undefined {
-    // IMPORTANT: Determine format first to use correct indices
-    // MediaPipe-33 and COCO-17 have different index mappings for body parts
-    const isMediaPipeFormat = this.keypoints.length === 33;
-
     // Try different casing variations
     const variants = [
       name.toLowerCase(),
       name,
       name.toUpperCase(),
       // Convert camelCase to SNAKE_CASE
-      name
-        .replace(/([A-Z])/g, '_$1')
-        .toUpperCase(),
+      name.replace(/([A-Z])/g, '_$1').toUpperCase(),
       // Convert camelCase to snake_case
-      name
-        .replace(/([A-Z])/g, '_$1')
-        .toLowerCase(),
+      name.replace(/([A-Z])/g, '_$1').toLowerCase(),
     ];
 
-    // Try each variant with the correct body parts mapping for the format
+    // Try each variant with MediaPipe body parts mapping
     for (const variant of variants) {
       // Check direct mapping
       const index = this.keypointMapping[variant];
@@ -410,88 +387,52 @@ export class Skeleton {
         return this.keypoints[index];
       }
 
-      // Use the correct body parts mapping based on format
-      if (isMediaPipeFormat) {
-        // MediaPipe-33: Only check MediaPipeBodyParts
-        if (variant in MediaPipeBodyParts) {
-          // @ts-expect-error - We're checking if the key exists
-          const mediaPipeIndex = MediaPipeBodyParts[variant];
-          if (this.keypoints[mediaPipeIndex]) {
-            return this.keypoints[mediaPipeIndex];
-          }
-        }
-      } else {
-        // COCO-17: Only check CocoBodyParts
-        if (variant in CocoBodyParts) {
-          // @ts-expect-error - We're checking if the key exists
-          const cocoIndex = CocoBodyParts[variant];
-          if (this.keypoints[cocoIndex]) {
-            return this.keypoints[cocoIndex];
-          }
+      // Check MediaPipeBodyParts
+      if (variant in MediaPipeBodyParts) {
+        // @ts-expect-error - We're checking if the key exists
+        const mediaPipeIndex = MediaPipeBodyParts[variant];
+        if (this.keypoints[mediaPipeIndex]) {
+          return this.keypoints[mediaPipeIndex];
         }
       }
     }
 
     // Fallback: Direct access for common points by their standard names
-
     if (name === 'rightShoulder' || name === 'RIGHT_SHOULDER') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_SHOULDER : CocoBodyParts.RIGHT_SHOULDER;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
     }
-
     if (name === 'leftShoulder' || name === 'LEFT_SHOULDER') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_SHOULDER : CocoBodyParts.LEFT_SHOULDER;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
     }
-
     if (name === 'rightElbow' || name === 'RIGHT_ELBOW') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_ELBOW : CocoBodyParts.RIGHT_ELBOW;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_ELBOW];
     }
-
     if (name === 'leftElbow' || name === 'LEFT_ELBOW') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_ELBOW : CocoBodyParts.LEFT_ELBOW;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_ELBOW];
     }
-
     if (name === 'rightHip' || name === 'RIGHT_HIP') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_HIP : CocoBodyParts.RIGHT_HIP;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_HIP];
     }
-
     if (name === 'leftHip' || name === 'LEFT_HIP') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_HIP : CocoBodyParts.LEFT_HIP;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_HIP];
     }
-
     if (name === 'rightWrist' || name === 'RIGHT_WRIST') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_WRIST : CocoBodyParts.RIGHT_WRIST;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_WRIST];
     }
-
     if (name === 'leftWrist' || name === 'LEFT_WRIST') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_WRIST : CocoBodyParts.LEFT_WRIST;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_WRIST];
     }
-
     if (name === 'rightKnee' || name === 'RIGHT_KNEE') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_KNEE : CocoBodyParts.RIGHT_KNEE;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_KNEE];
     }
-
     if (name === 'leftKnee' || name === 'LEFT_KNEE') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_KNEE : CocoBodyParts.LEFT_KNEE;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_KNEE];
     }
-
     if (name === 'rightAnkle' || name === 'RIGHT_ANKLE') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_ANKLE : CocoBodyParts.RIGHT_ANKLE;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_ANKLE];
     }
-
     if (name === 'leftAnkle' || name === 'LEFT_ANKLE') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_ANKLE : CocoBodyParts.LEFT_ANKLE;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_ANKLE];
     }
 
     console.warn(`Keypoint not found by name: ${name}`);

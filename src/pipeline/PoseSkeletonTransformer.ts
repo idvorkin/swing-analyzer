@@ -67,9 +67,8 @@ export const SKELETON_CONNECTIONS = [
  * Skeleton transformer stage - transforms frames to skeletons using ML pose detection
  * This combines the functionality of pose detection and skeleton construction
  *
- * Supports multiple pose detection models via ModelConfig:
- * - MoveNet (Lightning/Thunder) - COCO-17 keypoints
- * - BlazePose (Lite/Full/Heavy) - MediaPipe-33 keypoints (normalized to COCO-17)
+ * Supports BlazePose model variants via ModelConfig:
+ * - BlazePose (Lite/Full/Heavy) - MediaPipe-33 keypoints
  */
 export class PoseSkeletonTransformer implements SkeletonTransformer {
   // Store the pose detector instance

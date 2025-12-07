@@ -40,7 +40,7 @@ The second "top" position after "release" marks the completion of one rep. The r
 
 ### Skeleton
 
-A **skeleton** is the pose data extracted from a video frame, consisting of 17 keypoints (COCO format) or 33 keypoints (MediaPipe format). The skeleton provides:
+A **skeleton** is the pose data extracted from a video frame, consisting of 33 keypoints (MediaPipe BlazePose-33 format). The skeleton provides:
 
 - Joint positions (x, y coordinates)
 - Confidence scores per keypoint
