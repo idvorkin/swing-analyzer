@@ -1120,17 +1120,20 @@ if (typeof window !== 'undefined') {
 
       try {
         // Serialize in chunks to avoid string length limits
-        const track = poseTrack as { metadata: unknown; frames: unknown[] };
+        // Exclude frameImage (runtime-only ImageData, not for serialization)
+        const track = poseTrack as { metadata: unknown; frames: Record<string, unknown>[] };
         const chunks: string[] = [];
         chunks.push('{"metadata":');
         chunks.push(JSON.stringify(track.metadata));
         chunks.push(',"frames":[');
 
-        // Add frames one by one to avoid huge string concatenation
+        // Add frames one by one, excluding frameImage to save space
         const frames = track.frames;
         for (let i = 0; i < frames.length; i++) {
           if (i > 0) chunks.push(',');
-          chunks.push(JSON.stringify(frames[i]));
+          // Omit frameImage - it's runtime-only ImageData for filmstrip thumbnails
+          const { frameImage, ...frameWithoutImage } = frames[i];
+          chunks.push(JSON.stringify(frameWithoutImage));
         }
         chunks.push(']}');
 
