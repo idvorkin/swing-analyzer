@@ -28,13 +28,14 @@ function createMockSkeleton(angles: {
 /**
  * Phase angle presets based on default thresholds:
  * - topSpineMax: 25, topHipMin: 150
- * - bottomArmMax: 0, bottomSpineMin: 35, bottomHipMax: 140
- * - connectArmMax: 30, connectSpineMin: 20
- * - releaseArmMin: 10, releaseSpineMax: 25
+ * - bottomArmMax: 10, bottomSpineMin: 35, bottomHipMax: 140
+ * - connectArmMax: 25, connectSpineMax: 25 (arms crossing vertical on way down)
+ * - releaseArmMax: 25, releaseSpineMax: 25 (arms crossing vertical on way up)
  */
 const PHASE_ANGLES_NORMAL = {
   top: { arm: 80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
-  connect: { arm: 20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
+  // CONNECT: arms approaching vertical, spine still upright (before hinge)
+  connect: { arm: 20, spine: 20, hip: 155, knee: 165, wristHeight: 0 },
   bottom: { arm: -10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
   release: { arm: 20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
 };
@@ -45,7 +46,8 @@ const PHASE_ANGLES_NORMAL = {
  */
 const PHASE_ANGLES_MIRRORED = {
   top: { arm: -80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
-  connect: { arm: -20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
+  // CONNECT: arms approaching vertical, spine still upright (before hinge)
+  connect: { arm: -20, spine: 20, hip: 155, knee: 165, wristHeight: 0 },
   bottom: { arm: 10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
   release: { arm: -20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
 };
@@ -92,13 +94,13 @@ describe('KettlebellSwingFormAnalyzer', () => {
 
   // Run phase transition tests with BOTH normal and mirrored video angles
   describe.each(VIDEO_ORIENTATIONS)('phase transitions ($name)', ({ angles: ANGLES }) => {
-    it('transitions from TOP to CONNECT when arm drops and spine tilts', () => {
+    it('transitions from TOP to CONNECT when arms reach vertical with spine upright', () => {
       // Start in top
       analyzer.processFrame(createMockSkeleton(ANGLES.top), 0);
       analyzer.processFrame(createMockSkeleton(ANGLES.top), 10);
       expect(analyzer.getPhase()).toBe('top');
 
-      // Transition to connect (|arm| < 30, spine > 20)
+      // Transition to connect (|arm| < 15, spine < 25) - arms vertical before hinge
       analyzer.processFrame(createMockSkeleton(ANGLES.connect), 20);
       analyzer.processFrame(createMockSkeleton(ANGLES.connect), 30);
       analyzer.processFrame(createMockSkeleton(ANGLES.connect), 40);
@@ -385,7 +387,8 @@ describe('KettlebellSwingFormAnalyzer', () => {
       // Normal video: arm behind body = negative angle
       const normalAngles = {
         top: { arm: 80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
-        connect: { arm: 20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
+        // CONNECT: arms approaching vertical, spine still upright (before hinge)
+        connect: { arm: 20, spine: 20, hip: 155, knee: 165, wristHeight: 0 },
         bottom: { arm: -10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
         release: { arm: 20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
       };
@@ -411,9 +414,10 @@ describe('KettlebellSwingFormAnalyzer', () => {
       // Mirrored video: arm behind body = positive angle (same magnitude, opposite sign)
       const mirroredAngles = {
         top: { arm: 80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
-        connect: { arm: 20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
+        // CONNECT: arms approaching vertical, spine still upright (before hinge)
+        connect: { arm: -20, spine: 20, hip: 155, knee: 165, wristHeight: 0 },
         bottom: { arm: 10, spine: 50, hip: 120, knee: 160, wristHeight: -100 }, // +10 instead of -10
-        release: { arm: 20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
+        release: { arm: -20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
       };
 
       // Process through all phases - should work identically
@@ -437,9 +441,10 @@ describe('KettlebellSwingFormAnalyzer', () => {
       // Use positive arm angles throughout (mirrored video style)
       const mirroredPhases = {
         top: { arm: 80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
-        connect: { arm: 20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
+        // CONNECT: arms approaching vertical, spine still upright (before hinge)
+        connect: { arm: -20, spine: 20, hip: 155, knee: 165, wristHeight: 0 },
         bottom: { arm: 10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
-        release: { arm: 20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
+        release: { arm: -20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
       };
 
       let time = 0;
