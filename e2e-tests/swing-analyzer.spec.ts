@@ -97,7 +97,7 @@ test.describe('Swing Analyzer', () => {
     // HUD should be visible because poses exist for this frame
     await expect(page.locator('.hud-overlay-reps')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('.hud-overlay-angles')).toBeVisible();
-    await expect(page.locator('.hud-overlay-status')).toBeVisible();
+    // Note: .hud-overlay-status (position label) is only shown during checkpoint navigation
   });
 
   test('Extraction % hidden after extraction completes', async ({ page }) => {

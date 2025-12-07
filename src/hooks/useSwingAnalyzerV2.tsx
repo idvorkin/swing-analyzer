@@ -65,6 +65,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const [extractionProgress, setExtractionProgress] = useState<ExtractionProgress | null>(null);
   const [inputState, setInputState] = useState<InputSessionState>({ type: 'idle' });
   const [hasPosesForCurrentFrame, setHasPosesForCurrentFrame] = useState<boolean>(false);
+  const [currentPosition, setCurrentPosition] = useState<string | null>(null);
 
   // Track if we've recorded extraction start for current session (to avoid spam)
   const hasRecordedExtractionStartRef = useRef<boolean>(false);
@@ -782,6 +783,87 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   }, [repCount]);
 
   // ========================================
+  // Checkpoint Navigation
+  // ========================================
+  const POSITION_ORDER = ['top', 'connect', 'bottom', 'release'] as const;
+
+  // Build flat list of all checkpoints sorted by time
+  const getAllCheckpoints = useCallback(() => {
+    const checkpoints: Array<{ repNum: number; position: string; videoTime: number }> = [];
+
+    for (const [repNum, positions] of repThumbnails.entries()) {
+      for (const posName of POSITION_ORDER) {
+        const candidate = positions.get(posName);
+        if (candidate?.videoTime !== undefined) {
+          checkpoints.push({
+            repNum,
+            position: posName,
+            videoTime: candidate.videoTime,
+          });
+        }
+      }
+    }
+
+    // Sort by video time
+    checkpoints.sort((a, b) => a.videoTime - b.videoTime);
+    return checkpoints;
+  }, [repThumbnails]);
+
+  const navigateToNextCheckpoint = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const checkpoints = getAllCheckpoints();
+    if (checkpoints.length === 0) return;
+
+    const currentTime = video.currentTime;
+
+    // Find the next checkpoint after current time
+    const nextCheckpoint = checkpoints.find(cp => cp.videoTime > currentTime + 0.01);
+
+    if (nextCheckpoint) {
+      video.currentTime = nextCheckpoint.videoTime;
+      setCurrentPosition(nextCheckpoint.position);
+      // Update rep index if needed
+      setAppState(prev => ({
+        ...prev,
+        currentRepIndex: nextCheckpoint.repNum - 1, // repNum is 1-indexed
+      }));
+    }
+    // If no next checkpoint, don't wrap around
+  }, [getAllCheckpoints]);
+
+  const navigateToPreviousCheckpoint = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const checkpoints = getAllCheckpoints();
+    if (checkpoints.length === 0) return;
+
+    const currentTime = video.currentTime;
+
+    // Find the previous checkpoint before current time
+    const prevCheckpoints = checkpoints.filter(cp => cp.videoTime < currentTime - 0.01);
+    const prevCheckpoint = prevCheckpoints[prevCheckpoints.length - 1];
+
+    if (prevCheckpoint) {
+      video.currentTime = prevCheckpoint.videoTime;
+      setCurrentPosition(prevCheckpoint.position);
+      // Update rep index if needed
+      setAppState(prev => ({
+        ...prev,
+        currentRepIndex: prevCheckpoint.repNum - 1, // repNum is 1-indexed
+      }));
+    }
+    // If no previous checkpoint, don't wrap around
+  }, [getAllCheckpoints]);
+
+  // Clear position label when playing or using frame navigation
+  const clearPositionLabel = useCallback(() => {
+    setCurrentPosition(null);
+  }, []);
+
+  // ========================================
   // Keyboard Navigation
   // ========================================
   const { isFullscreen } = useKeyboardNavigation({
@@ -905,6 +987,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setDebugMode: () => {}, // TODO: Implement
     navigateToPreviousRep,
     navigateToNextRep,
+    navigateToPreviousCheckpoint,
+    navigateToNextCheckpoint,
+    clearPositionLabel,
     getVideoContainerClass,
     reinitializeWithCachedPoses: async () => {}, // No-op in V2
     reinitializeWithLiveCache: async () => {}, // No-op in V2
@@ -920,5 +1005,8 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     // HUD visibility (based on pose availability, not extraction state)
     hasPosesForCurrentFrame,
+
+    // Current position (shown when navigating by checkpoint)
+    currentPosition,
   };
 }

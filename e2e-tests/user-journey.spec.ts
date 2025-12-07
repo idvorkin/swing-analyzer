@@ -284,7 +284,8 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       // Wait for HUD to be visible (requires poses to exist for current frame)
       await expect(page.locator('#rep-counter')).toBeVisible({ timeout: 5000 });
       // Seeded fixture contains ~4 swings which produces 3 detected reps
-      await expect(page.locator('#rep-counter')).toHaveText('3', { timeout: 5000 });
+      // Format is "current/total" e.g. "1/3"
+      await expect(page.locator('#rep-counter')).toHaveText(/\d+\/3/, { timeout: 5000 });
     });
 
     test('angle displays update during playback', async ({ page }) => {
