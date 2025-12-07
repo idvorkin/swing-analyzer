@@ -254,6 +254,89 @@ describe('VideoSectionV2', () => {
     });
   });
 
+  describe('Rep Navigation Strip', () => {
+    it('shows rep-nav-strip when reps exist and video loaded', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        appState: { isModelLoaded: true, currentRepIndex: 0 },
+        currentVideoFile: new File([], 'test.mp4'),
+        repCount: 3,
+      }));
+      render(<VideoSectionV2 />);
+      expect(document.querySelector('.rep-nav-strip')).toBeInTheDocument();
+    });
+
+    it('has four navigation buttons (double arrows for reps, single for checkpoints)', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        appState: { isModelLoaded: true, currentRepIndex: 1 },
+        currentVideoFile: new File([], 'test.mp4'),
+        repCount: 3,
+      }));
+      render(<VideoSectionV2 />);
+      expect(screen.getByRole('button', { name: /previous rep/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /previous checkpoint/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /next checkpoint/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /next rep/i })).toBeInTheDocument();
+    });
+
+    it('disables previous rep button on first rep', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        appState: { isModelLoaded: true, currentRepIndex: 0 },
+        currentVideoFile: new File([], 'test.mp4'),
+        repCount: 3,
+      }));
+      render(<VideoSectionV2 />);
+      expect(screen.getByRole('button', { name: /previous rep/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /next rep/i })).not.toBeDisabled();
+    });
+
+    it('disables next rep button on last rep', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        appState: { isModelLoaded: true, currentRepIndex: 2 },
+        currentVideoFile: new File([], 'test.mp4'),
+        repCount: 3,
+      }));
+      render(<VideoSectionV2 />);
+      expect(screen.getByRole('button', { name: /previous rep/i })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /next rep/i })).toBeDisabled();
+    });
+
+    it('calls navigation functions when buttons clicked', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        appState: { isModelLoaded: true, currentRepIndex: 1 },
+        currentVideoFile: new File([], 'test.mp4'),
+        repCount: 3,
+      }));
+      render(<VideoSectionV2 />);
+
+      fireEvent.click(screen.getByRole('button', { name: /previous rep/i }));
+      expect(mockNavigateToPreviousRep).toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: /next rep/i }));
+      expect(mockNavigateToNextRep).toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: /previous checkpoint/i }));
+      expect(mockNavigateToPreviousCheckpoint).toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: /next checkpoint/i }));
+      expect(mockNavigateToNextCheckpoint).toHaveBeenCalled();
+    });
+
+    it('shows current position in HUD when checkpoint selected', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        appState: { isModelLoaded: true, currentRepIndex: 0 },
+        currentVideoFile: new File([], 'test.mp4'),
+        repCount: 2,
+        hasPosesForCurrentFrame: true,
+        currentPosition: 'connect',
+      }));
+      render(<VideoSectionV2 />);
+      // Position should be inline with angles in HUD (also shown in nav strip)
+      const hudPosition = document.querySelector('.hud-overlay-position');
+      expect(hudPosition).toBeInTheDocument();
+      expect(hudPosition?.textContent).toContain('Connect');
+    });
+  });
+
   describe('Filmstrip', () => {
     it('shows empty message when no reps', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
