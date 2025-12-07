@@ -324,6 +324,26 @@ done | sort -r
 git fetch origin && git rebase origin/dev
 ```
 
+**🔀 REBASE vs MERGE**: When rebase has many conflicts, check if branches have diverged due to PR squash/merge creating duplicate commits with different hashes:
+
+```bash
+# Check divergence
+git rev-list --count main..dev   # commits on dev not in main
+git rev-list --count dev..main   # commits on main not in dev
+
+# If both are high (e.g., 100+), branches likely have same changes with different hashes
+# Compare commit messages to confirm:
+git log --oneline main | head -10
+git log --oneline dev | head -10
+```
+
+If commits have matching messages but different hashes (from PR merges), **merge is cleaner than rebase**:
+- `git merge main` - single merge commit, no conflict per duplicate commit
+- Rebase would stop at every "duplicate" commit asking to resolve
+
+Use rebase for: feature branches with unique work, staying current with small changes
+Use merge for: syncing branches that diverged due to PR workflow
+
 ### Merging Feature Branches to Dev
 
 **⚠️ MANDATORY: Run PR review agents before ANY merge to dev.**
