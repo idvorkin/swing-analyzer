@@ -183,16 +183,58 @@ export class Skeleton {
   }
 
   /**
+   * Detect which direction the body is facing based on ankle/knee positions.
+   * In a side view, the knee is slightly in front of the ankle.
+   * Returns 'right' if facing right (knee X > ankle X), 'left' otherwise.
+   */
+  getFacingDirection(): 'left' | 'right' | null {
+    const leftAnkle = this.getKeypointByName('leftAnkle');
+    const rightAnkle = this.getKeypointByName('rightAnkle');
+    const leftKnee = this.getKeypointByName('leftKnee');
+    const rightKnee = this.getKeypointByName('rightKnee');
+
+    // Average both sides for stability
+    let ankleX = 0, kneeX = 0, count = 0;
+    if (leftAnkle && leftKnee) {
+      ankleX += leftAnkle.x;
+      kneeX += leftKnee.x;
+      count++;
+    }
+    if (rightAnkle && rightKnee) {
+      ankleX += rightAnkle.x;
+      kneeX += rightKnee.x;
+      count++;
+    }
+    if (count === 0) return null;
+
+    ankleX /= count;
+    kneeX /= count;
+
+    // Knee ahead of ankle indicates facing direction
+    // Need significant offset to be confident (>10px)
+    const offset = kneeX - ankleX;
+    if (Math.abs(offset) < 10) return null;
+    return offset > 0 ? 'right' : 'left';
+  }
+
+  /**
+   * Get wrist X position for a given side (used for dominant arm detection)
+   */
+  getWristX(side: 'left' | 'right'): number | null {
+    const wrist = this.getKeypointByName(side === 'left' ? 'leftWrist' : 'rightWrist');
+    return wrist?.x ?? null;
+  }
+
+  /**
    * Get the arm-to-vertical angle
    * This is the angle between the arm vector (shoulder to elbow) and
    * a vertical line pointing downward (0° is arm pointing straight down, 90° is horizontal, 180° is pointing up)
    * Negative values indicate the arm is pointing to the left, positive to the right
    *
-   * For mirrored video support: uses the arm with higher confidence instead of
-   * always preferring right. This ensures the swinging arm is tracked correctly
-   * regardless of video orientation.
+   * @param preferredSide - If specified, use this arm (set by FormAnalyzer after detecting dominant arm)
+   *                        If not specified, fall back to heuristics (more vertical arm)
    */
-  getArmToVerticalAngle(): number {
+  getArmToVerticalAngle(preferredSide?: 'left' | 'right'): number {
     // If already calculated, return cached value
     if (this._armToVerticalAngle !== null) {
       return this._armToVerticalAngle;
@@ -220,28 +262,37 @@ export class Skeleton {
       const leftConf = (leftElbow?.score ?? leftElbow?.visibility ?? 0);
       const minConf = 0.3; // Minimum confidence to consider
 
-      if (rightShoulder && rightElbow && rightConf > minConf) {
-        rightAngle = calcAngle(rightShoulder, rightElbow);
+      const rightValid = rightShoulder && rightElbow && rightConf > minConf;
+      const leftValid = leftShoulder && leftElbow && leftConf > minConf;
+
+      if (rightValid) {
+        rightAngle = calcAngle(rightShoulder!, rightElbow!);
       }
-      if (leftShoulder && leftElbow && leftConf > minConf) {
-        leftAngle = calcAngle(leftShoulder, leftElbow);
+      if (leftValid) {
+        leftAngle = calcAngle(leftShoulder!, leftElbow!);
       }
 
-      // Choose the arm that's MORE VERTICAL (smaller angle from vertical).
-      // This helps with kettlebell swings where the swinging arm should be
-      // more vertical at the bottom position than the non-swinging arm.
       let shoulder: PoseKeypoint | undefined;
       let elbow: PoseKeypoint | undefined;
 
-      if (rightAngle <= leftAngle && rightShoulder && rightElbow && rightConf > minConf) {
+      // Strategy 1: Use preferred side if specified and valid
+      if (preferredSide === 'right' && rightValid) {
         shoulder = rightShoulder;
         elbow = rightElbow;
-      } else if (leftShoulder && leftElbow && leftConf > minConf) {
+      } else if (preferredSide === 'left' && leftValid) {
         shoulder = leftShoulder;
         elbow = leftElbow;
+      } else if (rightValid && leftValid) {
+        // Strategy 2: When no preference, use most vertical arm
+        if (rightAngle <= leftAngle) {
+          shoulder = rightShoulder;
+          elbow = rightElbow;
+        } else {
+          shoulder = leftShoulder;
+          elbow = leftElbow;
+        }
       } else {
-        // Fallback: only use complete arm pairs, never mix left/right
-        // (mixing left shoulder with right elbow produces invalid angles)
+        // Strategy 3: Fallback to whichever arm has valid keypoints
         if (rightShoulder && rightElbow) {
           shoulder = rightShoulder;
           elbow = rightElbow;
