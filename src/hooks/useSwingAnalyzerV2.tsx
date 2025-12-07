@@ -706,7 +706,13 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     if (!video) return;
 
     if (video.paused) {
-      video.play();
+      // Handle the play promise to avoid AbortError when pause() is called before play() resolves
+      video.play().catch((err) => {
+        // AbortError is expected when play() is interrupted by pause() - ignore it
+        if (err.name !== 'AbortError') {
+          console.error('Error playing video:', err);
+        }
+      });
     } else {
       video.pause();
     }
