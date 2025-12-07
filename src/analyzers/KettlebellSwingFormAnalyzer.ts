@@ -145,12 +145,18 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
 
     // Need facing direction to determine front
     const facing = skeleton.getFacingDirection();
-    if (!facing) return;
+    if (!facing) {
+      console.debug('detectDominantArm: Cannot determine facing direction, skipping');
+      return;
+    }
 
     // Compare wrist positions to determine front arm
     const leftWristX = skeleton.getWristX('left');
     const rightWristX = skeleton.getWristX('right');
-    if (leftWristX === null || rightWristX === null) return;
+    if (leftWristX === null || rightWristX === null) {
+      console.debug('detectDominantArm: Missing wrist keypoints, skipping');
+      return;
+    }
 
     // The swinging arm is on the "front" side (same direction as facing)
     let frontArm: 'left' | 'right';
@@ -169,6 +175,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     const totalVotes = this.dominantArmVotes.left + this.dominantArmVotes.right;
     if (totalVotes >= this.votesNeededForLock) {
       this.dominantArm = this.dominantArmVotes.right >= this.dominantArmVotes.left ? 'right' : 'left';
+      console.debug(`detectDominantArm: Locked in ${this.dominantArm} arm (votes: L=${this.dominantArmVotes.left}, R=${this.dominantArmVotes.right})`);
     }
   }
 
