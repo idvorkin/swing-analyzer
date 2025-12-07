@@ -272,38 +272,35 @@ main {
   }
 }
 
-/* Mobile swap button - tiny corner button when video loaded (hidden on desktop) */
-.mobile-swap-btn {
+/* Header swap button - camera icon to load new video (mobile only) */
+.header-swap-btn {
   display: none;
 }
 
 @media (max-width: 480px) {
-  .mobile-swap-btn {
-    display: flex;
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    z-index: 12;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
+  .header-swap-btn {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    color: rgba(255, 255, 255, 0.85);
     cursor: pointer;
-    opacity: 0.6;
-    transition: opacity 0.15s ease;
+    transition: all 0.15s ease;
   }
 
-  .mobile-swap-btn:active {
-    opacity: 1;
+  .header-swap-btn:hover,
+  .header-swap-btn:active {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
-  .mobile-swap-btn svg {
-    width: 18px;
-    height: 18px;
-    fill: white;
+  .header-swap-btn svg {
+    width: 1rem;
+    height: 1rem;
   }
 }
 
