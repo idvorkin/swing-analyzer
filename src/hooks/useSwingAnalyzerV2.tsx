@@ -36,6 +36,7 @@ import type { PositionCandidate } from '../types/exercise';
 import type { CropRegion } from '../types/posetrack';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
+import type { DetectedExercise } from '../analyzers';
 
 // Throttle interval for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
 const REP_SYNC_INTERVAL_MS = 1000; // 1 second
@@ -74,6 +75,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const [inputState, setInputState] = useState<InputSessionState>({ type: 'idle' });
   const [hasPosesForCurrentFrame, setHasPosesForCurrentFrame] = useState<boolean>(false);
   const [currentPosition, setCurrentPosition] = useState<string | null>(null);
+
+  // Exercise detection state
+  const [detectedExercise, setDetectedExercise] = useState<DetectedExercise>('unknown');
+  const [detectionConfidence, setDetectionConfidence] = useState<number>(0);
+  const [isDetectionLocked, setIsDetectionLocked] = useState<boolean>(false);
 
   // Track if we've recorded extraction start for current session (to avoid spam)
   const hasRecordedExtractionStartRef = useRef<boolean>(false);
@@ -486,6 +492,13 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setExtractionProgress(progress);
     });
 
+    // Subscribe to exercise detection events
+    const detectionSubscription = pipeline.getExerciseDetectionEvents().subscribe((detection) => {
+      setDetectedExercise(detection.exercise);
+      setDetectionConfidence(detection.confidence);
+      setIsDetectionLocked(pipeline.isExerciseDetectionLocked());
+    });
+
     // Mark as ready
     setAppState(prev => ({ ...prev, isModelLoaded: true }));
     setStatus('Ready');
@@ -520,6 +533,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       stateSubscription.unsubscribe();
       skeletonSubscription.unsubscribe();
       progressSubscription.unsubscribe();
+      detectionSubscription.unsubscribe();
       session.dispose();
       inputSessionRef.current = null;
     };
@@ -1160,6 +1174,15 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   }, []);
 
   // ========================================
+  // Exercise Type Override
+  // ========================================
+  const setExerciseType = useCallback((exercise: DetectedExercise) => {
+    pipelineRef.current?.setExerciseType(exercise);
+    setDetectedExercise(exercise);
+    setIsDetectionLocked(true);
+  }, []);
+
+  // ========================================
   // Helper Functions
   // ========================================
   const getVideoContainerClass = useCallback(() => {
@@ -1237,5 +1260,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     // Current position (shown when navigating by checkpoint)
     currentPosition,
+
+    // Exercise detection
+    detectedExercise,
+    detectionConfidence,
+    isDetectionLocked,
+    setExerciseType,
   };
 }

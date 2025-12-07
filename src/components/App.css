@@ -702,6 +702,12 @@ main {
   right: 12px;
 }
 
+.hud-overlay-bottom-left {
+  position: absolute;
+  bottom: 70px; /* Above video controls */
+  left: 12px;
+}
+
 .hud-overlay-status {
   display: flex;
   align-items: center;
@@ -777,6 +783,11 @@ main {
   .hud-overlay-bottom {
     bottom: 60px;
     right: 8px;
+  }
+
+  .hud-overlay-bottom-left {
+    bottom: 60px;
+    left: 8px;
   }
 
   .hud-overlay-status {

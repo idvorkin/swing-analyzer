@@ -9,6 +9,7 @@
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import { ExerciseDetectionBadge } from './ExerciseDetectionBadge';
 import { RepGalleryModal } from './RepGalleryModal';
 import { PHASE_ORDER, PHASE_LABELS } from './repGalleryConstants';
 
@@ -47,6 +48,11 @@ const VideoSectionV2: React.FC = () => {
     currentPosition,
     // Rep gallery
     setCurrentRepIndex,
+    // Exercise detection
+    detectedExercise,
+    detectionConfidence,
+    isDetectionLocked,
+    setExerciseType,
   } = useSwingAnalyzerContext();
 
   // Ref for the rep-gallery container
@@ -586,6 +592,15 @@ const VideoSectionV2: React.FC = () => {
                 </div>
               </div>
             )}
+            {/* Exercise detection badge - bottom left */}
+            <div className="hud-overlay-bottom-left">
+              <ExerciseDetectionBadge
+                detectedExercise={detectedExercise}
+                confidence={detectionConfidence}
+                isLocked={isDetectionLocked}
+                onOverride={setExerciseType}
+              />
+            </div>
           </div>
         )}
 
