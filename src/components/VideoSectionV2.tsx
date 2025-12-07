@@ -48,6 +48,8 @@ const VideoSectionV2: React.FC = () => {
     status,
     spineAngle,
     armToSpineAngle,
+    // HUD visibility (based on pose availability, not extraction state)
+    hasPosesForCurrentFrame,
   } = useSwingAnalyzerContext();
 
   // Ref for the filmstrip container
@@ -174,12 +176,13 @@ const VideoSectionV2: React.FC = () => {
         <video id="video" ref={videoRef} playsInline />
         <canvas id="output-canvas" ref={canvasRef} />
 
-        {/* HUD Overlay - follows same visibility rules as skeleton:
-            - During extraction: only show extraction % (skeleton not rendered during extraction)
-            - After extraction (poses available): show reps, angles, position */}
+        {/* HUD Overlay - visibility based on TWO INDEPENDENT conditions:
+            1. Extraction % visible when extraction is running
+            2. Skeleton/HUD visible when poses exist for current frame
+            Both can be true simultaneously (progressive playback) */}
         {currentVideoFile && (
           <div className="hud-overlay">
-            {/* During extraction: only show extraction progress */}
+            {/* Extraction progress (top-right) - visible when extraction running */}
             {isExtracting && extractionProgress && (
               <div className="hud-overlay-top-right">
                 <div className="hud-overlay-extraction">
@@ -190,8 +193,8 @@ const VideoSectionV2: React.FC = () => {
                 </div>
               </div>
             )}
-            {/* After extraction: show status overlay (same timing as skeleton) */}
-            {!isExtracting && (
+            {/* Status overlay - visible when poses exist for current frame */}
+            {hasPosesForCurrentFrame && (
               <>
                 <div className="hud-overlay-top">
                   <div className="hud-overlay-reps">
