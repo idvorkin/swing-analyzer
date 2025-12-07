@@ -11,6 +11,7 @@ import { useShakeDetector } from '../hooks/useShakeDetector';
 import { useVersionCheck } from '../hooks/useVersionCheck';
 import { BugReportModal } from './BugReportModal';
 import { CrashFallback } from './CrashFallback';
+import { HelpModal } from './HelpModal';
 import { SettingsModal } from './SettingsModal';
 import { VersionNotification } from './VersionNotification';
 
@@ -54,9 +55,10 @@ const branchDisplayName = isFeatureBranch
 // Header with navigation
 interface HeaderProps {
   onOpenSettings: () => void;
+  onOpenHelp: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenHelp }) => {
   return (
     <header>
       <h1>
@@ -69,6 +71,20 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         )}
       </h1>
       <nav>
+        {/* Help button - shows touch gesture guide */}
+        <button
+          type="button"
+          className="header-help-btn"
+          title="Touch controls help"
+          onClick={onOpenHelp}
+          aria-label="Touch controls help"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </button>
         {/* Swap video button - shows source picker overlay */}
         <button
           type="button"
@@ -99,6 +115,7 @@ const AppContent: React.FC = () => {
   const bugReporter = useBugReporter();
   const versionCheck = useVersionCheck();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const { isSupported: isShakeSupported, requestPermission } = useShakeDetector(
     {
@@ -130,11 +147,12 @@ const AppContent: React.FC = () => {
 
   return (
     <SwingAnalyzerProvider>
-      <Header onOpenSettings={() => setSettingsOpen(true)} />
+      <Header onOpenSettings={() => setSettingsOpen(true)} onOpenHelp={() => setHelpOpen(true)} />
       <Routes>
         <Route path="/" element={<MainApplication />} />
       </Routes>
       <VersionNotification />
+      <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
       <BugReportModal
         isOpen={bugReporter.isOpen}
         onClose={bugReporter.close}

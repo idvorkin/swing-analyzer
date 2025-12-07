@@ -87,10 +87,16 @@ const VideoSectionV2: React.FC = () => {
     }
   }, [currentVideoFile]);
 
-  // Double-tap to play/pause state
-  const lastTapRef = useRef<number>(0);
-  const [showPlayPauseOverlay, setShowPlayPauseOverlay] = useState<'play' | 'pause' | null>(null);
+  // Double-tap zone state for touch devices
+  const lastTapRef = useRef<{ time: number; x: number }>({ time: 0, x: 0 });
+  const [tapOverlay, setTapOverlay] = useState<{
+    type: 'play' | 'pause' | 'prev' | 'next';
+    position: 'left' | 'center' | 'right';
+  } | null>(null);
   const overlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Check if device supports touch
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
   // Cleanup overlay timeout on unmount to prevent memory leak
   useEffect(() => {
@@ -101,26 +107,59 @@ const VideoSectionV2: React.FC = () => {
     };
   }, []);
 
-  // Double-tap handler for video container
-  const handleVideoDoubleTap = useCallback(() => {
+  // Double-tap handler for video container with zone detection (touch only)
+  const handleVideoDoubleTap = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Only handle on touch devices
+    if (!isTouchDevice) return;
+
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300; // ms
+    const currentX = e.clientX;
 
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // Double tap detected - toggle play/pause
-      clearPositionLabel();
-      togglePlayPause();
-      // Show visual feedback - clear any existing timeout first
+    if (now - lastTapRef.current.time < DOUBLE_TAP_DELAY) {
+      // Double tap detected - determine zone based on first tap position
+      const container = e.currentTarget;
+      const rect = container.getBoundingClientRect();
+      const relativeX = lastTapRef.current.x - rect.left;
+      const containerWidth = rect.width;
+      const tapPosition = relativeX / containerWidth;
+
+      // Zone thresholds: left 25%, middle 50%, right 25%
+      const LEFT_ZONE = 0.25;
+      const RIGHT_ZONE = 0.75;
+
+      let action: 'play' | 'pause' | 'prev' | 'next';
+      let position: 'left' | 'center' | 'right';
+
+      if (tapPosition < LEFT_ZONE) {
+        // Left zone - previous checkpoint
+        navigateToPreviousCheckpoint();
+        action = 'prev';
+        position = 'left';
+      } else if (tapPosition > RIGHT_ZONE) {
+        // Right zone - next checkpoint
+        navigateToNextCheckpoint();
+        action = 'next';
+        position = 'right';
+      } else {
+        // Middle zone - play/pause
+        clearPositionLabel();
+        togglePlayPause();
+        action = isPlaying ? 'pause' : 'play';
+        position = 'center';
+      }
+
+      // Show visual feedback
       if (overlayTimeoutRef.current) {
         clearTimeout(overlayTimeoutRef.current);
       }
-      setShowPlayPauseOverlay(isPlaying ? 'play' : 'pause'); // Shows opposite since state hasn't updated yet
-      overlayTimeoutRef.current = setTimeout(() => setShowPlayPauseOverlay(null), 500);
-      lastTapRef.current = 0; // Reset to prevent triple-tap
+      setTapOverlay({ type: action, position });
+      overlayTimeoutRef.current = setTimeout(() => setTapOverlay(null), 500);
+      lastTapRef.current = { time: 0, x: 0 }; // Reset to prevent triple-tap
     } else {
-      lastTapRef.current = now;
+      lastTapRef.current = { time: now, x: currentX };
     }
-  }, [clearPositionLabel, togglePlayPause, isPlaying]);
+  }, [isTouchDevice, clearPositionLabel, togglePlayPause, isPlaying, navigateToPreviousCheckpoint, navigateToNextCheckpoint]);
 
   // Event delegation handler for filmstrip clicks (avoids individual event listeners)
   const handleFilmstripClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -313,17 +352,28 @@ const VideoSectionV2: React.FC = () => {
         <video id="video" ref={videoRef} playsInline />
         <canvas id="output-canvas" ref={canvasRef} />
 
-        {/* Double-tap play/pause feedback overlay */}
-        {showPlayPauseOverlay && (
-          <div className="video-tap-overlay">
+        {/* Double-tap zone feedback overlay */}
+        {tapOverlay && (
+          <div className={`video-tap-overlay video-tap-overlay--${tapOverlay.position}`}>
             <div className="video-tap-icon">
-              {showPlayPauseOverlay === 'pause' ? (
+              {tapOverlay.type === 'pause' && (
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
                   <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                 </svg>
-              ) : (
+              )}
+              {tapOverlay.type === 'play' && (
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
                   <path d="M8 5v14l11-7z" />
+                </svg>
+              )}
+              {tapOverlay.type === 'prev' && (
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                  <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                </svg>
+              )}
+              {tapOverlay.type === 'next' && (
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                  <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
                 </svg>
               )}
             </div>

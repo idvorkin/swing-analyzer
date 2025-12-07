@@ -389,7 +389,8 @@ main {
 }
 
 /* Header swap button - camera icon to load/switch video */
-.header-swap-btn {
+.header-swap-btn,
+.header-help-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -403,13 +404,16 @@ main {
 }
 
 .header-swap-btn:hover,
-.header-swap-btn:active {
+.header-swap-btn:active,
+.header-help-btn:hover,
+.header-help-btn:active {
   background: rgba(255, 255, 255, 0.15);
   color: white;
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.header-swap-btn svg {
+.header-swap-btn svg,
+.header-help-btn svg {
   width: 1rem;
   height: 1rem;
 }
@@ -509,9 +513,24 @@ main {
   z-index: 20;
 }
 
+/* Position overlays in zones for touch double-tap */
+.video-tap-overlay--left {
+  justify-content: flex-start;
+  padding-left: 12.5%; /* Center within left 25% zone */
+}
+
+.video-tap-overlay--right {
+  justify-content: flex-end;
+  padding-right: 12.5%; /* Center within right 25% zone */
+}
+
+.video-tap-overlay--center {
+  justify-content: center;
+}
+
 .video-tap-icon {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
