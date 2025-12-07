@@ -17,6 +17,7 @@ import type {
   PoseTrackFrame,
   PoseTrackMetadata,
 } from '../types/posetrack';
+import { normalizeToMediaPipeFormat, isCocoFormat } from './KeypointAdapter';
 
 /**
  * Event emitted when a new frame is added to the cache
@@ -245,13 +246,33 @@ export class LivePoseCache {
 
   /**
    * Load from a static PoseTrackFile (for pre-seeded data)
+   * Converts legacy COCO-17 keypoints to MediaPipe-33 format if needed.
    */
   static fromPoseTrackFile(poseTrack: PoseTrackFile): LivePoseCache {
     const cache = new LivePoseCache(poseTrack.metadata.sourceVideoHash);
     cache.setMetadata(poseTrack.metadata);
 
+    // Check if we need to convert from legacy COCO-17 format
+    const needsConversion =
+      poseTrack.frames.length > 0 &&
+      poseTrack.frames[0].keypoints &&
+      isCocoFormat(poseTrack.frames[0].keypoints);
+
+    if (needsConversion) {
+      console.log(
+        `LivePoseCache: Converting ${poseTrack.frames.length} frames from COCO-17 to MediaPipe-33 format`
+      );
+    }
+
     for (const frame of poseTrack.frames) {
-      cache.addFrame(frame);
+      // Convert keypoints to MediaPipe-33 format if they're in COCO-17 format
+      const convertedFrame = needsConversion
+        ? {
+            ...frame,
+            keypoints: normalizeToMediaPipeFormat(frame.keypoints),
+          }
+        : frame;
+      cache.addFrame(convertedFrame);
     }
 
     cache.markComplete(poseTrack.metadata);

@@ -214,13 +214,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   // Process a skeleton event through the pipeline and update UI
   const processSkeletonEvent = useCallback((event: SkeletonEvent) => {
     if (!event.skeleton) {
-      console.log('[DEBUG] processSkeletonEvent: no skeleton in event', event);
       return;
     }
 
     const pipeline = pipelineRef.current;
     if (!pipeline) {
-      console.log('[DEBUG] processSkeletonEvent: no pipeline');
       return;
     }
 
@@ -266,21 +264,12 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
           if (!hasRecordedExtractionStartRef.current) {
             hasRecordedExtractionStartRef.current = true;
             recordExtractionStart({ fileName: state.fileName });
-            console.log('[DEBUG] Extraction started for:', state.fileName);
           }
         } else if (state.sourceState.type === 'active') {
           setStatus('Ready');
-          // Record extraction complete for debugging (only if we recorded start)
+          // Record extraction complete (only if we recorded start)
           if (hasRecordedExtractionStartRef.current) {
             recordExtractionComplete({ fileName: state.fileName });
-            console.log('[DEBUG] Extraction complete for:', state.fileName);
-            // Log cache state for debugging
-            const videoSource = session.getVideoFileSource();
-            const cache = videoSource?.getLiveCache();
-            console.log('[DEBUG] Cache state:', {
-              frameCount: cache?.getFrameCount() ?? 0,
-              isComplete: cache?.isExtractionComplete() ?? false,
-            });
           }
           // Check if poses exist for current frame (for HUD visibility)
           const video = videoRef.current;
@@ -326,10 +315,6 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     let skeletonEventCount = 0;
     const skeletonSubscription = session.skeletons$.subscribe((event) => {
       skeletonEventCount++;
-      // Log first 5 events and then every 100th
-      if (skeletonEventCount <= 5 || skeletonEventCount % 100 === 0) {
-        console.log('[DEBUG] Received skeleton event from extraction:', skeletonEventCount, 'hasSkeleton:', !!event.skeleton);
-      }
       // Use the ref to access the latest handler (avoids stale closure)
       skeletonHandlerRef.current?.(event);
     });

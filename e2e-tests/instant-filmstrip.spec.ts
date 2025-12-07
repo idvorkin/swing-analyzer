@@ -58,7 +58,8 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
 
     // Configure mock pose detector - 0ms delay for fast test execution
     // Real extraction timing is tested separately if needed
-    await setupMockPoseDetector(page, 'swing-sample', 0);
+    // Use swing-sample-4reps to match useShortTestVideo()
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Verify mock was set up
     const mockAvailable = await page.evaluate(() => {
@@ -115,7 +116,8 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     page,
   }) => {
     // Use fast delay for testing - 0ms per frame
-    await setupMockPoseDetector(page, 'swing-sample', 0);
+    // Use swing-sample-4reps to match useShortTestVideo()
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Load video
     await page.click('#load-hardcoded-btn');
@@ -146,7 +148,8 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     page,
   }) => {
     // Fast extraction for this test
-    await setupMockPoseDetector(page, 'swing-sample', 0);
+    // Use swing-sample-4reps to match useShortTestVideo()
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Load video and wait for extraction to complete
     await page.click('#load-hardcoded-btn');
@@ -194,7 +197,8 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
   }) => {
     test.info().annotations.push({ type: 'retry', description: 'Flaky with parallel IndexedDB access' });
     // This test validates that mock detector produces realistic results
-    await setupMockPoseDetector(page, 'swing-sample', 0);
+    // Use swing-sample-4reps to match useShortTestVideo()
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
@@ -249,7 +253,8 @@ test.describe.serial('Playback Mode: No Duplicate Rep Counting', () => {
   }) => {
     test.info().annotations.push({ type: 'retry', description: 'Flaky with parallel IndexedDB access' });
     // Configure mock pose detector - fast extraction (0ms delay for speed)
-    await setupMockPoseDetector(page, 'swing-sample', 0);
+    // Use swing-sample-4reps to match useShortTestVideo()
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Load video - triggers extraction
     await page.click('#load-hardcoded-btn');
@@ -310,7 +315,8 @@ test.describe.serial('Playback Mode: No Duplicate Rep Counting', () => {
   }) => {
     test.info().annotations.push({ type: 'retry', description: 'Flaky with parallel IndexedDB access' });
     // Configure mock pose detector (0ms delay for speed)
-    await setupMockPoseDetector(page, 'swing-sample', 0);
+    // Use swing-sample-4reps to match useShortTestVideo()
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Load video and wait for extraction to complete
     await page.click('#load-hardcoded-btn');
@@ -369,16 +375,19 @@ test.describe.serial('Filmstrip Frame Capture During Extraction', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for at least one rep
+    // Wait for filmstrip to have exactly 4 thumbnails (one rep with 4 positions)
+    // Note: We check filmstrip directly instead of HUD rep counter since HUD
+    // only shows when there's a pose at the current video time
     await page.waitForFunction(
       () => {
-        const el = document.querySelector('#rep-counter');
-        return parseInt(el?.textContent || '0', 10) >= 1;
+        const filmstrip = document.querySelector('.filmstrip-container');
+        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        return thumbnails === 4;
       },
       { timeout: 30000 }
     );
 
-    // Check filmstrip has 4 thumbnails for the first rep
+    // Verify filmstrip has exactly 4 thumbnails for the first rep
     const thumbnailCount = await page.evaluate(() => {
       const filmstrip = document.querySelector('.filmstrip-container');
       return filmstrip?.querySelectorAll('canvas').length || 0;

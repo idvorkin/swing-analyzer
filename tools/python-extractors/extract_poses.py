@@ -490,11 +490,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s video.mp4                     Extract poses to video.posetrack.json
+  %(prog)s video.mp4                     Extract poses to video.posetrack.json (33 keypoints)
   %(prog)s video.mp4 -o poses.json       Custom output path
   %(prog)s video.mp4 --preview           Show preview during extraction
   %(prog)s video.mp4 --complexity 2      Use heavy model for better accuracy
-  %(prog)s video.mp4 --full              Output all 33 BlazePose keypoints
+  %(prog)s video.mp4 --coco              Output legacy COCO-17 keypoints instead
         """
     )
     parser.add_argument("video", type=Path, help="Input video file")
@@ -505,11 +505,18 @@ Examples:
         help="Model complexity: 0=lite, 1=full (default), 2=heavy"
     )
     parser.add_argument(
-        "--full", action="store_true",
-        help="Output all 33 BlazePose keypoints instead of COCO-17"
+        "--full", action="store_true", default=True,
+        help="Output all 33 BlazePose keypoints (default)"
+    )
+    parser.add_argument(
+        "--coco", action="store_true",
+        help="Output legacy COCO-17 keypoints instead of BlazePose-33"
     )
 
     args = parser.parse_args()
+
+    # Default to BlazePose-33, use COCO-17 only if --coco is specified
+    use_full_keypoints = not args.coco
 
     if not args.video.exists():
         print(f"Error: Video not found: {args.video}", file=sys.stderr)
@@ -521,7 +528,7 @@ Examples:
             output_path=args.output,
             preview=args.preview,
             model_complexity=args.complexity,
-            full_keypoints=args.full,
+            full_keypoints=use_full_keypoints,
         )
     except KeyboardInterrupt:
         print("\nAborted")

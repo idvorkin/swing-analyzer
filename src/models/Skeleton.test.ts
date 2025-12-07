@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CocoBodyParts, type PoseKeypoint } from '../types';
+import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
 import { Skeleton } from './Skeleton';
 
 /**
@@ -13,36 +13,36 @@ function createSkeleton(keypoints: PoseKeypoint[]): Skeleton {
  * Helper to create a keypoint with default confidence
  */
 function kp(x: number, y: number, score = 0.9): PoseKeypoint {
-  return { x, y, score };
+  return { x, y, score, visibility: score };
 }
 
 /**
- * Helper to create a full 17-keypoint COCO skeleton with specific positions
+ * Helper to create a full 33-keypoint MediaPipe skeleton with specific positions
  * Non-specified keypoints are set to undefined (sparse array)
  */
-function createCocoSkeleton(overrides: Partial<Record<string, PoseKeypoint>>): Skeleton {
+function createMediaPipeSkeleton(overrides: Partial<Record<string, PoseKeypoint>>): Skeleton {
   // Create sparse array - undefined keypoints won't be found
-  const keypoints: (PoseKeypoint | undefined)[] = new Array(17);
+  const keypoints: (PoseKeypoint | undefined)[] = new Array(33);
 
-  // Apply overrides using COCO body part indices
+  // Apply overrides using MediaPipe body part indices
   const nameToIndex: Record<string, number> = {
-    nose: CocoBodyParts.NOSE,
-    leftEye: CocoBodyParts.LEFT_EYE,
-    rightEye: CocoBodyParts.RIGHT_EYE,
-    leftEar: CocoBodyParts.LEFT_EAR,
-    rightEar: CocoBodyParts.RIGHT_EAR,
-    leftShoulder: CocoBodyParts.LEFT_SHOULDER,
-    rightShoulder: CocoBodyParts.RIGHT_SHOULDER,
-    leftElbow: CocoBodyParts.LEFT_ELBOW,
-    rightElbow: CocoBodyParts.RIGHT_ELBOW,
-    leftWrist: CocoBodyParts.LEFT_WRIST,
-    rightWrist: CocoBodyParts.RIGHT_WRIST,
-    leftHip: CocoBodyParts.LEFT_HIP,
-    rightHip: CocoBodyParts.RIGHT_HIP,
-    leftKnee: CocoBodyParts.LEFT_KNEE,
-    rightKnee: CocoBodyParts.RIGHT_KNEE,
-    leftAnkle: CocoBodyParts.LEFT_ANKLE,
-    rightAnkle: CocoBodyParts.RIGHT_ANKLE,
+    nose: MediaPipeBodyParts.NOSE,
+    leftEye: MediaPipeBodyParts.LEFT_EYE,
+    rightEye: MediaPipeBodyParts.RIGHT_EYE,
+    leftEar: MediaPipeBodyParts.LEFT_EAR,
+    rightEar: MediaPipeBodyParts.RIGHT_EAR,
+    leftShoulder: MediaPipeBodyParts.LEFT_SHOULDER,
+    rightShoulder: MediaPipeBodyParts.RIGHT_SHOULDER,
+    leftElbow: MediaPipeBodyParts.LEFT_ELBOW,
+    rightElbow: MediaPipeBodyParts.RIGHT_ELBOW,
+    leftWrist: MediaPipeBodyParts.LEFT_WRIST,
+    rightWrist: MediaPipeBodyParts.RIGHT_WRIST,
+    leftHip: MediaPipeBodyParts.LEFT_HIP,
+    rightHip: MediaPipeBodyParts.RIGHT_HIP,
+    leftKnee: MediaPipeBodyParts.LEFT_KNEE,
+    rightKnee: MediaPipeBodyParts.RIGHT_KNEE,
+    leftAnkle: MediaPipeBodyParts.LEFT_ANKLE,
+    rightAnkle: MediaPipeBodyParts.RIGHT_ANKLE,
   };
 
   for (const [name, point] of Object.entries(overrides)) {
@@ -55,6 +55,9 @@ function createCocoSkeleton(overrides: Partial<Record<string, PoseKeypoint>>): S
   // Cast to PoseKeypoint[] - undefined entries will be handled by Skeleton
   return createSkeleton(keypoints as PoseKeypoint[]);
 }
+
+// Alias for backward compatibility in tests
+const createCocoSkeleton = createMediaPipeSkeleton;
 
 describe('Skeleton', () => {
   describe('getBoundingBox', () => {
