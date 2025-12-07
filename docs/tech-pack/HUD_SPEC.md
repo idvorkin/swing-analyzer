@@ -43,7 +43,7 @@ The HUD renders **on whatever is currently visible**. This means:
 - During playback: HUD shows data for the current frame
 - When paused: HUD shows data for the paused frame
 - After seeking: HUD updates immediately to match new position
-- During extraction: HUD is hidden (no valid frame to overlay)
+- No poses for frame: HUD hidden (no data to display)
 
 ### 2. Non-Intrusive
 
@@ -118,18 +118,32 @@ Styling:
 
 ## Visibility States
 
-The HUD follows the same visibility rules as the skeleton: **only visible when poses are available for the current frame**.
+**Core rule**: Skeleton and HUD are visible whenever poses exist for `video.currentTime`.
 
-| App State | Skeleton | Status Overlay | Extraction % | Position |
+Extraction state and pose availability are **independent**:
+- Extraction % → visible when extraction is running
+- Skeleton/HUD → visible when poses exist for current frame
+
+| Condition | Skeleton | Status Overlay | Extraction % | Position |
 |-----------|----------|----------------|--------------|----------|
 | No video loaded | Hidden | Hidden | Hidden | Hidden |
 | Video loading | Hidden | Hidden | Hidden | Hidden |
-| Extraction in progress | Hidden | Hidden | **Visible** | Hidden |
-| Playback (poses available) | Visible | Visible | Hidden | Visible |
-| Paused (poses available) | Visible | Visible | Hidden | Visible |
-| Playback (no poses at frame) | Hidden | Shows last known | Hidden | Shows last known |
+| Poses exist for current frame | **Visible** | **Visible** | (see below) | **Visible** |
+| No poses for current frame | Hidden | Hidden | (see below) | Hidden |
+| Extraction running | (see above) | (see above) | **Visible** | (see above) |
+| Extraction complete | (see above) | (see above) | Hidden | (see above) |
 
-**Rationale**: During extraction, the skeleton is not rendered because the visible video isn't synced to extraction frames. The status overlay (reps, angles, position) derives from skeleton data, so it must also be hidden during extraction. Only extraction % is shown to indicate progress.
+### Progressive Playback
+
+During extraction, **both** can be true simultaneously:
+- Extraction is running (show extraction %)
+- Poses exist for current frame (show skeleton + HUD)
+
+Example: User loads video, extraction starts at frame 0. By the time user seeks to frame 50:
+- If frame 50 already extracted → skeleton + HUD visible + extraction % visible
+- If frame 50 not yet extracted → no skeleton/HUD + extraction % visible
+
+**This gives users immediate feedback** - they see results as soon as available, no waiting.
 
 **Key Rule**: The entire HUD overlay is only visible when `currentVideoFile` is set.
 

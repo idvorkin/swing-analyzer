@@ -16,14 +16,22 @@
 | Video playing | Updates on each video frame via `requestVideoFrameCallback` |
 | Video paused | Shows pose at `video.currentTime` |
 | Video seeked | Updates immediately after seek completes |
-| During extraction | No skeleton rendered (extraction uses hidden video element) |
-| No poses cached | No skeleton (canvas cleared or hidden) |
+| No poses for current frame | No skeleton (canvas cleared or hidden) |
 
-**Note on extraction**: Skeleton does NOT render during extraction because:
-- Extraction uses a hidden video element for ML inference
-- The visible video isn't synced to extraction frames
-- Rendering would show skeleton in wrong position
-- Playback works immediately for any frames already extracted (progressive playback)
+### Progressive Playback (Key Concept)
+
+**The skeleton renders whenever poses exist for `video.currentTime`, regardless of extraction state.**
+
+During extraction:
+- Extraction runs on a **hidden** video element (for ML inference)
+- The **visible** video is independent - user can play, pause, seek freely
+- If user plays to a frame that's already extracted → skeleton renders
+- If user plays to a frame not yet extracted → no skeleton (no data yet)
+
+This means:
+- User sees results **immediately** as frames are extracted
+- No waiting for full extraction to complete
+- Skeleton appears progressively as more frames become available
 
 ### Canvas Alignment
 
