@@ -17,12 +17,12 @@ import type {
 // This allows fixtures to match the hardcoded sample video
 // Hash computed using computeQuickVideoHash (first 1MB + last 1MB + file size)
 export const SWING_SAMPLE_VIDEO_HASH =
-  '69a7ee1e3ce888da6ac0379e5de5b3f4dba88705ffb429cf5df7d95d17e11130';
+  'e4e5ef779b9bc5b4bda049b010439a60caa1b9ff2ad3c66f3cb23307a23b3414';
 
 // Video hash for swing-sample-4reps.webm (short test video, ~5.5 seconds)
 // This is a trimmed version for faster E2E tests
 export const SWING_SAMPLE_4REPS_VIDEO_HASH =
-  'e1cdbc269811f5916c4a972c1912c1ce0eaa7f518fe05ba516400323f8461a5c';
+  '2fbf38b42328d66e0c61f66fe490ebf1339e7448d53217a12ff0bdb0fa80dba1';
 
 /**
  * COCO keypoint indices for reference
