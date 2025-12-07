@@ -109,21 +109,8 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
 
       console.log(`Pose detector initialized: ${this.modelName} (MediaPipe 33-keypoint format)`);
     } catch (error) {
-      console.error('Failed to initialize primary model:', error);
-
-      // Try a fallback model (PoseNet)
-      // Note: PoseNet uses COCO-17 format but our code now expects MediaPipe-33
-      // This fallback may not work correctly - consider removing in future
-      try {
-        this.detector = await poseDetection.createDetector(
-          poseDetection.SupportedModels.PoseNet
-        );
-        this.modelName = 'PoseNet (fallback - may have issues with 17-point format)';
-        console.warn('Fallback model initialized - PoseNet uses 17-point format, expecting 33-point');
-      } catch (fallbackError) {
-        console.error('Failed to initialize fallback model:', fallbackError);
-        throw new Error('Could not initialize any pose detection model');
-      }
+      console.error('Failed to initialize pose detection model:', error);
+      throw new Error('Could not initialize pose detection model. Check WebGL support and browser compatibility.');
     }
   }
 
