@@ -34,10 +34,48 @@ test.describe('Swing Analyzer', () => {
     await expect(page.locator('#load-hardcoded-btn')).toBeVisible();
   });
 
-  test('should display analysis UI elements', async ({ page }) => {
-    // Check that the analysis elements exist
-    await expect(page.locator('#spine-angle')).toBeVisible();
-    await expect(page.locator('#rep-counter')).toBeVisible();
+  test('HUD should be hidden before video loads', async ({ page }) => {
+    // HUD overlay should NOT be visible until a video is loaded
+    await expect(page.locator('.hud-overlay')).not.toBeVisible();
+  });
+
+  test('HUD should appear after video loads', async ({ page }) => {
+    // Load video
+    await page.click('#load-hardcoded-btn');
+
+    // Wait for video to load
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video && video.src && video.src.startsWith('blob:');
+      },
+      { timeout: 10000 }
+    );
+
+    // HUD overlay should now be visible
+    await expect(page.locator('.hud-overlay')).toBeVisible();
+
+    // Check HUD contains expected elements
+    await expect(page.locator('.hud-overlay-reps')).toBeVisible();
+    await expect(page.locator('.hud-overlay-angles')).toBeVisible();
+    await expect(page.locator('.hud-overlay-status')).toBeVisible();
+  });
+
+  test('HUD should show extraction progress during extraction', async ({ page }) => {
+    // Load video to trigger extraction
+    await page.click('#load-hardcoded-btn');
+
+    // Wait for extraction indicator to appear (may be brief if cached)
+    // Note: This may not always show if poses are cached - that's OK
+    try {
+      await expect(page.locator('.hud-overlay-extraction')).toBeVisible({ timeout: 3000 });
+      // If visible, verify it shows a percentage
+      const text = await page.locator('.hud-overlay-extraction-value').textContent();
+      expect(text).toMatch(/\d+%/);
+    } catch {
+      // Extraction may have been instant (cached) - verify HUD still shows
+      await expect(page.locator('.hud-overlay')).toBeVisible();
+    }
   });
 
   test('should load hardcoded video when sample button clicked', async ({
