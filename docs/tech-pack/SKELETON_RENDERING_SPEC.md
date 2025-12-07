@@ -1,5 +1,7 @@
 # Skeleton Rendering Specification
 
+> **Part of the [HUD](./HUD_SPEC.md)** - The skeleton is one component of the heads-up display that overlays the video.
+
 ## Expected Behavior
 
 ### Visibility Rules

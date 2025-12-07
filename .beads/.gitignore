@@ -10,6 +10,8 @@ daemon.lock
 daemon.log
 daemon.pid
 bd.sock
+.local_version
+bd.sock.startlock
 
 # Legacy database files
 db.sqlite
@@ -23,15 +25,12 @@ beads.left.meta.json
 beads.right.jsonl
 beads.right.meta.json
 
-# Data files - only tracked on beads-metadata branch
-# Use 'bd sync' to commit these to beads-metadata
+# JSONL files are managed on beads-metadata branch only (via bd sync)
+# Do NOT track them on main/dev/feature branches
 issues.jsonl
-metadata.json
-deletions.jsonl
+*.jsonl
 
-# Keep config tracked on all branches
+# Keep config files tracked
+!metadata.json
+!config.json
 !config.yaml
-
-# Local version tracking (not needed in git)
-.local_version
-bd.sock.startlock

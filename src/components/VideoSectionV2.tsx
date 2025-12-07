@@ -39,12 +39,15 @@ const VideoSectionV2: React.FC = () => {
     repThumbnails,
     extractionProgress,
     isExtracting,
-    inputState,
     currentVideoFile,
     // Crop controls
     hasCropRegion,
     isCropEnabled,
     toggleCrop,
+    // HUD data
+    status,
+    spineAngle,
+    armToSpineAngle,
   } = useSwingAnalyzerContext();
 
   // Ref for the filmstrip container
@@ -139,10 +142,6 @@ const VideoSectionV2: React.FC = () => {
     );
   };
 
-  // Get ready status
-  const isReady = inputState.type === 'video-file' &&
-    inputState.sourceState.type === 'active';
-
   return (
     <section className="video-section">
       <div className="top-controls">
@@ -194,6 +193,37 @@ const VideoSectionV2: React.FC = () => {
         {/* biome-ignore lint/a11y/useMediaCaption: This is a video analysis app, not media playback - no audio captions needed */}
         <video id="video" ref={videoRef} playsInline />
         <canvas id="output-canvas" ref={canvasRef} />
+
+        {/* HUD Overlay - Top left: rep counter, angles. Bottom right: position */}
+        {currentVideoFile && (
+          <div className="hud-overlay">
+            <div className="hud-overlay-top">
+              <div className="hud-overlay-reps">
+                <span className="hud-overlay-reps-value">
+                  {appState.currentRepIndex + 1}/{repCount}
+                </span>
+                <span className="hud-overlay-reps-label">REPS</span>
+              </div>
+              <div className="hud-overlay-angles">
+                <div className="hud-overlay-angle">
+                  <span className="hud-overlay-angle-label">SPINE</span>
+                  <span className="hud-overlay-angle-value">{spineAngle}°</span>
+                </div>
+                <div className="hud-overlay-angle">
+                  <span className="hud-overlay-angle-label">ARM</span>
+                  <span className="hud-overlay-angle-value">{armToSpineAngle}°</span>
+                </div>
+              </div>
+            </div>
+            <div className="hud-overlay-bottom">
+              <div className="hud-overlay-status">
+                <span className="hud-overlay-status-dot" />
+                <span className="hud-overlay-status-text">{status}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="video-controls">
           <button
             id="prev-frame-btn"
@@ -311,13 +341,6 @@ const VideoSectionV2: React.FC = () => {
 
       {/* Extraction Progress (replaces PoseTrackStatusBar) */}
       {getExtractionStatus()}
-
-      {/* Ready indicator */}
-      {isReady && !isExtracting && currentVideoFile && (
-        <div className="ready-status">
-          Ready - {repCount} reps detected
-        </div>
-      )}
 
       {/* Checkpoint Filmstrip */}
       <div className="filmstrip-section">

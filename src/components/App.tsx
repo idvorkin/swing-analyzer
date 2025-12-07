@@ -4,7 +4,6 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
 import { GIT_BRANCH } from '../generated_version';
-import AnalysisSection from './AnalysisSection';
 import VideoSectionV2 from './VideoSectionV2';
 import './App.css';
 import { useBugReporter } from '../hooks/useBugReporter';
@@ -36,7 +35,6 @@ const MainApplication: React.FC = () => {
   return (
     <main>
       <VideoSectionV2 />
-      <AnalysisSection />
     </main>
   );
 };
