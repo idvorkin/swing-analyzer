@@ -34,6 +34,8 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
+from angle_utils import compute_angles
+
 # MediaPipe BlazePose indices (33 keypoints)
 MEDIAPIPE_PARTS = {
     "NOSE": 0,
@@ -211,91 +213,6 @@ def mediapipe_to_blazepose(landmarks, width: int, height: int) -> list[dict]:
         })
 
     return keypoints
-
-
-def calculate_angle(p1: dict, p2: dict, p3: dict) -> float:
-    """Calculate angle at p2 given three points."""
-    v1 = np.array([p1["x"] - p2["x"], p1["y"] - p2["y"]])
-    v2 = np.array([p3["x"] - p2["x"], p3["y"] - p2["y"]])
-
-    cos_angle = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-6)
-    cos_angle = np.clip(cos_angle, -1, 1)
-    return math.degrees(math.acos(cos_angle))
-
-
-def compute_angles(keypoints: list[dict]) -> dict:
-    """Compute pre-computed angles for swing analysis."""
-    # Get keypoints by name
-    kp_map = {kp["name"]: kp for kp in keypoints}
-
-    try:
-        # Spine angle: angle between vertical and shoulder-hip line
-        left_shoulder = kp_map["left_shoulder"]
-        right_shoulder = kp_map["right_shoulder"]
-        left_hip = kp_map["left_hip"]
-        right_hip = kp_map["right_hip"]
-
-        # Midpoints
-        shoulder_mid = {
-            "x": (left_shoulder["x"] + right_shoulder["x"]) / 2,
-            "y": (left_shoulder["y"] + right_shoulder["y"]) / 2,
-        }
-        hip_mid = {
-            "x": (left_hip["x"] + right_hip["x"]) / 2,
-            "y": (left_hip["y"] + right_hip["y"]) / 2,
-        }
-
-        # Spine vector (hip to shoulder)
-        spine_vec = np.array([
-            shoulder_mid["x"] - hip_mid["x"],
-            shoulder_mid["y"] - hip_mid["y"]
-        ])
-
-        # Vertical is negative Y in screen coords
-        vertical = np.array([0, -1])
-
-        cos_spine = np.dot(spine_vec, vertical) / (np.linalg.norm(spine_vec) + 1e-6)
-        cos_spine = np.clip(cos_spine, -1, 1)
-        spine_angle = math.degrees(math.acos(cos_spine))
-
-        # Arm angle: use left wrist position relative to spine
-        left_wrist = kp_map["left_wrist"]
-        arm_vec = np.array([
-            left_wrist["x"] - shoulder_mid["x"],
-            left_wrist["y"] - shoulder_mid["y"]
-        ])
-
-        # Arm to vertical
-        cos_arm_vert = np.dot(arm_vec, vertical) / (np.linalg.norm(arm_vec) + 1e-6)
-        cos_arm_vert = np.clip(cos_arm_vert, -1, 1)
-        arm_to_vertical = math.degrees(math.acos(cos_arm_vert))
-
-        # Arm to spine
-        cos_arm_spine = np.dot(arm_vec, spine_vec) / (np.linalg.norm(arm_vec) * np.linalg.norm(spine_vec) + 1e-6)
-        cos_arm_spine = np.clip(cos_arm_spine, -1, 1)
-        arm_to_spine = math.degrees(math.acos(cos_arm_spine))
-
-        # Hip angle: knee-hip-shoulder
-        left_knee = kp_map["left_knee"]
-        hip_angle = calculate_angle(left_knee, left_hip, left_shoulder)
-
-        # Knee angle: hip-knee-ankle
-        left_ankle = kp_map["left_ankle"]
-        knee_angle = calculate_angle(left_hip, left_knee, left_ankle)
-
-        return {
-            "spineAngle": round(spine_angle, 2),
-            "armToSpineAngle": round(arm_to_spine, 2),
-            "armToVerticalAngle": round(arm_to_vertical, 2),
-            "hipAngle": round(hip_angle, 2),
-            "kneeAngle": round(knee_angle, 2),
-        }
-    except (KeyError, ZeroDivisionError):
-        return {
-            "spineAngle": 0,
-            "armToSpineAngle": 0,
-            "armToVerticalAngle": 0,
-        }
 
 
 def extract_poses(

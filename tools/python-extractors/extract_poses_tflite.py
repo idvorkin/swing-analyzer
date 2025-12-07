@@ -32,6 +32,8 @@ from typing import Optional
 import cv2
 import numpy as np
 
+from angle_utils import compute_angles
+
 # Try tflite-runtime first (lighter), fall back to full tensorflow
 try:
     from tflite_runtime.interpreter import Interpreter
@@ -202,60 +204,6 @@ class BlazePoseDetector:
         except Exception as e:
             print(f"Error parsing landmarks: {e}")
             return None
-
-
-def compute_angles(keypoints: list[dict]) -> dict:
-    """Compute angles for swing analysis."""
-    kp_map = {kp["name"]: kp for kp in keypoints}
-
-    try:
-        ls = kp_map["left_shoulder"]
-        rs = kp_map["right_shoulder"]
-        lh = kp_map["left_hip"]
-        rh = kp_map["right_hip"]
-        lw = kp_map["left_wrist"]
-        lk = kp_map["left_knee"]
-        la = kp_map["left_ankle"]
-
-        # Midpoints
-        shoulder_mid = {"x": (ls["x"] + rs["x"]) / 2, "y": (ls["y"] + rs["y"]) / 2}
-        hip_mid = {"x": (lh["x"] + rh["x"]) / 2, "y": (lh["y"] + rh["y"]) / 2}
-
-        # Spine angle (from vertical)
-        spine_vec = np.array([shoulder_mid["x"] - hip_mid["x"], shoulder_mid["y"] - hip_mid["y"]])
-        vertical = np.array([0, -1])
-        cos_spine = np.dot(spine_vec, vertical) / (np.linalg.norm(spine_vec) + 1e-6)
-        spine_angle = math.degrees(math.acos(np.clip(cos_spine, -1, 1)))
-
-        # Arm angles
-        arm_vec = np.array([lw["x"] - shoulder_mid["x"], lw["y"] - shoulder_mid["y"]])
-        cos_arm_vert = np.dot(arm_vec, vertical) / (np.linalg.norm(arm_vec) + 1e-6)
-        arm_to_vertical = math.degrees(math.acos(np.clip(cos_arm_vert, -1, 1)))
-
-        cos_arm_spine = np.dot(arm_vec, spine_vec) / (np.linalg.norm(arm_vec) * np.linalg.norm(spine_vec) + 1e-6)
-        arm_to_spine = math.degrees(math.acos(np.clip(cos_arm_spine, -1, 1)))
-
-        # Hip angle (knee-hip-shoulder)
-        v1 = np.array([lk["x"] - lh["x"], lk["y"] - lh["y"]])
-        v2 = np.array([ls["x"] - lh["x"], ls["y"] - lh["y"]])
-        cos_hip = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-6)
-        hip_angle = math.degrees(math.acos(np.clip(cos_hip, -1, 1)))
-
-        # Knee angle (hip-knee-ankle)
-        v1 = np.array([lh["x"] - lk["x"], lh["y"] - lk["y"]])
-        v2 = np.array([la["x"] - lk["x"], la["y"] - lk["y"]])
-        cos_knee = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-6)
-        knee_angle = math.degrees(math.acos(np.clip(cos_knee, -1, 1)))
-
-        return {
-            "spineAngle": round(spine_angle, 2),
-            "armToSpineAngle": round(arm_to_spine, 2),
-            "armToVerticalAngle": round(arm_to_vertical, 2),
-            "hipAngle": round(hip_angle, 2),
-            "kneeAngle": round(knee_angle, 2),
-        }
-    except (KeyError, ZeroDivisionError):
-        return {"spineAngle": 0, "armToSpineAngle": 0, "armToVerticalAngle": 0}
 
 
 def extract_poses(
