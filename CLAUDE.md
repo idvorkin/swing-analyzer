@@ -98,9 +98,30 @@ This keeps your branch up-to-date with changes from other agents.
 
 **Merging to main** (on origin/idvorkin-ai-tools):
 ```bash
-git checkout main && git merge agent/swing-N && git push
+git checkout main && git merge agent/swing-N
+# If merge had conflicts, run tests before pushing:
+npx playwright test && npx tsc --noEmit
+git push --no-verify
 ```
-Agents can merge directly to main on origin. For upstream (idvorkin), create a PR.
+
+**Merge criteria:**
+- Feature/task is complete
+- Rebased on latest main (no conflicts, or conflicts resolved)
+- If merge had conflicts: **must run test suite before pushing**
+- Use `--no-verify` on push (pre-push hook blocks main, but origin merges are allowed)
+
+**If merge conflicts occur:**
+1. Resolve conflicts carefully
+2. Run full test suite: `npx playwright test && npx tsc --noEmit`
+3. Only push if tests pass
+4. If tests fail, fix issues before pushing
+
+**If main is broken after merge:**
+1. `git revert HEAD && git push --no-verify` (quick rollback)
+2. Fix the issue on your agent branch
+3. Re-merge after fixing
+
+For upstream (idvorkin), create a PR instead of direct merge.
 
 ### Collaborative Feature Branches
 
@@ -154,11 +175,13 @@ cd ~/gits/agent-dashboard && npm run dev
 Actions requiring explicit "YES" approval from user:
 
 - **Removing broken tests** - Fix the test or code, never delete failing tests
-- **Pushing to main** - Always use feature branches and PRs
+- **Pushing to upstream (idvorkin repo)** - Requires PR and human approval
 - **Force pushing** - Can destroy history
-- **Accepting/merging PRs** - Human must review and approve
 - **Any action that loses work** - Deleting branches with unmerged commits, hard resets
 - **`bd init --force`** - Erases the beads database and rebuilds from JSONL. The database should already exist from clone.
+
+**Allowed without approval:**
+- Merging to origin/main (idvorkin-ai-tools) - this is the agent working repo
 
 **Encouraged** (not losing work): Deleting unused functions/files, removing commented-out code, cleaning unused imports - these are preserved in git history.
 
@@ -320,7 +343,7 @@ done | sort -r
 
 **📦 MINIMAL PRs**: When creating PRs to upstream, include ONLY the changes the user explicitly requested. Do not bundle unrelated changes from the branch. If unsure what to include, ask the user to confirm scope before creating the PR.
 
-**🚫 NO --no-verify**: Never use `git commit --no-verify` unless absolutely necessary.
+**🚫 NO --no-verify on commits**: Never use `git commit --no-verify` unless absolutely necessary. (Note: `git push --no-verify` IS required for origin/main merges due to pre-push hook.)
 
 **🧹 LINT FIRST**: Before making code changes, run pre-commit on affected files to fix existing lint issues. Commit those fixes first, then make your actual change. This keeps your logic commits clean and focused.
 
