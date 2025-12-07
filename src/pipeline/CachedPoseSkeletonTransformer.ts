@@ -15,7 +15,7 @@
 
 import { type Observable, of } from 'rxjs';
 import { Skeleton } from '../models/Skeleton';
-import { CocoBodyParts, type PoseKeypoint } from '../types';
+import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
 import { LivePoseCache } from './LivePoseCache';
 import type {
@@ -148,10 +148,10 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
    * Calculate spine angle from keypoints
    */
   private calculateSpineAngle(keypoints: PoseKeypoint[]): number {
-    const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
-    const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
-    const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
-    const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+    const leftShoulder = keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
+    const rightShoulder = keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
+    const leftHip = keypoints[MediaPipeBodyParts.LEFT_HIP];
+    const rightHip = keypoints[MediaPipeBodyParts.RIGHT_HIP];
 
     if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) {
       console.warn(
@@ -180,10 +180,10 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
    */
   private hasRequiredKeypoints(keypoints: PoseKeypoint[]): boolean {
     const requiredIndices = [
-      CocoBodyParts.LEFT_SHOULDER,
-      CocoBodyParts.RIGHT_SHOULDER,
-      CocoBodyParts.LEFT_HIP,
-      CocoBodyParts.RIGHT_HIP,
+      MediaPipeBodyParts.LEFT_SHOULDER,
+      MediaPipeBodyParts.RIGHT_SHOULDER,
+      MediaPipeBodyParts.LEFT_HIP,
+      MediaPipeBodyParts.RIGHT_HIP,
     ];
     return requiredIndices.every((index) => {
       const point = keypoints[index];

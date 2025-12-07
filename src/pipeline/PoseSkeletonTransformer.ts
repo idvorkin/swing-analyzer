@@ -8,8 +8,7 @@ import {
   type ModelConfig,
 } from '../config/modelConfig';
 import { Skeleton } from '../models/Skeleton';
-import { CocoBodyParts, type PoseKeypoint, type PoseResult } from '../types';
-import { normalizeToCocoFormat } from './KeypointAdapter';
+import { MediaPipeBodyParts, type PoseKeypoint, type PoseResult } from '../types';
 import type {
   FrameEvent,
   SkeletonEvent,
@@ -26,26 +25,42 @@ export interface PoseEvent {
 }
 
 /**
- * Defines body part connections for the skeleton
+ * Defines body part connections for the skeleton (MediaPipe 33-point format)
  */
 export const SKELETON_CONNECTIONS = [
   // Torso
-  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.RIGHT_SHOULDER],
-  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_HIP],
-  [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_HIP],
-  [CocoBodyParts.LEFT_HIP, CocoBodyParts.RIGHT_HIP],
+  [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.RIGHT_SHOULDER],
+  [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.LEFT_HIP],
+  [MediaPipeBodyParts.RIGHT_SHOULDER, MediaPipeBodyParts.RIGHT_HIP],
+  [MediaPipeBodyParts.LEFT_HIP, MediaPipeBodyParts.RIGHT_HIP],
 
   // Arms
-  [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_ELBOW],
-  [CocoBodyParts.LEFT_ELBOW, CocoBodyParts.LEFT_WRIST],
-  [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_ELBOW],
-  [CocoBodyParts.RIGHT_ELBOW, CocoBodyParts.RIGHT_WRIST],
+  [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.LEFT_ELBOW],
+  [MediaPipeBodyParts.LEFT_ELBOW, MediaPipeBodyParts.LEFT_WRIST],
+  [MediaPipeBodyParts.RIGHT_SHOULDER, MediaPipeBodyParts.RIGHT_ELBOW],
+  [MediaPipeBodyParts.RIGHT_ELBOW, MediaPipeBodyParts.RIGHT_WRIST],
 
   // Legs
-  [CocoBodyParts.LEFT_HIP, CocoBodyParts.LEFT_KNEE],
-  [CocoBodyParts.LEFT_KNEE, CocoBodyParts.LEFT_ANKLE],
-  [CocoBodyParts.RIGHT_HIP, CocoBodyParts.RIGHT_KNEE],
-  [CocoBodyParts.RIGHT_KNEE, CocoBodyParts.RIGHT_ANKLE],
+  [MediaPipeBodyParts.LEFT_HIP, MediaPipeBodyParts.LEFT_KNEE],
+  [MediaPipeBodyParts.LEFT_KNEE, MediaPipeBodyParts.LEFT_ANKLE],
+  [MediaPipeBodyParts.RIGHT_HIP, MediaPipeBodyParts.RIGHT_KNEE],
+  [MediaPipeBodyParts.RIGHT_KNEE, MediaPipeBodyParts.RIGHT_ANKLE],
+
+  // Hands (new in 33-point format)
+  [MediaPipeBodyParts.LEFT_WRIST, MediaPipeBodyParts.LEFT_PINKY],
+  [MediaPipeBodyParts.LEFT_WRIST, MediaPipeBodyParts.LEFT_INDEX],
+  [MediaPipeBodyParts.LEFT_WRIST, MediaPipeBodyParts.LEFT_THUMB],
+  [MediaPipeBodyParts.RIGHT_WRIST, MediaPipeBodyParts.RIGHT_PINKY],
+  [MediaPipeBodyParts.RIGHT_WRIST, MediaPipeBodyParts.RIGHT_INDEX],
+  [MediaPipeBodyParts.RIGHT_WRIST, MediaPipeBodyParts.RIGHT_THUMB],
+
+  // Feet (new in 33-point format)
+  [MediaPipeBodyParts.LEFT_ANKLE, MediaPipeBodyParts.LEFT_HEEL],
+  [MediaPipeBodyParts.LEFT_HEEL, MediaPipeBodyParts.LEFT_FOOT_INDEX],
+  [MediaPipeBodyParts.LEFT_ANKLE, MediaPipeBodyParts.LEFT_FOOT_INDEX],
+  [MediaPipeBodyParts.RIGHT_ANKLE, MediaPipeBodyParts.RIGHT_HEEL],
+  [MediaPipeBodyParts.RIGHT_HEEL, MediaPipeBodyParts.RIGHT_FOOT_INDEX],
+  [MediaPipeBodyParts.RIGHT_ANKLE, MediaPipeBodyParts.RIGHT_FOOT_INDEX],
 ];
 
 /**
@@ -62,9 +77,6 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
 
   // Model configuration
   private config: ModelConfig;
-
-  // Keypoint format produced by the model
-  private keypointFormat: 'coco' | 'mediapipe' = 'coco';
 
   // Model name for logging
   private modelName: string = '';
@@ -93,21 +105,21 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       // Use factory to create the detector based on config
       const result = await PoseDetectorFactory.create(this.config);
       this.detector = result.detector;
-      this.keypointFormat = result.keypointFormat;
       this.modelName = result.modelName;
 
-      console.log(`Pose detector initialized: ${this.modelName}`);
+      console.log(`Pose detector initialized: ${this.modelName} (MediaPipe 33-keypoint format)`);
     } catch (error) {
       console.error('Failed to initialize primary model:', error);
 
       // Try a fallback model (PoseNet)
+      // Note: PoseNet uses COCO-17 format but our code now expects MediaPipe-33
+      // This fallback may not work correctly - consider removing in future
       try {
         this.detector = await poseDetection.createDetector(
           poseDetection.SupportedModels.PoseNet
         );
-        this.keypointFormat = 'coco';
-        this.modelName = 'PoseNet (fallback)';
-        console.log('Fallback model initialized');
+        this.modelName = 'PoseNet (fallback - may have issues with 17-point format)';
+        console.warn('Fallback model initialized - PoseNet uses 17-point format, expecting 33-point');
       } catch (fallbackError) {
         console.error('Failed to initialize fallback model:', fallbackError);
         throw new Error('Could not initialize any pose detection model');
@@ -153,10 +165,8 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       }
 
       const pose = poses[0];
-      const keypoints =
-        this.keypointFormat === 'mediapipe'
-          ? normalizeToCocoFormat(pose.keypoints as PoseKeypoint[])
-          : (pose.keypoints as PoseKeypoint[]);
+      // Use raw keypoints directly (MediaPipe 33-point format)
+      const keypoints = pose.keypoints as PoseKeypoint[];
 
       return {
         pose: { keypoints, score: pose.score },
@@ -208,12 +218,8 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
 
         // Use the first detected pose (we're focused on single person)
         const pose = poses[0];
-
-        // Normalize keypoints to COCO format if using BlazePose (MediaPipe format)
-        const keypoints =
-          this.keypointFormat === 'mediapipe'
-            ? normalizeToCocoFormat(pose.keypoints as PoseKeypoint[])
-            : (pose.keypoints as PoseKeypoint[]);
+        // Use raw keypoints directly (MediaPipe 33-point format)
+        const keypoints = pose.keypoints as PoseKeypoint[];
 
         return {
           pose: {
@@ -264,10 +270,10 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
    */
   private calculateSpineVertical(keypoints: PoseKeypoint[]): number {
     // 1. First approach: Use shoulders and hips if available (best)
-    const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
-    const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
-    const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
-    const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+    const leftShoulder = keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
+    const rightShoulder = keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
+    const leftHip = keypoints[MediaPipeBodyParts.LEFT_HIP];
+    const rightHip = keypoints[MediaPipeBodyParts.RIGHT_HIP];
 
     // Safe array of points that exist and are visible
     const safeShoulders = [];
@@ -301,9 +307,9 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
     }
 
     // 2. Second approach: Use face orientation as fallback
-    const nose = keypoints[CocoBodyParts.NOSE];
-    const leftEye = keypoints[CocoBodyParts.LEFT_EYE];
-    const rightEye = keypoints[CocoBodyParts.RIGHT_EYE];
+    const nose = keypoints[MediaPipeBodyParts.NOSE];
+    const leftEye = keypoints[MediaPipeBodyParts.LEFT_EYE];
+    const rightEye = keypoints[MediaPipeBodyParts.RIGHT_EYE];
 
     if (nose && (leftEye || rightEye) && this.isPointVisible(nose)) {
       // Use visible eye, or average of both if available
@@ -351,12 +357,12 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
    * Check if the required keypoints for pose analysis are visible
    */
   private hasRequiredKeypoints(keypoints: PoseKeypoint[]): boolean {
-    // Required keypoints for spine angle calculation
+    // Required keypoints for spine angle calculation (MediaPipe indices)
     const requiredParts = [
-      CocoBodyParts.LEFT_SHOULDER,
-      CocoBodyParts.RIGHT_SHOULDER,
-      CocoBodyParts.LEFT_HIP,
-      CocoBodyParts.RIGHT_HIP,
+      MediaPipeBodyParts.LEFT_SHOULDER,
+      MediaPipeBodyParts.RIGHT_SHOULDER,
+      MediaPipeBodyParts.LEFT_HIP,
+      MediaPipeBodyParts.RIGHT_HIP,
     ];
 
     // Check if all required keypoints are visible

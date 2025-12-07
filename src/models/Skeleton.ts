@@ -421,45 +421,46 @@ export class Skeleton {
     }
 
     // Direct access for common points by their standard names
+    // MediaPipe (33-point) indices are tried first as that's the default format
     if (name === 'rightShoulder' || name === 'RIGHT_SHOULDER') {
       return (
-        this.keypoints[CocoBodyParts.RIGHT_SHOULDER] ||
-        this.keypoints[MediaPipeBodyParts.RIGHT_SHOULDER]
+        this.keypoints[MediaPipeBodyParts.RIGHT_SHOULDER] ||
+        this.keypoints[CocoBodyParts.RIGHT_SHOULDER]
       );
     }
 
     if (name === 'leftShoulder' || name === 'LEFT_SHOULDER') {
       return (
-        this.keypoints[CocoBodyParts.LEFT_SHOULDER] ||
-        this.keypoints[MediaPipeBodyParts.LEFT_SHOULDER]
+        this.keypoints[MediaPipeBodyParts.LEFT_SHOULDER] ||
+        this.keypoints[CocoBodyParts.LEFT_SHOULDER]
       );
     }
 
     if (name === 'rightElbow' || name === 'RIGHT_ELBOW') {
       return (
-        this.keypoints[CocoBodyParts.RIGHT_ELBOW] ||
-        this.keypoints[MediaPipeBodyParts.RIGHT_ELBOW]
+        this.keypoints[MediaPipeBodyParts.RIGHT_ELBOW] ||
+        this.keypoints[CocoBodyParts.RIGHT_ELBOW]
       );
     }
 
     if (name === 'leftElbow' || name === 'LEFT_ELBOW') {
       return (
-        this.keypoints[CocoBodyParts.LEFT_ELBOW] ||
-        this.keypoints[MediaPipeBodyParts.LEFT_ELBOW]
+        this.keypoints[MediaPipeBodyParts.LEFT_ELBOW] ||
+        this.keypoints[CocoBodyParts.LEFT_ELBOW]
       );
     }
 
     if (name === 'rightHip' || name === 'RIGHT_HIP') {
       return (
-        this.keypoints[CocoBodyParts.RIGHT_HIP] ||
-        this.keypoints[MediaPipeBodyParts.RIGHT_HIP]
+        this.keypoints[MediaPipeBodyParts.RIGHT_HIP] ||
+        this.keypoints[CocoBodyParts.RIGHT_HIP]
       );
     }
 
     if (name === 'leftHip' || name === 'LEFT_HIP') {
       return (
-        this.keypoints[CocoBodyParts.LEFT_HIP] ||
-        this.keypoints[MediaPipeBodyParts.LEFT_HIP]
+        this.keypoints[MediaPipeBodyParts.LEFT_HIP] ||
+        this.keypoints[CocoBodyParts.LEFT_HIP]
       );
     }
 

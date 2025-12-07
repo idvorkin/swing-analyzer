@@ -1,6 +1,6 @@
 import type { ModelConfig } from '../config/modelConfig';
 import { Skeleton } from '../models/Skeleton';
-import { CocoBodyParts, type PoseKeypoint } from '../types';
+import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
 import { CachedPoseSkeletonTransformer } from './CachedPoseSkeletonTransformer';
 import type { LivePoseCache } from './LivePoseCache';
@@ -148,10 +148,10 @@ function buildSkeletonFromFrame(keypoints: PoseKeypoint[]): Skeleton | null {
   }
 
   // Calculate spine angle
-  const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
-  const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
-  const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
-  const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+  const leftShoulder = keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
+  const rightShoulder = keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
+  const leftHip = keypoints[MediaPipeBodyParts.LEFT_HIP];
+  const rightHip = keypoints[MediaPipeBodyParts.RIGHT_HIP];
 
   let spineAngle = 0;
   if (leftShoulder && rightShoulder && leftHip && rightHip) {
@@ -166,10 +166,10 @@ function buildSkeletonFromFrame(keypoints: PoseKeypoint[]): Skeleton | null {
 
   // Check visibility
   const requiredIndices = [
-    CocoBodyParts.LEFT_SHOULDER,
-    CocoBodyParts.RIGHT_SHOULDER,
-    CocoBodyParts.LEFT_HIP,
-    CocoBodyParts.RIGHT_HIP,
+    MediaPipeBodyParts.LEFT_SHOULDER,
+    MediaPipeBodyParts.RIGHT_SHOULDER,
+    MediaPipeBodyParts.LEFT_HIP,
+    MediaPipeBodyParts.RIGHT_HIP,
   ];
   const hasVisibleKeypoints = requiredIndices.every((index) => {
     const point = keypoints[index];
