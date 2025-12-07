@@ -277,11 +277,19 @@ main {
 .rep-nav-strip {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px;
   padding: 10px 16px;
   background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Left and right button groups */
+.rep-nav-left,
+.rep-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .rep-nav-btn {

@@ -186,33 +186,33 @@ const VideoSectionV2: React.FC = () => {
       {/* Rep navigation strip - shown when reps are detected */}
       {repCount > 0 && currentVideoFile && (
         <div className="rep-nav-strip">
-          {/* Double arrow: previous rep */}
-          <button
-            type="button"
-            className="rep-nav-btn rep-nav-btn-double"
-            onClick={navigateToPreviousRep}
-            disabled={appState.currentRepIndex <= 0}
-            aria-label="Previous rep"
-            title="Previous rep"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M18.41 7.41L17 6l-6 6 6 6 1.41-1.41L13.83 12z" />
-              <path d="M12.41 7.41L11 6l-6 6 6 6 1.41-1.41L7.83 12z" />
-            </svg>
-          </button>
-
-          {/* Single arrow: previous checkpoint */}
-          <button
-            type="button"
-            className="rep-nav-btn"
-            onClick={navigateToPreviousCheckpoint}
-            aria-label="Previous checkpoint"
-            title="Previous checkpoint"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-            </svg>
-          </button>
+          {/* Left buttons: previous rep, previous checkpoint */}
+          <div className="rep-nav-left">
+            <button
+              type="button"
+              className="rep-nav-btn rep-nav-btn-double"
+              onClick={navigateToPreviousRep}
+              disabled={appState.currentRepIndex <= 0}
+              aria-label="Previous rep"
+              title="Previous rep"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.41 7.41L17 6l-6 6 6 6 1.41-1.41L13.83 12z" />
+                <path d="M12.41 7.41L11 6l-6 6 6 6 1.41-1.41L7.83 12z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="rep-nav-btn"
+              onClick={navigateToPreviousCheckpoint}
+              aria-label="Previous checkpoint"
+              title="Previous checkpoint"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+              </svg>
+            </button>
+          </div>
 
           {/* Center: Rep and checkpoint display */}
           <span className="rep-nav-display">
@@ -223,33 +223,33 @@ const VideoSectionV2: React.FC = () => {
             </span>
           </span>
 
-          {/* Single arrow: next checkpoint */}
-          <button
-            type="button"
-            className="rep-nav-btn"
-            onClick={navigateToNextCheckpoint}
-            aria-label="Next checkpoint"
-            title="Next checkpoint"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-            </svg>
-          </button>
-
-          {/* Double arrow: next rep */}
-          <button
-            type="button"
-            className="rep-nav-btn rep-nav-btn-double"
-            onClick={navigateToNextRep}
-            disabled={appState.currentRepIndex >= repCount - 1}
-            aria-label="Next rep"
-            title="Next rep"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M5.59 7.41L7 6l6 6-6 6-1.41-1.41L10.17 12z" />
-              <path d="M11.59 7.41L13 6l6 6-6 6-1.41-1.41L16.17 12z" />
-            </svg>
-          </button>
+          {/* Right buttons: next checkpoint, next rep */}
+          <div className="rep-nav-right">
+            <button
+              type="button"
+              className="rep-nav-btn"
+              onClick={navigateToNextCheckpoint}
+              aria-label="Next checkpoint"
+              title="Next checkpoint"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="rep-nav-btn rep-nav-btn-double"
+              onClick={navigateToNextRep}
+              disabled={appState.currentRepIndex >= repCount - 1}
+              aria-label="Next rep"
+              title="Next rep"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M5.59 7.41L7 6l6 6-6 6-1.41-1.41L10.17 12z" />
+                <path d="M11.59 7.41L13 6l6 6-6 6-1.41-1.41L16.17 12z" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 
