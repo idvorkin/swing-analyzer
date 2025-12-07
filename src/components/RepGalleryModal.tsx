@@ -32,6 +32,7 @@ export function RepGalleryModal({
 }: RepGalleryModalProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedReps, setSelectedReps] = useState<Set<number>>(new Set());
+  const [focusedPhase, setFocusedPhase] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Get phase names dynamically from the data (exercise-agnostic)
@@ -64,8 +65,14 @@ export function RepGalleryModal({
     if (!isOpen) {
       setSelectedReps(new Set());
       setViewMode('grid');
+      setFocusedPhase(null);
     }
   }, [isOpen]);
+
+  // Toggle focused phase (click again to unfocus)
+  const handlePhaseClick = useCallback((phase: string) => {
+    setFocusedPhase((prev) => (prev === phase ? null : phase));
+  }, []);
 
   // Escape key handler
   useEffect(() => {
@@ -177,19 +184,22 @@ export function RepGalleryModal({
               No reps recorded yet. Complete some reps to see them here.
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="gallery-grid" ref={gridRef}>
+            <div className={`gallery-grid ${focusedPhase ? 'gallery-grid--focused' : ''}`} ref={gridRef}>
               {/* Header row with phase names */}
               <div className="gallery-grid-header">
                 <div className="gallery-grid-cell gallery-grid-cell--header gallery-grid-cell--rep">
                   Rep
                 </div>
                 {phaseNames.map((phase) => (
-                  <div
+                  <button
+                    type="button"
                     key={phase}
-                    className="gallery-grid-cell gallery-grid-cell--header"
+                    className={`gallery-grid-cell gallery-grid-cell--header gallery-phase-btn ${focusedPhase === phase ? 'gallery-phase-btn--active' : ''}`}
+                    onClick={() => handlePhaseClick(phase)}
+                    title={focusedPhase === phase ? 'Click to show all phases' : `Focus on ${PHASE_LABELS[phase] || phase}`}
                   >
                     {PHASE_LABELS[phase] || phase}
-                  </div>
+                  </button>
                 ))}
               </div>
 
@@ -220,18 +230,23 @@ export function RepGalleryModal({
                     {/* Phase cells */}
                     {phaseNames.map((phase) => {
                       const position = positions?.get(phase);
+                      const isFocused = focusedPhase === phase;
+                      const isMinimized = focusedPhase && !isFocused;
                       return (
-                        <div key={phase} className="gallery-grid-cell">
+                        <div
+                          key={phase}
+                          className={`gallery-grid-cell ${isFocused ? 'gallery-grid-cell--focused' : ''} ${isMinimized ? 'gallery-grid-cell--minimized' : ''}`}
+                        >
                           {position?.frameImage ? (
                             <ThumbnailCanvas
                               position={position}
                               onClick={() =>
                                 handleThumbnailClick(repNum, position)
                               }
-                              size="small"
+                              size={isFocused ? 'large' : isMinimized ? 'mini' : 'small'}
                             />
                           ) : (
-                            <div className="gallery-thumbnail-empty">—</div>
+                            <div className={`gallery-thumbnail-empty ${isMinimized ? 'gallery-thumbnail-empty--mini' : ''}`}>—</div>
                           )}
                         </div>
                       );
@@ -290,7 +305,7 @@ export function RepGalleryModal({
         <div className="gallery-footer">
           {viewMode === 'grid' ? (
             <span className="gallery-hint">
-              Click thumbnails to seek video. Select reps to compare.
+              Click phase headers to focus. Click thumbnails to seek. Select reps to compare.
             </span>
           ) : (
             <span className="gallery-hint">
@@ -311,7 +326,7 @@ function ThumbnailCanvas({
 }: {
   position: PositionCandidate;
   onClick: () => void;
-  size: 'small' | 'large';
+  size: 'small' | 'large' | 'mini';
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
