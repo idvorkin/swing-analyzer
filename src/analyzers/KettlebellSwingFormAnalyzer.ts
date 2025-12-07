@@ -10,7 +10,7 @@
  *
  * Phase meanings:
  * - TOP: Arms at peak height, standing upright (lockout position)
- * - CONNECT: Hinge initiating, arms approaching body
+ * - CONNECT: Arms at vertical (0°), connecting to body before hinge
  * - BOTTOM: Deepest hinge, arms behind body
  * - RELEASE: Arms leaving body after hip snap
  */
@@ -41,13 +41,13 @@ export interface SwingThresholds {
   bottomSpineMin: number; // Spine must be above this (hinged)
   bottomHipMax: number; // Hip must be below this (hinged)
 
-  // CONNECT thresholds (hinge initiation)
-  connectArmMax: number; // Arm dropping toward body
-  connectSpineMin: number; // Spine starting to tilt
+  // CONNECT thresholds (arms connecting to body before hinge)
+  connectArmMax: number; // Arm near vertical (0°)
+  connectSpineMax: number; // Spine still upright (before hinge)
 
-  // RELEASE thresholds (arms leaving body)
-  releaseArmMin: number; // Arm starting to rise
-  releaseSpineMax: number; // Spine should be vertical
+  // RELEASE thresholds (arms crossing vertical on way up from hinge)
+  releaseArmMax: number; // Arm crossing vertical (near 0°)
+  releaseSpineMax: number; // Spine returning to upright
 }
 
 /**
@@ -61,9 +61,13 @@ const DEFAULT_THRESHOLDS: SwingThresholds = {
   bottomArmMax: 10,
   bottomSpineMin: 35,
   bottomHipMax: 140,
-  connectArmMax: 30,
-  connectSpineMin: 20,
-  releaseArmMin: 10,
+  // CONNECT: arms approaching vertical while spine still upright (before hinge)
+  // Threshold relaxed to capture the phase even with imperfect form
+  // Quality scoring evaluates how close to vertical (0°) the arms actually were
+  connectArmMax: 25,
+  connectSpineMax: 25,
+  // RELEASE: arms crossing vertical on way up from hinge (mirrors CONNECT)
+  releaseArmMax: 25,
   releaseSpineMax: 25,
 };
 
@@ -136,12 +140,15 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
    * Votes across multiple hinged frames to ensure stability.
    */
   private detectDominantArm(skeleton: Skeleton): void {
-    // Once locked, don't change
+    // Once locked, don't change (intentionally no logging - too noisy)
     if (this.dominantArm !== null) return;
 
     // Only detect during hinged position (spine > 30°)
     const spine = skeleton.getSpineAngle();
-    if (spine <= 30) return;
+    if (spine <= 30) {
+      // Not hinged yet - skip detection (this is normal during TOP/RELEASE phases)
+      return;
+    }
 
     // Need facing direction to determine front
     const facing = skeleton.getFacingDirection();
@@ -355,13 +362,17 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
       case 'top':
         return angles.arm; // Highest arm = best lockout
       case 'connect':
-        return 90 - angles.arm; // Lower arm = better (arms down when hinge starts)
+        return 90 - angles.arm; // Lower arm = better (arms vertical before hinge)
       case 'bottom':
         return angles.spine; // Highest spine = deepest hinge
       case 'release':
         return 90 - angles.spine; // Lower spine = better (vertical when arms release)
-      default:
+      default: {
+        // Exhaustive check - TypeScript will error if a SwingPhase is unhandled
+        const _exhaustiveCheck: never = phase;
+        console.error(`calculatePeakScore: Unhandled phase "${_exhaustiveCheck}"`);
         return 0;
+      }
     }
   }
 
@@ -374,21 +385,23 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
 
     if (peak) {
       this.currentRepPeaks[phase] = peak;
+    } else {
+      console.debug(`finalizePhasePeak: No peak captured for "${phase}" phase`);
     }
   }
 
   /**
    * Check if we should transition from TOP to CONNECT
    *
-   * Uses absolute arm angle to work with mirrored video.
-   * Arm dropping toward body = angle decreasing toward 0.
+   * CONNECT = arms at 0° (vertical) while spine still upright.
+   * This is the moment arms "connect" with the body before the hinge.
    */
   private shouldTransitionToConnect(arm: number, spine: number): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
-    // Use absolute value - arm direction doesn't matter, only magnitude
+    // Arms near vertical (|arm| < 15°) AND spine still upright (< 25°)
     return (
       Math.abs(arm) < this.thresholds.connectArmMax &&
-      spine > this.thresholds.connectSpineMin
+      spine < this.thresholds.connectSpineMax
     );
   }
 
@@ -416,14 +429,14 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   /**
    * Check if we should transition from BOTTOM to RELEASE
    *
-   * Uses absolute arm angle to work with mirrored video.
-   * Arm rising from body = angle increasing from 0.
+   * RELEASE = arms crossing vertical (0°) on the way UP from the hinge.
+   * Mirrors CONNECT which is arms crossing vertical on the way DOWN.
    */
   private shouldTransitionToRelease(arm: number, spine: number): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
-    // Use absolute value - arm direction doesn't matter
+    // Arms crossing vertical (near 0°) AND spine returning to upright
     return (
-      Math.abs(arm) > this.thresholds.releaseArmMin &&
+      Math.abs(arm) < this.thresholds.releaseArmMax &&
       spine < this.thresholds.releaseSpineMax
     );
   }
