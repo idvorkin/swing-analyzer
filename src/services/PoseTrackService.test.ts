@@ -1,13 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PoseTrackFile } from '../types/posetrack';
 import {
+  clearAllPoseTracks,
+  clearMemoryStore,
   createPoseTrackMetadata,
   estimatePoseTrackSize,
   formatFileSize,
   generatePoseTrackFilename,
+  getPoseTrackStorageMode,
   POSETRACK_EXTENSION,
   parsePoseTrack,
   serializePoseTrack,
+  setPoseTrackStorageMode,
   validatePoseTrack,
 } from './PoseTrackService';
 
@@ -290,6 +294,42 @@ describe('PoseTrackService', () => {
     it('formats megabytes', () => {
       expect(formatFileSize(1024 * 1024)).toBe('1.0 MB');
       expect(formatFileSize(2.5 * 1024 * 1024)).toBe('2.5 MB');
+    });
+  });
+
+  describe('storage mode', () => {
+    beforeEach(() => {
+      clearMemoryStore();
+      // Reset to memory mode for isolation
+      setPoseTrackStorageMode('memory', false);
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('can be set to memory mode', () => {
+      setPoseTrackStorageMode('memory', false);
+      expect(getPoseTrackStorageMode()).toBe('memory');
+    });
+
+    it('can be set to indexeddb mode', () => {
+      setPoseTrackStorageMode('indexeddb', false);
+      expect(getPoseTrackStorageMode()).toBe('indexeddb');
+    });
+  });
+
+  describe('clearAllPoseTracks', () => {
+    beforeEach(() => {
+      clearMemoryStore();
+      setPoseTrackStorageMode('memory', false);
+    });
+
+    it('clears memory store when in memory mode', async () => {
+      setPoseTrackStorageMode('memory', false);
+      // Should complete without error
+      await clearAllPoseTracks();
+      expect(getPoseTrackStorageMode()).toBe('memory');
     });
   });
 });

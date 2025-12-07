@@ -42,6 +42,15 @@ export interface PoseTrackMetadata {
   /** Specific version of the model (e.g., "1.0.0") */
   modelVersion: string;
 
+  /** BlazePose variant used (lite, full, heavy) */
+  modelVariant?: 'lite' | 'full' | 'heavy';
+
+  /** Git SHA of the build that extracted this pose track */
+  buildSha?: string;
+
+  /** ISO 8601 timestamp of when the build was created */
+  buildTimestamp?: string;
+
   /** SHA-256 hash of the source video file for matching */
   sourceVideoHash: string;
 
@@ -138,6 +147,9 @@ export interface PoseTrackFile {
 export interface PoseExtractionOptions {
   /** Model to use for extraction */
   model: PoseModel;
+
+  /** BlazePose variant (lite, full, heavy) */
+  modelVariant?: 'lite' | 'full' | 'heavy';
 
   /** Whether to pre-compute angles during extraction */
   precomputeAngles?: boolean;

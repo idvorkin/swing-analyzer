@@ -20,22 +20,69 @@ const POSETRACK_DB_VERSION = 1;
 
 /**
  * Storage mode for pose tracks
- * - 'memory': Session-only, cleared on page reload (default)
- * - 'indexeddb': Persistent across page loads
+ * - 'memory': Session-only, cleared on page reload
+ * - 'indexeddb': Persistent across page loads (default)
  */
 export type PoseTrackStorageMode = 'memory' | 'indexeddb';
 
 // In-memory storage for session-only mode
 const memoryStore = new Map<string, PoseTrackFile>();
 
-// Current storage mode - defaults to memory for simplicity
-let currentStorageMode: PoseTrackStorageMode = 'memory';
+// Storage key for persisting the user's preference
+const STORAGE_MODE_KEY = 'swing-analyzer-pose-cache-mode';
+
+/**
+ * Load storage mode preference from localStorage
+ */
+function loadStorageModePreference(): PoseTrackStorageMode {
+  try {
+    const saved = localStorage.getItem(STORAGE_MODE_KEY);
+    if (saved === 'memory' || saved === 'indexeddb') {
+      return saved;
+    }
+  } catch (error) {
+    // localStorage not available (private browsing, etc.)
+    console.warn(
+      '[PoseTrackService] Failed to read storage mode preference. ' +
+        'Defaulting to IndexedDB. This may occur in private browsing mode.',
+      error
+    );
+  }
+  return 'indexeddb'; // Default to persistent caching
+}
+
+/**
+ * Save storage mode preference to localStorage
+ */
+function saveStorageModePreference(mode: PoseTrackStorageMode): void {
+  try {
+    localStorage.setItem(STORAGE_MODE_KEY, mode);
+  } catch (error) {
+    // localStorage not available (private browsing, quota exceeded, etc.)
+    console.warn(
+      '[PoseTrackService] Failed to save storage mode preference. ' +
+        'The setting will not persist after page reload.',
+      error
+    );
+  }
+}
+
+// Current storage mode - defaults to indexeddb (persistent caching)
+let currentStorageMode: PoseTrackStorageMode = loadStorageModePreference();
 
 /**
  * Set the storage mode for pose tracks
+ * @param mode - The storage mode to use
+ * @param persist - Whether to save the preference to localStorage (default: true)
  */
-export function setPoseTrackStorageMode(mode: PoseTrackStorageMode): void {
+export function setPoseTrackStorageMode(
+  mode: PoseTrackStorageMode,
+  persist: boolean = true
+): void {
   currentStorageMode = mode;
+  if (persist) {
+    saveStorageModePreference(mode);
+  }
 }
 
 /**
@@ -398,6 +445,40 @@ export async function deletePoseTrackFromStorage(
 }
 
 /**
+ * Clear all pose tracks from storage
+ */
+export async function clearAllPoseTracks(): Promise<void> {
+  if (currentStorageMode === 'memory') {
+    memoryStore.clear();
+    return;
+  }
+
+  // IndexedDB mode - delete and recreate the database
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(POSETRACK_DB_NAME);
+
+    request.onerror = () => {
+      reject(new Error('Failed to clear pose track cache'));
+    };
+
+    request.onblocked = () => {
+      console.warn(
+        '[PoseTrackService] Database deletion blocked - other tabs may have it open.'
+      );
+      reject(
+        new Error(
+          'Cache clear blocked. Please close other tabs using this app and try again.'
+        )
+      );
+    };
+
+    request.onsuccess = () => {
+      resolve();
+    };
+  });
+}
+
+/**
  * List all saved pose tracks
  */
 export async function listSavedPoseTracks(): Promise<SavedPoseTrackInfo[]> {
@@ -494,6 +575,9 @@ export async function hasPoseTrackForVideo(
 export function createPoseTrackMetadata(params: {
   model: PoseModel;
   modelVersion: string;
+  modelVariant?: 'lite' | 'full' | 'heavy';
+  buildSha?: string;
+  buildTimestamp?: string;
   sourceVideoHash: string;
   sourceVideoName?: string;
   sourceVideoDuration: number;
@@ -507,6 +591,9 @@ export function createPoseTrackMetadata(params: {
     version: '1.0',
     model: params.model,
     modelVersion: params.modelVersion,
+    modelVariant: params.modelVariant,
+    buildSha: params.buildSha,
+    buildTimestamp: params.buildTimestamp,
     sourceVideoHash: params.sourceVideoHash,
     sourceVideoName: params.sourceVideoName,
     sourceVideoDuration: params.sourceVideoDuration,

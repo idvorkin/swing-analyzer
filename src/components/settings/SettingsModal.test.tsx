@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SettingsModal } from '../SettingsModal';
@@ -52,6 +58,17 @@ vi.mock('../../services/SessionRecorder', () => ({
     })),
     downloadRecording: vi.fn(),
   },
+}));
+
+// Mock PoseTrackService
+const mockClearAllPoseTracks = vi.fn().mockResolvedValue(undefined);
+const mockGetPoseTrackStorageMode = vi.fn().mockReturnValue('indexeddb');
+const mockSetPoseTrackStorageMode = vi.fn();
+
+vi.mock('../../services/PoseTrackService', () => ({
+  clearAllPoseTracks: () => mockClearAllPoseTracks(),
+  getPoseTrackStorageMode: () => mockGetPoseTrackStorageMode(),
+  setPoseTrackStorageMode: (...args: unknown[]) => mockSetPoseTrackStorageMode(...args),
 }));
 
 const defaultProps = {
@@ -165,6 +182,59 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Lite')).toBeInTheDocument();
       expect(screen.getByText('Full')).toBeInTheDocument();
       expect(screen.getByText('Heavy')).toBeInTheDocument();
+    });
+
+    it('shows Cache Poses toggle', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+      expect(screen.getByText('Cache Poses')).toBeInTheDocument();
+      expect(screen.getByLabelText('Toggle pose caching')).toBeInTheDocument();
+    });
+
+    it('toggles pose caching from enabled to disabled', () => {
+      mockGetPoseTrackStorageMode.mockReturnValue('indexeddb');
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      const toggle = screen.getByLabelText('Toggle pose caching');
+      fireEvent.click(toggle);
+
+      expect(mockSetPoseTrackStorageMode).toHaveBeenCalledWith('memory');
+    });
+
+    it('toggles pose caching from disabled to enabled', () => {
+      mockGetPoseTrackStorageMode.mockReturnValue('memory');
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      const toggle = screen.getByLabelText('Toggle pose caching');
+      fireEvent.click(toggle);
+
+      expect(mockSetPoseTrackStorageMode).toHaveBeenCalledWith('indexeddb');
+    });
+
+    it('shows Clear Cache button', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+      expect(screen.getByText('Clear Cache')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
+    });
+
+    it('calls clearAllPoseTracks when Clear button is clicked', async () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      const clearButton = screen.getByRole('button', { name: 'Clear' });
+      fireEvent.click(clearButton);
+
+      expect(mockClearAllPoseTracks).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows Failed! when clearAllPoseTracks fails', async () => {
+      mockClearAllPoseTracks.mockRejectedValueOnce(new Error('IndexedDB error'));
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      const clearButton = screen.getByRole('button', { name: 'Clear' });
+      fireEvent.click(clearButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Failed!' })).toBeInTheDocument();
+      });
     });
   });
 

@@ -8,6 +8,7 @@
 import * as poseDetection from '@tensorflow-models/pose-detection';
 import '@tensorflow/tfjs-backend-webgl';
 import * as tf from '@tensorflow/tfjs-core';
+import { BUILD_TIMESTAMP, GIT_SHA_SHORT } from '../generated_version';
 import { Skeleton } from '../models/Skeleton';
 import { normalizeToCocoFormat } from '../pipeline/KeypointAdapter';
 import type { PoseKeypoint } from '../types';
@@ -386,6 +387,9 @@ export async function extractPosesFromVideo(
     const metadata = createPoseTrackMetadata({
       model: options.model,
       modelVersion: MODEL_VERSIONS[options.model],
+      modelVariant: options.modelVariant,
+      buildSha: GIT_SHA_SHORT,
+      buildTimestamp: BUILD_TIMESTAMP,
       sourceVideoHash: videoHash,
       sourceVideoName: videoFile.name,
       sourceVideoDuration: duration,

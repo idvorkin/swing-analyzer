@@ -403,11 +403,14 @@ def extract_poses(
     # Build output
     keypoint_format = "blazepose-33" if output_format == "blazepose" else "coco-17"
     keypoint_count = 33 if output_format == "blazepose" else 17
+    # Map model_type to modelVariant
+    model_variant_map = {"landmark_lite": "lite", "landmark_full": "full", "landmark_heavy": "heavy"}
     posetrack = {
         "metadata": {
             "version": "1.0",
             "model": "blazepose",
             "modelVersion": f"tflite-{model_type}",
+            "modelVariant": model_variant_map.get(model_type, "full"),
             "keypointFormat": keypoint_format,
             "keypointCount": keypoint_count,
             "sourceVideoHash": video_hash,
@@ -418,6 +421,7 @@ def extract_poses(
             "fps": round(fps, 2),
             "videoWidth": width,
             "videoHeight": height,
+            # buildSha and buildTimestamp are optional - set by CI/CD if available
         },
         "frames": frames,
     }
