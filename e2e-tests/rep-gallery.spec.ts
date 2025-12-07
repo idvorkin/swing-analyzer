@@ -64,13 +64,13 @@ test.describe('Rep Gallery Modal', () => {
 
       // Should have phase headers (dynamically detected)
       const phaseHeaders = page.locator('.gallery-phase-btn');
-      await expect(phaseHeaders).toHaveCount(4); // top, connect, bottom, release
+      await expect(phaseHeaders).toHaveCount(4); // bottom, release, top, connect
 
-      // Verify known phases are present
-      await expect(phaseHeaders.nth(0)).toHaveText('Top');
-      await expect(phaseHeaders.nth(1)).toHaveText('Connect');
-      await expect(phaseHeaders.nth(2)).toHaveText('Bottom');
-      await expect(phaseHeaders.nth(3)).toHaveText('Release');
+      // Verify known phases are present in display order (starting from bottom)
+      await expect(phaseHeaders.nth(0)).toHaveText('Bottom');
+      await expect(phaseHeaders.nth(1)).toHaveText('Release');
+      await expect(phaseHeaders.nth(2)).toHaveText('Top');
+      await expect(phaseHeaders.nth(3)).toHaveText('Connect');
     });
 
     test('RG-003: rep rows display with phase cells', async ({ page }) => {

@@ -12,7 +12,7 @@ import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 import { RepGalleryModal } from './RepGalleryModal';
 
 // Position display order for swing positions
-const POSITION_ORDER = ['top', 'connect', 'bottom', 'release'] as const;
+const POSITION_ORDER = ['bottom', 'release', 'top', 'connect'] as const;
 const POSITION_LABELS: Record<string, string> = {
   top: 'Top',
   connect: 'Connect',

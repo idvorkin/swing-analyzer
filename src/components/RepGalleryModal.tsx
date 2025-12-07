@@ -44,7 +44,7 @@ export function RepGalleryModal({
       }
     }
     // Sort by known order if possible, otherwise alphabetical
-    const knownOrder = ['top', 'connect', 'bottom', 'release'];
+    const knownOrder = ['bottom', 'release', 'top', 'connect'];
     return Array.from(phases).sort((a, b) => {
       const aIdx = knownOrder.indexOf(a);
       const bIdx = knownOrder.indexOf(b);

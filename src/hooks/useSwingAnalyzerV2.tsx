@@ -968,7 +968,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   // ========================================
   // Checkpoint Navigation
   // ========================================
-  const POSITION_ORDER = ['top', 'connect', 'bottom', 'release'] as const;
+  const POSITION_ORDER = ['bottom', 'release', 'top', 'connect'] as const;
 
   // Build flat list of all checkpoints sorted by time
   const getAllCheckpoints = useCallback(() => {
