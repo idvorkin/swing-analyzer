@@ -173,61 +173,26 @@ const VideoSectionV2: React.FC = () => {
 
   return (
     <section className="video-section">
-      <div className="top-controls">
-        <div className="control-row">
-          <div className="file-input">
-            <input
-              type="file"
-              id="video-upload"
-              accept="video/*"
-              ref={fileInputRef}
-              onChange={handleVideoUpload}
-            />
-            <label htmlFor="video-upload" className="file-label">
-              <svg
-                className="icon"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-              </svg>
-              File
-            </label>
-          </div>
-          <button
-            id="load-hardcoded-btn"
-            className="hardcoded-btn"
-            onClick={loadHardcodedVideo}
-            type="button"
-          >
-            <svg
-              className="icon"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z" />
-            </svg>
-            Sample
-          </button>
-        </div>
-      </div>
+      {/* Hidden file input - triggered by labels elsewhere */}
+      <input
+        type="file"
+        id="video-upload"
+        accept="video/*"
+        ref={fileInputRef}
+        onChange={handleVideoUpload}
+        className="sr-only"
+      />
 
       {/* biome-ignore lint/a11y/useKeyboardEquivalent: Double-tap is supplementary to existing button controls */}
       <div
         className={`video-container ${getVideoContainerClass()}`}
         onClick={handleVideoDoubleTap}
       >
-        {/* Mobile: Source picker - shown when no video OR when user taps header camera button */}
+        {/* Source picker overlay - shown when no video OR when user taps header camera button */}
         {(!currentVideoFile || showSourcePicker) && (
-          <div className="mobile-empty-state" onClick={() => setShowSourcePicker(false)}>
-            <div className="mobile-empty-buttons" onClick={(e) => e.stopPropagation()}>
-              <label htmlFor="video-upload" className="mobile-empty-btn camera-roll-btn">
+          <div className="source-picker-overlay" onClick={() => setShowSourcePicker(false)}>
+            <div className="source-picker-buttons" onClick={(e) => e.stopPropagation()}>
+              <label htmlFor="video-upload" className="source-picker-btn camera-roll-btn">
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
                 </svg>
@@ -235,7 +200,8 @@ const VideoSectionV2: React.FC = () => {
               </label>
               <button
                 type="button"
-                className="mobile-empty-btn sample-btn"
+                id="load-hardcoded-btn"
+                className="source-picker-btn sample-btn"
                 onClick={loadHardcodedVideo}
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

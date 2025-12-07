@@ -87,13 +87,11 @@ describe('VideoSectionV2', () => {
       expect(container).toContainElement(canvas);
     });
 
-    it('renders File and Sample buttons', () => {
+    it('renders source picker buttons when no video', () => {
       render(<VideoSectionV2 />);
-      // Desktop shows "File", mobile shows "Camera Roll" - test for presence of either
-      const fileLabel = document.querySelector('.file-label') || document.querySelector('.mobile-empty-btn.camera-roll-btn');
-      expect(fileLabel).toBeInTheDocument();
-      // Sample button exists in both desktop top-controls and mobile empty state
-      expect(screen.getAllByText('Sample').length).toBeGreaterThan(0);
+      // Source picker shows Camera Roll and Sample buttons
+      expect(document.querySelector('.source-picker-btn.camera-roll-btn')).toBeInTheDocument();
+      expect(document.querySelector('.source-picker-btn.sample-btn')).toBeInTheDocument();
     });
 
     it('renders video control buttons', () => {
@@ -299,17 +297,15 @@ describe('VideoSectionV2', () => {
     });
   });
 
-  describe('Mobile Source Picker', () => {
+  describe('Source Picker', () => {
     it('shows source picker when no video loaded', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
         currentVideoFile: null,
       }));
       render(<VideoSectionV2 />);
-      expect(document.querySelector('.mobile-empty-state')).toBeInTheDocument();
+      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
       expect(screen.getByText('Camera Roll')).toBeInTheDocument();
-      // Multiple "Sample" buttons exist (desktop + mobile), just check the mobile one is in the picker
-      const picker = document.querySelector('.mobile-empty-state');
-      expect(picker?.querySelector('.sample-btn')).toBeInTheDocument();
+      expect(document.querySelector('.source-picker-btn.sample-btn')).toBeInTheDocument();
     });
 
     it('hides source picker when video is loaded', () => {
@@ -317,7 +313,7 @@ describe('VideoSectionV2', () => {
         currentVideoFile: new File([], 'test.mp4'),
       }));
       render(<VideoSectionV2 />);
-      expect(document.querySelector('.mobile-empty-state')).not.toBeInTheDocument();
+      expect(document.querySelector('.source-picker-overlay')).not.toBeInTheDocument();
     });
 
     it('shows source picker when show-source-picker event is dispatched', () => {
@@ -327,7 +323,7 @@ describe('VideoSectionV2', () => {
       render(<VideoSectionV2 />);
 
       // Initially hidden when video loaded
-      expect(document.querySelector('.mobile-empty-state')).not.toBeInTheDocument();
+      expect(document.querySelector('.source-picker-overlay')).not.toBeInTheDocument();
 
       // Dispatch event to show picker
       act(() => {
@@ -335,7 +331,7 @@ describe('VideoSectionV2', () => {
       });
 
       // Now visible
-      expect(document.querySelector('.mobile-empty-state')).toBeInTheDocument();
+      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
     });
 
     it('hides source picker when clicking outside buttons', () => {
@@ -348,14 +344,14 @@ describe('VideoSectionV2', () => {
       act(() => {
         window.dispatchEvent(new CustomEvent('show-source-picker'));
       });
-      expect(document.querySelector('.mobile-empty-state')).toBeInTheDocument();
+      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
 
       // Click on the overlay background (outside buttons)
-      const overlay = document.querySelector('.mobile-empty-state');
+      const overlay = document.querySelector('.source-picker-overlay');
       fireEvent.click(overlay!);
 
       // Should be hidden
-      expect(document.querySelector('.mobile-empty-state')).not.toBeInTheDocument();
+      expect(document.querySelector('.source-picker-overlay')).not.toBeInTheDocument();
     });
 
     it('keeps source picker open when clicking on buttons container', () => {
@@ -370,11 +366,11 @@ describe('VideoSectionV2', () => {
       });
 
       // Click on the buttons container (not the overlay background)
-      const buttonsContainer = document.querySelector('.mobile-empty-buttons');
+      const buttonsContainer = document.querySelector('.source-picker-buttons');
       fireEvent.click(buttonsContainer!);
 
       // Should still be visible (stopPropagation)
-      expect(document.querySelector('.mobile-empty-state')).toBeInTheDocument();
+      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
     });
   });
 });
