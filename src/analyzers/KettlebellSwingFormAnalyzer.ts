@@ -57,10 +57,11 @@ export interface SwingThresholds {
 const DEFAULT_THRESHOLDS: SwingThresholds = {
   topSpineMax: 25,
   topHipMin: 150,
-  topArmMin: 60, // Arm must be >60° from vertical (near horizontal)
-  // bottomArmMax was 0, increased to 10 for mirrored video tolerance
-  // (transition threshold becomes |arm| < 25 instead of < 15)
-  bottomArmMax: 10,
+  topArmMin: 55, // Arm must be >55° from vertical (near horizontal, relaxed from 60 for one-handed swings)
+  // bottomArmMax controls CONNECT→BOTTOM transition: |arm| < bottomArmMax + 15
+  // Real swing data shows arm angles of 30-55° at bottom position (arms swing behind body)
+  // Set to 40 so threshold becomes |arm| < 55, capturing actual swing motion
+  bottomArmMax: 40,
   bottomSpineMin: 35,
   bottomHipMax: 140,
   // CONNECT: arms approaching vertical while spine still upright (before hinge)
