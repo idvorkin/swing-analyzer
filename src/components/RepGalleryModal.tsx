@@ -243,6 +243,7 @@ export function RepGalleryModal({
                               onClick={() =>
                                 handleThumbnailClick(repNum, position)
                               }
+                              onDoubleTap={() => handlePhaseClick(phase)}
                               size={isFocused ? 'large' : isMinimized ? 'mini' : 'small'}
                             />
                           ) : (
@@ -305,11 +306,11 @@ export function RepGalleryModal({
         <div className="gallery-footer">
           {viewMode === 'grid' ? (
             <span className="gallery-hint">
-              Click phase headers to focus. Click thumbnails to seek. Select reps to compare.
+              Double-tap thumbnail to focus phase. Tap to seek. Select reps to compare.
             </span>
           ) : (
             <span className="gallery-hint">
-              Click thumbnails to seek video.
+              Tap thumbnails to seek video.
             </span>
           )}
         </div>
@@ -322,13 +323,16 @@ export function RepGalleryModal({
 function ThumbnailCanvas({
   position,
   onClick,
+  onDoubleTap,
   size,
 }: {
   position: PositionCandidate;
   onClick: () => void;
+  onDoubleTap?: () => void;
   size: 'small' | 'large' | 'mini';
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastTapRef = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -348,11 +352,25 @@ function ThumbnailCanvas({
       ? `${position.videoTime.toFixed(2)}s`
       : undefined;
 
+  const handleClick = useCallback(() => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY && onDoubleTap) {
+      // Double-tap detected - focus the phase
+      onDoubleTap();
+    } else {
+      // Single tap - seek to timestamp
+      onClick();
+    }
+    lastTapRef.current = now;
+  }, [onClick, onDoubleTap]);
+
   return (
     <button
       type="button"
       className={`gallery-thumbnail gallery-thumbnail--${size}`}
-      onClick={onClick}
+      onClick={handleClick}
       title={timestamp ? `Seek to ${timestamp}` : undefined}
     >
       <canvas ref={canvasRef} className="gallery-thumbnail-canvas" />

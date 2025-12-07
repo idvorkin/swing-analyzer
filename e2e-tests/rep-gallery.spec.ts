@@ -401,7 +401,7 @@ test.describe('Rep Gallery Modal', () => {
       await page.click('.filmstrip-gallery-btn');
 
       await expect(page.locator('.gallery-hint')).toHaveText(
-        'Click phase headers to focus. Click thumbnails to seek. Select reps to compare.'
+        'Double-tap thumbnail to focus phase. Tap to seek. Select reps to compare.'
       );
     });
 
@@ -415,8 +415,53 @@ test.describe('Rep Gallery Modal', () => {
       await page.click('.gallery-compare-btn');
 
       await expect(page.locator('.gallery-hint')).toHaveText(
-        'Click thumbnails to seek video.'
+        'Tap thumbnails to seek video.'
       );
+    });
+  });
+
+  test.describe('Double-Tap Phase Focus', () => {
+    test.skip('RG-019: double-tap thumbnail focuses that phase column', async ({ page }) => {
+      // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
+      // Seeded fixtures don't include frameImage because it's captured at runtime.
+      // Double-tap logic: two clicks within 300ms triggers phase focus instead of seek.
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Grid should NOT be in focused mode initially
+      await expect(page.locator('.gallery-grid')).not.toHaveClass(/gallery-grid--focused/);
+
+      // Double-click a thumbnail in the "Top" column
+      const topThumbnail = page.locator('.gallery-grid-row').first().locator('.gallery-thumbnail').first();
+      await topThumbnail.dblclick();
+
+      // Grid should now be in focused mode
+      await expect(page.locator('.gallery-grid')).toHaveClass(/gallery-grid--focused/);
+
+      // "Top" phase button should be active
+      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).toHaveClass(/gallery-phase-btn--active/);
+
+      // Focused cells should be visible
+      const focusedCells = page.locator('.gallery-grid-cell--focused');
+      expect(await focusedCells.count()).toBeGreaterThan(0);
+    });
+
+    test.skip('RG-020: double-tap on already-focused phase unfocuses it', async ({ page }) => {
+      // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Focus "Top" phase via header click first
+      await page.click('.gallery-phase-btn:has-text("Top")');
+      await expect(page.locator('.gallery-grid')).toHaveClass(/gallery-grid--focused/);
+
+      // Double-click a thumbnail in the "Top" column (already focused)
+      const topThumbnail = page.locator('.gallery-grid-row').first().locator('.gallery-thumbnail').first();
+      await topThumbnail.dblclick();
+
+      // Grid should unfocus (toggle behavior)
+      await expect(page.locator('.gallery-grid')).not.toHaveClass(/gallery-grid--focused/);
+      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).not.toHaveClass(/gallery-phase-btn--active/);
     });
   });
 });

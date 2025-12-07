@@ -23,6 +23,8 @@ Tests marked with `*` below require actual extraction and are currently skipped.
 | Phase Focus | Clicking phase header expands that column, shrinks others. | RG-005 | PASS |
 | Phase Unfocus | Clicking focused phase header returns to normal view. | RG-006 | PASS |
 | Thumbnail Seek* | Clicking thumbnail seeks video to that timestamp. | RG-007 | SKIP |
+| Double-Tap Focus* | Double-tap thumbnail focuses that phase column. | RG-019 | SKIP |
+| Double-Tap Unfocus* | Double-tap on already-focused phase unfocuses it. | RG-020 | SKIP |
 | Rep Selection | Checkbox selects rep for comparison (max 4). | RG-008 | PASS |
 | Compare Button | Appears when 2+ reps selected. | RG-009 | PASS |
 | Empty State | Gallery button hidden when no reps exist. | RG-010 | PASS |
@@ -63,9 +65,9 @@ Tests use the `swing-sample-4reps` fixture which provides:
 
 ## Test Summary
 
-- **Total tests:** 21
+- **Total tests:** 23
 - **Passing:** 17
-- **Skipped:** 4 (require actual extraction with frame images)
+- **Skipped:** 6 (require actual extraction with frame images)
 
 ## Running Thumbnail Tests
 
