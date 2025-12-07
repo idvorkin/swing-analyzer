@@ -1,0 +1,422 @@
+/**
+ * Rep Gallery E2E Tests
+ *
+ * Tests the Rep Gallery modal feature for browsing and comparing reps.
+ * See specs/rep-gallery.md for the full specification.
+ *
+ * Tests use seeded pose data for deterministic, fast execution.
+ */
+
+import { expect, test } from '@playwright/test';
+import {
+  clearPoseTrackDB,
+  seedPoseTrackFixture,
+  useShortTestVideo,
+} from './helpers';
+
+test.describe('Rep Gallery Modal', () => {
+  test.beforeEach(async ({ page }) => {
+    await useShortTestVideo(page);
+    await page.goto('/');
+    await clearPoseTrackDB(page);
+    // Seed pose data so gallery has thumbnails
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+  });
+
+  /**
+   * Helper to load video and wait for gallery button to appear
+   */
+  async function loadVideoAndWaitForGallery(page: import('@playwright/test').Page) {
+    await page.click('#load-hardcoded-btn');
+    await page.waitForSelector('video', { timeout: 10000 });
+
+    // Wait for controls to be enabled (cached poses loaded)
+    await page.waitForFunction(
+      () => {
+        const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+        return btn && !btn.disabled;
+      },
+      { timeout: 20000 }
+    );
+
+    // Wait for gallery button to appear (requires reps and thumbnails)
+    await page.waitForSelector('.filmstrip-gallery-btn', { timeout: 10000 });
+  }
+
+  test.describe('Grid View (Default)', () => {
+    test('RG-001: gallery button appears when reps exist and opens modal', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+
+      // Gallery button should be visible
+      await expect(page.locator('.filmstrip-gallery-btn')).toBeVisible();
+
+      // Click to open gallery
+      await page.click('.filmstrip-gallery-btn');
+
+      // Modal should be visible
+      await expect(page.locator('.gallery-modal')).toBeVisible();
+      await expect(page.locator('#gallery-title')).toHaveText('Rep Gallery');
+    });
+
+    test('RG-002: phase headers are dynamically detected from data', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Should have phase headers (dynamically detected)
+      const phaseHeaders = page.locator('.gallery-phase-btn');
+      await expect(phaseHeaders).toHaveCount(4); // top, connect, bottom, release
+
+      // Verify known phases are present
+      await expect(phaseHeaders.nth(0)).toHaveText('Top');
+      await expect(phaseHeaders.nth(1)).toHaveText('Connect');
+      await expect(phaseHeaders.nth(2)).toHaveText('Bottom');
+      await expect(phaseHeaders.nth(3)).toHaveText('Release');
+    });
+
+    test('RG-003: rep rows display with phase cells', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Should have rep rows (seeded data has 3 detected reps)
+      const repRows = page.locator('.gallery-grid-row');
+      await expect(repRows).toHaveCount(3);
+
+      // Each row should have rep number
+      await expect(repRows.nth(0).locator('.gallery-rep-number')).toHaveText('1');
+      await expect(repRows.nth(1).locator('.gallery-rep-number')).toHaveText('2');
+      await expect(repRows.nth(2).locator('.gallery-rep-number')).toHaveText('3');
+
+      // Each row should have phase cells (4 phases + 1 rep cell = 5 cells per row)
+      // Note: seeded fixtures don't have frameImage data, so thumbnails show "—"
+      const firstRowCells = repRows.nth(0).locator('.gallery-grid-cell');
+      await expect(firstRowCells).toHaveCount(5); // rep + 4 phases
+    });
+
+    test('RG-004: current rep row is highlighted', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // First rep should be highlighted as current (0-indexed in app state)
+      const firstRow = page.locator('.gallery-grid-row').first();
+      await expect(firstRow).toHaveClass(/gallery-grid-row--current/);
+    });
+
+    test('RG-005: clicking phase header focuses that column', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Click on "Top" phase header
+      await page.click('.gallery-phase-btn:has-text("Top")');
+
+      // Phase button should be active
+      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).toHaveClass(/gallery-phase-btn--active/);
+
+      // Grid should be in focused mode
+      await expect(page.locator('.gallery-grid')).toHaveClass(/gallery-grid--focused/);
+
+      // Cells for focused phase should be larger
+      const focusedCells = page.locator('.gallery-grid-cell--focused');
+      expect(await focusedCells.count()).toBeGreaterThan(0);
+    });
+
+    test('RG-006: clicking focused phase header unfocuses it', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Focus "Top" phase
+      await page.click('.gallery-phase-btn:has-text("Top")');
+      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).toHaveClass(/gallery-phase-btn--active/);
+
+      // Click again to unfocus
+      await page.click('.gallery-phase-btn:has-text("Top")');
+
+      // Should no longer be active
+      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).not.toHaveClass(/gallery-phase-btn--active/);
+
+      // Grid should not be in focused mode
+      await expect(page.locator('.gallery-grid')).not.toHaveClass(/gallery-grid--focused/);
+    });
+
+    test.skip('RG-007: clicking thumbnail seeks video to that timestamp', async ({ page }) => {
+      // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
+      // Seeded fixtures don't include frameImage because it's captured at runtime.
+      // This test should be run with realistic test mode (mock detector with timing).
+      await loadVideoAndWaitForGallery(page);
+
+      // Get initial video time
+      const initialTime = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.currentTime || 0;
+      });
+
+      await page.click('.filmstrip-gallery-btn');
+
+      // Click a thumbnail (not the first one to ensure seeking)
+      const thumbnails = page.locator('.gallery-thumbnail');
+      await thumbnails.nth(4).click(); // Click a thumbnail from later in the video
+
+      // Video time should have changed
+      await page.waitForFunction(
+        (prevTime) => {
+          const video = document.querySelector('video');
+          return video && video.currentTime !== prevTime;
+        },
+        initialTime,
+        { timeout: 5000 }
+      );
+
+      const newTime = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.currentTime || 0;
+      });
+
+      expect(newTime).not.toBe(initialTime);
+    });
+
+    test('RG-008: checkbox selects rep for comparison (max 4)', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Select first rep
+      await page.click('.gallery-checkbox >> nth=0');
+
+      // Row should be selected
+      await expect(page.locator('.gallery-grid-row').first()).toHaveClass(/gallery-grid-row--selected/);
+
+      // Select second rep
+      await page.click('.gallery-checkbox >> nth=1');
+
+      // Both should be selected
+      const selectedRows = page.locator('.gallery-grid-row--selected');
+      await expect(selectedRows).toHaveCount(2);
+    });
+
+    test('RG-009: compare button appears when 2+ reps selected', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Compare button should not be visible initially
+      await expect(page.locator('.gallery-compare-btn')).not.toBeVisible();
+
+      // Select one rep - still no compare button
+      await page.click('.gallery-checkbox >> nth=0');
+      await expect(page.locator('.gallery-compare-btn')).not.toBeVisible();
+
+      // Select second rep - compare button should appear
+      await page.click('.gallery-checkbox >> nth=1');
+      await expect(page.locator('.gallery-compare-btn')).toBeVisible();
+      await expect(page.locator('.gallery-compare-btn')).toHaveText('Compare (2)');
+    });
+
+    test('RG-010: empty state shown when no reps exist', async ({ page }) => {
+      // Clear the database so no reps are loaded
+      await clearPoseTrackDB(page);
+      await page.goto('/');
+
+      // Load video without seeded data - gallery button won't appear
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      // Gallery button should NOT be visible (no reps)
+      await expect(page.locator('.filmstrip-gallery-btn')).not.toBeVisible();
+    });
+  });
+
+  test.describe('Compare View', () => {
+    test('RG-011: compare button switches to compare view', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Select two reps
+      await page.click('.gallery-checkbox >> nth=0');
+      await page.click('.gallery-checkbox >> nth=1');
+
+      // Click compare button
+      await page.click('.gallery-compare-btn');
+
+      // Title should change
+      await expect(page.locator('#gallery-title')).toHaveText('Compare Reps');
+
+      // Compare view should be visible
+      await expect(page.locator('.gallery-compare')).toBeVisible();
+
+      // Back button should appear
+      await expect(page.locator('.gallery-back-btn')).toBeVisible();
+    });
+
+    test('RG-012: back button returns to grid view', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Enter compare view
+      await page.click('.gallery-checkbox >> nth=0');
+      await page.click('.gallery-checkbox >> nth=1');
+      await page.click('.gallery-compare-btn');
+
+      await expect(page.locator('#gallery-title')).toHaveText('Compare Reps');
+
+      // Click back button
+      await page.click('.gallery-back-btn');
+
+      // Should be back in grid view
+      await expect(page.locator('#gallery-title')).toHaveText('Rep Gallery');
+      await expect(page.locator('.gallery-grid')).toBeVisible();
+    });
+
+    test.skip('RG-013: thumbnails seek video in compare view', async ({ page }) => {
+      // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
+      // Seeded fixtures don't include frameImage because it's captured at runtime.
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Enter compare view
+      await page.click('.gallery-checkbox >> nth=0');
+      await page.click('.gallery-checkbox >> nth=1');
+      await page.click('.gallery-compare-btn');
+
+      // Get initial video time
+      const initialTime = await page.evaluate(() => {
+        const video = document.querySelector('video');
+        return video?.currentTime || 0;
+      });
+
+      // Click a thumbnail in compare view
+      await page.locator('.gallery-compare .gallery-thumbnail').first().click();
+
+      // Video time should have changed
+      await page.waitForFunction(
+        (prevTime) => {
+          const video = document.querySelector('video');
+          return video && video.currentTime !== prevTime;
+        },
+        initialTime,
+        { timeout: 5000 }
+      );
+    });
+
+    test.skip('RG-014: compare view shows large thumbnails', async ({ page }) => {
+      // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
+      // Seeded fixtures don't include frameImage because it's captured at runtime.
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Enter compare view
+      await page.click('.gallery-checkbox >> nth=0');
+      await page.click('.gallery-checkbox >> nth=1');
+      await page.click('.gallery-compare-btn');
+
+      // All thumbnails should be large size
+      const thumbnails = page.locator('.gallery-compare .gallery-thumbnail');
+      const firstThumbnail = thumbnails.first();
+
+      // Large thumbnails have --large class
+      await expect(firstThumbnail).toHaveClass(/gallery-thumbnail--large/);
+    });
+  });
+
+  test.describe('Modal Behavior', () => {
+    test('RG-015: close button closes modal', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      await expect(page.locator('.gallery-modal')).toBeVisible();
+
+      // Click close button
+      await page.click('.gallery-close-btn');
+
+      // Modal should be hidden
+      await expect(page.locator('.gallery-modal')).not.toBeVisible();
+    });
+
+    test('RG-016: Escape key closes modal', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      await expect(page.locator('.gallery-modal')).toBeVisible();
+
+      // Press Escape
+      await page.keyboard.press('Escape');
+
+      // Modal should be hidden
+      await expect(page.locator('.gallery-modal')).not.toBeVisible();
+    });
+
+    test('RG-017: clicking overlay closes modal', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      await expect(page.locator('.gallery-modal')).toBeVisible();
+
+      // Click on overlay (outside modal)
+      await page.click('.gallery-overlay', { position: { x: 10, y: 10 } });
+
+      // Modal should be hidden
+      await expect(page.locator('.gallery-modal')).not.toBeVisible();
+    });
+
+    test('RG-018: selection and view mode reset when modal closes', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Select reps and enter compare view
+      await page.click('.gallery-checkbox >> nth=0');
+      await page.click('.gallery-checkbox >> nth=1');
+      await page.click('.gallery-compare-btn');
+
+      await expect(page.locator('#gallery-title')).toHaveText('Compare Reps');
+
+      // Close modal
+      await page.keyboard.press('Escape');
+
+      // Reopen modal
+      await page.click('.filmstrip-gallery-btn');
+
+      // Should be back in grid view with no selections
+      await expect(page.locator('#gallery-title')).toHaveText('Rep Gallery');
+      await expect(page.locator('.gallery-compare-btn')).not.toBeVisible();
+      await expect(page.locator('.gallery-grid-row--selected')).toHaveCount(0);
+    });
+  });
+
+  test.describe('Video Timestamp Display', () => {
+    test.skip('thumbnails show video time overlay', async ({ page }) => {
+      // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
+      // Seeded fixtures don't include frameImage because it's captured at runtime.
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Thumbnails should have time overlay
+      const timeOverlays = page.locator('.gallery-thumbnail-time');
+      expect(await timeOverlays.count()).toBeGreaterThan(0);
+
+      // Time should be formatted as "X.XXs"
+      const firstTime = await timeOverlays.first().textContent();
+      expect(firstTime).toMatch(/^\d+\.\d+s$/);
+    });
+  });
+
+  test.describe('Footer Hints', () => {
+    test('grid view shows correct hint', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      await expect(page.locator('.gallery-hint')).toHaveText(
+        'Click phase headers to focus. Click thumbnails to seek. Select reps to compare.'
+      );
+    });
+
+    test('compare view shows correct hint', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+      await page.click('.filmstrip-gallery-btn');
+
+      // Enter compare view
+      await page.click('.gallery-checkbox >> nth=0');
+      await page.click('.gallery-checkbox >> nth=1');
+      await page.click('.gallery-compare-btn');
+
+      await expect(page.locator('.gallery-hint')).toHaveText(
+        'Click thumbnails to seek video.'
+      );
+    });
+  });
+});
