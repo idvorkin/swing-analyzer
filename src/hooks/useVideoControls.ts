@@ -208,6 +208,8 @@ export function useVideoControls({
           // Pipeline automatically responds to play/pause via VideoFrameAcquisition
         })
         .catch((err) => {
+          // AbortError is expected when play() is interrupted by pause() - ignore it
+          if (err.name === 'AbortError') return;
           console.error('Error playing video:', err);
           setStatus(getVideoPlaybackErrorMessage(err));
         });
