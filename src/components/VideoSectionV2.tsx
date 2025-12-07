@@ -95,9 +95,6 @@ const VideoSectionV2: React.FC = () => {
   } | null>(null);
   const overlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Check if device supports touch
-  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
   // Cleanup overlay timeout on unmount to prevent memory leak
   useEffect(() => {
     return () => {
@@ -107,11 +104,9 @@ const VideoSectionV2: React.FC = () => {
     };
   }, []);
 
-  // Double-tap handler for video container with zone detection (touch only)
+  // Double-tap/double-click handler for video container with zone detection
+  // Works on both touch devices (double-tap) and desktop (double-click)
   const handleVideoDoubleTap = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    // Only handle on touch devices
-    if (!isTouchDevice) return;
-
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300; // ms
     const currentX = e.clientX;
@@ -163,7 +158,7 @@ const VideoSectionV2: React.FC = () => {
     } else {
       lastTapRef.current = { time: now, x: currentX };
     }
-  }, [isTouchDevice, clearPositionLabel, togglePlayPause, videoRef, navigateToPreviousCheckpoint, navigateToNextCheckpoint]);
+  }, [clearPositionLabel, togglePlayPause, videoRef, navigateToPreviousCheckpoint, navigateToNextCheckpoint]);
 
   // Event delegation handler for filmstrip clicks (avoids individual event listeners)
   const handleFilmstripClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
