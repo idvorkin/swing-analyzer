@@ -198,7 +198,7 @@ test.describe('Swing Analyzer', () => {
       (f) => f.keypoints.length > 0
     );
     expect(frameWithKeypoints?.keypoints).toBeDefined();
-    expect(frameWithKeypoints?.keypoints.length).toBe(17); // COCO-17 format
+    expect(frameWithKeypoints?.keypoints.length).toBe(33); // MediaPipe BlazePose-33 format
   });
 
   test('should have precomputed angles in pose track', async ({ page }) => {

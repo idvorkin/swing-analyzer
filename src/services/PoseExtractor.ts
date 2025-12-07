@@ -10,7 +10,6 @@ import '@tensorflow/tfjs-backend-webgl';
 import * as tf from '@tensorflow/tfjs-core';
 import { BUILD_TIMESTAMP, GIT_SHA_SHORT } from '../generated_version';
 import { Skeleton } from '../models/Skeleton';
-import { normalizeToCocoFormat } from '../pipeline/KeypointAdapter';
 import type { PoseKeypoint } from '../types';
 import type {
   PoseExtractionOptions,
@@ -298,12 +297,10 @@ export async function extractPosesFromVideo(
         THUMBNAIL_HEIGHT
       );
 
-      // Get keypoints and normalize to COCO format if using BlazePose
+      // Get keypoints (BlazePose returns 33 MediaPipe keypoints)
       let keypoints: PoseKeypoint[] = [];
       if (poses.length > 0) {
-        const rawKeypoints = poses[0].keypoints as PoseKeypoint[];
-        // BlazePose returns 33 keypoints, normalize to COCO 17-keypoint format
-        keypoints = normalizeToCocoFormat(rawKeypoints);
+        keypoints = poses[0].keypoints as PoseKeypoint[];
       }
 
       // Get video time from actual video position (works in both mock and real modes)
@@ -527,11 +524,11 @@ async function estimateVideoFps(_video: HTMLVideoElement): Promise<number> {
  * @internal Exported for testing
  */
 export function calculateSpineAngle(keypoints: PoseKeypoint[]): number {
-  // COCO keypoint indices
-  const LEFT_SHOULDER = 5;
-  const RIGHT_SHOULDER = 6;
-  const LEFT_HIP = 11;
-  const RIGHT_HIP = 12;
+  // MediaPipe BlazePose-33 keypoint indices
+  const LEFT_SHOULDER = 11;
+  const RIGHT_SHOULDER = 12;
+  const LEFT_HIP = 23;
+  const RIGHT_HIP = 24;
 
   const leftShoulder = keypoints[LEFT_SHOULDER];
   const rightShoulder = keypoints[RIGHT_SHOULDER];

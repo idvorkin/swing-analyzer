@@ -17,7 +17,7 @@ import type {
   PoseTrackFrame,
   PoseTrackMetadata,
 } from '../types/posetrack';
-import { normalizeToMediaPipeFormat, isCocoFormat } from './KeypointAdapter';
+import { isMediaPipeFormat, MEDIAPIPE_KEYPOINT_COUNT } from './KeypointAdapter';
 
 /**
  * Event emitted when a new frame is added to the cache
@@ -246,33 +246,28 @@ export class LivePoseCache {
 
   /**
    * Load from a static PoseTrackFile (for pre-seeded data)
-   * Converts legacy COCO-17 keypoints to MediaPipe-33 format if needed.
+   * Expects MediaPipe-33 keypoint format.
    */
   static fromPoseTrackFile(poseTrack: PoseTrackFile): LivePoseCache {
     const cache = new LivePoseCache(poseTrack.metadata.sourceVideoHash);
     cache.setMetadata(poseTrack.metadata);
 
-    // Check if we need to convert from legacy COCO-17 format
-    const needsConversion =
+    // Validate keypoint format
+    if (
       poseTrack.frames.length > 0 &&
       poseTrack.frames[0].keypoints &&
-      isCocoFormat(poseTrack.frames[0].keypoints);
-
-    if (needsConversion) {
-      console.log(
-        `LivePoseCache: Converting ${poseTrack.frames.length} frames from COCO-17 to MediaPipe-33 format`
+      poseTrack.frames[0].keypoints.length > 0 &&
+      !isMediaPipeFormat(poseTrack.frames[0].keypoints)
+    ) {
+      console.error(
+        `LivePoseCache: Invalid keypoint format - expected ${MEDIAPIPE_KEYPOINT_COUNT} keypoints (MediaPipe-33), ` +
+          `got ${poseTrack.frames[0].keypoints.length}. Legacy COCO-17 format is no longer supported. ` +
+          `Please regenerate pose data with BlazePose-33 format.`
       );
     }
 
     for (const frame of poseTrack.frames) {
-      // Convert keypoints to MediaPipe-33 format if they're in COCO-17 format
-      const convertedFrame = needsConversion
-        ? {
-            ...frame,
-            keypoints: normalizeToMediaPipeFormat(frame.keypoints),
-          }
-        : frame;
-      cache.addFrame(convertedFrame);
+      cache.addFrame(frame);
     }
 
     cache.markComplete(poseTrack.metadata);

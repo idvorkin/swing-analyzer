@@ -494,7 +494,6 @@ Examples:
   %(prog)s video.mp4 -o poses.json       Custom output path
   %(prog)s video.mp4 --preview           Show preview during extraction
   %(prog)s video.mp4 --complexity 2      Use heavy model for better accuracy
-  %(prog)s video.mp4 --coco              Output legacy COCO-17 keypoints instead
         """
     )
     parser.add_argument("video", type=Path, help="Input video file")
@@ -504,19 +503,11 @@ Examples:
         "--complexity", type=int, choices=[0, 1, 2], default=1,
         help="Model complexity: 0=lite, 1=full (default), 2=heavy"
     )
-    parser.add_argument(
-        "--full", action="store_true", default=True,
-        help="Output all 33 BlazePose keypoints (default)"
-    )
-    parser.add_argument(
-        "--coco", action="store_true",
-        help="Output legacy COCO-17 keypoints instead of BlazePose-33"
-    )
 
     args = parser.parse_args()
 
-    # Default to BlazePose-33, use COCO-17 only if --coco is specified
-    use_full_keypoints = not args.coco
+    # Always use BlazePose-33 keypoints (COCO-17 is no longer supported)
+    use_full_keypoints = True
 
     if not args.video.exists():
         print(f"Error: Video not found: {args.video}", file=sys.stderr)

@@ -1,7 +1,7 @@
 /**
  * Model Configuration for Pose Detection
  *
- * BlazePose is the only supported model (33 MediaPipe keypoints normalized to COCO-17)
+ * BlazePose is the only supported model (33 MediaPipe keypoints)
  */
 
 // Import PoseModel from types (single source of truth)

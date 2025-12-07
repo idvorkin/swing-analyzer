@@ -28,29 +28,29 @@ describe('PoseExtractor', () => {
   });
 
   describe('calculateSpineAngle', () => {
-    // Helper to create COCO-17 keypoints array with specific positions
+    // Helper to create MediaPipe BlazePose-33 keypoints array with specific positions
     function createKeypoints(positions: {
       leftShoulder?: { x: number; y: number };
       rightShoulder?: { x: number; y: number };
       leftHip?: { x: number; y: number };
       rightHip?: { x: number; y: number };
     }): PoseKeypoint[] {
-      // COCO-17 keypoint indices: shoulders at 5,6 and hips at 11,12
-      const keypoints: PoseKeypoint[] = Array(17)
+      // MediaPipe BlazePose-33 keypoint indices: shoulders at 11,12 and hips at 23,24
+      const keypoints: PoseKeypoint[] = Array(33)
         .fill(null)
         .map(() => ({ x: 0, y: 0, score: 0.9 }));
 
       if (positions.leftShoulder) {
-        keypoints[5] = { ...positions.leftShoulder, score: 0.9 };
+        keypoints[11] = { ...positions.leftShoulder, score: 0.9 };
       }
       if (positions.rightShoulder) {
-        keypoints[6] = { ...positions.rightShoulder, score: 0.9 };
+        keypoints[12] = { ...positions.rightShoulder, score: 0.9 };
       }
       if (positions.leftHip) {
-        keypoints[11] = { ...positions.leftHip, score: 0.9 };
+        keypoints[23] = { ...positions.leftHip, score: 0.9 };
       }
       if (positions.rightHip) {
-        keypoints[12] = { ...positions.rightHip, score: 0.9 };
+        keypoints[24] = { ...positions.rightHip, score: 0.9 };
       }
 
       return keypoints;
@@ -65,9 +65,9 @@ describe('PoseExtractor', () => {
         leftHip: { x: 100, y: 200 },
         rightHip: { x: 150, y: 200 },
       });
-      // Clear shoulder positions
-      keypoints[5] = undefined as unknown as PoseKeypoint;
-      keypoints[6] = undefined as unknown as PoseKeypoint;
+      // Clear shoulder positions (MediaPipe indices 11,12)
+      keypoints[11] = undefined as unknown as PoseKeypoint;
+      keypoints[12] = undefined as unknown as PoseKeypoint;
 
       expect(calculateSpineAngle(keypoints)).toBe(0);
     });
@@ -138,22 +138,24 @@ describe('PoseExtractor', () => {
 
   describe('computeAngles', () => {
     it('computes non-zero spine angle for tilted pose', () => {
-      // Create keypoints with tilted spine
-      const keypoints: PoseKeypoint[] = Array(17)
+      // Create keypoints with tilted spine (MediaPipe BlazePose-33)
+      const keypoints: PoseKeypoint[] = Array(33)
         .fill(null)
         .map(() => ({ x: 0, y: 0, score: 0.9 }));
 
-      // Set up a tilted pose
-      keypoints[5] = { x: 200, y: 100, score: 0.9 }; // left shoulder
-      keypoints[6] = { x: 250, y: 100, score: 0.9 }; // right shoulder
-      keypoints[7] = { x: 180, y: 150, score: 0.9 }; // left elbow
-      keypoints[8] = { x: 270, y: 150, score: 0.9 }; // right elbow
-      keypoints[11] = { x: 100, y: 200, score: 0.9 }; // left hip
-      keypoints[12] = { x: 150, y: 200, score: 0.9 }; // right hip
-      keypoints[13] = { x: 100, y: 300, score: 0.9 }; // left knee
-      keypoints[14] = { x: 150, y: 300, score: 0.9 }; // right knee
-      keypoints[15] = { x: 100, y: 400, score: 0.9 }; // left ankle
-      keypoints[16] = { x: 150, y: 400, score: 0.9 }; // right ankle
+      // Set up a tilted pose (MediaPipe indices)
+      keypoints[11] = { x: 200, y: 100, score: 0.9 }; // left shoulder
+      keypoints[12] = { x: 250, y: 100, score: 0.9 }; // right shoulder
+      keypoints[13] = { x: 180, y: 150, score: 0.9 }; // left elbow
+      keypoints[14] = { x: 270, y: 150, score: 0.9 }; // right elbow
+      keypoints[15] = { x: 160, y: 200, score: 0.9 }; // left wrist
+      keypoints[16] = { x: 290, y: 200, score: 0.9 }; // right wrist
+      keypoints[23] = { x: 100, y: 200, score: 0.9 }; // left hip
+      keypoints[24] = { x: 150, y: 200, score: 0.9 }; // right hip
+      keypoints[25] = { x: 100, y: 300, score: 0.9 }; // left knee
+      keypoints[26] = { x: 150, y: 300, score: 0.9 }; // right knee
+      keypoints[27] = { x: 100, y: 400, score: 0.9 }; // left ankle
+      keypoints[28] = { x: 150, y: 400, score: 0.9 }; // right ankle
 
       const angles = computeAngles(keypoints);
 
@@ -168,15 +170,15 @@ describe('PoseExtractor', () => {
     });
 
     it('computes ~0 spine angle for upright pose', () => {
-      const keypoints: PoseKeypoint[] = Array(17)
+      const keypoints: PoseKeypoint[] = Array(33)
         .fill(null)
         .map(() => ({ x: 0, y: 0, score: 0.9 }));
 
-      // Upright pose - shoulders directly above hips
-      keypoints[5] = { x: 100, y: 100, score: 0.9 }; // left shoulder
-      keypoints[6] = { x: 150, y: 100, score: 0.9 }; // right shoulder
-      keypoints[11] = { x: 100, y: 200, score: 0.9 }; // left hip
-      keypoints[12] = { x: 150, y: 200, score: 0.9 }; // right hip
+      // Upright pose - shoulders directly above hips (MediaPipe indices)
+      keypoints[11] = { x: 100, y: 100, score: 0.9 }; // left shoulder
+      keypoints[12] = { x: 150, y: 100, score: 0.9 }; // right shoulder
+      keypoints[23] = { x: 100, y: 200, score: 0.9 }; // left hip
+      keypoints[24] = { x: 150, y: 200, score: 0.9 }; // right hip
 
       const angles = computeAngles(keypoints);
 

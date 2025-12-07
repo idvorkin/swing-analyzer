@@ -15,7 +15,6 @@ Downloads Google's BlazePose models automatically on first run.
 
 Usage:
     uv run tools/python-extractors/extract_poses_tflite.py video.mp4
-    uv run tools/python-extractors/extract_poses_tflite.py video.mp4 --full
 """
 
 import argparse
@@ -80,34 +79,6 @@ BLAZEPOSE_NAMES = [
     "left_foot_index", "right_foot_index",
 ]
 
-# COCO-17 keypoint names (for compatibility)
-COCO_NAMES = [
-    "nose", "left_eye", "right_eye", "left_ear", "right_ear",
-    "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
-    "left_wrist", "right_wrist", "left_hip", "right_hip",
-    "left_knee", "right_knee", "left_ankle", "right_ankle",
-]
-
-# Mapping from BlazePose-33 to COCO-17
-BLAZEPOSE_TO_COCO = [
-    (0, 0),   # nose
-    (2, 1),   # left_eye
-    (5, 2),   # right_eye
-    (7, 3),   # left_ear
-    (8, 4),   # right_ear
-    (11, 5),  # left_shoulder
-    (12, 6),  # right_shoulder
-    (13, 7),  # left_elbow
-    (14, 8),  # right_elbow
-    (15, 9),  # left_wrist
-    (16, 10), # right_wrist
-    (23, 11), # left_hip
-    (24, 12), # right_hip
-    (25, 13), # left_knee
-    (26, 14), # right_knee
-    (27, 15), # left_ankle
-    (28, 16), # right_ankle
-]
 
 
 def get_model_path(model_name: str) -> Path:
@@ -233,27 +204,6 @@ class BlazePoseDetector:
             return None
 
 
-def blazepose_to_coco(keypoints: list[dict]) -> list[dict]:
-    """Convert BlazePose-33 keypoints to COCO-17 format."""
-    coco_keypoints = []
-    kp_map = {kp["name"]: kp for kp in keypoints}
-
-    for bp_idx, coco_idx in BLAZEPOSE_TO_COCO:
-        bp_name = BLAZEPOSE_NAMES[bp_idx]
-        coco_name = COCO_NAMES[coco_idx]
-
-        if bp_name in kp_map:
-            kp = kp_map[bp_name].copy()
-            kp["name"] = coco_name
-            coco_keypoints.append(kp)
-        else:
-            coco_keypoints.append({
-                "x": 0, "y": 0, "z": 0, "score": 0, "name": coco_name
-            })
-
-    return coco_keypoints
-
-
 def compute_angles(keypoints: list[dict]) -> dict:
     """Compute angles for swing analysis."""
     kp_map = {kp["name"]: kp for kp in keypoints}
@@ -312,7 +262,6 @@ def extract_poses(
     video_path: Path,
     output_path: Optional[Path] = None,
     model_type: str = "landmark_full",
-    output_format: str = "coco",  # "coco" (17) or "blazepose" (33)
 ) -> dict:
     """Extract poses from video."""
     video_path = Path(video_path)
@@ -359,13 +308,8 @@ def extract_poses(
         video_time = frame_idx / fps
 
         if result and result["score"] > 0.3:
-            # Convert to COCO format if requested
-            if output_format == "coco":
-                keypoints = blazepose_to_coco(result["keypoints"])
-            else:
-                keypoints = result["keypoints"]
-
-            angles = compute_angles(keypoints if output_format == "coco" else blazepose_to_coco(result["keypoints"]))
+            keypoints = result["keypoints"]
+            angles = compute_angles(keypoints)
 
             frame_data = {
                 "frameIndex": frame_idx,
@@ -376,12 +320,11 @@ def extract_poses(
                 "angles": angles,
             }
         else:
-            names = COCO_NAMES if output_format == "coco" else BLAZEPOSE_NAMES
             frame_data = {
                 "frameIndex": frame_idx,
                 "timestamp": round(timestamp_ms, 2),
                 "videoTime": round(video_time, 4),
-                "keypoints": [{"x": 0, "y": 0, "z": 0, "score": 0, "name": n} for n in names],
+                "keypoints": [{"x": 0, "y": 0, "z": 0, "score": 0, "name": n} for n in BLAZEPOSE_NAMES],
                 "score": 0,
             }
 
@@ -401,8 +344,6 @@ def extract_poses(
     print(f"\n  Completed in {elapsed:.1f}s ({frame_idx / elapsed:.1f} fps)")
 
     # Build output
-    keypoint_format = "blazepose-33" if output_format == "blazepose" else "coco-17"
-    keypoint_count = 33 if output_format == "blazepose" else 17
     # Map model_type to modelVariant
     model_variant_map = {"landmark_lite": "lite", "landmark_full": "full", "landmark_heavy": "heavy"}
     posetrack = {
@@ -411,8 +352,8 @@ def extract_poses(
             "model": "blazepose",
             "modelVersion": f"tflite-{model_type}",
             "modelVariant": model_variant_map.get(model_type, "full"),
-            "keypointFormat": keypoint_format,
-            "keypointCount": keypoint_count,
+            "keypointFormat": "blazepose-33",
+            "keypointCount": 33,
             "sourceVideoHash": video_hash,
             "sourceVideoName": video_path.name,
             "sourceVideoDuration": round(duration, 4),
@@ -442,35 +383,16 @@ def main():
         "--model", choices=["landmark_lite", "landmark_full", "landmark_heavy"],
         default="landmark_full", help="Model variant (default: landmark_full)"
     )
-    parser.add_argument(
-        "--format", choices=["coco", "blazepose"], default="blazepose",
-        help="Output format: blazepose (33 keypoints, default) or coco (17 keypoints)"
-    )
-    parser.add_argument(
-        "--full", action="store_true",
-        help="Output all 33 BlazePose keypoints (default, kept for compatibility)"
-    )
-    parser.add_argument(
-        "--coco", action="store_true",
-        help="Output legacy COCO-17 keypoints (alias for --format coco)"
-    )
+    # Always use BlazePose-33 keypoints (COCO-17 is no longer supported)
 
     args = parser.parse_args()
-
-    # --coco is alias for --format coco, --full is kept for compatibility
-    if args.coco:
-        output_format = "coco"
-    elif args.full:
-        output_format = "blazepose"
-    else:
-        output_format = args.format
 
     if not args.video.exists():
         print(f"Error: Video not found: {args.video}", file=sys.stderr)
         sys.exit(1)
 
     try:
-        extract_poses(args.video, args.output, args.model, output_format)
+        extract_poses(args.video, args.output, args.model)
     except KeyboardInterrupt:
         print("\nAborted")
         sys.exit(1)
