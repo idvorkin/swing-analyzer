@@ -118,14 +118,18 @@ Styling:
 
 ## Visibility States
 
+The HUD follows the same visibility rules as the skeleton: **only visible when poses are available for the current frame**.
+
 | App State | Skeleton | Status Overlay | Extraction % | Position |
 |-----------|----------|----------------|--------------|----------|
 | No video loaded | Hidden | Hidden | Hidden | Hidden |
 | Video loading | Hidden | Hidden | Hidden | Hidden |
-| Extraction in progress | Hidden | Visible | **Visible** | Visible |
+| Extraction in progress | Hidden | Hidden | **Visible** | Hidden |
 | Playback (poses available) | Visible | Visible | Hidden | Visible |
 | Paused (poses available) | Visible | Visible | Hidden | Visible |
 | Playback (no poses at frame) | Hidden | Shows last known | Hidden | Shows last known |
+
+**Rationale**: During extraction, the skeleton is not rendered because the visible video isn't synced to extraction frames. The status overlay (reps, angles, position) derives from skeleton data, so it must also be hidden during extraction. Only extraction % is shown to indicate progress.
 
 **Key Rule**: The entire HUD overlay is only visible when `currentVideoFile` is set.
 
