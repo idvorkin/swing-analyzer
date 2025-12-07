@@ -119,6 +119,10 @@ export class KettlebellSwingDetector implements ExerciseDetector {
   private framesInPhase = 0;
   private readonly minFramesInPhase = 2;
 
+  // Wrist height history for peak detection (Top = peak wrist height)
+  private wristHeightHistory: number[] = [];
+  private readonly wristHeightWindowSize = 5;
+
   constructor(thresholds: Partial<SwingThresholds> = {}) {
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
   }
@@ -132,7 +136,14 @@ export class KettlebellSwingDetector implements ExerciseDetector {
     const spine = skeleton.getSpineAngle();
     const hip = skeleton.getHipAngle();
     const knee = skeleton.getKneeAngle();
-    const angles = { arm, spine, hip, knee };
+    const wristHeight = skeleton.getWristHeight();
+    const angles = { arm, spine, hip, knee, wristHeight };
+
+    // Track wrist height history for peak detection
+    this.wristHeightHistory.push(wristHeight);
+    if (this.wristHeightHistory.length > this.wristHeightWindowSize * 2) {
+      this.wristHeightHistory = this.wristHeightHistory.slice(-this.wristHeightWindowSize * 2);
+    }
 
     // Track metrics for quality scoring
     this.updateMetrics(arm, spine, hip, knee);
@@ -373,18 +384,67 @@ export class KettlebellSwingDetector implements ExerciseDetector {
 
   /**
    * Check if we should transition from RELEASE to TOP (rep complete)
+   *
+   * Uses PEAK DETECTION: Top is when wrist height reaches its maximum
+   * (arms at apex) and starts descending. This is more accurate than
+   * threshold-based detection which triggers multiple times per rep.
+   *
+   * Requirements:
+   * - Wrist height peaked (was increasing, now decreasing)
+   * - Spine is upright (< 30°) - ensures we're standing
+   * - Hip is extended (> 150°) - ensures lockout
    */
   private shouldTransitionToTop(
-    arm: number,
+    _arm: number,
     spine: number,
     hip: number
   ): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
-    return (
-      arm > this.thresholds.topArmMin &&
-      spine < this.thresholds.topSpineMax &&
-      hip > this.thresholds.topHipMin
-    );
+
+    // Need enough history for peak detection
+    if (this.wristHeightHistory.length < 3) return false;
+
+    // Check posture requirements first (must be standing upright)
+    if (spine > this.thresholds.topSpineMax || hip < this.thresholds.topHipMin) {
+      return false;
+    }
+
+    // Peak detection: check if wrist height was increasing and is now decreasing
+    const h = this.wristHeightHistory;
+    const len = h.length;
+
+    // Get smoothed values over last few frames
+    const prev2 = this.smoothedWristHeight(len - 3, 2);
+    const prev1 = this.smoothedWristHeight(len - 2, 2);
+    const curr = this.smoothedWristHeight(len - 1, 2);
+
+    // Peak = prev1 >= prev2 AND prev1 > curr (local maximum)
+    // Also require wrist height to be above a minimum (arms not down)
+    const isPeak = prev1 >= prev2 && prev1 > curr;
+    const wristHighEnough = prev1 > -80; // At least close to shoulder level
+
+    return isPeak && wristHighEnough;
+  }
+
+  /**
+   * Get smoothed wrist height at an index (average of nearby values)
+   */
+  private smoothedWristHeight(centerIndex: number, radius: number): number {
+    const h = this.wristHeightHistory;
+    const start = Math.max(0, centerIndex - radius);
+    const end = Math.min(h.length - 1, centerIndex + radius);
+
+    if (start > end || start < 0 || end >= h.length) {
+      return h[Math.max(0, Math.min(h.length - 1, centerIndex))] ?? 0;
+    }
+
+    let sum = 0;
+    let count = 0;
+    for (let i = start; i <= end; i++) {
+      sum += h[i];
+      count++;
+    }
+    return count > 0 ? sum / count : 0;
   }
 
   /**
@@ -553,6 +613,7 @@ export class KettlebellSwingDetector implements ExerciseDetector {
     this.currentRepPeaks = {};
     this.lastPhasePeak = null;
     this.lastRepPeaks = null;
+    this.wristHeightHistory = [];
     this.resetMetrics();
   }
 
