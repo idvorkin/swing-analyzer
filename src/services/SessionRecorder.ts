@@ -1107,30 +1107,64 @@ if (typeof window !== 'undefined') {
     getPoseTrack: () => sessionRecorder.getPoseTrack(),
 
     /**
-     * Download current pose track as JSON file.
+     * Download current pose track as gzipped JSON file.
+     * Uses CompressionStream API for efficient gzip compression.
      * Usage: swingDebug.downloadPoseTrack()
      */
-    downloadPoseTrack: () => {
+    downloadPoseTrack: async () => {
       const poseTrack = sessionRecorder.getPoseTrack();
       if (!poseTrack) {
         console.warn('[swingDebug] No pose track data available');
         return null;
       }
-      // Download as JSON
-      const json = JSON.stringify(poseTrack, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const metadata = (poseTrack as { metadata?: { sourceVideoName?: string } }).metadata;
-      const videoName = metadata?.sourceVideoName || 'video';
-      const filename = videoName.replace(/\.[^.]+$/, '') + '.posetrack.json';
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      return filename;
+
+      try {
+        // Serialize in chunks to avoid string length limits
+        const track = poseTrack as { metadata: unknown; frames: unknown[] };
+        const chunks: string[] = [];
+        chunks.push('{"metadata":');
+        chunks.push(JSON.stringify(track.metadata));
+        chunks.push(',"frames":[');
+
+        // Add frames one by one to avoid huge string concatenation
+        const frames = track.frames;
+        for (let i = 0; i < frames.length; i++) {
+          if (i > 0) chunks.push(',');
+          chunks.push(JSON.stringify(frames[i]));
+        }
+        chunks.push(']}');
+
+        // Create blob from chunks
+        const jsonBlob = new Blob(chunks, { type: 'application/json' });
+        const uncompressedSize = jsonBlob.size;
+
+        // Compress with gzip using CompressionStream API
+        const compressionStream = new CompressionStream('gzip');
+        const compressedStream = jsonBlob.stream().pipeThrough(compressionStream);
+        const compressedBlob = await new Response(compressedStream).blob();
+
+        // Download the gzipped file
+        const url = URL.createObjectURL(compressedBlob);
+        const metadata = track.metadata as { sourceVideoName?: string };
+        const videoName = metadata?.sourceVideoName || 'video';
+        const filename = videoName.replace(/\.[^.]+$/, '') + '.posetrack.json.gz';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        const compressedSize = compressedBlob.size;
+        const ratio = ((1 - compressedSize / uncompressedSize) * 100).toFixed(1);
+        console.log(`[swingDebug] Downloaded pose track: ${filename}`);
+        console.log(`[swingDebug] Size: ${(compressedSize / 1024).toFixed(1)} KB (${ratio}% compression, was ${(uncompressedSize / 1024 / 1024).toFixed(2)} MB)`);
+        return filename;
+      } catch (error) {
+        console.error('[swingDebug] Failed to download pose track:', error);
+        return null;
+      }
     },
   };
 

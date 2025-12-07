@@ -263,16 +263,16 @@ test.describe('Settings Modal', () => {
       expect(poseTrack.frames).toBeDefined();
       expect(poseTrack.frames.length).toBeGreaterThan(0);
 
-      // Test the download function returns a filename
-      const filename = await page.evaluate(() => {
-        return (window as any).swingDebug.downloadPoseTrack();
+      // Test the download function returns a filename (async, returns gzipped file)
+      const filename = await page.evaluate(async () => {
+        return await (window as any).swingDebug.downloadPoseTrack();
       });
-      expect(filename).toMatch(/\.posetrack\.json$/);
+      expect(filename).toMatch(/\.posetrack\.json\.gz$/);
     });
 
     test('swingDebug.downloadPoseTrack should return null when no video loaded', async ({ page }) => {
-      const result = await page.evaluate(() => {
-        return (window as any).swingDebug.downloadPoseTrack();
+      const result = await page.evaluate(async () => {
+        return await (window as any).swingDebug.downloadPoseTrack();
       });
       expect(result).toBeNull();
     });
