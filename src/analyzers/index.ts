@@ -23,3 +23,10 @@ export {
   type PistolSquatPhase,
   type PistolSquatThresholds,
 } from './PistolSquatFormAnalyzer';
+
+export {
+  ExerciseDetector,
+  type DetectedExercise,
+  type DetectionResult,
+  type ExerciseDetectorConfig,
+} from './ExerciseDetector';
