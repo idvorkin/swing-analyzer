@@ -12,7 +12,6 @@ import { useShakeDetector } from '../hooks/useShakeDetector';
 import { useVersionCheck } from '../hooks/useVersionCheck';
 import { BugReportModal } from './BugReportModal';
 import { CrashFallback } from './CrashFallback';
-import { PoseStudioPage } from './PoseStudioPage';
 import { SettingsModal } from './SettingsModal';
 import { VersionNotification } from './VersionNotification';
 
@@ -130,7 +129,6 @@ const AppContent: React.FC = () => {
       <Header onOpenSettings={() => setSettingsOpen(true)} />
       <Routes>
         <Route path="/" element={<MainApplication />} />
-        <Route path="/poses" element={<PoseStudioPage />} />
       </Routes>
       <VersionNotification />
       <BugReportModal
