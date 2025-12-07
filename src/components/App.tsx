@@ -1,7 +1,7 @@
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { NavLink, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
 import { GIT_BRANCH } from '../generated_version';
 import VideoSectionV2 from './VideoSectionV2';
@@ -11,6 +11,7 @@ import { useShakeDetector } from '../hooks/useShakeDetector';
 import { useVersionCheck } from '../hooks/useVersionCheck';
 import { BugReportModal } from './BugReportModal';
 import { CrashFallback } from './CrashFallback';
+import { HelpModal } from './HelpModal';
 import { SettingsModal } from './SettingsModal';
 import { VersionNotification } from './VersionNotification';
 
@@ -54,9 +55,10 @@ const branchDisplayName = isFeatureBranch
 // Header with navigation
 interface HeaderProps {
   onOpenSettings: () => void;
+  onOpenHelp: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenHelp }) => {
   return (
     <header>
       <h1>
@@ -69,9 +71,32 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         )}
       </h1>
       <nav>
-        <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
-          <span>Analyzer</span>
-        </NavLink>
+        {/* Help button - shows touch gesture guide */}
+        <button
+          type="button"
+          className="header-help-btn"
+          title="Touch controls help"
+          onClick={onOpenHelp}
+          aria-label="Touch controls help"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </button>
+        {/* Swap video button - shows source picker overlay */}
+        <button
+          type="button"
+          className="header-swap-btn"
+          title="Load different video"
+          onClick={() => window.dispatchEvent(new CustomEvent('show-source-picker'))}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+        </button>
         <button
           type="button"
           onClick={onOpenSettings}
@@ -90,6 +115,7 @@ const AppContent: React.FC = () => {
   const bugReporter = useBugReporter();
   const versionCheck = useVersionCheck();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const { isSupported: isShakeSupported, requestPermission } = useShakeDetector(
     {
@@ -121,11 +147,12 @@ const AppContent: React.FC = () => {
 
   return (
     <SwingAnalyzerProvider>
-      <Header onOpenSettings={() => setSettingsOpen(true)} />
+      <Header onOpenSettings={() => setSettingsOpen(true)} onOpenHelp={() => setHelpOpen(true)} />
       <Routes>
         <Route path="/" element={<MainApplication />} />
       </Routes>
       <VersionNotification />
+      <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
       <BugReportModal
         isOpen={bugReporter.isOpen}
         onClose={bugReporter.close}

@@ -1,5 +1,5 @@
 import type { Skeleton } from '../models/Skeleton';
-import { CocoBodyParts, type PoseKeypoint } from '../types';
+import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
 
 /**
  * Responsible for rendering skeleton and pose data on a canvas
@@ -107,31 +107,48 @@ export class SkeletonRenderer {
     ctx.lineWidth = 2;
 
     // Define the connections to draw (pairs of keypoint indices)
+    // MediaPipe 33-point format includes hands and feet
     const connections = [
       // Torso
-      [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.RIGHT_SHOULDER],
-      [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_HIP],
-      [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_HIP],
-      [CocoBodyParts.LEFT_HIP, CocoBodyParts.RIGHT_HIP],
+      [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.RIGHT_SHOULDER],
+      [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.LEFT_HIP],
+      [MediaPipeBodyParts.RIGHT_SHOULDER, MediaPipeBodyParts.RIGHT_HIP],
+      [MediaPipeBodyParts.LEFT_HIP, MediaPipeBodyParts.RIGHT_HIP],
 
       // Arms
-      [CocoBodyParts.LEFT_SHOULDER, CocoBodyParts.LEFT_ELBOW],
-      [CocoBodyParts.LEFT_ELBOW, CocoBodyParts.LEFT_WRIST],
-      [CocoBodyParts.RIGHT_SHOULDER, CocoBodyParts.RIGHT_ELBOW],
-      [CocoBodyParts.RIGHT_ELBOW, CocoBodyParts.RIGHT_WRIST],
+      [MediaPipeBodyParts.LEFT_SHOULDER, MediaPipeBodyParts.LEFT_ELBOW],
+      [MediaPipeBodyParts.LEFT_ELBOW, MediaPipeBodyParts.LEFT_WRIST],
+      [MediaPipeBodyParts.RIGHT_SHOULDER, MediaPipeBodyParts.RIGHT_ELBOW],
+      [MediaPipeBodyParts.RIGHT_ELBOW, MediaPipeBodyParts.RIGHT_WRIST],
+
+      // Hands (new in 33-point format)
+      [MediaPipeBodyParts.LEFT_WRIST, MediaPipeBodyParts.LEFT_PINKY],
+      [MediaPipeBodyParts.LEFT_WRIST, MediaPipeBodyParts.LEFT_INDEX],
+      [MediaPipeBodyParts.LEFT_WRIST, MediaPipeBodyParts.LEFT_THUMB],
+      [MediaPipeBodyParts.RIGHT_WRIST, MediaPipeBodyParts.RIGHT_PINKY],
+      [MediaPipeBodyParts.RIGHT_WRIST, MediaPipeBodyParts.RIGHT_INDEX],
+      [MediaPipeBodyParts.RIGHT_WRIST, MediaPipeBodyParts.RIGHT_THUMB],
 
       // Legs
-      [CocoBodyParts.LEFT_HIP, CocoBodyParts.LEFT_KNEE],
-      [CocoBodyParts.LEFT_KNEE, CocoBodyParts.LEFT_ANKLE],
-      [CocoBodyParts.RIGHT_HIP, CocoBodyParts.RIGHT_KNEE],
-      [CocoBodyParts.RIGHT_KNEE, CocoBodyParts.RIGHT_ANKLE],
+      [MediaPipeBodyParts.LEFT_HIP, MediaPipeBodyParts.LEFT_KNEE],
+      [MediaPipeBodyParts.LEFT_KNEE, MediaPipeBodyParts.LEFT_ANKLE],
+      [MediaPipeBodyParts.RIGHT_HIP, MediaPipeBodyParts.RIGHT_KNEE],
+      [MediaPipeBodyParts.RIGHT_KNEE, MediaPipeBodyParts.RIGHT_ANKLE],
+
+      // Feet (new in 33-point format)
+      [MediaPipeBodyParts.LEFT_ANKLE, MediaPipeBodyParts.LEFT_HEEL],
+      [MediaPipeBodyParts.LEFT_HEEL, MediaPipeBodyParts.LEFT_FOOT_INDEX],
+      [MediaPipeBodyParts.LEFT_ANKLE, MediaPipeBodyParts.LEFT_FOOT_INDEX],
+      [MediaPipeBodyParts.RIGHT_ANKLE, MediaPipeBodyParts.RIGHT_HEEL],
+      [MediaPipeBodyParts.RIGHT_HEEL, MediaPipeBodyParts.RIGHT_FOOT_INDEX],
+      [MediaPipeBodyParts.RIGHT_ANKLE, MediaPipeBodyParts.RIGHT_FOOT_INDEX],
 
       // Face
-      [CocoBodyParts.LEFT_EYE, CocoBodyParts.RIGHT_EYE],
-      [CocoBodyParts.NOSE, CocoBodyParts.LEFT_EYE],
-      [CocoBodyParts.NOSE, CocoBodyParts.RIGHT_EYE],
-      [CocoBodyParts.LEFT_EYE, CocoBodyParts.LEFT_EAR],
-      [CocoBodyParts.RIGHT_EYE, CocoBodyParts.RIGHT_EAR],
+      [MediaPipeBodyParts.LEFT_EYE, MediaPipeBodyParts.RIGHT_EYE],
+      [MediaPipeBodyParts.NOSE, MediaPipeBodyParts.LEFT_EYE],
+      [MediaPipeBodyParts.NOSE, MediaPipeBodyParts.RIGHT_EYE],
+      [MediaPipeBodyParts.LEFT_EYE, MediaPipeBodyParts.LEFT_EAR],
+      [MediaPipeBodyParts.RIGHT_EYE, MediaPipeBodyParts.RIGHT_EAR],
     ];
 
     // Draw spine with different color to highlight it
@@ -140,10 +157,10 @@ export class SkeletonRenderer {
     ctx.lineWidth = 3;
 
     // Draw spine (mid-shoulders to mid-hips)
-    const leftShoulder = keypoints[CocoBodyParts.LEFT_SHOULDER];
-    const rightShoulder = keypoints[CocoBodyParts.RIGHT_SHOULDER];
-    const leftHip = keypoints[CocoBodyParts.LEFT_HIP];
-    const rightHip = keypoints[CocoBodyParts.RIGHT_HIP];
+    const leftShoulder = keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
+    const rightShoulder = keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
+    const leftHip = keypoints[MediaPipeBodyParts.LEFT_HIP];
+    const rightHip = keypoints[MediaPipeBodyParts.RIGHT_HIP];
 
     if (
       this.isPointVisible(leftShoulder) &&
@@ -347,28 +364,47 @@ export class SkeletonRenderer {
   }
 
   /**
-   * Get human-readable name for a body part index
+   * Get human-readable name for a body part index (MediaPipe 33-point format)
    */
   private getBodyPartName(index: number): string {
     // Map index to readable name
     const bodyPartNames: { [key: number]: string } = {
-      [CocoBodyParts.NOSE]: 'Nose',
-      [CocoBodyParts.LEFT_EYE]: 'Left Eye',
-      [CocoBodyParts.RIGHT_EYE]: 'Right Eye',
-      [CocoBodyParts.LEFT_EAR]: 'Left Ear',
-      [CocoBodyParts.RIGHT_EAR]: 'Right Ear',
-      [CocoBodyParts.LEFT_SHOULDER]: 'Left Shoulder',
-      [CocoBodyParts.RIGHT_SHOULDER]: 'Right Shoulder',
-      [CocoBodyParts.LEFT_ELBOW]: 'Left Elbow',
-      [CocoBodyParts.RIGHT_ELBOW]: 'Right Elbow',
-      [CocoBodyParts.LEFT_WRIST]: 'Left Wrist',
-      [CocoBodyParts.RIGHT_WRIST]: 'Right Wrist',
-      [CocoBodyParts.LEFT_HIP]: 'Left Hip',
-      [CocoBodyParts.RIGHT_HIP]: 'Right Hip',
-      [CocoBodyParts.LEFT_KNEE]: 'Left Knee',
-      [CocoBodyParts.RIGHT_KNEE]: 'Right Knee',
-      [CocoBodyParts.LEFT_ANKLE]: 'Left Ankle',
-      [CocoBodyParts.RIGHT_ANKLE]: 'Right Ankle',
+      // Face (0-10)
+      [MediaPipeBodyParts.NOSE]: 'Nose',
+      [MediaPipeBodyParts.LEFT_EYE_INNER]: 'Left Eye Inner',
+      [MediaPipeBodyParts.LEFT_EYE]: 'Left Eye',
+      [MediaPipeBodyParts.LEFT_EYE_OUTER]: 'Left Eye Outer',
+      [MediaPipeBodyParts.RIGHT_EYE_INNER]: 'Right Eye Inner',
+      [MediaPipeBodyParts.RIGHT_EYE]: 'Right Eye',
+      [MediaPipeBodyParts.RIGHT_EYE_OUTER]: 'Right Eye Outer',
+      [MediaPipeBodyParts.LEFT_EAR]: 'Left Ear',
+      [MediaPipeBodyParts.RIGHT_EAR]: 'Right Ear',
+      [MediaPipeBodyParts.MOUTH_LEFT]: 'Mouth Left',
+      [MediaPipeBodyParts.MOUTH_RIGHT]: 'Mouth Right',
+      // Upper body (11-22)
+      [MediaPipeBodyParts.LEFT_SHOULDER]: 'Left Shoulder',
+      [MediaPipeBodyParts.RIGHT_SHOULDER]: 'Right Shoulder',
+      [MediaPipeBodyParts.LEFT_ELBOW]: 'Left Elbow',
+      [MediaPipeBodyParts.RIGHT_ELBOW]: 'Right Elbow',
+      [MediaPipeBodyParts.LEFT_WRIST]: 'Left Wrist',
+      [MediaPipeBodyParts.RIGHT_WRIST]: 'Right Wrist',
+      [MediaPipeBodyParts.LEFT_PINKY]: 'Left Pinky',
+      [MediaPipeBodyParts.RIGHT_PINKY]: 'Right Pinky',
+      [MediaPipeBodyParts.LEFT_INDEX]: 'Left Index',
+      [MediaPipeBodyParts.RIGHT_INDEX]: 'Right Index',
+      [MediaPipeBodyParts.LEFT_THUMB]: 'Left Thumb',
+      [MediaPipeBodyParts.RIGHT_THUMB]: 'Right Thumb',
+      // Lower body (23-32)
+      [MediaPipeBodyParts.LEFT_HIP]: 'Left Hip',
+      [MediaPipeBodyParts.RIGHT_HIP]: 'Right Hip',
+      [MediaPipeBodyParts.LEFT_KNEE]: 'Left Knee',
+      [MediaPipeBodyParts.RIGHT_KNEE]: 'Right Knee',
+      [MediaPipeBodyParts.LEFT_ANKLE]: 'Left Ankle',
+      [MediaPipeBodyParts.RIGHT_ANKLE]: 'Right Ankle',
+      [MediaPipeBodyParts.LEFT_HEEL]: 'Left Heel',
+      [MediaPipeBodyParts.RIGHT_HEEL]: 'Right Heel',
+      [MediaPipeBodyParts.LEFT_FOOT_INDEX]: 'Left Foot',
+      [MediaPipeBodyParts.RIGHT_FOOT_INDEX]: 'Right Foot',
     };
 
     return bodyPartNames[index] || `Point ${index}`;

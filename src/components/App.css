@@ -140,21 +140,29 @@ main {
   margin-bottom: 30px;
 }
 
-/* Controls */
+/* Screen reader only - visually hidden but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Legacy top-controls - kept for backwards compatibility but hidden */
 .top-controls {
-  display: flex;
-  margin-bottom: 25px;
-  background-color: white;
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  display: none;
 }
 
 .control-row {
   width: 100%;
   display: flex;
   flex-direction: row;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: nowrap;
 }
 
@@ -177,18 +185,18 @@ main {
   background: linear-gradient(135deg, #4285f4, #1a73e8);
   color: white;
   border: none;
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 15px;
-  transition: all 0.3s;
+  font-size: 14px;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 5px rgba(26, 115, 232, 0.2);
   width: 100%;
-  min-height: 45px;
+  min-height: 40px;
   box-sizing: border-box;
   white-space: nowrap;
 }
@@ -205,6 +213,211 @@ main {
   flex-shrink: 0;
 }
 
+/* Source picker overlay - shown when no video or when switching videos */
+.source-picker-overlay {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.source-picker-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+.source-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 32px;
+  border-radius: 12px;
+  border: none;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 200px;
+}
+
+.source-picker-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.source-picker-btn.camera-roll-btn {
+  background: linear-gradient(135deg, #4285f4, #1a73e8);
+  color: white;
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+}
+
+.source-picker-btn.sample-btn {
+  background: linear-gradient(135deg, #34c759, #28a745);
+  color: white;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.source-picker-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.source-picker-btn:active {
+  transform: scale(0.97);
+}
+
+/* Rep navigation strip - dedicated strip below header */
+.rep-nav-strip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Left and right button groups - fixed width so they don't move */
+.rep-nav-left,
+.rep-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+
+.rep-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rep-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.rep-nav-btn:active:not(:disabled) {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.rep-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Double-arrow buttons for rep navigation - slightly different color */
+.rep-nav-btn-double {
+  background: rgba(139, 92, 246, 0.25);
+}
+
+.rep-nav-btn-double:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.4);
+}
+
+.rep-nav-btn-double:active:not(:disabled) {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+/* Center display: Rep X/Y • Checkpoint - flex:1 so right buttons stay fixed */
+.rep-nav-display {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.rep-nav-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.rep-nav-dot {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.75rem;
+}
+
+.rep-nav-position {
+  color: #a78bfa;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Mobile: keep touch-friendly sizes, tighter spacing */
+@media (max-width: 480px) {
+  .rep-nav-strip {
+    padding: 8px 8px;
+    gap: 3px;
+  }
+
+  .rep-nav-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .rep-nav-display {
+    padding: 0 8px;
+    font-size: 0.875rem;
+    gap: 4px;
+  }
+
+  .rep-nav-position {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Header swap button - camera icon to load/switch video */
+.header-swap-btn,
+.header-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-swap-btn:hover,
+.header-swap-btn:active,
+.header-help-btn:hover,
+.header-help-btn:active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.header-swap-btn svg,
+.header-help-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .icon-right {
   margin-right: 0;
   margin-left: 6px;
@@ -215,15 +428,16 @@ main {
   background: linear-gradient(135deg, #4285f4, #1a73e8);
   color: white;
   border: none;
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 15px;
-  transition: all 0.3s;
+  font-size: 14px;
+  transition: all 0.2s;
   box-shadow: 0 2px 5px rgba(26, 115, 232, 0.2);
   flex: 1;
   min-width: 0;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -288,6 +502,55 @@ main {
   z-index: 10;
 }
 
+/* Double-tap play/pause feedback overlay */
+.video-tap-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Position overlays in zones for touch double-tap */
+.video-tap-overlay--left {
+  justify-content: flex-start;
+  padding-left: 12.5%; /* Center within left 25% zone */
+}
+
+.video-tap-overlay--right {
+  justify-content: flex-end;
+  padding-right: 12.5%; /* Center within right 25% zone */
+}
+
+.video-tap-overlay--center {
+  justify-content: center;
+}
+
+.video-tap-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: video-tap-fade 0.5s ease-out forwards;
+}
+
+@keyframes video-tap-fade {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
 /* ============================================
    HUD OVERLAY - Floating on video
    ============================================ */
@@ -296,7 +559,7 @@ main {
   --hud-bg: rgba(15, 20, 25, 0.85);
   --hud-accent: #00d4aa;
   --hud-text: rgba(255, 255, 255, 0.95);
-  --hud-text-dim: rgba(255, 255, 255, 0.6);
+  --hud-text-dim: rgba(255, 255, 255, 0.75); /* Increased from 0.6 for WCAG AA contrast */
   --hud-border: rgba(255, 255, 255, 0.1);
   --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 
@@ -377,6 +640,13 @@ main {
   font-weight: 600;
   color: var(--hud-text);
   line-height: 1.2;
+}
+
+/* Position indicator in HUD - purple accent to match nav strip */
+.hud-overlay-position .hud-overlay-angle-value {
+  color: #a78bfa;
+  text-transform: uppercase;
+  font-size: 0.875rem;
 }
 
 .hud-overlay-top-right {
@@ -602,43 +872,47 @@ main {
 /* Mobile-specific video controls */
 @media (max-width: 768px) {
   .video-controls {
-    gap: 6px;
-    padding: 0 8px;
-    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 10px;
+    flex-wrap: nowrap;
   }
 
   .video-controls button {
     min-width: 0;
-    padding: 10px 12px;
+    padding: 10px;
     flex: 1;
+    min-height: 48px; /* Increased from 44px for better thumb targets */
   }
 
   .video-controls .button-text {
     display: none; /* Hide text on mobile */
   }
 
-  /* Play button compact on mobile too */
+  /* Play button - smallest (tertiary action) */
   #play-pause-btn {
-    min-width: 0;
-    flex: 0.6;
-  }
-
-  /* Frame buttons prominent on mobile */
-  #prev-frame-btn,
-  #next-frame-btn {
     min-width: 44px;
     min-height: 44px;
-    flex: 1;
+    flex: 0.5;
+    padding: 8px;
+  }
+
+  /* Frame buttons - medium size (secondary action) */
+  #prev-frame-btn,
+  #next-frame-btn {
+    min-width: 48px;
+    min-height: 48px;
+    flex: 0.8;
     padding: 10px;
   }
 
-  /* Checkpoint buttons most prominent on mobile */
+  /* Checkpoint buttons - largest (primary action) */
   #prev-checkpoint-btn,
   #next-checkpoint-btn {
-    min-width: 48px;
-    min-height: 48px;
+    min-width: 56px;
+    min-height: 56px;
     flex: 1.2;
-    padding: 10px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
   }
 }
 
@@ -652,6 +926,7 @@ main {
   --filmstrip-text: rgba(255, 255, 255, 0.7);
   --filmstrip-border: rgba(255, 255, 255, 0.08);
 
+  position: relative;
   background: var(--filmstrip-bg);
   border-radius: 12px;
   padding: 1rem;
@@ -719,6 +994,35 @@ main {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
+}
+
+/* Gallery button */
+.filmstrip-gallery-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--filmstrip-border);
+  color: var(--filmstrip-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.filmstrip-gallery-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--filmstrip-accent);
+  border-color: var(--filmstrip-accent);
+}
+
+.filmstrip-gallery-btn:focus-visible {
+  outline: 2px solid var(--filmstrip-accent);
+  outline-offset: 2px;
 }
 
 /* Navigation controls */

@@ -1082,6 +1082,39 @@
   );
 }
 
+.settings-compact-icon--green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.settings-compact-label-indent {
+  margin-left: 34px; /* Align with text after icon */
+  color: var(--settings-text-muted);
+}
+
+.settings-clear-btn {
+  padding: var(--settings-space-xs) var(--settings-space-md);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--settings-text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--settings-radius-sm);
+  font-family: var(--settings-font-sans);
+  font-weight: 500;
+  font-size: var(--settings-text-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.settings-clear-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.settings-clear-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ==========================================================================
    Segmented Control
    ========================================================================== */

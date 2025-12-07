@@ -403,11 +403,14 @@ def extract_poses(
     # Build output
     keypoint_format = "blazepose-33" if output_format == "blazepose" else "coco-17"
     keypoint_count = 33 if output_format == "blazepose" else 17
+    # Map model_type to modelVariant
+    model_variant_map = {"landmark_lite": "lite", "landmark_full": "full", "landmark_heavy": "heavy"}
     posetrack = {
         "metadata": {
             "version": "1.0",
             "model": "blazepose",
             "modelVersion": f"tflite-{model_type}",
+            "modelVariant": model_variant_map.get(model_type, "full"),
             "keypointFormat": keypoint_format,
             "keypointCount": keypoint_count,
             "sourceVideoHash": video_hash,
@@ -418,6 +421,7 @@ def extract_poses(
             "fps": round(fps, 2),
             "videoWidth": width,
             "videoHeight": height,
+            # buildSha and buildTimestamp are optional - set by CI/CD if available
         },
         "frames": frames,
     }
@@ -439,18 +443,27 @@ def main():
         default="landmark_full", help="Model variant (default: landmark_full)"
     )
     parser.add_argument(
-        "--format", choices=["coco", "blazepose"], default="coco",
-        help="Output format: coco (17 keypoints) or blazepose (33 keypoints)"
+        "--format", choices=["coco", "blazepose"], default="blazepose",
+        help="Output format: blazepose (33 keypoints, default) or coco (17 keypoints)"
     )
     parser.add_argument(
         "--full", action="store_true",
-        help="Output all 33 BlazePose keypoints (alias for --format blazepose)"
+        help="Output all 33 BlazePose keypoints (default, kept for compatibility)"
+    )
+    parser.add_argument(
+        "--coco", action="store_true",
+        help="Output legacy COCO-17 keypoints (alias for --format coco)"
     )
 
     args = parser.parse_args()
 
-    # --full is alias for --format blazepose
-    output_format = "blazepose" if args.full else args.format
+    # --coco is alias for --format coco, --full is kept for compatibility
+    if args.coco:
+        output_format = "coco"
+    elif args.full:
+        output_format = "blazepose"
+    else:
+        output_format = args.format
 
     if not args.video.exists():
         print(f"Error: Video not found: {args.video}", file=sys.stderr)

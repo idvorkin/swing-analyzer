@@ -1,3 +1,4 @@
+- **Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** to understand where code belongs before making changes
 - Use PRs to do updates
 - When reporting dev server URLs, always use the **Tailscale URL** (e.g., `https://c-5001.squeaker-teeth.ts.net:5174`), not localhost
 
@@ -16,9 +17,11 @@ Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) 
 ## Multi-Agent Setup
 
 - **Use full clones**, not worktrees - worktrees cause issues with parallel agents
-- **Remote setup**: `origin` = idvorkin-ai-tools fork (push here), `upstream` = idvorkin (fetch from here)
+- **Remote setup**:
+  - `origin` = **idvorkin-ai-tools** fork (agents push here, can merge to main directly)
+  - `upstream` = **idvorkin** (human-only repo, requires PR approval to merge)
 - **Clone command**: `git clone https://github.com/idvorkin-ai-tools/swing-analyzer.git swing-N`
-- **After cloning**: `cd swing-N && just setup && git remote add upstream https://github.com/idvorkin/swing-analyzer.git && git checkout dev`
+- **After cloning**: `cd swing-N && just setup && git remote add upstream https://github.com/idvorkin/swing-analyzer.git`
 
 ### Per-Clone Branches (Recommended)
 
@@ -84,20 +87,41 @@ Always push after every commit - keeps your work visible in dashboard.
 
 **Stay current (rebase often):**
 ```bash
-git fetch origin dev && git rebase origin/dev
+git fetch origin main && git rebase origin/main
 git push origin agent/swing-N --force-with-lease
 ```
-Rebase on dev:
+Rebase on main:
 - Every 15 minutes during active work
 - Before starting any major new task
-- Before merging to dev
+- Before merging to main
 
 This keeps your branch up-to-date with changes from other agents.
 
-**Human merges to dev** when ready:
+**Merging to main** (on origin/idvorkin-ai-tools):
 ```bash
-git checkout dev && git merge agent/swing-N && git push
+git checkout main && git merge agent/swing-N
+# If merge had conflicts, run tests before pushing:
+npx playwright test && npx tsc --noEmit
+git push origin main
 ```
+
+**Merge criteria:**
+- Feature/task is complete
+- Rebased on latest main (no conflicts, or conflicts resolved)
+- If merge had conflicts: **must run test suite before pushing**
+
+**If merge conflicts occur:**
+1. Resolve conflicts carefully
+2. Run full test suite: `npx playwright test && npx tsc --noEmit`
+3. Only push if tests pass
+4. If tests fail, fix issues before pushing
+
+**If main is broken after merge:**
+1. `git revert HEAD && git push origin main` (quick rollback)
+2. Fix the issue on your agent branch
+3. Re-merge after fixing
+
+For upstream (idvorkin), create a PR instead of direct merge.
 
 ### Collaborative Feature Branches
 
@@ -151,11 +175,13 @@ cd ~/gits/agent-dashboard && npm run dev
 Actions requiring explicit "YES" approval from user:
 
 - **Removing broken tests** - Fix the test or code, never delete failing tests
-- **Pushing to main** - Always use feature branches and PRs
+- **Pushing to upstream (idvorkin repo)** - Requires PR and human approval
 - **Force pushing** - Can destroy history
-- **Accepting/merging PRs** - Human must review and approve
 - **Any action that loses work** - Deleting branches with unmerged commits, hard resets
 - **`bd init --force`** - Erases the beads database and rebuilds from JSONL. The database should already exist from clone.
+
+**Allowed without approval:**
+- Merging to origin/main (idvorkin-ai-tools) - this is the agent working repo
 
 **Encouraged** (not losing work): Deleting unused functions/files, removing commented-out code, cleaning unused imports - these are preserved in git history.
 
@@ -277,42 +303,71 @@ This avoids downloading browsers separately for each project.
 The `.githooks/` directory contains:
 - `pre-commit` - Syncs beads before commits
 - `post-merge` - Syncs beads after pulls
-- `pre-push` - Blocks direct pushes to `main`
+- `pre-push` - Blocks pushes to upstream/main only (origin/main is allowed)
 
 ### Branch Strategy
 
-- **feature branches**: Agents work here, one branch per task
-- **dev branch**: Feature branches merge here after local review
-- **main branch**: Nothing merges without a PR and human approval
-- **PR merge process**: Periodically diff dev from main, split into clean PRs, merge to main
+- **agent/swing-N branches**: Each agent works on its own branch
+- **feature branches**: Collaborative work, multiple agents can join
+- **main branch**:
+  - On **origin** (idvorkin-ai-tools): Agents can merge directly
+  - On **upstream** (idvorkin): Requires PR and human approval
 
-**⚠️ CRITICAL: Only humans merge to main. Agents must NEVER merge PRs to main unless the user explicitly says "YES" (uppercase). Phrases like "get it to main" or "merge it" are NOT sufficient - you must ask for confirmation and receive "YES" before merging any PR to main.**
+### Branch Hygiene (Every Few Days)
 
-**📦 MINIMAL PRs**: When creating PRs to main, include ONLY the changes the user explicitly requested. Do not bundle unrelated changes from the branch. If unsure what to include, ask the user to confirm scope before creating the PR.
+Run branch audit to prevent stale branch accumulation:
 
-**🚫 NO --no-verify**: Never use `git commit --no-verify` unless absolutely necessary.
+```bash
+# List remote branches by last commit date with behind/ahead counts
+for branch in $(git branch -r | grep -v HEAD | head -20); do
+  behind=$(git rev-list --count origin/main ^$branch 2>/dev/null || echo "?")
+  ahead=$(git rev-list --count $branch ^origin/main 2>/dev/null || echo "?")
+  date=$(git log -1 --format='%ci' $branch 2>/dev/null | cut -d' ' -f1)
+  echo "$date | $branch | +$ahead -$behind"
+done | sort -r
+```
+
+**Delete criteria:**
+- Branches 100+ commits behind with 0 unique commits (already merged)
+- Branches 200+ commits behind (too stale to salvage)
+- Copilot/exploration branches older than 2 weeks
+
+**Keep criteria:**
+- Active agent branches (`agent/swing-N`)
+- Branches with open PRs
+- `main`, `beads-metadata`
+
+**⚠️ UPSTREAM MERGES (idvorkin repo)**: Only humans merge to upstream/main. Agents must NEVER merge PRs to upstream unless the user explicitly says "YES" (uppercase). Phrases like "get it to main" or "merge it" are NOT sufficient - you must ask for confirmation and receive "YES" before merging any PR to upstream.
+
+**✅ ORIGIN MERGES (idvorkin-ai-tools fork)**: Agents can merge directly to origin/main. This is the working repo for agents.
+
+**📦 MINIMAL PRs**: When creating PRs to upstream, include ONLY the changes the user explicitly requested. Do not bundle unrelated changes from the branch. If unsure what to include, ask the user to confirm scope before creating the PR.
+
+**🚫 NO --no-verify**: Never use `--no-verify` unless absolutely necessary. The pre-push hook now allows origin/main pushes, so `--no-verify` shouldn't be needed.
 
 **🧹 LINT FIRST**: Before making code changes, run pre-commit on affected files to fix existing lint issues. Commit those fixes first, then make your actual change. This keeps your logic commits clean and focused.
 
 **🚫 NO FORCE PUSH**: Never use `git push --force` or `git push -f` unless the user explicitly types "yes" to confirm. If you have conflicts or diverged history, resolve them with rebase and regular push. Messy history on a branch is okay - losing other people's work is not.
 
-**🔄 REBASE OFTEN**: Multiple agents push to dev constantly. Always rebase before starting work:
+**🔄 REBASE OFTEN**: Multiple agents push to main constantly. Always rebase before starting work:
 
 ```bash
-git fetch origin && git rebase origin/dev
+git fetch origin && git rebase origin/main
 ```
 
-### Merging Feature Branches to Dev
+**🔀 REBASE vs MERGE**: When rebase has many conflicts, check if branches have diverged due to PR squash/merge creating duplicate commits with different hashes. If commits have matching messages but different hashes, **merge is cleaner than rebase**.
 
-**⚠️ MANDATORY: Run PR review agents before ANY merge to dev.**
+### Merging Feature Branches to Main
 
-Before merging your feature branch to dev:
+**⚠️ MANDATORY: Run PR review agents before ANY merge to main.**
 
-1. **Rebase on dev**: `git fetch origin && git rebase origin/dev`
+Before merging your feature branch to main:
+
+1. **Rebase on main**: `git fetch origin && git rebase origin/main`
 2. **Run PR review agents**: `/code-review:code-review` or `/pr-review-toolkit:review-pr`
 3. **Fix all issues** found by the review - do NOT skip this
 4. **Run tests**: `npx playwright test && npx tsc --noEmit`
-5. **Merge to dev**: `git checkout dev && git merge feature-branch && git push`
+5. **Merge to main**: `git checkout main && git merge feature-branch && git push`
 
 **🏗️ BIG ARCHITECTURAL CHANGES**: For refactoring or architecture changes (new state machines, new patterns, multiple new files), run comprehensive review:
 
@@ -335,21 +390,6 @@ Fix all critical and important issues before merging.
 - Bug fixes for user-facing issues
 
 If E2E tests don't exist for the affected area, create them before merging.
-
-### Splitting Dev Branch into Clean PRs
-
-When dev has accumulated many unrelated changes:
-
-1. **Diff dev from main**: `git diff main..dev --stat` to see all changes
-2. **Analyze commits**: `git log main..dev --oneline` to see commit history
-3. **Categorize changes** into logical groups (e.g., bug fixes, new features, refactors)
-4. **Create beads issues** for each PR: `bd create --title="Merge PR #X: description" --priority=1`
-5. **Add dependencies** between PRs: `bd dep add <blocked> <blocker>`
-6. **Create feature branches** from main, cherry-pick or manually copy changes
-7. **Rebase each branch** on main: `git rebase origin/main`
-8. **Run code review agent** on each PR to find issues
-9. **Fix issues**, run tests, push
-10. **Merge PRs** in dependency order, then sync dev with main
 
 ### PR Review Checklist
 
@@ -435,32 +475,31 @@ Observable<Frame>    Observable<Skeleton>    Observable<Form>   Observable<Rep>
 **Key Files:**
 
 - `src/pipeline/Pipeline.ts` - Orchestrator
-- `src/pipeline/PoseSkeletonTransformer.ts` - MoveNet pose detection
-- `src/pipeline/SwingFormProcessor.ts` - Swing position detection (Top/Connect/Bottom/Release)
-- `src/pipeline/SwingRepProcessor.ts` - Rep counting (Release→Top = 1 rep)
+- `src/pipeline/PoseSkeletonTransformer.ts` - BlazePose pose detection
+- `src/analyzers/KettlebellSwingFormAnalyzer.ts` - Swing position detection (Top/Connect/Bottom/Release)
 - `src/models/Skeleton.ts` - Angle calculations (spine, hip, knee, arm angles)
 
-### Current Model: MoveNet Lightning
+### Current Model: BlazePose
 
-- COCO-17 keypoint format
-- Fallback to PoseNet if MoveNet fails
-- Hardcoded in `PoseSkeletonTransformer`
+- MediaPipe-33 keypoint format (normalized to COCO-17 via `KeypointAdapter`)
+- Variants: Lite (default), Full, Heavy
+- Configured in `src/config/modelConfig.ts`
 
 ### Current Limitations (for future abstraction)
 
-1. **Model coupling** - MoveNet hardcoded, no runtime model selection
-2. **Exercise coupling** - Swing-specific positions/angles/rep logic throughout
-3. **Hardcoded thresholds** - Ideal angles in `SwingFormProcessor` as magic numbers
+1. **Model coupling** - BlazePose hardcoded in `PoseDetectorFactory`, no runtime model selection UI
+2. **Exercise coupling** - Only kettlebell swing analyzer exists (but plugin architecture ready for more)
+3. **Hardcoded thresholds** - Ideal angles in `KettlebellSwingFormAnalyzer` as magic numbers
 
-## Target Architecture
+## Current Architecture
 
-### Unified Pipeline with Swappable Sources
+### Unified Pipeline with Swappable Sources (Implemented)
 
 ```
-                      SwingAnalyzer (shared core)
+                      FormAnalyzer (plugin interface)
                              ▲
                              │
-                      SwingProcessor
+                         Pipeline
                              ▲
                              │
                  Observable<SkeletonEvent>
@@ -468,52 +507,49 @@ Observable<Frame>    Observable<Skeleton>    Observable<Form>   Observable<Rep>
                              │
             ┌────────────────┴────────────────┐
             │                                 │
-   VideoSkeletonSource              PoseTrackSkeletonSource
-   (live, real-time)                (pre-extracted, fast)
+   PoseSkeletonTransformer         CachedPoseSkeletonTransformer
+   (real-time ML inference)        (pre-extracted poses)
             │                                 │
             ▼                                 ▼
-   Camera/Video + ML model            PoseTrackFile (JSON)
+   Camera/Video + BlazePose         LivePoseCache (streaming)
 ```
 
-**Key insight**: Same streaming interface, different sources. PoseTrack source just runs faster than real-time.
+**Key insight**: Same streaming interface, different sources. Cached transformer runs faster than real-time.
 
 ### Components
 
-| Component                 | Purpose                                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------------------------- |
-| `SwingAnalyzer`           | Pure analysis logic - position detection, rep counting, thresholds. No video/ML/RxJS dependencies. |
-| `SwingProcessor`          | Wraps analyzer in RxJS streaming interface. One implementation for both modes.                     |
-| `VideoSkeletonSource`     | Live source - camera/video feed + ML model. Throttled by playback speed.                           |
-| `PoseTrackSkeletonSource` | Recorded source - iterates PoseTrack frames. As fast as CPU allows.                                |
+| Component                       | Purpose                                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `KettlebellSwingFormAnalyzer`   | Pure analysis logic - position detection, rep counting, thresholds. Implements `FormAnalyzer`.     |
+| `Pipeline`                      | Orchestrates frame acquisition + skeleton transformation + form analysis.                          |
+| `PoseSkeletonTransformer`       | Real-time source - BlazePose ML inference. Throttled by model speed.                               |
+| `CachedPoseSkeletonTransformer` | Cached source - reads from `LivePoseCache`. As fast as CPU allows.                                 |
+| `VideoFileSkeletonSource`       | Coordinates extraction and caching for video files.                                                |
 
 ### Benefits
 
-- Single source of truth for analysis logic
-- Unit test `SwingAnalyzer` with hardcoded skeletons
-- E2E tests use `PoseTrackSkeletonSource` - no video, no ML, deterministic
-- Real-time and batch modes guaranteed identical results
+- Single source of truth for analysis logic (FormAnalyzer plugin)
+- Unit test analyzers with hardcoded skeletons
+- E2E tests use cached poses - no ML inference, deterministic
+- Real-time and batch modes use same analysis code
 
 ## Future Roadmap
 
-### 1. Refactor to Unified Pipeline
+### 1. Exercise Abstraction (to support Pull-ups, Pistol Squats, etc.)
 
-- Extract shared logic from `SwingFormProcessor` → `SwingAnalyzer`
-- Create `VideoSkeletonSource` (wrap current ML path)
-- Create `PoseTrackSkeletonSource` (wrap PoseTrack iteration)
-- Delete duplicated logic from `PoseTrackPipeline`
-
-### 2. Model Abstraction (to support BlazePose, etc.)
-
-- Extract model config to separate file
-- Make `PoseSkeletonTransformer` accept model type
-- Create `PoseDetectorFactory` for model instantiation
-- Handle different keypoint formats (COCO vs MediaPipe)
-
-### 3. Exercise Abstraction (to support Pull-ups, Pistol Squats, etc.)
-
-- Create `ExerciseDefinition` interface with positions, ideal angles, rep criteria
-- Create exercise-specific analyzers: `PullUpAnalyzer`, `PistolSquatAnalyzer`
+- Create exercise-specific analyzers: `PullUpFormAnalyzer`, `PistolSquatFormAnalyzer`
+- Add exercise selection UI
 - Configuration-driven instead of code-driven thresholds
+
+### 2. Model Selection UI
+
+- Expose BlazePose variant selection (Lite/Full/Heavy) in settings
+- Add runtime model switching support
+
+### 3. Camera Source
+
+- Create `CameraSkeletonSource` for live webcam input
+- Real-time analysis without pre-recorded video
 
 ## Tech Pack
 

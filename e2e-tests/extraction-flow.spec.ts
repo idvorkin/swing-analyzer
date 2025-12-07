@@ -51,7 +51,8 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
   }) => {
     test.info().annotations.push({ type: 'retry', description: 'Flaky with parallel IndexedDB access' });
     // Fast mode: 0ms delay
-    await setupMockPoseDetector(page, 'swing-sample', 0);
+    // Use swing-sample-4reps to match useShortTestVideo()
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Click Sample - triggers extraction
     await page.click('#load-hardcoded-btn');
@@ -164,7 +165,8 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
   // Skeleton rendering only happens during playback via requestVideoFrameCallback
   test('skeleton does not render during extraction', async ({ page }) => {
     // Use longer delay so we can check during extraction
-    await setupMockPoseDetector(page, 'swing-sample', 50);
+    // Use swing-sample-4reps to match useShortTestVideo()
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 50);
 
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
@@ -201,7 +203,8 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
   });
 
   test('playback after extraction uses cached poses', async ({ page }) => {
-    await setupMockPoseDetector(page, 'swing-sample', 0);
+    // Use swing-sample-4reps to match useShortTestVideo()
+    await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });

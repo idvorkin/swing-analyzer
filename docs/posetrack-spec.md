@@ -28,7 +28,7 @@ PoseTrack enables offline pose analysis by pre-extracting pose data from videos.
 
 ### Services
 
-- **PoseExtractor** (`src/services/PoseExtractor.ts`) - Extracts poses frame-by-frame using TensorFlow.js MoveNet models
+- **PoseExtractor** (`src/services/PoseExtractor.ts`) - Extracts poses frame-by-frame using TensorFlow.js BlazePose models
 - **PoseTrackService** (`src/services/PoseTrackService.ts`) - File I/O, IndexedDB storage, validation
 
 ### Pipeline
@@ -37,9 +37,8 @@ PoseTrack enables offline pose analysis by pre-extracting pose data from videos.
 
 ### React Integration
 
-- **usePoseTrack** (`src/hooks/usePoseTrack.ts`) - Hook for extraction state management
-- **PoseTrackStatusBar** (`src/components/PoseTrackStatusBar.tsx`) - UI showing extraction progress
-- **PoseStudioPage** (`src/components/PoseStudioPage.tsx`) - Debug page at `/poses` route
+- **useSwingAnalyzerV2** (`src/hooks/useSwingAnalyzerV2.tsx`) - Main hook managing extraction and analysis
+- **SwingAnalyzerContext** (`src/contexts/SwingAnalyzerContext.tsx`) - Context providing analyzer state
 
 ## File Format
 
@@ -52,11 +51,11 @@ Video matching uses SHA-256 hash of first/last 64KB chunks + file size.
 
 ## Supported Models
 
-| Model             | Status                   | Notes                   |
-| ----------------- | ------------------------ | ----------------------- |
-| movenet-lightning | ✓ Enabled                | Fast, lower accuracy    |
-| movenet-thunder   | ✓ Enabled                | Slower, higher accuracy |
-| blazepose         | Implemented, UI disabled | Requires WebGL2         |
+| Model          | Status    | Notes                        |
+| -------------- | --------- | ---------------------------- |
+| blazepose-lite | ✓ Default | Fast, good accuracy          |
+| blazepose-full | ✓ Enabled | Balanced speed/accuracy      |
+| blazepose-heavy| ✓ Enabled | Highest accuracy, slowest    |
 
 ## Main Page Integration
 

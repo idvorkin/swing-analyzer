@@ -19,7 +19,6 @@ import {
 import { InputSession, type InputSessionState } from '../pipeline/InputSession';
 import type { Skeleton } from '../models/Skeleton';
 import type { Pipeline, ThumbnailEvent } from '../pipeline/Pipeline';
-import { kettlebellSwingDefinition } from '../exercises';
 import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { ExtractionProgress } from '../pipeline/SkeletonSource';
@@ -35,6 +34,13 @@ import type { PositionCandidate } from '../types/exercise';
 import type { CropRegion } from '../types/posetrack';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
+
+// Throttle interval for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
+const REP_SYNC_INTERVAL_MS = 1000; // 1 second
+
+// Helper for consistent position display (e.g., "top" → "Top")
+const formatPositionForDisplay = (position: string): string =>
+  position.charAt(0).toUpperCase() + position.slice(1).toLowerCase();
 
 export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   // ========================================
@@ -82,6 +88,16 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const isPlayingRef = useRef<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentVideoFile, setCurrentVideoFile] = useState<File | null>(null);
+
+  // Track current video's object URL for cleanup on video switch
+  const currentVideoUrlRef = useRef<string | null>(null);
+  // Track if we're in the middle of loading a video (to abort on switch)
+  const videoLoadAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Throttle for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
+  const lastRepSyncTimeRef = useRef<number>(0);
+  // Ref to hold the rep sync handler (enables stable reference from event handlers)
+  const repSyncHandlerRef = useRef<((videoTime: number) => void) | null>(null);
 
   // Crop state for auto-centering on person in landscape videos
   const [cropRegion, setCropRegionState] = useState<CropRegion | null>(null);
@@ -156,6 +172,102 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     return () => window.removeEventListener('resize', handleResize);
   }, [syncCanvasToVideo]);
 
+  // Cleanup Object URL and abort controller on unmount
+  useEffect(() => {
+    return () => {
+      // Revoke any remaining blob URL to prevent memory leak
+      if (currentVideoUrlRef.current && currentVideoUrlRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(currentVideoUrlRef.current);
+      }
+      // Abort any in-flight video load
+      videoLoadAbortControllerRef.current?.abort();
+    };
+  }, []);
+
+  // ========================================
+  // Safe Video Loading Helper
+  // ========================================
+  // Handles all cleanup and race conditions when switching videos
+  const loadVideoSafely = useCallback(async (
+    videoElement: HTMLVideoElement,
+    url: string,
+    signal: AbortSignal
+  ): Promise<void> => {
+    // 1. Pause any current playback
+    videoElement.pause();
+    videoElement.currentTime = 0;
+
+    // 2. Clean up previous object URL if it was a blob URL
+    if (currentVideoUrlRef.current && currentVideoUrlRef.current.startsWith('blob:')) {
+      URL.revokeObjectURL(currentVideoUrlRef.current);
+    }
+
+    // 3. Set new source and track it
+    currentVideoUrlRef.current = url;
+    videoElement.src = url;
+
+    // 4. Wait for metadata with proper event handling (no property assignment)
+    await new Promise<void>((resolve, reject) => {
+      // Check if aborted before we even start
+      if (signal.aborted) {
+        reject(new DOMException('Video load aborted', 'AbortError'));
+        return;
+      }
+
+      const timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('Timeout loading video metadata'));
+      }, 10000);
+
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        videoElement.removeEventListener('error', handleError);
+        signal.removeEventListener('abort', handleAbort);
+      };
+
+      const handleLoadedMetadata = () => {
+        cleanup();
+        // Sync canvas to video after a small delay (wait for layout)
+        requestAnimationFrame(() => syncCanvasToVideo());
+        resolve();
+      };
+
+      const handleError = () => {
+        cleanup();
+        const mediaError = videoElement.error;
+        let message = 'Failed to load video';
+        if (mediaError) {
+          switch (mediaError.code) {
+            case MediaError.MEDIA_ERR_ABORTED:
+              message = 'Video load was aborted';
+              break;
+            case MediaError.MEDIA_ERR_NETWORK:
+              message = 'Network error loading video';
+              break;
+            case MediaError.MEDIA_ERR_DECODE:
+              message = 'Video format could not be decoded';
+              break;
+            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              message = 'Video format not supported';
+              break;
+          }
+        }
+        reject(new Error(message));
+      };
+
+      const handleAbort = () => {
+        cleanup();
+        reject(new DOMException('Video load aborted', 'AbortError'));
+      };
+
+      // Use addEventListener (not property assignment) to avoid race conditions
+      videoElement.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+      videoElement.addEventListener('error', handleError, { once: true });
+      signal.addEventListener('abort', handleAbort, { once: true });
+    });
+  }, [syncCanvasToVideo]);
+
   // ========================================
   // Pipeline Setup
   // ========================================
@@ -215,13 +327,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   // Process a skeleton event through the pipeline and update UI
   const processSkeletonEvent = useCallback((event: SkeletonEvent) => {
     if (!event.skeleton) {
-      console.log('[DEBUG] processSkeletonEvent: no skeleton in event', event);
       return;
     }
 
     const pipeline = pipelineRef.current;
     if (!pipeline) {
-      console.log('[DEBUG] processSkeletonEvent: no pipeline');
       return;
     }
 
@@ -267,21 +377,12 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
           if (!hasRecordedExtractionStartRef.current) {
             hasRecordedExtractionStartRef.current = true;
             recordExtractionStart({ fileName: state.fileName });
-            console.log('[DEBUG] Extraction started for:', state.fileName);
           }
         } else if (state.sourceState.type === 'active') {
           setStatus('Ready');
-          // Record extraction complete for debugging (only if we recorded start)
+          // Record extraction complete (only if we recorded start)
           if (hasRecordedExtractionStartRef.current) {
             recordExtractionComplete({ fileName: state.fileName });
-            console.log('[DEBUG] Extraction complete for:', state.fileName);
-            // Log cache state for debugging
-            const videoSource = session.getVideoFileSource();
-            const cache = videoSource?.getLiveCache();
-            console.log('[DEBUG] Cache state:', {
-              frameCount: cache?.getFrameCount() ?? 0,
-              isComplete: cache?.isExtractionComplete() ?? false,
-            });
           }
           // Check if poses exist for current frame (for HUD visibility)
           const video = videoRef.current;
@@ -327,10 +428,6 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     let skeletonEventCount = 0;
     const skeletonSubscription = session.skeletons$.subscribe((event) => {
       skeletonEventCount++;
-      // Log first 5 events and then every 100th
-      if (skeletonEventCount <= 5 || skeletonEventCount % 100 === 0) {
-        console.log('[DEBUG] Received skeleton event from extraction:', skeletonEventCount, 'hasSkeleton:', !!event.skeleton);
-      }
       // Use the ref to access the latest handler (avoids stale closure)
       skeletonHandlerRef.current?.(event);
     });
@@ -381,42 +478,24 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setSpineAngle(Math.round(skeleton.getSpineAngle() || 0));
     setArmToSpineAngle(Math.round(skeleton.getArmToVerticalAngle() || 0));
 
-    // Update position from pipeline's form analyzer
-    const pipeline = pipelineRef.current;
-    if (pipeline) {
-      // Get a stateless position estimate based on current angles
-      const angles: Record<string, number> = {
-        spine: skeleton.getSpineAngle() || 0,
-        armToSpine: skeleton.getArmToSpineAngle() || 0,
-        hip: skeleton.getHipAngle() || 0,
-      };
-      // Use the exercise definition to find best matching position
-      const exercise = kettlebellSwingDefinition;
-      let bestPosition: string | null = null;
-      let bestScore = Number.POSITIVE_INFINITY;
+    // Estimate position from spine angle (stateless, for HUD display during seek)
+    // Position thresholds based on spine angle:
+    //   top: ~10° (upright), connect: ~45°, release: ~37°, bottom: ~75° (hinged)
+    const spine = skeleton.getSpineAngle() || 0;
+    let position: string | null = null;
 
-      for (const position of exercise.positions) {
-        let score = 0;
-        let angleCount = 0;
-        // angleTargets is Record<string, AngleTarget>
-        for (const [angleName, target] of Object.entries(position.angleTargets)) {
-          const actualAngle = angles[angleName] ?? 0;
-          const diff = Math.abs(actualAngle - target.ideal);
-          score += diff / (target.tolerance || 15);
-          angleCount++;
-        }
-        if (angleCount > 0) {
-          score /= angleCount;
-          if (score < 2.0 && score < bestScore) {
-            bestScore = score;
-            bestPosition = position.name;
-          }
-        }
-      }
+    if (spine < 25) {
+      position = 'Top';
+    } else if (spine >= 25 && spine < 41) {
+      position = 'Release'; // ~37° ideal
+    } else if (spine >= 41 && spine < 60) {
+      position = 'Connect'; // ~45° ideal
+    } else if (spine >= 60) {
+      position = 'Bottom'; // ~75° ideal
+    }
 
-      if (bestPosition) {
-        setStatus(bestPosition.charAt(0).toUpperCase() + bestPosition.slice(1));
-      }
+    if (position) {
+      setStatus(position);
     }
   }, []);
 
@@ -466,6 +545,14 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
           }
           // Update HUD with current frame's data
           updateHudFromSkeleton(skeletonEvent.skeleton);
+        }
+
+        // Throttled rep/position sync (every REP_SYNC_INTERVAL_MS)
+        // This updates the rep counter and position display as video plays.
+        // See ARCHITECTURE.md "Throttled Playback Sync" for rationale.
+        if (now - lastRepSyncTimeRef.current >= REP_SYNC_INTERVAL_MS) {
+          lastRepSyncTimeRef.current = now;
+          repSyncHandlerRef.current?.(metadata.mediaTime);
         }
       }
 
@@ -520,6 +607,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
         // Update HUD with current frame's data
         updateHudFromSkeleton(skeletonEvent.skeleton);
       }
+
+      // Sync rep counter and position to seek location (immediate, not throttled)
+      repSyncHandlerRef.current?.(video.currentTime);
     };
 
     video.addEventListener('play', handlePlayWithCallback);
@@ -534,7 +624,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       video.removeEventListener('seeked', handleSeeked);
       stopVideoFrameCallback();
     };
-  }, [updateHudFromSkeleton]); // updateHudFromSkeleton is stable (useCallback with no deps)
+  }, [updateHudFromSkeleton]); // repSyncHandlerRef is stable (ref), updateHudFromSkeleton is stable (useCallback)
 
   // ========================================
   // Video File Controls
@@ -554,52 +644,30 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       return;
     }
 
+    // Abort any in-progress video load
+    videoLoadAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    videoLoadAbortControllerRef.current = abortController;
+
     // Reset state
     setRepCount(0);
     setRepThumbnails(new Map());
     pipelineRef.current?.reset();
     hasRecordedExtractionStartRef.current = false; // Reset for new video
 
-    // Load video into element
+    // Load video safely (handles cleanup, pausing, and race conditions)
     const url = URL.createObjectURL(file);
-    video.src = url;
-
-    // Wait for video metadata with timeout
-    await new Promise<void>((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        reject(new Error('Timeout loading video metadata'));
-      }, 10000);
-
-      video.onloadedmetadata = () => {
-        clearTimeout(timeoutId);
-        // Sync canvas to video after a small delay (wait for layout)
-        requestAnimationFrame(() => syncCanvasToVideo());
-        resolve();
-      };
-
-      video.onerror = () => {
-        clearTimeout(timeoutId);
-        const mediaError = video.error;
-        let message = 'Failed to load video file';
-        if (mediaError) {
-          switch (mediaError.code) {
-            case MediaError.MEDIA_ERR_ABORTED:
-              message = 'Video load was aborted';
-              break;
-            case MediaError.MEDIA_ERR_NETWORK:
-              message = 'Network error loading video';
-              break;
-            case MediaError.MEDIA_ERR_DECODE:
-              message = 'Video format could not be decoded';
-              break;
-            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-              message = 'Video format not supported';
-              break;
-          }
-        }
-        reject(new Error(message));
-      };
-    });
+    try {
+      await loadVideoSafely(video, url, abortController.signal);
+    } catch (error) {
+      // AbortError means user switched videos - silently ignore
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+      console.error('Failed to load video:', error);
+      setStatus(`Error: ${error instanceof Error ? error.message : 'Failed to load video'}`);
+      return;
+    }
 
     setCurrentVideoFile(file);
 
@@ -620,7 +688,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       }
       setStatus(`Error: ${userMessage}`);
     }
-  }, [syncCanvasToVideo]);
+  }, [loadVideoSafely]);
 
   const loadHardcodedVideo = useCallback(async () => {
     const session = inputSessionRef.current;
@@ -633,6 +701,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setStatus('Error: App not initialized. Please refresh.');
       return;
     }
+
+    // Abort any in-progress video load
+    videoLoadAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    videoLoadAbortControllerRef.current = abortController;
 
     setStatus('Loading sample video...');
 
@@ -663,46 +736,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
         type: 'video/webm',
       });
 
-      // Load video into element
+      // Load video safely (handles cleanup, pausing, and race conditions)
       const blobUrl = URL.createObjectURL(blob);
-      video.src = blobUrl;
-
-      // Wait for video metadata with timeout
-      await new Promise<void>((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('Timeout loading video metadata'));
-        }, 10000);
-
-        video.onloadedmetadata = () => {
-          clearTimeout(timeoutId);
-          // Sync canvas to video after a small delay (wait for layout)
-          requestAnimationFrame(() => syncCanvasToVideo());
-          resolve();
-        };
-
-        video.onerror = () => {
-          clearTimeout(timeoutId);
-          const mediaError = video.error;
-          let message = 'Failed to load sample video';
-          if (mediaError) {
-            switch (mediaError.code) {
-              case MediaError.MEDIA_ERR_ABORTED:
-                message = 'Video load was aborted';
-                break;
-              case MediaError.MEDIA_ERR_NETWORK:
-                message = 'Network error loading video';
-                break;
-              case MediaError.MEDIA_ERR_DECODE:
-                message = 'Video format could not be decoded';
-                break;
-              case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                message = 'Video format not supported';
-                break;
-            }
-          }
-          reject(new Error(message));
-        };
-      });
+      await loadVideoSafely(video, blobUrl, abortController.signal);
 
       setCurrentVideoFile(videoFile);
       recordVideoLoad({ source: 'hardcoded', fileName: 'swing-sample.webm' });
@@ -712,10 +748,29 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
       setStatus('Video loaded. Press Play to start.');
     } catch (error) {
+      // AbortError means user switched videos - silently ignore
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
       console.error('Error loading hardcoded video:', error);
-      setStatus('Error: Could not load sample video');
+      // Apply same detailed error handling as handleVideoUpload
+      let userMessage = 'Could not load sample video';
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        userMessage = 'Storage full. Clear browser data and try again.';
+      } else if (error instanceof Error) {
+        if (error.message.includes('Timeout')) {
+          userMessage = 'Video load timed out. Check your network and try again.';
+        } else if (error.message.includes('fetch') || error.message.includes('Network')) {
+          userMessage = 'Network error loading video. Check your connection.';
+        } else if (error.message.includes('model')) {
+          userMessage = 'Failed to load pose detection. Check network and refresh.';
+        } else if (error.message.includes('format') || error.message.includes('supported')) {
+          userMessage = 'Video format not supported by your browser.';
+        }
+      }
+      setStatus(`Error: ${userMessage}`);
     }
-  }, [syncCanvasToVideo]);
+  }, [loadVideoSafely]);
 
   // ========================================
   // Playback Controls
@@ -725,7 +780,22 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     if (!video) return;
 
     if (video.paused) {
-      video.play();
+      // Handle the play promise to avoid AbortError when pause() is called before play() resolves
+      video.play().catch((err) => {
+        // AbortError is expected when play() is interrupted by pause() - ignore it
+        if (err.name === 'AbortError') {
+          return;
+        }
+        console.error('Error playing video:', err);
+        // Provide user feedback for play failures
+        if (err.name === 'NotAllowedError') {
+          setStatus('Playback blocked by browser. Click Play again to start.');
+        } else if (err.name === 'NotSupportedError') {
+          setStatus('Error: Video format not supported.');
+        } else {
+          setStatus('Error: Could not play video. Try reloading.');
+        }
+      });
     } else {
       video.pause();
     }
@@ -769,20 +839,70 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   }, [frameStep]);
 
   // ========================================
-  // Rep Navigation
+  // Rep Navigation - seeks to first checkpoint of target rep and pauses
   // ========================================
   const navigateToPreviousRep = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const newRepIndex = Math.max(0, appState.currentRepIndex - 1);
+    if (newRepIndex === appState.currentRepIndex) return; // Already at first rep
+
+    // Find first checkpoint of the target rep - track actual position found
+    const targetRepNum = newRepIndex + 1; // repNum is 1-indexed
+    const positions = repThumbnails.get(targetRepNum);
+    const topCheckpoint = positions?.get('top');
+    const firstCheckpoint = topCheckpoint || positions?.values().next().value;
+    // Determine actual position name - 'top' if found, otherwise first available
+    const actualPosition = topCheckpoint ? 'top' : (positions?.keys().next().value ?? null);
+
+    video.pause(); // Pause when seeking to rep
+    if (firstCheckpoint?.videoTime !== undefined) {
+      video.currentTime = firstCheckpoint.videoTime;
+      if (actualPosition) {
+        setCurrentPosition(formatPositionForDisplay(actualPosition));
+      }
+    }
     setAppState(prev => ({
       ...prev,
-      currentRepIndex: Math.max(0, prev.currentRepIndex - 1),
+      currentRepIndex: newRepIndex,
     }));
-  }, []);
+  }, [appState.currentRepIndex, repThumbnails]);
 
   const navigateToNextRep = useCallback(() => {
-    if (repCount <= 0) return;
+    const video = videoRef.current;
+    if (!video || repCount <= 0) return;
+
+    const newRepIndex = Math.min(repCount - 1, appState.currentRepIndex + 1);
+    if (newRepIndex === appState.currentRepIndex) return; // Already at last rep
+
+    // Find first checkpoint of the target rep - track actual position found
+    const targetRepNum = newRepIndex + 1; // repNum is 1-indexed
+    const positions = repThumbnails.get(targetRepNum);
+    const topCheckpoint = positions?.get('top');
+    const firstCheckpoint = topCheckpoint || positions?.values().next().value;
+    // Determine actual position name - 'top' if found, otherwise first available
+    const actualPosition = topCheckpoint ? 'top' : (positions?.keys().next().value ?? null);
+
+    video.pause(); // Pause when seeking to rep
+    if (firstCheckpoint?.videoTime !== undefined) {
+      video.currentTime = firstCheckpoint.videoTime;
+      if (actualPosition) {
+        setCurrentPosition(formatPositionForDisplay(actualPosition));
+      }
+    }
     setAppState(prev => ({
       ...prev,
-      currentRepIndex: Math.min(repCount - 1, prev.currentRepIndex + 1),
+      currentRepIndex: newRepIndex,
+    }));
+  }, [repCount, appState.currentRepIndex, repThumbnails]);
+
+  // Set current rep index directly (used by gallery modal)
+  const setCurrentRepIndex = useCallback((index: number) => {
+    if (index < 0 || index >= repCount) return;
+    setAppState(prev => ({
+      ...prev,
+      currentRepIndex: index,
     }));
   }, [repCount]);
 
@@ -813,6 +933,49 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     return checkpoints;
   }, [repThumbnails]);
 
+  // ========================================
+  // Auto-Sync Rep & Position During Playback
+  // ========================================
+  // Updates currentRepIndex and currentPosition based on video time.
+  // Called from throttled playback loop and on seek events.
+  // See ARCHITECTURE.md "Throttled Playback Sync" for design rationale.
+  const updateRepAndPositionFromTime = useCallback((videoTime: number) => {
+    const checkpoints = getAllCheckpoints();
+    if (checkpoints.length === 0) return;
+
+    // Find which rep/position we're in: last checkpoint where time >= checkpoint.videoTime
+    // Default to rep 1 before first checkpoint (per spec: show rep 1 before first rep)
+    let foundRepNum = 1;
+    let foundPosition: string | null = null;
+
+    for (const cp of checkpoints) {
+      if (videoTime >= cp.videoTime - 0.05) {  // Small tolerance for frame timing
+        foundRepNum = cp.repNum;
+        foundPosition = cp.position;
+      } else {
+        break; // Checkpoints are sorted, so we've passed current time
+      }
+    }
+
+    // Update rep index if changed (repNum is 1-indexed, currentRepIndex is 0-indexed)
+    // Use functional update to avoid stale closure on appState.currentRepIndex
+    const newRepIndex = foundRepNum - 1;
+    setAppState(prev => {
+      if (newRepIndex !== prev.currentRepIndex) {
+        return { ...prev, currentRepIndex: newRepIndex };
+      }
+      return prev; // Return same reference to avoid unnecessary re-render
+    });
+
+    // Update position if found
+    if (foundPosition) {
+      setCurrentPosition(formatPositionForDisplay(foundPosition));
+    }
+  }, [getAllCheckpoints]); // No appState dependency needed with functional update
+
+  // Keep ref up to date for use in event handlers (avoids stale closure)
+  repSyncHandlerRef.current = updateRepAndPositionFromTime;
+
   const navigateToNextCheckpoint = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -826,8 +989,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const nextCheckpoint = checkpoints.find(cp => cp.videoTime > currentTime + 0.01);
 
     if (nextCheckpoint) {
+      video.pause(); // Pause when seeking to checkpoint
       video.currentTime = nextCheckpoint.videoTime;
-      setCurrentPosition(nextCheckpoint.position);
+      setCurrentPosition(formatPositionForDisplay(nextCheckpoint.position));
       // Update rep index if needed
       setAppState(prev => ({
         ...prev,
@@ -851,8 +1015,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const prevCheckpoint = prevCheckpoints[prevCheckpoints.length - 1];
 
     if (prevCheckpoint) {
+      video.pause(); // Pause when seeking to checkpoint
       video.currentTime = prevCheckpoint.videoTime;
-      setCurrentPosition(prevCheckpoint.position);
+      setCurrentPosition(formatPositionForDisplay(prevCheckpoint.position));
       // Update rep index if needed
       setAppState(prev => ({
         ...prev,
@@ -993,6 +1158,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     navigateToNextRep,
     navigateToPreviousCheckpoint,
     navigateToNextCheckpoint,
+    setCurrentRepIndex,
     clearPositionLabel,
     getVideoContainerClass,
     reinitializeWithCachedPoses: async () => {}, // No-op in V2
