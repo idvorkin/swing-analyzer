@@ -63,6 +63,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const [repThumbnails, setRepThumbnails] = useState<Map<number, Map<string, PositionCandidate>>>(new Map());
   const [extractionProgress, setExtractionProgress] = useState<ExtractionProgress | null>(null);
   const [inputState, setInputState] = useState<InputSessionState>({ type: 'idle' });
+  const [hasPosesForCurrentFrame, setHasPosesForCurrentFrame] = useState<boolean>(false);
 
   // Track if we've recorded extraction start for current session (to avoid spam)
   const hasRecordedExtractionStartRef = useRef<boolean>(false);
@@ -282,6 +283,20 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
               isComplete: cache?.isExtractionComplete() ?? false,
             });
           }
+          // Check if poses exist for current frame (for HUD visibility)
+          const video = videoRef.current;
+          if (video) {
+            const skeletonEvent = session.getSkeletonAtTime(video.currentTime);
+            const hasPoses = !!skeletonEvent?.skeleton;
+            setHasPosesForCurrentFrame(hasPoses);
+            if (skeletonEvent?.skeleton) {
+              updateHudFromSkeleton(skeletonEvent.skeleton);
+              // Also render skeleton on canvas
+              if (skeletonRendererRef.current) {
+                skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, performance.now());
+              }
+            }
+          }
           // Check for crop region in posetrack metadata
           const videoSource = session.getVideoFileSource();
           const poseTrack = videoSource?.getPoseTrack();
@@ -438,6 +453,8 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       const session = inputSessionRef.current;
       if (session && isPlayingRef.current) {
         const skeletonEvent = session.getSkeletonAtTime(metadata.mediaTime);
+        const hasPoses = !!skeletonEvent?.skeleton;
+        setHasPosesForCurrentFrame(hasPoses);
         if (skeletonEvent?.skeleton) {
           // Render the skeleton
           if (skeletonRendererRef.current) {
@@ -489,6 +506,8 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       if (!session) return;
 
       const skeletonEvent = session.getSkeletonAtTime(video.currentTime);
+      const hasPoses = !!skeletonEvent?.skeleton;
+      setHasPosesForCurrentFrame(hasPoses);
       if (skeletonEvent?.skeleton) {
         // Render the skeleton
         if (skeletonRendererRef.current) {
@@ -839,5 +858,8 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     isCropEnabled,
     toggleCrop,
     hasCropRegion: cropRegion !== null,
+
+    // HUD visibility (based on pose availability, not extraction state)
+    hasPosesForCurrentFrame,
   };
 }
