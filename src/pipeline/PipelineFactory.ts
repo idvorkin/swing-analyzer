@@ -1,8 +1,6 @@
 import type { ModelConfig } from '../config/modelConfig';
-import { getExerciseDefinition } from '../exercises';
 import { Skeleton } from '../models/Skeleton';
 import { CocoBodyParts, type PoseKeypoint } from '../types';
-import { ExerciseType } from '../types/exercise';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
 import { CachedPoseSkeletonTransformer } from './CachedPoseSkeletonTransformer';
 import type { LivePoseCache } from './LivePoseCache';
@@ -39,11 +37,11 @@ export interface CreatePipelineOptions {
   modelConfig?: ModelConfig;
 
   /**
-   * Exercise type for form analysis.
-   * When provided, uses the generic FormAnalyzer with the appropriate
-   * exercise definition. Defaults to KettlebellSwing.
+   * Custom form analyzer for exercise-specific analysis.
+   * When provided, uses this analyzer instead of the default.
+   * Defaults to KettlebellSwingFormAnalyzer.
    */
-  exerciseType?: ExerciseType;
+  formAnalyzer?: import('../analyzers').FormAnalyzer;
 }
 
 /**
@@ -79,12 +77,8 @@ export function createPipeline(
     skeletonTransformer = createSkeletonTransformer(options.modelConfig);
   }
 
-  // Get exercise definition (defaults to kettlebell swing)
-  const exerciseType = options.exerciseType ?? ExerciseType.KettlebellSwing;
-  const exerciseDefinition = getExerciseDefinition(exerciseType);
-
-  // Create the pipeline with exercise support
-  return new Pipeline(frameAcquisition, skeletonTransformer, exerciseDefinition);
+  // Create the pipeline with optional custom analyzer
+  return new Pipeline(frameAcquisition, skeletonTransformer, options.formAnalyzer);
 }
 
 /**

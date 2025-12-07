@@ -1,10 +1,12 @@
 import { type Observable, Subject, type Subscription } from 'rxjs';
 import { share, switchMap, tap } from 'rxjs/operators';
-import { KettlebellSwingDetector, type ExerciseDetector } from '../detectors';
+import {
+  type FormAnalyzer,
+  type RepPosition,
+  KettlebellSwingFormAnalyzer,
+} from '../analyzers';
 import type { Skeleton } from '../models/Skeleton';
-import type { ExerciseDefinition, PositionCandidate } from '../types/exercise';
 import type { CropRegion } from '../types/posetrack';
-import { FormAnalyzer } from './FormAnalyzer';
 import type {
   FrameAcquisition,
   FrameEvent,
@@ -14,13 +16,13 @@ import type {
 import { VideoFrameAcquisition } from './VideoFrameAcquisition';
 
 /**
- * Event emitted when a rep/cycle completes with position thumbnails
+ * Event emitted when a rep completes with position thumbnails
  */
 export interface ThumbnailEvent {
   /** Rep number (1-indexed) */
   repNumber: number;
-  /** Best position candidates for this cycle, keyed by position name */
-  positions: Map<string, PositionCandidate>;
+  /** Position captures from the completed rep (skeleton at each phase peak) */
+  positions: RepPosition[];
 }
 
 /**
@@ -31,6 +33,11 @@ export interface ThumbnailEvent {
  * 2. RxJS streaming (legacy): Call start() to begin Observable-based processing
  *
  * Pipeline flow: Frame → Skeleton → FormAnalyzer.processFrame() → Results
+ *
+ * The FormAnalyzer is a plugin interface - different exercises get different analyzers:
+ * - KettlebellSwingFormAnalyzer: peak-based state machine for swings
+ * - PullUpFormAnalyzer: (future) for pull-ups
+ * - MockFormAnalyzer: (testing) deterministic behavior
  */
 export class Pipeline {
   // Latest data from the pipeline
@@ -46,23 +53,16 @@ export class Pipeline {
   private skeletonSubject = new Subject<SkeletonEvent>();
   private thumbnailSubject = new Subject<ThumbnailEvent>();
 
-  // Form analyzer for position detection (legacy, kept for thumbnails)
+  // Form analyzer - plugin for exercise-specific analysis
   private formAnalyzer: FormAnalyzer;
-
-  // State machine detector for accurate rep counting (peak-based Top detection)
-  private detector: ExerciseDetector;
-
-  // Current exercise definition
-  private exerciseDefinition: ExerciseDefinition;
 
   constructor(
     private frameAcquisition: FrameAcquisition,
     private skeletonTransformer: SkeletonTransformer,
-    exerciseDefinition: ExerciseDefinition
+    formAnalyzer?: FormAnalyzer
   ) {
-    this.exerciseDefinition = exerciseDefinition;
-    this.formAnalyzer = new FormAnalyzer(exerciseDefinition);
-    this.detector = new KettlebellSwingDetector();
+    // Default to kettlebell swing analyzer if none provided
+    this.formAnalyzer = formAnalyzer ?? new KettlebellSwingFormAnalyzer();
   }
 
   /**
@@ -94,7 +94,7 @@ export class Pipeline {
           this.skeletonTransformer.transformToSkeleton(frameEvent)
         ),
 
-        // Stage 2: Process skeleton through detector and form analyzer
+        // Stage 2: Process skeleton through form analyzer
         tap((skeletonEvent) => {
           // Emit the skeleton event to subscribers (for rendering)
           this.skeletonSubject.next(skeletonEvent);
@@ -103,20 +103,29 @@ export class Pipeline {
           if (skeletonEvent.skeleton) {
             this.latestSkeleton = skeletonEvent.skeleton;
 
-            // Process through detector for rep counting (peak-based Top detection)
-            const detectorResult = this.detector.processFrame(
+            // Process through form analyzer
+            const result = this.formAnalyzer.processFrame(
               skeletonEvent.skeleton,
-              skeletonEvent.poseEvent.frameEvent.timestamp
+              skeletonEvent.poseEvent.frameEvent.timestamp,
+              skeletonEvent.poseEvent.frameEvent.videoTime
             );
 
-            // Update rep count from detector
-            this.repCount = detectorResult.repCount;
+            // Update rep count
+            this.repCount = result.repCount;
 
             // Emit result
             this.resultSubject.next({
               skeleton: skeletonEvent.skeleton,
-              repCount: detectorResult.repCount,
+              repCount: result.repCount,
             });
+
+            // Emit thumbnail event when rep completes
+            if (result.repCompleted && result.repPositions) {
+              this.thumbnailSubject.next({
+                repNumber: result.repCount,
+                positions: result.repPositions,
+              });
+            }
           }
         }),
 
@@ -133,7 +142,7 @@ export class Pipeline {
           this.resultSubject.complete();
           this.skeletonSubject.complete();
           this.isActive = false;
-        }
+        },
       });
 
     return this.resultSubject.asObservable();
@@ -155,7 +164,7 @@ export class Pipeline {
   }
 
   /**
-   * Get an observable for thumbnail events (emitted when a rep/cycle completes)
+   * Get an observable for thumbnail events (emitted when a rep completes)
    */
   getThumbnailEvents(): Observable<ThumbnailEvent> {
     return this.thumbnailSubject.asObservable();
@@ -181,7 +190,6 @@ export class Pipeline {
    */
   reset(): void {
     this.formAnalyzer.reset();
-    this.detector.reset();
     this.latestSkeleton = null;
     this.repCount = 0;
   }
@@ -208,13 +216,6 @@ export class Pipeline {
   }
 
   /**
-   * Get the current exercise definition
-   */
-  getExerciseDefinition(): ExerciseDefinition {
-    return this.exerciseDefinition;
-  }
-
-  /**
    * Process the current video frame asynchronously (video-event-driven mode).
    * Call this from video timeupdate/seeked events for direct processing
    * without RxJS subscriptions.
@@ -231,7 +232,8 @@ export class Pipeline {
     };
 
     // Transform to skeleton using async method
-    const skeletonEvent = await this.skeletonTransformer.transformToSkeletonAsync(frameEvent);
+    const skeletonEvent =
+      await this.skeletonTransformer.transformToSkeletonAsync(frameEvent);
 
     if (!skeletonEvent.skeleton) {
       return null;
@@ -240,21 +242,22 @@ export class Pipeline {
     // Store latest skeleton
     this.latestSkeleton = skeletonEvent.skeleton;
 
-    // Process through detector for rep counting (peak-based Top detection)
-    const detectorResult = this.detector.processFrame(
+    // Process through form analyzer
+    const result = this.formAnalyzer.processFrame(
       skeletonEvent.skeleton,
-      frameEvent.timestamp
+      frameEvent.timestamp,
+      frameEvent.videoTime
     );
 
-    // Update rep count from detector
-    this.repCount = detectorResult.repCount;
+    // Update rep count
+    this.repCount = result.repCount;
 
     return {
       skeleton: skeletonEvent.skeleton,
-      repCount: detectorResult.repCount,
-      position: detectorResult.phase,
-      angles: detectorResult.angles,
-      repCompleted: detectorResult.repCompleted,
+      repCount: result.repCount,
+      position: result.phase,
+      angles: result.angles,
+      repCompleted: result.repCompleted,
     };
   }
 
@@ -274,37 +277,29 @@ export class Pipeline {
       // Emit skeleton event for real-time rendering during extraction
       this.skeletonSubject.next(skeletonEvent);
 
-      // Process through detector for rep counting (peak-based Top detection)
-      const detectorResult = this.detector.processFrame(
-        skeletonEvent.skeleton,
-        skeletonEvent.poseEvent.frameEvent.timestamp
-      );
-
-      // Update rep count from detector
-      this.repCount = detectorResult.repCount;
-
-      // Also process through FormAnalyzer for filmstrip thumbnails (cyclePositions)
-      const analyzerResult = this.formAnalyzer.processFrame(
+      // Process through form analyzer
+      const result = this.formAnalyzer.processFrame(
         skeletonEvent.skeleton,
         skeletonEvent.poseEvent.frameEvent.timestamp,
-        skeletonEvent.poseEvent.frameEvent.videoTime,
-        skeletonEvent.poseEvent.frameEvent.frameImage
+        skeletonEvent.poseEvent.frameEvent.videoTime
       );
 
-      // Emit thumbnail event when cycle completes (has position candidates)
-      // This is based on angle thresholds and may happen BEFORE rep completes
-      if (analyzerResult.cyclePositions && analyzerResult.cyclePositions.size > 0) {
+      // Update rep count
+      this.repCount = result.repCount;
+
+      // Emit thumbnail event when rep completes (with positions at each phase peak)
+      if (result.repCompleted && result.repPositions) {
         this.thumbnailSubject.next({
-          repNumber: detectorResult.repCount + 1, // Next rep number since cycle just completed
-          positions: analyzerResult.cyclePositions,
+          repNumber: result.repCount,
+          positions: result.repPositions,
         });
       }
 
-      // Emit result when rep completes (from detector)
-      if (detectorResult.repCompleted) {
+      // Emit result when rep completes
+      if (result.repCompleted) {
         this.resultSubject.next({
           skeleton: skeletonEvent.skeleton,
-          repCount: detectorResult.repCount,
+          repCount: result.repCount,
         });
       }
     }

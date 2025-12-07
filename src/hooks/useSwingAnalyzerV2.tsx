@@ -161,10 +161,24 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const pipeline = createPipeline(videoRef.current, canvasRef.current);
 
     // Subscribe to thumbnail events
+    // Convert RepPosition[] to Map<string, PositionCandidate> for UI compatibility
     pipeline.getThumbnailEvents().subscribe((event: ThumbnailEvent) => {
       setRepThumbnails(prev => {
         const updated = new Map(prev);
-        updated.set(event.repNumber, event.positions);
+        // Convert RepPosition[] to Map<string, PositionCandidate>
+        const positionMap = new Map<string, PositionCandidate>();
+        for (const pos of event.positions) {
+          positionMap.set(pos.name, {
+            position: pos.name,
+            timestamp: pos.timestamp,
+            videoTime: pos.videoTime,
+            angles: pos.angles,
+            score: pos.score,
+            // Note: frameImage not available from peak-based detection
+            // Filmstrip will show placeholder until frame capture is added
+          });
+        }
+        updated.set(event.repNumber, positionMap);
         return updated;
       });
     });
