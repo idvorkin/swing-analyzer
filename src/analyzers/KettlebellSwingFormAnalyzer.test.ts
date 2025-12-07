@@ -29,12 +29,34 @@ function createMockSkeleton(angles: {
  * - connectArmMax: 30, connectSpineMin: 20
  * - releaseArmMin: 10, releaseSpineMax: 25
  */
-const PHASE_ANGLES = {
+const PHASE_ANGLES_NORMAL = {
   top: { arm: 80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
   connect: { arm: 20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
   bottom: { arm: -10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
   release: { arm: 20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
 };
+
+/**
+ * Mirrored video version - arm angles have opposite sign
+ * but same magnitude. Tests that algorithm uses Math.abs().
+ */
+const PHASE_ANGLES_MIRRORED = {
+  top: { arm: -80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
+  connect: { arm: -20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
+  bottom: { arm: 10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
+  release: { arm: -20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
+};
+
+// Default to normal angles for backwards compatibility
+const PHASE_ANGLES = PHASE_ANGLES_NORMAL;
+
+/**
+ * Test configurations for normal and mirrored video
+ */
+const VIDEO_ORIENTATIONS = [
+  { name: 'normal video', angles: PHASE_ANGLES_NORMAL },
+  { name: 'mirrored video', angles: PHASE_ANGLES_MIRRORED },
+] as const;
 
 describe('KettlebellSwingFormAnalyzer', () => {
   let analyzer: KettlebellSwingFormAnalyzer;
@@ -65,54 +87,55 @@ describe('KettlebellSwingFormAnalyzer', () => {
     });
   });
 
-  describe('phase transitions', () => {
+  // Run phase transition tests with BOTH normal and mirrored video angles
+  describe.each(VIDEO_ORIENTATIONS)('phase transitions ($name)', ({ angles: ANGLES }) => {
     it('transitions from TOP to CONNECT when arm drops and spine tilts', () => {
       // Start in top
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.top), 0);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.top), 10);
+      analyzer.processFrame(createMockSkeleton(ANGLES.top), 0);
+      analyzer.processFrame(createMockSkeleton(ANGLES.top), 10);
       expect(analyzer.getPhase()).toBe('top');
 
-      // Transition to connect (arm < 30, spine > 20)
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.connect), 20);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.connect), 30);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.connect), 40);
+      // Transition to connect (|arm| < 30, spine > 20)
+      analyzer.processFrame(createMockSkeleton(ANGLES.connect), 20);
+      analyzer.processFrame(createMockSkeleton(ANGLES.connect), 30);
+      analyzer.processFrame(createMockSkeleton(ANGLES.connect), 40);
 
       expect(analyzer.getPhase()).toBe('connect');
     });
 
     it('transitions from CONNECT to BOTTOM when fully hinged', () => {
       // Get to connect phase first
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.top), 0);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.top), 10);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.connect), 20);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.connect), 30);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.connect), 40);
+      analyzer.processFrame(createMockSkeleton(ANGLES.top), 0);
+      analyzer.processFrame(createMockSkeleton(ANGLES.top), 10);
+      analyzer.processFrame(createMockSkeleton(ANGLES.connect), 20);
+      analyzer.processFrame(createMockSkeleton(ANGLES.connect), 30);
+      analyzer.processFrame(createMockSkeleton(ANGLES.connect), 40);
       expect(analyzer.getPhase()).toBe('connect');
 
-      // Transition to bottom (arm < 0, spine > 35, hip < 140)
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 50);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 60);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 70);
+      // Transition to bottom (|arm| < 15, spine > 35, hip < 140)
+      analyzer.processFrame(createMockSkeleton(ANGLES.bottom), 50);
+      analyzer.processFrame(createMockSkeleton(ANGLES.bottom), 60);
+      analyzer.processFrame(createMockSkeleton(ANGLES.bottom), 70);
 
       expect(analyzer.getPhase()).toBe('bottom');
     });
 
     it('transitions from BOTTOM to RELEASE when hips extend', () => {
-      // Get to bottom phase
-      goToPhase(analyzer, 'bottom');
+      // Get to bottom phase using parameterized angles
+      goToPhaseWithAngles(analyzer, 'bottom', ANGLES);
       expect(analyzer.getPhase()).toBe('bottom');
 
-      // Transition to release (arm > 10, spine < 25)
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.release), 100);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.release), 110);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.release), 120);
+      // Transition to release (|arm| > 10, spine < 25)
+      analyzer.processFrame(createMockSkeleton(ANGLES.release), 100);
+      analyzer.processFrame(createMockSkeleton(ANGLES.release), 110);
+      analyzer.processFrame(createMockSkeleton(ANGLES.release), 120);
 
       expect(analyzer.getPhase()).toBe('release');
     });
 
     it('transitions from RELEASE to TOP when wrist peaks', () => {
-      // Get to release phase
-      goToPhase(analyzer, 'release');
+      // Get to release phase using parameterized angles
+      goToPhaseWithAngles(analyzer, 'release', ANGLES);
       expect(analyzer.getPhase()).toBe('release');
 
       // Simulate wrist height rising then falling (peak detection)
@@ -121,7 +144,7 @@ describe('KettlebellSwingFormAnalyzer', () => {
       const wristPattern = [10, 20, 30, 50, 50, 50, 40, 30];
       let time = 130;
       for (const wrist of wristPattern) {
-        const angles = { ...PHASE_ANGLES.top, wristHeight: wrist };
+        const angles = { ...ANGLES.top, wristHeight: wrist };
         analyzer.processFrame(createMockSkeleton(angles), time);
         time += 10;
       }
@@ -493,6 +516,51 @@ function goToPhase(
       const angles =
         i === targetIndex && overrideAngles ? overrideAngles : PHASE_ANGLES[phase];
 
+      for (let j = 0; j < 4; j++) {
+        analyzer.processFrame(createMockSkeleton(angles), time);
+        time += 10;
+      }
+    }
+  }
+}
+
+/**
+ * Advance analyzer to a specific phase with custom angle set.
+ * Used for parameterized tests with normal/mirrored angles.
+ */
+function goToPhaseWithAngles(
+  analyzer: KettlebellSwingFormAnalyzer,
+  targetPhase: SwingPhase,
+  phaseAngles: typeof PHASE_ANGLES_NORMAL,
+  startTime = 0
+): void {
+  const phases: SwingPhase[] = ['top', 'connect', 'bottom', 'release'];
+  const currentPhase = analyzer.getPhase() as SwingPhase;
+  const currentIndex = phases.indexOf(currentPhase);
+  const targetIndex = phases.indexOf(targetPhase);
+  let time = startTime;
+
+  const needsFullCycle = targetPhase === 'top' && currentIndex > 0;
+
+  if (needsFullCycle) {
+    for (let i = currentIndex; i <= 3; i++) {
+      const phase = phases[i];
+      const angles = phaseAngles[phase];
+      for (let j = 0; j < 4; j++) {
+        analyzer.processFrame(createMockSkeleton(angles), time);
+        time += 10;
+      }
+    }
+    const wristPattern = [10, 20, 30, 50, 50, 50, 40, 30];
+    for (const wrist of wristPattern) {
+      const angles = { ...phaseAngles.top, wristHeight: wrist };
+      analyzer.processFrame(createMockSkeleton(angles), time);
+      time += 10;
+    }
+  } else {
+    for (let i = currentIndex === -1 ? 0 : currentIndex; i <= targetIndex; i++) {
+      const phase = phases[i];
+      const angles = phaseAngles[phase];
       for (let j = 0; j < 4; j++) {
         analyzer.processFrame(createMockSkeleton(angles), time);
         time += 10;
