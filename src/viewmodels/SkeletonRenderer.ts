@@ -375,24 +375,6 @@ export class SkeletonRenderer {
   }
 
   /**
-   * Render a skeleton to a given canvas context
-   */
-  renderSkeletonToCanvas(
-    skeleton: Skeleton,
-    context: CanvasRenderingContext2D
-  ): void {
-    if (!skeleton) return;
-
-    // Render the skeleton using existing methods
-    // Get current timestamp for consistent rendering
-    const timestamp = Date.now();
-    
-    // Draw connections and keypoints
-    this.drawConnections(context, skeleton.getKeypoints());
-    this.drawKeypoints(context, skeleton.getKeypoints(), timestamp);
-  }
-
-  /**
    * Render a simple debug grid on the canvas
    */
   private drawDebugGrid(context: CanvasRenderingContext2D): void {
