@@ -278,7 +278,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 4px;
   padding: 10px 16px;
   background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -313,71 +313,62 @@ main {
   cursor: not-allowed;
 }
 
-.rep-nav-label {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  white-space: nowrap;
-  padding: 0 4px;
+/* Double-arrow buttons for rep navigation - slightly different color */
+.rep-nav-btn-double {
+  background: rgba(139, 92, 246, 0.25);
 }
 
-.rep-nav-divider {
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 4px;
+.rep-nav-btn-double:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.4);
 }
 
-.rep-nav-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  min-height: 44px;
-  border: none;
-  border-radius: 10px;
-  background: rgba(139, 92, 246, 0.35);
-  color: white;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.rep-nav-pill:hover {
+.rep-nav-btn-double:active:not(:disabled) {
   background: rgba(139, 92, 246, 0.5);
 }
 
-.rep-nav-pill:active {
-  transform: scale(0.97);
-  background: rgba(139, 92, 246, 0.6);
+/* Center display: Rep X/Y • Checkpoint */
+.rep-nav-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rep-nav-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.rep-nav-dot {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.75rem;
 }
 
 .rep-nav-position {
+  color: #a78bfa;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 
-.rep-nav-cycle-icon {
-  opacity: 0.7;
-  flex-shrink: 0;
-}
-
-/* Mobile: keep touch-friendly sizes */
+/* Mobile: keep touch-friendly sizes, tighter spacing */
 @media (max-width: 480px) {
   .rep-nav-strip {
-    padding: 8px 12px;
-    gap: 6px;
+    padding: 8px 8px;
+    gap: 3px;
   }
 
-  .rep-nav-label {
-    font-size: 0.875rem;
+  .rep-nav-btn {
+    min-width: 40px;
+    min-height: 40px;
   }
 
-  .rep-nav-pill {
-    padding: 8px 12px;
+  .rep-nav-display {
+    padding: 0 8px;
     font-size: 0.875rem;
-    gap: 5px;
+    gap: 4px;
   }
 
   .rep-nav-position {

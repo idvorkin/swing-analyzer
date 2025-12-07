@@ -35,6 +35,7 @@ const VideoSectionV2: React.FC = () => {
     getVideoContainerClass,
     navigateToPreviousRep,
     navigateToNextRep,
+    navigateToPreviousCheckpoint,
     navigateToNextCheckpoint,
     clearPositionLabel,
     repThumbnails,
@@ -185,49 +186,68 @@ const VideoSectionV2: React.FC = () => {
       {/* Rep navigation strip - shown when reps are detected */}
       {repCount > 0 && currentVideoFile && (
         <div className="rep-nav-strip">
+          {/* Double arrow: previous rep */}
           <button
             type="button"
-            className="rep-nav-btn"
+            className="rep-nav-btn rep-nav-btn-double"
             onClick={navigateToPreviousRep}
             disabled={appState.currentRepIndex <= 0}
             aria-label="Previous rep"
             title="Previous rep"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18.41 7.41L17 6l-6 6 6 6 1.41-1.41L13.83 12z" />
+              <path d="M12.41 7.41L11 6l-6 6 6 6 1.41-1.41L7.83 12z" />
+            </svg>
+          </button>
+
+          {/* Single arrow: previous checkpoint */}
+          <button
+            type="button"
+            className="rep-nav-btn"
+            onClick={navigateToPreviousCheckpoint}
+            aria-label="Previous checkpoint"
+            title="Previous checkpoint"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
             </svg>
           </button>
 
-          <span className="rep-nav-label">
-            Rep {appState.currentRepIndex + 1}/{repCount}
+          {/* Center: Rep and checkpoint display */}
+          <span className="rep-nav-display">
+            <span className="rep-nav-label">Rep {appState.currentRepIndex + 1}/{repCount}</span>
+            <span className="rep-nav-dot">•</span>
+            <span className="rep-nav-position">
+              {currentPosition ? (POSITION_LABELS[currentPosition] || currentPosition) : '—'}
+            </span>
           </span>
 
+          {/* Single arrow: next checkpoint */}
           <button
             type="button"
             className="rep-nav-btn"
-            onClick={navigateToNextRep}
-            disabled={appState.currentRepIndex >= repCount - 1}
-            aria-label="Next rep"
-            title="Next rep"
+            onClick={navigateToNextCheckpoint}
+            aria-label="Next checkpoint"
+            title="Next checkpoint"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
             </svg>
           </button>
 
-          <span className="rep-nav-divider" />
-
+          {/* Double arrow: next rep */}
           <button
             type="button"
-            className="rep-nav-pill"
-            onClick={navigateToNextCheckpoint}
-            title="Cycle through checkpoints: Top → Connect → Bottom → Release"
+            className="rep-nav-btn rep-nav-btn-double"
+            onClick={navigateToNextRep}
+            disabled={appState.currentRepIndex >= repCount - 1}
+            aria-label="Next rep"
+            title="Next rep"
           >
-            <span className="rep-nav-position">
-              {currentPosition ? (POSITION_LABELS[currentPosition] || currentPosition) : 'Checkpoint'}
-            </span>
-            <svg className="rep-nav-cycle-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M5.59 7.41L7 6l6 6-6 6-1.41-1.41L10.17 12z" />
+              <path d="M11.59 7.41L13 6l6 6-6 6-1.41-1.41L16.17 12z" />
             </svg>
           </button>
         </div>
