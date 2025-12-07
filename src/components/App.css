@@ -561,16 +561,42 @@ main {
   color: rgba(255, 255, 255, 0.7);
 }
 
-#stop-btn {
-  background: rgba(220, 53, 69, 0.6);
+/* Play button - compact */
+#play-pause-btn {
+  min-width: 70px;
+  flex: 0.5 !important;
 }
 
-#stop-btn:hover {
-  background: rgba(220, 53, 69, 0.8);
+/* Frame navigation buttons - prominent orange */
+#prev-frame-btn,
+#next-frame-btn {
+  min-width: 50px;
+  flex: 0.8;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+#prev-frame-btn:hover,
+#next-frame-btn:hover {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+/* Checkpoint navigation buttons - most prominent purple */
+#prev-checkpoint-btn,
+#next-checkpoint-btn {
+  min-width: 60px;
+  flex: 1;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+#prev-checkpoint-btn:hover,
+#next-checkpoint-btn:hover {
+  background: linear-gradient(135deg, #a78bfa, #8b5cf6);
 }
 
 .toggle-button {
-  min-width: 120px;
+  min-width: 70px;
 }
 
 /* Mobile-specific video controls */
@@ -591,29 +617,28 @@ main {
     display: none; /* Hide text on mobile */
   }
 
+  /* Play button compact on mobile too */
   #play-pause-btn {
     min-width: 0;
-    flex: 2;
+    flex: 0.6;
   }
 
-  /* Make frame buttons prominent on mobile */
+  /* Frame buttons prominent on mobile */
   #prev-frame-btn,
   #next-frame-btn {
     min-width: 44px;
     min-height: 44px;
     flex: 1;
     padding: 10px;
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    border: 2px solid rgba(255, 255, 255, 0.3);
   }
 
-  #prev-frame-btn:hover,
-  #next-frame-btn:hover {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  }
-
-  #stop-btn {
-    flex: 1;
+  /* Checkpoint buttons most prominent on mobile */
+  #prev-checkpoint-btn,
+  #next-checkpoint-btn {
+    min-width: 48px;
+    min-height: 48px;
+    flex: 1.2;
+    padding: 10px;
   }
 }
 
@@ -848,7 +873,7 @@ main {
   }
 }
 
-/* Mobile styles for all controls */
+/* Mobile styles for all controls - additional breakpoint */
 @media (max-width: 768px) {
   .video-controls {
     gap: 8px;
@@ -863,22 +888,6 @@ main {
 
   .video-controls .button-text {
     display: none; /* Hide text on mobile */
-  }
-
-  #play-pause-btn {
-    min-width: 0;
-    flex: 2; /* Give play/pause button more space */
-  }
-
-  #prev-frame-btn,
-  #next-frame-btn {
-    min-width: 0;
-    flex: 1;
-    padding: 8px;
-  }
-
-  #stop-btn {
-    flex: 1;
   }
 }
 

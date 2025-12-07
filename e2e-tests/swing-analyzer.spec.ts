@@ -267,12 +267,10 @@ test.describe('Swing Analyzer', () => {
   test('should have video control buttons visible', async ({ page }) => {
     // Check that control buttons exist on the page
     const playPauseBtn = page.locator('#play-pause-btn');
-    const stopBtn = page.locator('#stop-btn');
     const loadBtn = page.locator('#load-hardcoded-btn');
 
     await expect(loadBtn).toBeVisible();
     await expect(playPauseBtn).toBeVisible();
-    await expect(stopBtn).toBeVisible();
   });
 
   test('canvas dimensions should match video dimensions after loading', async ({ page }) => {

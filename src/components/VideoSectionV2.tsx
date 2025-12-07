@@ -30,7 +30,6 @@ const VideoSectionV2: React.FC = () => {
     handleVideoUpload,
     loadHardcodedVideo,
     togglePlayPause,
-    stopVideo,
     nextFrame,
     previousFrame,
     getVideoContainerClass,
@@ -301,19 +300,6 @@ const VideoSectionV2: React.FC = () => {
           >
             <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6-1.41 1.41zM16 6h2v12h-2V6z" />
-            </svg>
-          </button>
-
-          {/* 6. Reset/Stop */}
-          <button
-            id="stop-btn"
-            disabled={!appState.isModelLoaded || !currentVideoFile}
-            onClick={() => { clearPositionLabel(); stopVideo(); }}
-            title="Reset to start"
-            type="button"
-          >
-            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M6 6h12v12H6z" />
             </svg>
           </button>
 
