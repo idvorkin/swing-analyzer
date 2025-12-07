@@ -453,4 +453,127 @@ describe('Skeleton', () => {
       expect(skeleton.getWristHeight()).toBe(50);
     });
   });
+
+  describe('getFacingDirection', () => {
+    it('returns right when knee is ahead of ankle (facing right)', () => {
+      const skeleton = createCocoSkeleton({
+        leftAnkle: kp(100, 400),
+        rightAnkle: kp(120, 400),
+        leftKnee: kp(130, 300), // Knee 20px ahead of ankle
+        rightKnee: kp(150, 300),
+      });
+
+      expect(skeleton.getFacingDirection()).toBe('right');
+    });
+
+    it('returns left when knee is behind ankle (facing left)', () => {
+      const skeleton = createCocoSkeleton({
+        leftAnkle: kp(150, 400),
+        rightAnkle: kp(170, 400),
+        leftKnee: kp(120, 300), // Knee 20px behind ankle
+        rightKnee: kp(140, 300),
+      });
+
+      expect(skeleton.getFacingDirection()).toBe('left');
+    });
+
+    it('returns null when offset is too small to determine', () => {
+      const skeleton = createCocoSkeleton({
+        leftAnkle: kp(100, 400),
+        rightAnkle: kp(120, 400),
+        leftKnee: kp(105, 300), // Only 5px difference - below threshold
+        rightKnee: kp(125, 300),
+      });
+
+      expect(skeleton.getFacingDirection()).toBeNull();
+    });
+
+    it('returns null when keypoints are missing', () => {
+      const skeleton = createCocoSkeleton({
+        leftAnkle: kp(100, 400),
+        // Missing other keypoints
+      });
+
+      expect(skeleton.getFacingDirection()).toBeNull();
+    });
+
+    it('works with single side available', () => {
+      const skeleton = createCocoSkeleton({
+        rightAnkle: kp(100, 400),
+        rightKnee: kp(130, 300), // Knee 30px ahead
+      });
+
+      expect(skeleton.getFacingDirection()).toBe('right');
+    });
+  });
+
+  describe('getWristX', () => {
+    it('returns left wrist X coordinate', () => {
+      const skeleton = createCocoSkeleton({
+        leftWrist: kp(150, 200),
+        rightWrist: kp(250, 200),
+      });
+
+      expect(skeleton.getWristX('left')).toBe(150);
+    });
+
+    it('returns right wrist X coordinate', () => {
+      const skeleton = createCocoSkeleton({
+        leftWrist: kp(150, 200),
+        rightWrist: kp(250, 200),
+      });
+
+      expect(skeleton.getWristX('right')).toBe(250);
+    });
+
+    it('returns null when wrist is missing', () => {
+      const skeleton = createCocoSkeleton({
+        leftWrist: kp(150, 200),
+        // rightWrist missing
+      });
+
+      expect(skeleton.getWristX('right')).toBeNull();
+    });
+  });
+
+  describe('getArmToVerticalAngle with preferredSide', () => {
+    it('uses right arm when preferredSide is right', () => {
+      const skeleton = createCocoSkeleton({
+        rightShoulder: kp(100, 100),
+        rightElbow: kp(150, 200), // Arm at ~27° from vertical
+        leftShoulder: kp(200, 100),
+        leftElbow: kp(200, 200), // Arm straight down (0°)
+      });
+
+      // Without preference, would choose left (more vertical)
+      // With preference, should use right
+      const angleWithPreference = skeleton.getArmToVerticalAngle('right');
+      expect(angleWithPreference).toBeGreaterThan(20);
+    });
+
+    it('uses left arm when preferredSide is left', () => {
+      const skeleton = createCocoSkeleton({
+        rightShoulder: kp(100, 100),
+        rightElbow: kp(100, 200), // Arm straight down (0°)
+        leftShoulder: kp(200, 100),
+        leftElbow: kp(250, 200), // Arm at angle
+      });
+
+      const angleWithPreference = skeleton.getArmToVerticalAngle('left');
+      expect(angleWithPreference).toBeGreaterThan(20);
+    });
+
+    it('falls back to heuristics when preferred side has low confidence', () => {
+      const skeleton = createCocoSkeleton({
+        rightShoulder: kp(100, 100),
+        rightElbow: kp(100, 200, 0.1), // Low confidence
+        leftShoulder: kp(200, 100),
+        leftElbow: kp(200, 200, 0.9), // High confidence, straight down
+      });
+
+      // Prefers right, but right has low confidence, falls back to left
+      const angle = skeleton.getArmToVerticalAngle('right');
+      expect(angle).toBeCloseTo(0, 0); // Should use left arm (straight down)
+    });
+  });
 });

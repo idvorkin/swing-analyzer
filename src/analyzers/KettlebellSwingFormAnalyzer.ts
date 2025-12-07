@@ -121,8 +121,55 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   private wristHeightHistory: number[] = [];
   private readonly wristHeightWindowSize = 5;
 
+  // Dominant arm detection (set once during first hinged frames)
+  private dominantArm: 'left' | 'right' | null = null;
+  private dominantArmVotes = { left: 0, right: 0 };
+  private readonly votesNeededForLock = 5;
+
   constructor(thresholds: Partial<SwingThresholds> = {}) {
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
+  }
+
+  /**
+   * Detect the dominant (swinging) arm based on body facing direction.
+   * When hinged forward, the arm on the "front" side of the body is the swinging arm.
+   * Votes across multiple hinged frames to ensure stability.
+   */
+  private detectDominantArm(skeleton: Skeleton): void {
+    // Once locked, don't change
+    if (this.dominantArm !== null) return;
+
+    // Only detect during hinged position (spine > 30°)
+    const spine = skeleton.getSpineAngle();
+    if (spine <= 30) return;
+
+    // Need facing direction to determine front
+    const facing = skeleton.getFacingDirection();
+    if (!facing) return;
+
+    // Compare wrist positions to determine front arm
+    const leftWristX = skeleton.getWristX('left');
+    const rightWristX = skeleton.getWristX('right');
+    if (leftWristX === null || rightWristX === null) return;
+
+    // The swinging arm is on the "front" side (same direction as facing)
+    let frontArm: 'left' | 'right';
+    if (facing === 'right') {
+      // Facing right: front arm has wrist further right (higher X)
+      frontArm = rightWristX > leftWristX ? 'right' : 'left';
+    } else {
+      // Facing left: front arm has wrist further left (lower X)
+      frontArm = leftWristX < rightWristX ? 'left' : 'right';
+    }
+
+    // Vote for this arm
+    this.dominantArmVotes[frontArm]++;
+
+    // Lock in once we have enough votes
+    const totalVotes = this.dominantArmVotes.left + this.dominantArmVotes.right;
+    if (totalVotes >= this.votesNeededForLock) {
+      this.dominantArm = this.dominantArmVotes.right >= this.dominantArmVotes.left ? 'right' : 'left';
+    }
   }
 
   /**
@@ -134,8 +181,11 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     videoTime?: number,
     frameImage?: ImageData
   ): FormAnalyzerResult {
-    // Get all angles
-    const arm = skeleton.getArmToVerticalAngle();
+    // Detect dominant arm during first hinged frames
+    this.detectDominantArm(skeleton);
+
+    // Get all angles (pass dominant arm if detected)
+    const arm = skeleton.getArmToVerticalAngle(this.dominantArm ?? undefined);
     const spine = skeleton.getSpineAngle();
     const hip = skeleton.getHipAngle();
     const knee = skeleton.getKneeAngle();
@@ -535,6 +585,8 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     this.currentPhasePeak = null;
     this.currentRepPeaks = {};
     this.wristHeightHistory = [];
+    this.dominantArm = null;
+    this.dominantArmVotes = { left: 0, right: 0 };
     this.resetMetrics();
   }
 
