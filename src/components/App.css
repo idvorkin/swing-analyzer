@@ -623,6 +623,13 @@ main {
   line-height: 1.2;
 }
 
+/* Position indicator in HUD - purple accent to match nav strip */
+.hud-overlay-position .hud-overlay-angle-value {
+  color: #a78bfa;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
 .hud-overlay-top-right {
   position: absolute;
   top: 12px;

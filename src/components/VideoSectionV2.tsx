@@ -323,37 +323,32 @@ const VideoSectionV2: React.FC = () => {
             )}
             {/* Status overlay - visible when poses exist for current frame */}
             {hasPosesForCurrentFrame && (
-              <>
-                <div className="hud-overlay-top">
-                  <div className="hud-overlay-reps">
-                    <span id="rep-counter" className="hud-overlay-reps-value">
-                      {repCount > 0 ? `${appState.currentRepIndex + 1}/${repCount}` : '0'}
-                    </span>
-                    <span className="hud-overlay-reps-label">REP</span>
-                  </div>
-                  <div className="hud-overlay-angles">
-                    <div className="hud-overlay-angle">
-                      <span className="hud-overlay-angle-label">SPINE</span>
-                      <span id="spine-angle" className="hud-overlay-angle-value">{spineAngle}°</span>
-                    </div>
-                    <div className="hud-overlay-angle">
-                      <span className="hud-overlay-angle-label">ARM</span>
-                      <span id="arm-angle" className="hud-overlay-angle-value">{armToSpineAngle}°</span>
-                    </div>
-                  </div>
+              <div className="hud-overlay-top">
+                <div className="hud-overlay-reps">
+                  <span id="rep-counter" className="hud-overlay-reps-value">
+                    {repCount > 0 ? `${appState.currentRepIndex + 1}/${repCount}` : '0'}
+                  </span>
+                  <span className="hud-overlay-reps-label">REP</span>
                 </div>
-                {/* Position label - only shown during checkpoint navigation */}
-                {currentPosition && (
-                  <div className="hud-overlay-bottom">
-                    <div className="hud-overlay-status">
-                      <span className="hud-overlay-status-dot" />
-                      <span className="hud-overlay-status-text">
+                <div className="hud-overlay-angles">
+                  <div className="hud-overlay-angle">
+                    <span className="hud-overlay-angle-label">SPINE</span>
+                    <span id="spine-angle" className="hud-overlay-angle-value">{spineAngle}°</span>
+                  </div>
+                  <div className="hud-overlay-angle">
+                    <span className="hud-overlay-angle-label">ARM</span>
+                    <span id="arm-angle" className="hud-overlay-angle-value">{armToSpineAngle}°</span>
+                  </div>
+                  {currentPosition && (
+                    <div className="hud-overlay-angle hud-overlay-position">
+                      <span className="hud-overlay-angle-label">POS</span>
+                      <span className="hud-overlay-angle-value">
                         {POSITION_LABELS[currentPosition] || currentPosition}
                       </span>
                     </div>
-                  </div>
-                )}
-              </>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}
