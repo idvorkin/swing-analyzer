@@ -5,6 +5,7 @@ import { DownloadIcon } from './Icons';
 export function DeveloperTab() {
   const [recordingStats, setRecordingStats] = useState(sessionRecorder.getStats());
   const [hasPoseTrack, setHasPoseTrack] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -22,11 +23,16 @@ export function DeveloperTab() {
     return `${seconds}s`;
   };
 
-  const handleDownloadPoseTrack = useCallback(() => {
+  const handleDownloadPoseTrack = useCallback(async () => {
     // Use swingDebug to download (it has the download logic)
-    const swingDebug = (window as unknown as { swingDebug?: { downloadPoseTrack: () => string | null } }).swingDebug;
+    const swingDebug = (window as unknown as { swingDebug?: { downloadPoseTrack: () => Promise<string | null> } }).swingDebug;
     if (swingDebug?.downloadPoseTrack) {
-      swingDebug.downloadPoseTrack();
+      setIsDownloading(true);
+      try {
+        await swingDebug.downloadPoseTrack();
+      } finally {
+        setIsDownloading(false);
+      }
     }
   }, []);
 
@@ -45,10 +51,10 @@ export function DeveloperTab() {
           type="button"
           className="settings-action-btn settings-action-btn--blue"
           onClick={handleDownloadPoseTrack}
-          disabled={!hasPoseTrack}
+          disabled={!hasPoseTrack || isDownloading}
           title={hasPoseTrack ? 'Download extracted pose data' : 'Load a video first'}
         >
-          <DownloadIcon /> Download Poses
+          <DownloadIcon /> {isDownloading ? 'Compressing...' : 'Download Poses'}
         </button>
       </div>
 
