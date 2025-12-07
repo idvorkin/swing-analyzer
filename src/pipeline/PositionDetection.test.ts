@@ -53,26 +53,11 @@ function loadGroundTruth(filename: string): GroundTruthFile {
 }
 
 /**
- * Calculate arm height from keypoints (wrist Y relative to shoulder)
- * Positive = wrists above shoulder, negative = wrists below
+ * Get arm height (wrist height relative to shoulder)
+ * Uses the new Skeleton.getWristHeight() method
  */
 function getArmHeight(skeleton: Skeleton): number {
-  const keypoints = skeleton.keypoints;
-  const leftShoulder = keypoints[5];
-  const rightShoulder = keypoints[6];
-  const leftWrist = keypoints[9];
-  const rightWrist = keypoints[10];
-
-  if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist) {
-    return 0;
-  }
-
-  const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
-  const avgWristY = (leftWrist.y + rightWrist.y) / 2;
-
-  // In screen coords, lower Y = higher position
-  // So shoulder_y - wrist_y = positive when wrist is above shoulder
-  return shoulderMidY - avgWristY;
+  return skeleton.getWristHeight();
 }
 
 /**

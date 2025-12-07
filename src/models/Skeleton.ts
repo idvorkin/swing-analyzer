@@ -37,6 +37,9 @@ export class Skeleton {
   // Elbow angle cache (shoulder-elbow-wrist angle)
   private _elbowAngle: number | null = null;
 
+  // Wrist height cache (wrist Y relative to shoulder, positive = above)
+  private _wristHeight: number | null = null;
+
   // Timestamp for velocity calculations
   private _timestamp: number = 0;
 
@@ -538,6 +541,55 @@ export class Skeleton {
     } catch (e) {
       console.error('Error calculating elbow angle:', e);
       this._elbowAngle = 0;
+      return 0;
+    }
+  }
+
+  /**
+   * Get the average wrist height relative to shoulder midpoint
+   *
+   * BIOMECHANICS: This measures how high the hands (and thus kettlebell) are.
+   * - Positive values = wrists above shoulder level (arms raised high)
+   * - Negative values = wrists below shoulder level (arms down)
+   * - Zero = wrists at shoulder height
+   *
+   * In a kettlebell swing:
+   * - At Top (lockout): wrists near shoulder level or slightly above (0 to +50)
+   * - At Bottom (hinge): wrists well below, often behind body (-200 to -300)
+   *
+   * For detecting the "Top" position, look for the PEAK (maximum) of this value
+   * during each rep cycle, rather than a fixed threshold.
+   */
+  getWristHeight(): number {
+    if (this._wristHeight !== null) {
+      return this._wristHeight;
+    }
+
+    try {
+      // Get shoulder keypoints to calculate midpoint
+      const leftShoulder = this.getKeypointByName('leftShoulder');
+      const rightShoulder = this.getKeypointByName('rightShoulder');
+      const leftWrist = this.getKeypointByName('leftWrist');
+      const rightWrist = this.getKeypointByName('rightWrist');
+
+      if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist) {
+        this._wristHeight = 0;
+        return 0;
+      }
+
+      // Calculate shoulder midpoint Y
+      const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
+
+      // Calculate average wrist Y
+      const avgWristY = (leftWrist.y + rightWrist.y) / 2;
+
+      // In screen coordinates, Y increases downward
+      // So shoulder_y - wrist_y = positive when wrist is ABOVE shoulder
+      this._wristHeight = shoulderMidY - avgWristY;
+      return this._wristHeight;
+    } catch (e) {
+      console.error('Error calculating wrist height:', e);
+      this._wristHeight = 0;
       return 0;
     }
   }
