@@ -28,6 +28,8 @@ export interface RepPosition {
   angles: Record<string, number>;
   /** Quality score for this position (higher = better) */
   score: number;
+  /** Frame thumbnail for filmstrip display (only available during extraction) */
+  frameImage?: ImageData;
 }
 
 /**
@@ -83,9 +85,10 @@ export interface FormAnalyzer {
    * @param skeleton - The skeleton to analyze
    * @param timestamp - Frame timestamp (performance.now())
    * @param videoTime - Optional video time in seconds
+   * @param frameImage - Optional frame thumbnail for filmstrip capture
    * @returns Analysis result with phase, rep count, and positions
    */
-  processFrame(skeleton: Skeleton, timestamp: number, videoTime?: number): FormAnalyzerResult;
+  processFrame(skeleton: Skeleton, timestamp: number, videoTime?: number, frameImage?: ImageData): FormAnalyzerResult;
 
   /** Get the current phase */
   getPhase(): string;

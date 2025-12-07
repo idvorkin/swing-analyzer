@@ -75,6 +75,7 @@ interface PhasePeak {
   videoTime?: number;
   score: number;
   angles: { arm: number; spine: number; hip: number; knee: number };
+  frameImage?: ImageData;
 }
 
 /**
@@ -128,7 +129,8 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   processFrame(
     skeleton: Skeleton,
     timestamp: number = Date.now(),
-    videoTime?: number
+    videoTime?: number,
+    frameImage?: ImageData
   ): FormAnalyzerResult {
     // Get all angles
     const arm = skeleton.getArmToVerticalAngle();
@@ -150,7 +152,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     this.updateMetrics(arm, spine, hip, knee);
 
     // Update peak tracking for current phase
-    this.updatePhasePeak(skeleton, timestamp, videoTime, { arm, spine, hip, knee });
+    this.updatePhasePeak(skeleton, timestamp, videoTime, { arm, spine, hip, knee }, frameImage);
 
     // Increment frames in current phase
     this.framesInPhase++;
@@ -233,6 +235,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
           knee: peak.angles.knee,
         },
         score: peak.score,
+        frameImage: peak.frameImage,
       });
     }
 
@@ -246,7 +249,8 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     skeleton: Skeleton,
     timestamp: number,
     videoTime: number | undefined,
-    angles: { arm: number; spine: number; hip: number; knee: number }
+    angles: { arm: number; spine: number; hip: number; knee: number },
+    frameImage?: ImageData
   ): void {
     const score = this.calculatePeakScore(this.phase, angles);
 
@@ -263,6 +267,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
           skeleton,
           score,
           angles: { ...angles },
+          frameImage,
         };
       }
     } else {
@@ -274,6 +279,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
           skeleton,
           score,
           angles: { ...angles },
+          frameImage,
         };
       }
     }
