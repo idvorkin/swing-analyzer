@@ -270,6 +270,15 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
+      // Wait for pipeline to fully initialize (controls become enabled)
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
       // Rep counter should exist and show reps from seeded pose data
       await expect(page.locator('#rep-counter')).toBeVisible();
       // Seeded fixture contains ~4 swings which produces 3 detected reps
