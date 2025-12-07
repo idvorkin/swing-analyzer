@@ -77,6 +77,16 @@ const VideoSectionV2: React.FC = () => {
   // Double-tap to play/pause state
   const lastTapRef = useRef<number>(0);
   const [showPlayPauseOverlay, setShowPlayPauseOverlay] = useState<'play' | 'pause' | null>(null);
+  const overlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup overlay timeout on unmount to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (overlayTimeoutRef.current) {
+        clearTimeout(overlayTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Double-tap handler for video container
   const handleVideoDoubleTap = useCallback(() => {
@@ -87,9 +97,12 @@ const VideoSectionV2: React.FC = () => {
       // Double tap detected - toggle play/pause
       clearPositionLabel();
       togglePlayPause();
-      // Show visual feedback
+      // Show visual feedback - clear any existing timeout first
+      if (overlayTimeoutRef.current) {
+        clearTimeout(overlayTimeoutRef.current);
+      }
       setShowPlayPauseOverlay(isPlaying ? 'play' : 'pause'); // Shows opposite since state hasn't updated yet
-      setTimeout(() => setShowPlayPauseOverlay(null), 500);
+      overlayTimeoutRef.current = setTimeout(() => setShowPlayPauseOverlay(null), 500);
       lastTapRef.current = 0; // Reset to prevent triple-tap
     } else {
       lastTapRef.current = now;

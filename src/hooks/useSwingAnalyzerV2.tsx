@@ -765,15 +765,20 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const newRepIndex = Math.max(0, appState.currentRepIndex - 1);
     if (newRepIndex === appState.currentRepIndex) return; // Already at first rep
 
-    // Find first checkpoint of the target rep
+    // Find first checkpoint of the target rep - track actual position found
     const targetRepNum = newRepIndex + 1; // repNum is 1-indexed
     const positions = repThumbnails.get(targetRepNum);
-    const firstCheckpoint = positions?.get('top') || positions?.values().next().value;
+    const topCheckpoint = positions?.get('top');
+    const firstCheckpoint = topCheckpoint || positions?.values().next().value;
+    // Determine actual position name - 'top' if found, otherwise first available
+    const actualPosition = topCheckpoint ? 'top' : (positions?.keys().next().value ?? null);
 
     video.pause(); // Pause when seeking to rep
     if (firstCheckpoint?.videoTime !== undefined) {
       video.currentTime = firstCheckpoint.videoTime;
-      setCurrentPosition('top');
+      if (actualPosition) {
+        setCurrentPosition(actualPosition);
+      }
     }
     setAppState(prev => ({
       ...prev,
@@ -788,15 +793,20 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const newRepIndex = Math.min(repCount - 1, appState.currentRepIndex + 1);
     if (newRepIndex === appState.currentRepIndex) return; // Already at last rep
 
-    // Find first checkpoint of the target rep
+    // Find first checkpoint of the target rep - track actual position found
     const targetRepNum = newRepIndex + 1; // repNum is 1-indexed
     const positions = repThumbnails.get(targetRepNum);
-    const firstCheckpoint = positions?.get('top') || positions?.values().next().value;
+    const topCheckpoint = positions?.get('top');
+    const firstCheckpoint = topCheckpoint || positions?.values().next().value;
+    // Determine actual position name - 'top' if found, otherwise first available
+    const actualPosition = topCheckpoint ? 'top' : (positions?.keys().next().value ?? null);
 
     video.pause(); // Pause when seeking to rep
     if (firstCheckpoint?.videoTime !== undefined) {
       video.currentTime = firstCheckpoint.videoTime;
-      setCurrentPosition('top');
+      if (actualPosition) {
+        setCurrentPosition(actualPosition);
+      }
     }
     setAppState(prev => ({
       ...prev,
