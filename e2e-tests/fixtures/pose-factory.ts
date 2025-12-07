@@ -3,9 +3,10 @@
  *
  * Creates realistic pose sequences for swing analysis testing.
  * Based on the actual swing phases: Top -> Connect -> Bottom -> Release
+ * Uses MediaPipe 33-keypoint format.
  */
 
-import type { PoseKeypoint } from '../../src/types';
+import { MediaPipeBodyParts, type PoseKeypoint } from '../../src/types';
 import type {
   PoseTrackFile,
   PoseTrackFrame,
@@ -25,27 +26,9 @@ export const SWING_SAMPLE_4REPS_VIDEO_HASH =
   '2fbf38b42328d66e0c61f66fe490ebf1339e7448d53217a12ff0bdb0fa80dba1';
 
 /**
- * COCO keypoint indices for reference
+ * MediaPipe keypoint indices (33-point format)
  */
-export const KEYPOINT_INDICES = {
-  NOSE: 0,
-  LEFT_EYE: 1,
-  RIGHT_EYE: 2,
-  LEFT_EAR: 3,
-  RIGHT_EAR: 4,
-  LEFT_SHOULDER: 5,
-  RIGHT_SHOULDER: 6,
-  LEFT_ELBOW: 7,
-  RIGHT_ELBOW: 8,
-  LEFT_WRIST: 9,
-  RIGHT_WRIST: 10,
-  LEFT_HIP: 11,
-  RIGHT_HIP: 12,
-  LEFT_KNEE: 13,
-  RIGHT_KNEE: 14,
-  LEFT_ANKLE: 15,
-  RIGHT_ANKLE: 16,
-} as const;
+export const KEYPOINT_INDICES = MediaPipeBodyParts;
 
 /**
  * Swing phases for rep detection
@@ -80,27 +63,54 @@ const ARM_ANGLES = {
 /**
  * Create base keypoints for a standing person
  * Coordinates are in pixels (assuming 640x480 video)
+ * MediaPipe 33-keypoint format
  */
 function createBaseKeypoints(): PoseKeypoint[] {
-  return [
-    { x: 320, y: 60, score: 0.95 }, // 0: nose
-    { x: 310, y: 50, score: 0.92 }, // 1: left_eye
-    { x: 330, y: 50, score: 0.92 }, // 2: right_eye
-    { x: 295, y: 55, score: 0.88 }, // 3: left_ear
-    { x: 345, y: 55, score: 0.88 }, // 4: right_ear
-    { x: 280, y: 120, score: 0.95 }, // 5: left_shoulder
-    { x: 360, y: 120, score: 0.95 }, // 6: right_shoulder
-    { x: 260, y: 200, score: 0.92 }, // 7: left_elbow
-    { x: 380, y: 200, score: 0.92 }, // 8: right_elbow
-    { x: 250, y: 280, score: 0.9 }, // 9: left_wrist
-    { x: 390, y: 280, score: 0.9 }, // 10: right_wrist
-    { x: 290, y: 280, score: 0.95 }, // 11: left_hip
-    { x: 350, y: 280, score: 0.95 }, // 12: right_hip
-    { x: 285, y: 380, score: 0.93 }, // 13: left_knee
-    { x: 355, y: 380, score: 0.93 }, // 14: right_knee
-    { x: 280, y: 470, score: 0.91 }, // 15: left_ankle
-    { x: 360, y: 470, score: 0.91 }, // 16: right_ankle
-  ];
+  // Create 33-element array for MediaPipe format
+  const kp: PoseKeypoint[] = new Array(33).fill(null).map(() => ({
+    x: 0, y: 0, score: 0.5, visibility: 0.5,
+  }));
+
+  // Face keypoints (0-10)
+  kp[KEYPOINT_INDICES.NOSE] = { x: 320, y: 60, score: 0.95, visibility: 0.95 };
+  kp[KEYPOINT_INDICES.LEFT_EYE_INNER] = { x: 315, y: 50, score: 0.92, visibility: 0.92 };
+  kp[KEYPOINT_INDICES.LEFT_EYE] = { x: 310, y: 50, score: 0.92, visibility: 0.92 };
+  kp[KEYPOINT_INDICES.LEFT_EYE_OUTER] = { x: 305, y: 50, score: 0.92, visibility: 0.92 };
+  kp[KEYPOINT_INDICES.RIGHT_EYE_INNER] = { x: 325, y: 50, score: 0.92, visibility: 0.92 };
+  kp[KEYPOINT_INDICES.RIGHT_EYE] = { x: 330, y: 50, score: 0.92, visibility: 0.92 };
+  kp[KEYPOINT_INDICES.RIGHT_EYE_OUTER] = { x: 335, y: 50, score: 0.92, visibility: 0.92 };
+  kp[KEYPOINT_INDICES.LEFT_EAR] = { x: 295, y: 55, score: 0.88, visibility: 0.88 };
+  kp[KEYPOINT_INDICES.RIGHT_EAR] = { x: 345, y: 55, score: 0.88, visibility: 0.88 };
+  kp[KEYPOINT_INDICES.MOUTH_LEFT] = { x: 315, y: 70, score: 0.85, visibility: 0.85 };
+  kp[KEYPOINT_INDICES.MOUTH_RIGHT] = { x: 325, y: 70, score: 0.85, visibility: 0.85 };
+
+  // Upper body keypoints (11-22)
+  kp[KEYPOINT_INDICES.LEFT_SHOULDER] = { x: 280, y: 120, score: 0.95, visibility: 0.95 };
+  kp[KEYPOINT_INDICES.RIGHT_SHOULDER] = { x: 360, y: 120, score: 0.95, visibility: 0.95 };
+  kp[KEYPOINT_INDICES.LEFT_ELBOW] = { x: 260, y: 200, score: 0.92, visibility: 0.92 };
+  kp[KEYPOINT_INDICES.RIGHT_ELBOW] = { x: 380, y: 200, score: 0.92, visibility: 0.92 };
+  kp[KEYPOINT_INDICES.LEFT_WRIST] = { x: 250, y: 280, score: 0.9, visibility: 0.9 };
+  kp[KEYPOINT_INDICES.RIGHT_WRIST] = { x: 390, y: 280, score: 0.9, visibility: 0.9 };
+  kp[KEYPOINT_INDICES.LEFT_PINKY] = { x: 245, y: 290, score: 0.85, visibility: 0.85 };
+  kp[KEYPOINT_INDICES.RIGHT_PINKY] = { x: 395, y: 290, score: 0.85, visibility: 0.85 };
+  kp[KEYPOINT_INDICES.LEFT_INDEX] = { x: 250, y: 295, score: 0.85, visibility: 0.85 };
+  kp[KEYPOINT_INDICES.RIGHT_INDEX] = { x: 390, y: 295, score: 0.85, visibility: 0.85 };
+  kp[KEYPOINT_INDICES.LEFT_THUMB] = { x: 255, y: 285, score: 0.85, visibility: 0.85 };
+  kp[KEYPOINT_INDICES.RIGHT_THUMB] = { x: 385, y: 285, score: 0.85, visibility: 0.85 };
+
+  // Lower body keypoints (23-32)
+  kp[KEYPOINT_INDICES.LEFT_HIP] = { x: 290, y: 280, score: 0.95, visibility: 0.95 };
+  kp[KEYPOINT_INDICES.RIGHT_HIP] = { x: 350, y: 280, score: 0.95, visibility: 0.95 };
+  kp[KEYPOINT_INDICES.LEFT_KNEE] = { x: 285, y: 380, score: 0.93, visibility: 0.93 };
+  kp[KEYPOINT_INDICES.RIGHT_KNEE] = { x: 355, y: 380, score: 0.93, visibility: 0.93 };
+  kp[KEYPOINT_INDICES.LEFT_ANKLE] = { x: 280, y: 470, score: 0.91, visibility: 0.91 };
+  kp[KEYPOINT_INDICES.RIGHT_ANKLE] = { x: 360, y: 470, score: 0.91, visibility: 0.91 };
+  kp[KEYPOINT_INDICES.LEFT_HEEL] = { x: 275, y: 475, score: 0.88, visibility: 0.88 };
+  kp[KEYPOINT_INDICES.RIGHT_HEEL] = { x: 365, y: 475, score: 0.88, visibility: 0.88 };
+  kp[KEYPOINT_INDICES.LEFT_FOOT_INDEX] = { x: 270, y: 480, score: 0.88, visibility: 0.88 };
+  kp[KEYPOINT_INDICES.RIGHT_FOOT_INDEX] = { x: 370, y: 480, score: 0.88, visibility: 0.88 };
+
+  return kp;
 }
 
 /**

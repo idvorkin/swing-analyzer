@@ -119,10 +119,12 @@ export class VideoFileSkeletonSource implements SkeletonSource {
 
         // Emit all cached skeletons for initial pipeline processing
         // This allows the pipeline to count reps from cached data
+        console.log('[VideoFileSkeletonSource] Emitting', cached.frames.length, 'cached skeleton events');
         for (const frame of cached.frames) {
           const skeletonEvent = buildSkeletonEventFromFrame(frame);
           this.skeletonSubject.next(skeletonEvent);
         }
+        console.log('[VideoFileSkeletonSource] Done emitting cached skeleton events');
 
         return;
       }

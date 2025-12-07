@@ -2,6 +2,7 @@ import type { ModelConfig } from '../config/modelConfig';
 import { Skeleton } from '../models/Skeleton';
 import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
+import { normalizeToMediaPipeFormat } from './KeypointAdapter';
 import { CachedPoseSkeletonTransformer } from './CachedPoseSkeletonTransformer';
 import type { LivePoseCache } from './LivePoseCache';
 import { Pipeline } from './Pipeline';
@@ -141,17 +142,21 @@ export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEven
 
 /**
  * Build a Skeleton from keypoints
+ * Normalizes COCO-17 keypoints to MediaPipe-33 format if needed.
  */
 function buildSkeletonFromFrame(keypoints: PoseKeypoint[]): Skeleton | null {
   if (!keypoints || keypoints.length === 0) {
     return null;
   }
 
+  // Normalize to MediaPipe-33 format (handles legacy COCO-17 cached data)
+  const normalizedKeypoints = normalizeToMediaPipeFormat(keypoints);
+
   // Calculate spine angle
-  const leftShoulder = keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
-  const rightShoulder = keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
-  const leftHip = keypoints[MediaPipeBodyParts.LEFT_HIP];
-  const rightHip = keypoints[MediaPipeBodyParts.RIGHT_HIP];
+  const leftShoulder = normalizedKeypoints[MediaPipeBodyParts.LEFT_SHOULDER];
+  const rightShoulder = normalizedKeypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
+  const leftHip = normalizedKeypoints[MediaPipeBodyParts.LEFT_HIP];
+  const rightHip = normalizedKeypoints[MediaPipeBodyParts.RIGHT_HIP];
 
   let spineAngle = 0;
   if (leftShoulder && rightShoulder && leftHip && rightHip) {
@@ -172,9 +177,9 @@ function buildSkeletonFromFrame(keypoints: PoseKeypoint[]): Skeleton | null {
     MediaPipeBodyParts.RIGHT_HIP,
   ];
   const hasVisibleKeypoints = requiredIndices.every((index) => {
-    const point = keypoints[index];
+    const point = normalizedKeypoints[index];
     return point && (point.score ?? point.visibility ?? 0) > 0.2;
   });
 
-  return new Skeleton(keypoints, spineAngle, hasVisibleKeypoints);
+  return new Skeleton(normalizedKeypoints, spineAngle, hasVisibleKeypoints);
 }

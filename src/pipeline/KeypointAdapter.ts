@@ -116,3 +116,64 @@ export function normalizeToCocoFormat(
   );
   return keypoints;
 }
+
+/**
+ * Convert COCO keypoints (17) to MediaPipe BlazePose format (33)
+ *
+ * Creates placeholder keypoints for MediaPipe-specific points (hands, feet, mouth)
+ * that don't exist in COCO format.
+ *
+ * @param keypoints - COCO format keypoints (17 points)
+ * @returns MediaPipe format keypoints (33 points)
+ */
+export function cocoToMediaPipe(keypoints: PoseKeypoint[]): PoseKeypoint[] {
+  // Create array of 33 placeholder keypoints
+  const mediaPipeKeypoints: PoseKeypoint[] = new Array(33).fill(null).map(() => ({
+    x: 0,
+    y: 0,
+    z: 0,
+    score: 0,
+    visibility: 0,
+  }));
+
+  // Map COCO keypoints to MediaPipe positions (reverse of MEDIAPIPE_TO_COCO_MAP)
+  for (const [mpIndex, cocoIndex] of MEDIAPIPE_TO_COCO_MAP) {
+    const cocoKeypoint = keypoints[cocoIndex];
+
+    if (cocoKeypoint) {
+      mediaPipeKeypoints[mpIndex] = {
+        x: cocoKeypoint.x,
+        y: cocoKeypoint.y,
+        z: cocoKeypoint.z ?? 0,
+        score: cocoKeypoint.score ?? cocoKeypoint.visibility ?? 0,
+        visibility: cocoKeypoint.visibility ?? cocoKeypoint.score ?? 0,
+        name: cocoKeypoint.name,
+      };
+    }
+  }
+
+  return mediaPipeKeypoints;
+}
+
+/**
+ * Normalize keypoints to MediaPipe format (33 keypoints)
+ * If already MediaPipe format, returns as-is
+ * If COCO format, converts to MediaPipe (with placeholder hand/foot keypoints)
+ */
+export function normalizeToMediaPipeFormat(
+  keypoints: PoseKeypoint[]
+): PoseKeypoint[] {
+  if (isMediaPipeFormat(keypoints)) {
+    return keypoints;
+  }
+
+  if (isCocoFormat(keypoints)) {
+    return cocoToMediaPipe(keypoints);
+  }
+
+  // Unknown format - return as-is with warning
+  console.warn(
+    `KeypointAdapter: Unknown keypoint format (${keypoints.length} keypoints), expected 17 or 33`
+  );
+  return keypoints;
+}
