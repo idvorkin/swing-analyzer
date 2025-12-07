@@ -17,6 +17,7 @@ import {
   LOCAL_SAMPLE_VIDEO,
 } from '../config/sampleVideos';
 import { InputSession, type InputSessionState } from '../pipeline/InputSession';
+import type { Skeleton } from '../models/Skeleton';
 import type { Pipeline, ThumbnailEvent } from '../pipeline/Pipeline';
 import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
@@ -354,6 +355,53 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   }, [initializePipeline, processSkeletonEvent]);
 
   // ========================================
+  // HUD Update Helper
+  // ========================================
+  // Updates HUD display from a skeleton (called during playback and seek)
+  const updateHudFromSkeleton = useCallback((skeleton: Skeleton) => {
+    setSpineAngle(Math.round(skeleton.getSpineAngle() || 0));
+    setArmToSpineAngle(Math.round(skeleton.getArmToVerticalAngle() || 0));
+
+    // Update position from pipeline's form analyzer
+    const pipeline = pipelineRef.current;
+    if (pipeline) {
+      // Get a stateless position estimate based on current angles
+      const angles: Record<string, number> = {
+        spine: skeleton.getSpineAngle() || 0,
+        armToSpine: skeleton.getArmToSpineAngle() || 0,
+        hip: skeleton.getHipAngle() || 0,
+      };
+      // Use the exercise definition to find best matching position
+      const exercise = pipeline.getExerciseDefinition();
+      let bestPosition: string | null = null;
+      let bestScore = Number.POSITIVE_INFINITY;
+
+      for (const position of exercise.positions) {
+        let score = 0;
+        let angleCount = 0;
+        // angleTargets is Record<string, AngleTarget>
+        for (const [angleName, target] of Object.entries(position.angleTargets)) {
+          const actualAngle = angles[angleName] ?? 0;
+          const diff = Math.abs(actualAngle - target.ideal);
+          score += diff / (target.tolerance || 15);
+          angleCount++;
+        }
+        if (angleCount > 0) {
+          score /= angleCount;
+          if (score < 2.0 && score < bestScore) {
+            bestScore = score;
+            bestPosition = position.name;
+          }
+        }
+      }
+
+      if (bestPosition) {
+        setStatus(bestPosition.charAt(0).toUpperCase() + bestPosition.slice(1));
+      }
+    }
+  }, []);
+
+  // ========================================
   // Video Playback Handlers
   // ========================================
   useEffect(() => {
@@ -390,8 +438,13 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       const session = inputSessionRef.current;
       if (session && isPlayingRef.current) {
         const skeletonEvent = session.getSkeletonAtTime(metadata.mediaTime);
-        if (skeletonEvent?.skeleton && skeletonRendererRef.current) {
-          skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, now);
+        if (skeletonEvent?.skeleton) {
+          // Render the skeleton
+          if (skeletonRendererRef.current) {
+            skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, now);
+          }
+          // Update HUD with current frame's data
+          updateHudFromSkeleton(skeletonEvent.skeleton);
         }
       }
 
@@ -436,8 +489,13 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       if (!session) return;
 
       const skeletonEvent = session.getSkeletonAtTime(video.currentTime);
-      if (skeletonEvent?.skeleton && skeletonRendererRef.current) {
-        skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, performance.now());
+      if (skeletonEvent?.skeleton) {
+        // Render the skeleton
+        if (skeletonRendererRef.current) {
+          skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, performance.now());
+        }
+        // Update HUD with current frame's data
+        updateHudFromSkeleton(skeletonEvent.skeleton);
       }
     };
 
@@ -453,7 +511,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       video.removeEventListener('seeked', handleSeeked);
       stopVideoFrameCallback();
     };
-  }, []); // No dependencies needed - uses refs for stable access
+  }, [updateHudFromSkeleton]); // updateHudFromSkeleton is stable (useCallback with no deps)
 
   // ========================================
   // Video File Controls
