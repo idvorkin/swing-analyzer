@@ -160,6 +160,18 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     return () => window.removeEventListener('resize', handleResize);
   }, [syncCanvasToVideo]);
 
+  // Cleanup Object URL and abort controller on unmount
+  useEffect(() => {
+    return () => {
+      // Revoke any remaining blob URL to prevent memory leak
+      if (currentVideoUrlRef.current && currentVideoUrlRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(currentVideoUrlRef.current);
+      }
+      // Abort any in-flight video load
+      videoLoadAbortControllerRef.current?.abort();
+    };
+  }, []);
+
   // ========================================
   // Safe Video Loading Helper
   // ========================================
@@ -718,7 +730,22 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
         return;
       }
       console.error('Error loading hardcoded video:', error);
-      setStatus('Error: Could not load sample video');
+      // Apply same detailed error handling as handleVideoUpload
+      let userMessage = 'Could not load sample video';
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        userMessage = 'Storage full. Clear browser data and try again.';
+      } else if (error instanceof Error) {
+        if (error.message.includes('Timeout')) {
+          userMessage = 'Video load timed out. Check your network and try again.';
+        } else if (error.message.includes('fetch') || error.message.includes('Network')) {
+          userMessage = 'Network error loading video. Check your connection.';
+        } else if (error.message.includes('model')) {
+          userMessage = 'Failed to load pose detection. Check network and refresh.';
+        } else if (error.message.includes('format') || error.message.includes('supported')) {
+          userMessage = 'Video format not supported by your browser.';
+        }
+      }
+      setStatus(`Error: ${userMessage}`);
     }
   }, [loadVideoSafely]);
 
@@ -733,8 +760,17 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       // Handle the play promise to avoid AbortError when pause() is called before play() resolves
       video.play().catch((err) => {
         // AbortError is expected when play() is interrupted by pause() - ignore it
-        if (err.name !== 'AbortError') {
-          console.error('Error playing video:', err);
+        if (err.name === 'AbortError') {
+          return;
+        }
+        console.error('Error playing video:', err);
+        // Provide user feedback for play failures
+        if (err.name === 'NotAllowedError') {
+          setStatus('Playback blocked by browser. Click Play again to start.');
+        } else if (err.name === 'NotSupportedError') {
+          setStatus('Error: Video format not supported.');
+        } else {
+          setStatus('Error: Could not play video. Try reloading.');
         }
       });
     } else {
