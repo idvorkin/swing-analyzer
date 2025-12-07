@@ -422,7 +422,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   ): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
     // Use absolute value - in mirrored video, "behind body" could be positive
-    // bottomArmMax is 0, so we check if arm is near vertical (close to 0)
+    // bottomArmMax is 40, so threshold becomes |arm| < 55 (captures arms swinging behind)
     return (
       Math.abs(arm) < Math.abs(this.thresholds.bottomArmMax) + 15 &&
       spine > this.thresholds.bottomSpineMin &&

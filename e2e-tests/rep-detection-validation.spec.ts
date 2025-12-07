@@ -7,7 +7,7 @@
  * 3. Angles are captured correctly in session recording
  */
 import { test, expect } from '@playwright/test';
-import { seedPoseTrackFixture, clearPoseTrackDB, useShortTestVideo } from './helpers';
+import { seedPoseTrackFixture, clearPoseTrackDB } from './helpers';
 
 test.describe('Rep Detection Validation', () => {
   test('igor-1h-swing detects 9 reps with correct angles in session recording', async ({ page }) => {

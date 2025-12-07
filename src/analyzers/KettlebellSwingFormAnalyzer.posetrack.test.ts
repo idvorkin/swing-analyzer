@@ -195,13 +195,12 @@ describe('KettlebellSwingFormAnalyzer with real posetrack data', () => {
       expect(repCount).toBeLessThanOrEqual(11);
     });
 
-    it('swing-sample (~26s two-handed swing): detects ~13 reps', () => {
+    it('swing-sample (~20s browser-extracted): detects 9 reps', () => {
       const posetrack = loadPosetrack('swing-sample.posetrack.json');
       const { repCount } = countRepsFromPosetrack(posetrack);
 
-      // Full swing sample, ~26 seconds, should have 12-14 reps
-      expect(repCount).toBeGreaterThanOrEqual(12);
-      expect(repCount).toBeLessThanOrEqual(15);
+      // Browser-extracted swing sample, ~20 seconds, should have exactly 9 reps
+      expect(repCount).toBe(9);
     });
 
     it('swing-sample-4reps (~5.5s): detects exactly 4 reps', () => {
