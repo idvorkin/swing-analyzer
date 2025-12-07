@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import type { BlazePoseVariant } from '../../config/modelConfig';
 import { useSwingAnalyzerContext } from '../../contexts/SwingAnalyzerContext';
+import {
+  clearAllPoseTracks,
+  getPoseTrackStorageMode,
+  setPoseTrackStorageMode,
+} from '../../services/PoseTrackService';
 import type { DisplayMode } from '../../types';
-import { MonitorIcon, SparklesIcon } from './Icons';
+import { DatabaseIcon, MonitorIcon, SparklesIcon } from './Icons';
 import { SegmentedControl } from './SegmentedControl';
+import { Toggle } from './Toggle';
 
 // Storage key for BlazePose variant
 const BLAZEPOSE_VARIANT_KEY = 'swing-analyzer-blazepose-variant';
@@ -46,6 +52,9 @@ export function SettingsTab() {
   const [blazePoseVariant, setBlazePoseVariant] = useState<BlazePoseVariant>(
     getSavedBlazePoseVariant()
   );
+  const [poseCacheEnabled, setPoseCacheEnabled] = useState(
+    () => getPoseTrackStorageMode() === 'indexeddb'
+  );
   const [needsReload, setNeedsReload] = useState(false);
 
   const handleVariantChange = (variant: BlazePoseVariant) => {
@@ -54,6 +63,29 @@ export function SettingsTab() {
     saveBlazePoseVariant(variant);
     if (variant !== previousVariant) {
       setNeedsReload(true);
+    }
+  };
+
+  const handlePoseCacheToggle = () => {
+    const newEnabled = !poseCacheEnabled;
+    setPoseCacheEnabled(newEnabled);
+    setPoseTrackStorageMode(newEnabled ? 'indexeddb' : 'memory');
+  };
+
+  const [isClearing, setIsClearing] = useState(false);
+  const [clearSuccess, setClearSuccess] = useState(false);
+
+  const handleClearCache = async () => {
+    setIsClearing(true);
+    setClearSuccess(false);
+    try {
+      await clearAllPoseTracks();
+      setClearSuccess(true);
+      setTimeout(() => setClearSuccess(false), 2000);
+    } catch (error) {
+      console.error('Failed to clear cache:', error);
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -89,6 +121,36 @@ export function SettingsTab() {
           onChange={handleVariantChange}
           name="blazepose-variant"
         />
+      </div>
+
+      {/* Pose Cache */}
+      <div className="settings-compact-row">
+        <div className="settings-compact-label">
+          <div className="settings-compact-icon settings-compact-icon--green">
+            <DatabaseIcon />
+          </div>
+          <span>Cache Poses</span>
+        </div>
+        <Toggle
+          checked={poseCacheEnabled}
+          onChange={handlePoseCacheToggle}
+          aria-label="Toggle pose caching"
+        />
+      </div>
+
+      {/* Clear Cache */}
+      <div className="settings-compact-row">
+        <div className="settings-compact-label">
+          <span className="settings-compact-label-indent">Clear Cache</span>
+        </div>
+        <button
+          type="button"
+          className="settings-clear-btn"
+          onClick={handleClearCache}
+          disabled={isClearing}
+        >
+          {isClearing ? 'Clearing...' : clearSuccess ? 'Cleared!' : 'Clear'}
+        </button>
       </div>
 
       {/* Reload Banner */}

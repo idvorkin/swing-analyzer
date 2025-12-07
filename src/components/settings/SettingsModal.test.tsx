@@ -54,6 +54,17 @@ vi.mock('../../services/SessionRecorder', () => ({
   },
 }));
 
+// Mock PoseTrackService
+const mockClearAllPoseTracks = vi.fn().mockResolvedValue(undefined);
+const mockGetPoseTrackStorageMode = vi.fn().mockReturnValue('indexeddb');
+const mockSetPoseTrackStorageMode = vi.fn();
+
+vi.mock('../../services/PoseTrackService', () => ({
+  clearAllPoseTracks: () => mockClearAllPoseTracks(),
+  getPoseTrackStorageMode: () => mockGetPoseTrackStorageMode(),
+  setPoseTrackStorageMode: (...args: unknown[]) => mockSetPoseTrackStorageMode(...args),
+}));
+
 const defaultProps = {
   isOpen: true,
   onClose: vi.fn(),
@@ -165,6 +176,37 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Lite')).toBeInTheDocument();
       expect(screen.getByText('Full')).toBeInTheDocument();
       expect(screen.getByText('Heavy')).toBeInTheDocument();
+    });
+
+    it('shows Cache Poses toggle', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+      expect(screen.getByText('Cache Poses')).toBeInTheDocument();
+      expect(screen.getByLabelText('Toggle pose caching')).toBeInTheDocument();
+    });
+
+    it('toggles pose caching when clicked', () => {
+      mockGetPoseTrackStorageMode.mockReturnValue('indexeddb');
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      const toggle = screen.getByLabelText('Toggle pose caching');
+      fireEvent.click(toggle);
+
+      expect(mockSetPoseTrackStorageMode).toHaveBeenCalledWith('memory');
+    });
+
+    it('shows Clear Cache button', () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+      expect(screen.getByText('Clear Cache')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
+    });
+
+    it('calls clearAllPoseTracks when Clear button is clicked', async () => {
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      const clearButton = screen.getByRole('button', { name: 'Clear' });
+      fireEvent.click(clearButton);
+
+      expect(mockClearAllPoseTracks).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -28,14 +28,51 @@ export type PoseTrackStorageMode = 'memory' | 'indexeddb';
 // In-memory storage for session-only mode
 const memoryStore = new Map<string, PoseTrackFile>();
 
-// Current storage mode - defaults to memory for simplicity
-let currentStorageMode: PoseTrackStorageMode = 'memory';
+// Storage key for persisting the user's preference
+const STORAGE_MODE_KEY = 'swing-analyzer-pose-cache-mode';
+
+/**
+ * Load storage mode preference from localStorage
+ */
+function loadStorageModePreference(): PoseTrackStorageMode {
+  try {
+    const saved = localStorage.getItem(STORAGE_MODE_KEY);
+    if (saved === 'memory' || saved === 'indexeddb') {
+      return saved;
+    }
+  } catch {
+    // localStorage not available (private browsing, etc.)
+  }
+  return 'indexeddb'; // Default to persistent caching
+}
+
+/**
+ * Save storage mode preference to localStorage
+ */
+function saveStorageModePreference(mode: PoseTrackStorageMode): void {
+  try {
+    localStorage.setItem(STORAGE_MODE_KEY, mode);
+  } catch {
+    // localStorage not available
+  }
+}
+
+// Current storage mode - defaults to indexeddb (persistent caching)
+let currentStorageMode: PoseTrackStorageMode = loadStorageModePreference();
 
 /**
  * Set the storage mode for pose tracks
+ * @param mode - The storage mode to use
+ * @param persist - Whether to save the preference to localStorage (default: true)
  */
-export function setPoseTrackStorageMode(mode: PoseTrackStorageMode): void {
+export function setPoseTrackStorageMode(
+  mode: PoseTrackStorageMode,
+  persist: boolean = true
+): void {
   currentStorageMode = mode;
+  if (persist) {
+    saveStorageModePreference(mode);
+  }
 }
 
 /**
@@ -393,6 +430,29 @@ export async function deletePoseTrackFromStorage(
 
     transaction.oncomplete = () => {
       db.close();
+    };
+  });
+}
+
+/**
+ * Clear all pose tracks from storage
+ */
+export async function clearAllPoseTracks(): Promise<void> {
+  if (currentStorageMode === 'memory') {
+    memoryStore.clear();
+    return;
+  }
+
+  // IndexedDB mode - delete and recreate the database
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(POSETRACK_DB_NAME);
+
+    request.onerror = () => {
+      reject(new Error('Failed to clear pose track cache'));
+    };
+
+    request.onsuccess = () => {
+      resolve();
     };
   });
 }
