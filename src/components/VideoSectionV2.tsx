@@ -7,7 +7,7 @@
  */
 
 import type React from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 
 // Position display order for swing positions
@@ -56,6 +56,28 @@ const VideoSectionV2: React.FC = () => {
 
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);
+
+  // Double-tap to play/pause state
+  const lastTapRef = useRef<number>(0);
+  const [showPlayPauseOverlay, setShowPlayPauseOverlay] = useState<'play' | 'pause' | null>(null);
+
+  // Double-tap handler for video container
+  const handleVideoDoubleTap = useCallback(() => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300; // ms
+
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Double tap detected - toggle play/pause
+      clearPositionLabel();
+      togglePlayPause();
+      // Show visual feedback
+      setShowPlayPauseOverlay(isPlaying ? 'play' : 'pause'); // Shows opposite since state hasn't updated yet
+      setTimeout(() => setShowPlayPauseOverlay(null), 500);
+      lastTapRef.current = 0; // Reset to prevent triple-tap
+    } else {
+      lastTapRef.current = now;
+    }
+  }, [clearPositionLabel, togglePlayPause, isPlaying]);
 
   // Event delegation handler for filmstrip clicks (avoids individual event listeners)
   const handleFilmstripClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -179,10 +201,31 @@ const VideoSectionV2: React.FC = () => {
         </div>
       </div>
 
-      <div className={`video-container ${getVideoContainerClass()}`}>
+      {/* biome-ignore lint/a11y/useKeyboardEquivalent: Double-tap is supplementary to existing button controls */}
+      <div
+        className={`video-container ${getVideoContainerClass()}`}
+        onClick={handleVideoDoubleTap}
+      >
         {/* biome-ignore lint/a11y/useMediaCaption: This is a video analysis app, not media playback - no audio captions needed */}
         <video id="video" ref={videoRef} playsInline />
         <canvas id="output-canvas" ref={canvasRef} />
+
+        {/* Double-tap play/pause feedback overlay */}
+        {showPlayPauseOverlay && (
+          <div className="video-tap-overlay">
+            <div className="video-tap-icon">
+              {showPlayPauseOverlay === 'pause' ? (
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                </svg>
+              ) : (
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* HUD Overlay - visibility based on TWO INDEPENDENT conditions:
             1. Extraction % visible when extraction is running

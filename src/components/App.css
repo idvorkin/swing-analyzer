@@ -143,18 +143,18 @@ main {
 /* Controls */
 .top-controls {
   display: flex;
-  margin-bottom: 25px;
+  margin-bottom: 12px;
   background-color: white;
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
 .control-row {
   width: 100%;
   display: flex;
   flex-direction: row;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: nowrap;
 }
 
@@ -177,18 +177,18 @@ main {
   background: linear-gradient(135deg, #4285f4, #1a73e8);
   color: white;
   border: none;
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 15px;
-  transition: all 0.3s;
+  font-size: 14px;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 5px rgba(26, 115, 232, 0.2);
   width: 100%;
-  min-height: 45px;
+  min-height: 40px;
   box-sizing: border-box;
   white-space: nowrap;
 }
@@ -205,6 +205,34 @@ main {
   flex-shrink: 0;
 }
 
+/* Mobile-specific top controls - even more compact */
+@media (max-width: 480px) {
+  .top-controls {
+    margin-bottom: 8px;
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .control-row {
+    gap: 6px;
+  }
+
+  .file-label,
+  .hardcoded-btn {
+    min-height: 36px;
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 6px;
+  }
+
+  .file-label .icon,
+  .hardcoded-btn .icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+  }
+}
+
 .icon-right {
   margin-right: 0;
   margin-left: 6px;
@@ -215,15 +243,16 @@ main {
   background: linear-gradient(135deg, #4285f4, #1a73e8);
   color: white;
   border: none;
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 15px;
-  transition: all 0.3s;
+  font-size: 14px;
+  transition: all 0.2s;
   box-shadow: 0 2px 5px rgba(26, 115, 232, 0.2);
   flex: 1;
   min-width: 0;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -288,6 +317,40 @@ main {
   z-index: 10;
 }
 
+/* Double-tap play/pause feedback overlay */
+.video-tap-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.video-tap-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: video-tap-fade 0.5s ease-out forwards;
+}
+
+@keyframes video-tap-fade {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
 /* ============================================
    HUD OVERLAY - Floating on video
    ============================================ */
@@ -296,7 +359,7 @@ main {
   --hud-bg: rgba(15, 20, 25, 0.85);
   --hud-accent: #00d4aa;
   --hud-text: rgba(255, 255, 255, 0.95);
-  --hud-text-dim: rgba(255, 255, 255, 0.6);
+  --hud-text-dim: rgba(255, 255, 255, 0.75); /* Increased from 0.6 for WCAG AA contrast */
   --hud-border: rgba(255, 255, 255, 0.1);
   --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 
@@ -602,43 +665,47 @@ main {
 /* Mobile-specific video controls */
 @media (max-width: 768px) {
   .video-controls {
-    gap: 6px;
-    padding: 0 8px;
-    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 10px;
+    flex-wrap: nowrap;
   }
 
   .video-controls button {
     min-width: 0;
-    padding: 10px 12px;
+    padding: 10px;
     flex: 1;
+    min-height: 48px; /* Increased from 44px for better thumb targets */
   }
 
   .video-controls .button-text {
     display: none; /* Hide text on mobile */
   }
 
-  /* Play button compact on mobile too */
+  /* Play button - smallest (tertiary action) */
   #play-pause-btn {
-    min-width: 0;
-    flex: 0.6;
-  }
-
-  /* Frame buttons prominent on mobile */
-  #prev-frame-btn,
-  #next-frame-btn {
     min-width: 44px;
     min-height: 44px;
-    flex: 1;
+    flex: 0.5;
+    padding: 8px;
+  }
+
+  /* Frame buttons - medium size (secondary action) */
+  #prev-frame-btn,
+  #next-frame-btn {
+    min-width: 48px;
+    min-height: 48px;
+    flex: 0.8;
     padding: 10px;
   }
 
-  /* Checkpoint buttons most prominent on mobile */
+  /* Checkpoint buttons - largest (primary action) */
   #prev-checkpoint-btn,
   #next-checkpoint-btn {
-    min-width: 48px;
-    min-height: 48px;
+    min-width: 56px;
+    min-height: 56px;
     flex: 1.2;
-    padding: 10px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
   }
 }
 
