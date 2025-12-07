@@ -63,6 +63,8 @@ export interface StateChangeEvent {
     | 'pipeline_reinit'
     | 'rep_detected'
     | 'checkpoint_detected'
+    | 'cache_load'
+    | 'skeleton_processing_complete'
     | 'error';
   timestamp: number;
   details?: Record<string, unknown>;
@@ -947,6 +949,32 @@ export function recordCheckpointDetected(
     type: 'checkpoint_detected',
     timestamp: Date.now(),
     details: { position, ...details },
+  });
+}
+
+export function recordCacheLoad(details: {
+  frameCount: number;
+  videoHash: string;
+  videoDuration?: number;
+}): void {
+  sessionRecorder.recordStateChange({
+    type: 'cache_load',
+    timestamp: Date.now(),
+    details,
+  });
+}
+
+export function recordSkeletonProcessingComplete(details: {
+  framesProcessed: number;
+  finalRepCount: number;
+  dominantArm?: string | null;
+  processingTimeMs?: number;
+  totalFramesProcessed?: number;
+}): void {
+  sessionRecorder.recordStateChange({
+    type: 'skeleton_processing_complete',
+    timestamp: Date.now(),
+    details,
   });
 }
 

@@ -28,6 +28,8 @@ import {
   recordVideoLoad,
   recordPlaybackStart,
   recordPlaybackPause,
+  recordRepDetected,
+  recordSkeletonProcessingComplete,
   sessionRecorder,
 } from '../services/SessionRecorder';
 import type { PositionCandidate } from '../types/exercise';
@@ -324,6 +326,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   // Use a ref to hold the handler so video events can access it stably
   const skeletonHandlerRef = useRef<((event: SkeletonEvent) => void) | null>(null);
 
+  // Track previous rep count for detecting new reps
+  const prevRepCountRef = useRef<number>(0);
+  // Track frame index for debugging
+  const frameIndexRef = useRef<number>(0);
+
   // Process a skeleton event through the pipeline and update UI
   const processSkeletonEvent = useCallback((event: SkeletonEvent) => {
     if (!event.skeleton) {
@@ -337,6 +344,39 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     // Process through pipeline (updates rep count, form state, etc.)
     const result = pipeline.processSkeletonEvent(event);
+
+    // Increment frame counter
+    frameIndexRef.current++;
+    const frameIndex = frameIndexRef.current;
+
+    // Record rep detection event when rep count increases
+    if (result > prevRepCountRef.current) {
+      const skeleton = event.skeleton;
+      const formAnalyzer = pipeline.getFormAnalyzer();
+      // Get dominant arm from analyzer (same as what algorithm uses)
+      const dominantArm = (formAnalyzer as any).dominantArm as 'left' | 'right' | null;
+      recordRepDetected(result, {
+        frameIndex,
+        videoTime: event.poseEvent.frameEvent.videoTime,
+        angles: {
+          spine: skeleton.getSpineAngle(),
+          arm: skeleton.getArmToSpineAngle(),
+          // Use same arm selection as algorithm
+          armToVertical: skeleton.getArmToVerticalAngle(dominantArm ?? undefined),
+          armToVerticalAuto: skeleton.getArmToVerticalAngle(), // For comparison
+          hip: skeleton.getHipAngle(),
+        },
+        dominantArm,
+        phase: formAnalyzer.getPhase(),
+      });
+      prevRepCountRef.current = result;
+    }
+
+    // Debug: log every 100 frames and on rep changes
+    if (event.poseEvent.frameEvent.videoTime !== undefined &&
+        Math.floor(event.poseEvent.frameEvent.videoTime * 30) % 100 === 0) {
+      console.log(`[processSkeletonEvent] videoTime=${event.poseEvent.frameEvent.videoTime?.toFixed(2)}, repCount=${result}`);
+    }
 
     // Update rep count (cumulative across all extracted frames)
     setRepCount(result);
@@ -383,6 +423,19 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
           // Record extraction complete (only if we recorded start)
           if (hasRecordedExtractionStartRef.current) {
             recordExtractionComplete({ fileName: state.fileName });
+          }
+          // Record skeleton processing complete (for both extraction and cache load)
+          const sourceState = state.sourceState as { batchComplete?: boolean; framesProcessed?: number; processingTimeMs?: number };
+          if (sourceState.batchComplete) {
+            recordSkeletonProcessingComplete({
+              framesProcessed: sourceState.framesProcessed ?? 0,
+              finalRepCount: pipelineRef.current?.getRepCount() ?? 0,
+              processingTimeMs: sourceState.processingTimeMs,
+              totalFramesProcessed: frameIndexRef.current,
+            });
+            // Reset counters for next video
+            prevRepCountRef.current = 0;
+            frameIndexRef.current = 0;
           }
           // Check if poses exist for current frame (for HUD visibility)
           const video = videoRef.current;
