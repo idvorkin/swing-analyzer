@@ -284,6 +284,30 @@ The `.githooks/` directory contains:
 - **main branch**: Nothing merges without a PR and human approval
 - **PR merge process**: Periodically diff dev from main, split into clean PRs, merge to main
 
+### Branch Hygiene (Every Few Days)
+
+Run branch audit to prevent stale branch accumulation:
+
+```bash
+# List remote branches by last commit date with behind/ahead counts
+for branch in $(git branch -r | grep -v HEAD | head -20); do
+  behind=$(git rev-list --count origin/dev ^$branch 2>/dev/null || echo "?")
+  ahead=$(git rev-list --count $branch ^origin/dev 2>/dev/null || echo "?")
+  date=$(git log -1 --format='%ci' $branch 2>/dev/null | cut -d' ' -f1)
+  echo "$date | $branch | +$ahead -$behind"
+done | sort -r
+```
+
+**Delete criteria:**
+- Branches 100+ commits behind with 0 unique commits (already merged)
+- Branches 200+ commits behind (too stale to salvage)
+- Copilot/exploration branches older than 2 weeks
+
+**Keep criteria:**
+- Active agent branches (`agent/swing-N`)
+- Branches with open PRs
+- `main`, `dev`, `beads-metadata`
+
 **⚠️ CRITICAL: Only humans merge to main. Agents must NEVER merge PRs to main unless the user explicitly says "YES" (uppercase). Phrases like "get it to main" or "merge it" are NOT sufficient - you must ask for confirmation and receive "YES" before merging any PR to main.**
 
 **📦 MINIMAL PRs**: When creating PRs to main, include ONLY the changes the user explicitly requested. Do not bundle unrelated changes from the branch. If unsure what to include, ask the user to confirm scope before creating the PR.
