@@ -90,10 +90,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // Reduced workers to avoid race conditions with shared IndexedDB state
-  // Tests that clear IndexedDB can interfere with tests that seed data
-  // Mock detector tests share state across files, so keep parallelism low
-  workers: process.env.CI ? 1 : 2,
+  // Note: IndexedDB is per-context so parallel tests are isolated
+  // 3 workers balances speed vs. resource contention on extraction tests
+  workers: process.env.CI ? 1 : 3,
 
   // HTML report with console output
   reporter: [

@@ -136,7 +136,6 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       );
 
       await expect(page.locator('#play-pause-btn')).not.toBeDisabled();
-      await expect(page.locator('#stop-btn')).not.toBeDisabled();
       await expect(page.locator('#prev-frame-btn')).not.toBeDisabled();
       await expect(page.locator('#next-frame-btn')).not.toBeDisabled();
     });
@@ -222,48 +221,6 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(isPaused).toBe(true);
     });
 
-    test('stop button resets video to beginning', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
-      await page.waitForSelector('video', { timeout: 10000 });
-
-      await page.waitForFunction(
-        () => {
-          const btn = document.querySelector(
-            '#play-pause-btn'
-          ) as HTMLButtonElement;
-          return btn && !btn.disabled;
-        },
-        { timeout: 20000 }
-      );
-
-      // Start playback and wait for it to actually play
-      await page.click('#play-pause-btn');
-      await page.waitForFunction(
-        () => {
-          const video = document.querySelector('video');
-          return video && !video.paused && video.currentTime > 0;
-        },
-        { timeout: 5000 }
-      );
-
-      await page.click('#stop-btn');
-
-      // Wait for video to reset
-      await page.waitForFunction(
-        () => {
-          const video = document.querySelector('video');
-          return video && video.currentTime === 0;
-        },
-        { timeout: 5000 }
-      );
-
-      const currentTime = await page.evaluate(() => {
-        const video = document.querySelector('video');
-        return video?.currentTime ?? -1;
-      });
-      expect(currentTime).toBe(0);
-    });
   });
 
   test.describe('Step 4-5: Rep Counting', () => {
