@@ -58,7 +58,7 @@ Tests marked with `*` below require actual extraction and are currently skipped.
 ## Test Data
 
 Tests use the `swing-sample-4reps` fixture which provides:
-- 3 detected reps with pose data
+- 4 detected reps with pose data
 - 4 phases per rep: Top, Connect, Bottom, Release
 - Pre-computed skeleton data for deterministic testing
 - **No frameImage data** (thumbnails show "—" placeholder)

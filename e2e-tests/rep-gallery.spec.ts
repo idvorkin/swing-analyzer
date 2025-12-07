@@ -77,14 +77,15 @@ test.describe('Rep Gallery Modal', () => {
       await loadVideoAndWaitForGallery(page);
       await page.click('.filmstrip-gallery-btn');
 
-      // Should have rep rows (seeded data has 3 detected reps)
+      // Should have rep rows (seeded data has 4 detected reps from swing-sample-4reps.webm)
       const repRows = page.locator('.gallery-grid-row');
-      await expect(repRows).toHaveCount(3);
+      await expect(repRows).toHaveCount(4);
 
       // Each row should have rep number
       await expect(repRows.nth(0).locator('.gallery-rep-number')).toHaveText('1');
       await expect(repRows.nth(1).locator('.gallery-rep-number')).toHaveText('2');
       await expect(repRows.nth(2).locator('.gallery-rep-number')).toHaveText('3');
+      await expect(repRows.nth(3).locator('.gallery-rep-number')).toHaveText('4');
 
       // Each row should have phase cells (4 phases + 1 rep cell = 5 cells per row)
       // Note: seeded fixtures don't have frameImage data, so thumbnails show "—"
