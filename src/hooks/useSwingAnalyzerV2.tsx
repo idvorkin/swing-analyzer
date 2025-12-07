@@ -353,20 +353,16 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     if (result > prevRepCountRef.current) {
       const skeleton = event.skeleton;
       const formAnalyzer = pipeline.getFormAnalyzer();
-      // Get dominant arm from analyzer (same as what algorithm uses)
-      const dominantArm = (formAnalyzer as any).dominantArm as 'left' | 'right' | null;
+      // Algorithm always uses right arm - for left-handed users, mirror input data
       recordRepDetected(result, {
         frameIndex,
         videoTime: event.poseEvent.frameEvent.videoTime,
         angles: {
           spine: skeleton.getSpineAngle(),
           arm: skeleton.getArmToSpineAngle(),
-          // Use same arm selection as algorithm
-          armToVertical: skeleton.getArmToVerticalAngle(dominantArm ?? undefined),
-          armToVerticalAuto: skeleton.getArmToVerticalAngle(), // For comparison
+          armToVertical: skeleton.getArmToVerticalAngle('right'),
           hip: skeleton.getHipAngle(),
         },
-        dominantArm,
         phase: formAnalyzer.getPhase(),
       });
       prevRepCountRef.current = result;

@@ -208,7 +208,7 @@ export class Skeleton {
   }
 
   /**
-   * Get wrist X position for a given side (used for dominant arm detection)
+   * Get wrist X position for a given side
    */
   getWristX(side: 'left' | 'right'): number | null {
     const wrist = this.getKeypointByName(side === 'left' ? 'leftWrist' : 'rightWrist');
@@ -221,8 +221,9 @@ export class Skeleton {
    * a vertical line pointing downward (0° is arm pointing straight down, 90° is horizontal, 180° is pointing up)
    * Negative values indicate the arm is pointing to the left, positive to the right
    *
-   * @param preferredSide - If specified, use this arm (set by FormAnalyzer after detecting dominant arm)
-   *                        If not specified, fall back to heuristics (more vertical arm)
+   * @param preferredSide - If specified, use this arm. The analyzer always uses 'right'.
+   *                        For left-handed users, mirror the input skeleton data.
+   *                        If not specified, falls back to heuristics (more vertical arm).
    */
   getArmToVerticalAngle(preferredSide?: 'left' | 'right'): number {
     // Check cache keyed by preferredSide (undefined becomes 'auto')
@@ -636,8 +637,8 @@ export class Skeleton {
    * For detecting the "Top" position, look for the PEAK (maximum) of this value
    * during each rep cycle, rather than a fixed threshold.
    *
-   * @param preferredSide - If specified, use this wrist (set by FormAnalyzer after detecting dominant arm).
-   *                        For one-handed exercises, this should match the working arm.
+   * @param preferredSide - If specified, use this wrist. The analyzer always uses 'right'.
+   *                        For left-handed users, mirror the input skeleton data.
    *                        If not specified, uses the wrist with higher confidence score.
    */
   getWristHeight(preferredSide?: 'left' | 'right'): number {
@@ -670,10 +671,10 @@ export class Skeleton {
       let wristY: number | null = null;
 
       if (preferredSide === 'right' && rightWrist && rightConf > minConf) {
-        // Use right wrist (dominant arm specified)
+        // Use right wrist (preferred side specified)
         wristY = rightWrist.y;
       } else if (preferredSide === 'left' && leftWrist && leftConf > minConf) {
-        // Use left wrist (dominant arm specified)
+        // Use left wrist (preferred side specified)
         wristY = leftWrist.y;
       } else if (leftWrist && rightWrist && leftConf > minConf && rightConf > minConf) {
         // Both wrists have good confidence - use average (two-handed swing)

@@ -985,7 +985,6 @@ export function recordCacheLoad(details: {
 export function recordSkeletonProcessingComplete(details: {
   framesProcessed: number;
   finalRepCount: number;
-  dominantArm?: string | null;
   processingTimeMs?: number;
   totalFramesProcessed?: number;
 }): void {
