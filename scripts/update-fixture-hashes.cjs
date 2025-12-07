@@ -36,14 +36,32 @@ const VIDEO_FIXTURE_MAP = {
 
 /**
  * Compute quick video hash (same algorithm as computeQuickVideoHash in videoHash.ts)
+ * Uses first 1MB + last 1MB + file size as BigUint64 (8 bytes, little-endian)
  */
 function computeQuickVideoHash(filePath) {
   const buffer = fs.readFileSync(filePath);
-  const chunk = buffer.slice(0, 64 * 1024); // First 64KB
-  return crypto.createHash('sha256')
-    .update(chunk)
-    .update(buffer.length.toString())
-    .digest('hex');
+  const size = buffer.length;
+  const chunkSize = 1024 * 1024; // 1MB
+
+  // For small files, hash the whole thing
+  if (size <= chunkSize * 2) {
+    return crypto.createHash('sha256').update(buffer).digest('hex');
+  }
+
+  // First chunk (1MB)
+  const firstChunk = buffer.slice(0, chunkSize);
+
+  // Last chunk (1MB)
+  const lastChunk = buffer.slice(size - chunkSize, size);
+
+  // File size as BigUint64 little-endian (8 bytes)
+  const sizeBuffer = Buffer.alloc(8);
+  sizeBuffer.writeBigUInt64LE(BigInt(size), 0);
+
+  // Combine all buffers
+  const combined = Buffer.concat([firstChunk, lastChunk, sizeBuffer]);
+
+  return crypto.createHash('sha256').update(combined).digest('hex');
 }
 
 /**
