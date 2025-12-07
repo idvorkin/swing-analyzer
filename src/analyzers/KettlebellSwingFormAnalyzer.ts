@@ -320,16 +320,24 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
 
   /**
    * Check if we should transition from TOP to CONNECT
+   *
+   * Uses absolute arm angle to work with mirrored video.
+   * Arm dropping toward body = angle decreasing toward 0.
    */
   private shouldTransitionToConnect(arm: number, spine: number): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
+    // Use absolute value - arm direction doesn't matter, only magnitude
     return (
-      arm < this.thresholds.connectArmMax && spine > this.thresholds.connectSpineMin
+      Math.abs(arm) < this.thresholds.connectArmMax &&
+      spine > this.thresholds.connectSpineMin
     );
   }
 
   /**
    * Check if we should transition from CONNECT to BOTTOM
+   *
+   * Uses absolute arm angle to work with mirrored video.
+   * Arm behind body = angle near 0 or slightly past vertical.
    */
   private shouldTransitionToBottom(
     arm: number,
@@ -337,8 +345,10 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     hip: number
   ): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
+    // Use absolute value - in mirrored video, "behind body" could be positive
+    // bottomArmMax is 0, so we check if arm is near vertical (close to 0)
     return (
-      arm < this.thresholds.bottomArmMax &&
+      Math.abs(arm) < Math.abs(this.thresholds.bottomArmMax) + 15 &&
       spine > this.thresholds.bottomSpineMin &&
       hip < this.thresholds.bottomHipMax
     );
@@ -346,11 +356,16 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
 
   /**
    * Check if we should transition from BOTTOM to RELEASE
+   *
+   * Uses absolute arm angle to work with mirrored video.
+   * Arm rising from body = angle increasing from 0.
    */
   private shouldTransitionToRelease(arm: number, spine: number): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
+    // Use absolute value - arm direction doesn't matter
     return (
-      arm > this.thresholds.releaseArmMin && spine < this.thresholds.releaseSpineMax
+      Math.abs(arm) > this.thresholds.releaseArmMin &&
+      spine < this.thresholds.releaseSpineMax
     );
   }
 
