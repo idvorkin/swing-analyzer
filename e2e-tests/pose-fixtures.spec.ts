@@ -236,28 +236,3 @@ test.describe('Pose Track Fixtures', () => {
     });
   });
 });
-
-test.describe('Pose Studio Page', () => {
-  test('navigates to /poses route', async ({ page }) => {
-    await page.goto('/poses');
-
-    // Page should load without errors
-    await expect(page.locator('body')).not.toBeEmpty();
-  });
-
-  test('shows seeded pose tracks', async ({ page }) => {
-    // Seed data first
-    await page.goto('/');
-    await seedPoseTrackFixture(page, 'swing-sample-4reps');
-
-    // Navigate to poses page
-    await page.goto('/poses');
-
-    // Wait for page to be fully loaded instead of arbitrary timeout
-    await page.waitForLoadState('networkidle');
-
-    // Page content should exist (specific UI depends on implementation)
-    const pageContent = await page.textContent('body');
-    expect(pageContent).toBeTruthy();
-  });
-});

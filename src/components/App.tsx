@@ -72,9 +72,6 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
           <span>Analyzer</span>
         </NavLink>
-        <NavLink to="/poses" className={({ isActive }) => isActive ? 'active' : ''}>
-          <span>Poses</span>
-        </NavLink>
         <button
           type="button"
           onClick={onOpenSettings}
