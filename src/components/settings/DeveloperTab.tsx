@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { sessionRecorder } from '../../services/SessionRecorder';
 import { DownloadIcon } from './Icons';
 
 export function DeveloperTab() {
   const [recordingStats, setRecordingStats] = useState(sessionRecorder.getStats());
+  const [hasPoseTrack, setHasPoseTrack] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setRecordingStats(sessionRecorder.getStats());
+      // Check if pose track is available
+      setHasPoseTrack(sessionRecorder.getPoseTrack() !== null);
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -19,6 +22,14 @@ export function DeveloperTab() {
     return `${seconds}s`;
   };
 
+  const handleDownloadPoseTrack = useCallback(() => {
+    // Use swingDebug to download (it has the download logic)
+    const swingDebug = (window as unknown as { swingDebug?: { downloadPoseTrack: () => string | null } }).swingDebug;
+    if (swingDebug?.downloadPoseTrack) {
+      swingDebug.downloadPoseTrack();
+    }
+  }, []);
+
   return (
     <div className="settings-section settings-section--compact">
       {/* Action buttons row */}
@@ -29,6 +40,15 @@ export function DeveloperTab() {
           onClick={() => sessionRecorder.downloadRecording()}
         >
           <DownloadIcon /> Download Log
+        </button>
+        <button
+          type="button"
+          className="settings-action-btn settings-action-btn--blue"
+          onClick={handleDownloadPoseTrack}
+          disabled={!hasPoseTrack}
+          title={hasPoseTrack ? 'Download extracted pose data' : 'Load a video first'}
+        >
+          <DownloadIcon /> Download Poses
         </button>
       </div>
 

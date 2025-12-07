@@ -697,6 +697,24 @@ class SessionRecorderImpl {
     this.pipelineStateGetter = getter;
   }
 
+  // Pose track provider for debug downloads
+  private poseTrackProvider: (() => unknown | null) | null = null;
+
+  /**
+   * Set the pose track provider function
+   * Called by the app to provide access to current pose track data
+   */
+  setPoseTrackProvider(provider: () => unknown | null): void {
+    this.poseTrackProvider = provider;
+  }
+
+  /**
+   * Get current pose track data (if available)
+   */
+  getPoseTrack(): unknown | null {
+    return this.poseTrackProvider?.() ?? null;
+  }
+
   /**
    * Set app settings for debugging (e.g., model type, exercise type)
    * Called by the app to include current settings in bug reports
@@ -1081,6 +1099,39 @@ if (typeof window !== 'undefined') {
      * Usage: swingDebug.setAppSettings({ model: 'blazepose', exercise: 'swing' })
      */
     setAppSettings: (settings: Record<string, unknown>) => sessionRecorder.setAppSettings(settings),
+
+    /**
+     * Get current pose track data (if available).
+     * Usage: swingDebug.getPoseTrack()
+     */
+    getPoseTrack: () => sessionRecorder.getPoseTrack(),
+
+    /**
+     * Download current pose track as JSON file.
+     * Usage: swingDebug.downloadPoseTrack()
+     */
+    downloadPoseTrack: () => {
+      const poseTrack = sessionRecorder.getPoseTrack();
+      if (!poseTrack) {
+        console.warn('[swingDebug] No pose track data available');
+        return null;
+      }
+      // Download as JSON
+      const json = JSON.stringify(poseTrack, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const metadata = (poseTrack as { metadata?: { sourceVideoName?: string } }).metadata;
+      const videoName = metadata?.sourceVideoName || 'video';
+      const filename = videoName.replace(/\.[^.]+$/, '') + '.posetrack.json';
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return filename;
+    },
   };
 
   (window as unknown as { swingDebug: typeof swingDebug }).swingDebug = swingDebug;

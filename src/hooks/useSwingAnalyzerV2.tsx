@@ -514,6 +514,12 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       };
     });
 
+    // Set up pose track provider for debug downloads
+    sessionRecorder.setPoseTrackProvider(() => {
+      const videoSource = inputSessionRef.current?.getVideoFileSource();
+      return videoSource?.getPoseTrack() ?? null;
+    });
+
     return () => {
       stateSubscription.unsubscribe();
       skeletonSubscription.unsubscribe();
