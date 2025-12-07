@@ -451,11 +451,13 @@ def extract_poses(
 
     # Build PoseTrack structure
     keypoint_format = "blazepose-33" if full_keypoints else "coco-17"
+    model_variant_map = {0: "lite", 1: "full", 2: "heavy"}
     posetrack = {
         "metadata": {
             "version": "1.0",
             "model": "blazepose",
             "modelVersion": f"mediapipe-{mp.__version__}",
+            "modelVariant": model_variant_map.get(model_complexity, "full"),
             "keypointFormat": keypoint_format,
             "keypointCount": 33 if full_keypoints else 17,
             "sourceVideoHash": video_hash,
@@ -466,6 +468,7 @@ def extract_poses(
             "fps": round(fps, 2),
             "videoWidth": width,
             "videoHeight": height,
+            # buildSha and buildTimestamp are optional - set by CI/CD if available
         },
         "frames": frames,
     }

@@ -554,6 +554,9 @@ export async function hasPoseTrackForVideo(
 export function createPoseTrackMetadata(params: {
   model: PoseModel;
   modelVersion: string;
+  modelVariant?: 'lite' | 'full' | 'heavy';
+  buildSha?: string;
+  buildTimestamp?: string;
   sourceVideoHash: string;
   sourceVideoName?: string;
   sourceVideoDuration: number;
@@ -567,6 +570,9 @@ export function createPoseTrackMetadata(params: {
     version: '1.0',
     model: params.model,
     modelVersion: params.modelVersion,
+    modelVariant: params.modelVariant,
+    buildSha: params.buildSha,
+    buildTimestamp: params.buildTimestamp,
     sourceVideoHash: params.sourceVideoHash,
     sourceVideoName: params.sourceVideoName,
     sourceVideoDuration: params.sourceVideoDuration,
