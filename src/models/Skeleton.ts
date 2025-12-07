@@ -240,14 +240,16 @@ export class Skeleton {
         shoulder = leftShoulder;
         elbow = leftElbow;
       } else {
-        // Fallback to any available with reasonable confidence
-        if (rightConf >= leftConf && rightShoulder && rightElbow) {
+        // Fallback: only use complete arm pairs, never mix left/right
+        // (mixing left shoulder with right elbow produces invalid angles)
+        if (rightShoulder && rightElbow) {
           shoulder = rightShoulder;
           elbow = rightElbow;
-        } else {
-          shoulder = leftShoulder || rightShoulder;
-          elbow = leftElbow || rightElbow;
+        } else if (leftShoulder && leftElbow) {
+          shoulder = leftShoulder;
+          elbow = leftElbow;
         }
+        // If neither complete pair available, shoulder/elbow remain undefined
       }
 
       if (shoulder && elbow) {
@@ -292,6 +294,8 @@ export class Skeleton {
         this._armToVerticalAngle = angleDeg;
         return angleDeg;
       } else {
+        // No complete arm pair found - log for debugging
+        console.warn('Missing keypoints for arm-to-vertical angle calculation');
         this._armToVerticalAngle = 0; // Default if keypoints not available
         return 0;
       }
