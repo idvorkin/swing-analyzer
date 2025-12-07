@@ -3,9 +3,86 @@
 default:
     @just --list
 
+# One-time setup after clone (run this first!)
+setup:
+    #!/usr/bin/env bash
+    echo "🔧 Setting up development environment..."
+
+    # Configure git hooks
+    git config core.hooksPath .githooks
+    echo "✓ Git hooks configured (.githooks)"
+
+    # Install npm dependencies
+    npm install
+    echo "✓ npm dependencies installed"
+
+    # Download test videos for E2E tests
+    just download-test-videos
+
+    echo ""
+    echo "✅ Setup complete! Run 'just dev' to start developing."
+    echo ""
+    echo "📝 Note: For Playwright, use a global install (shared across repos):"
+    echo "   npm install -g playwright && playwright install --with-deps"
+
+# Download test videos from form-analyzer-samples repo
+download-test-videos:
+    #!/usr/bin/env bash
+    echo "📥 Downloading test videos..."
+
+    VIDEOS_DIR="public/videos"
+    SAMPLES_REPO="idvorkin-ai-tools/form-analyzer-samples"
+    SAMPLES_PATH="exercises/kettlebell-swing/good"
+
+    mkdir -p "$VIDEOS_DIR"
+
+    # Download swing-sample.webm (full video, ~26s)
+    if [ ! -f "$VIDEOS_DIR/swing-sample.webm" ]; then
+        echo "  Downloading swing-sample.webm..."
+        gh api "repos/$SAMPLES_REPO/contents/$SAMPLES_PATH/swing-sample.webm" \
+            --jq '.download_url' | xargs curl -sL -o "$VIDEOS_DIR/swing-sample.webm"
+        echo "  ✓ swing-sample.webm"
+    else
+        echo "  ✓ swing-sample.webm (already exists)"
+    fi
+
+    # Download swing-sample-4reps.webm (short video, ~5.5s for fast E2E tests)
+    if [ ! -f "$VIDEOS_DIR/swing-sample-4reps.webm" ]; then
+        echo "  Downloading swing-sample-4reps.webm..."
+        gh api "repos/$SAMPLES_REPO/contents/$SAMPLES_PATH/swing-sample-4reps.webm" \
+            --jq '.download_url' | xargs curl -sL -o "$VIDEOS_DIR/swing-sample-4reps.webm"
+        echo "  ✓ swing-sample-4reps.webm"
+    else
+        echo "  ✓ swing-sample-4reps.webm (already exists)"
+    fi
+
+    echo "✓ Test videos ready in $VIDEOS_DIR"
+
+    # Update fixture hashes to match downloaded videos
+    just update-fixture-hashes
+
+# Check if fixture hashes match video files
+check-fixture-hashes:
+    node scripts/update-fixture-hashes.cjs --check
+
+# Update fixture hashes to match current video files
+update-fixture-hashes:
+    node scripts/update-fixture-hashes.cjs
+
 # Run the development server
 dev:
     npm run dev
+
+# Start agent dashboard (monitors all agent clones)
+dashboard:
+    #!/usr/bin/env bash
+    DASHBOARD_DIR="$HOME/gits/agent-dashboard"
+    if [ ! -d "$DASHBOARD_DIR" ]; then
+        echo "📦 Cloning agent-dashboard..."
+        git clone https://github.com/idvorkin-ai-tools/agent-dashboard.git "$DASHBOARD_DIR"
+        cd "$DASHBOARD_DIR" && npm install
+    fi
+    cd "$DASHBOARD_DIR" && npm run dev
 
 # Build the project
 build:
@@ -22,6 +99,14 @@ test-unit:
 # Run E2E tests (all projects - desktop + mobile)
 e2e:
     npx playwright test
+
+# Run fast E2E tests (seeded data, no extraction) - good for CI
+e2e-fast:
+    npx playwright test user-journey.spec.ts swing-analyzer.spec.ts pose-fixtures.spec.ts settings.spec.ts
+
+# Run extraction E2E tests (mock detector, longer tests)
+e2e-extraction:
+    npx playwright test extraction-flow.spec.ts instant-filmstrip.spec.ts
 
 # Run E2E tests (desktop chromium only - same as 'e2e' until mobile is enabled)
 e2e-desktop:

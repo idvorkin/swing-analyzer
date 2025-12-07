@@ -272,8 +272,7 @@ main {
   min-height: 300px;
 }
 
-#video,
-#output-canvas {
+#video {
   width: 100%;
   max-height: 70vh;
   background-color: #212529;
@@ -281,28 +280,252 @@ main {
 }
 
 #output-canvas {
+  /* Position set via JS to match video's rendered area */
+  /* (canvas doesn't support object-fit: contain) */
   position: absolute;
-  left: 0;
-  top: 0;
   background-color: transparent;
   pointer-events: none;
-  object-fit: contain;
   z-index: 10;
 }
 
+/* ============================================
+   HUD OVERLAY - Floating on video
+   ============================================ */
+
+.hud-overlay {
+  --hud-bg: rgba(15, 20, 25, 0.85);
+  --hud-accent: #00d4aa;
+  --hud-text: rgba(255, 255, 255, 0.95);
+  --hud-text-dim: rgba(255, 255, 255, 0.6);
+  --hud-border: rgba(255, 255, 255, 0.1);
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.hud-overlay-top {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.hud-overlay-reps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--hud-bg);
+  backdrop-filter: blur(8px);
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--hud-border);
+}
+
+.hud-overlay-reps-value {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--hud-text);
+  line-height: 1;
+  text-shadow: 0 0 20px var(--hud-accent);
+}
+
+.hud-overlay-reps-label {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--hud-accent);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.hud-overlay-angles {
+  display: flex;
+  gap: 8px;
+}
+
+.hud-overlay-angle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--hud-bg);
+  backdrop-filter: blur(8px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--hud-border);
+  min-width: 50px;
+}
+
+.hud-overlay-angle-label {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--hud-text-dim);
+  text-transform: uppercase;
+}
+
+.hud-overlay-angle-value {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--hud-text);
+  line-height: 1.2;
+}
+
+.hud-overlay-top-right {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.hud-overlay-extraction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--hud-bg);
+  backdrop-filter: blur(8px);
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--hud-border);
+  animation: hud-extraction-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes hud-extraction-pulse {
+  0%, 100% {
+    border-color: var(--hud-border);
+    box-shadow: 0 0 0 0 rgba(0, 212, 170, 0);
+  }
+  50% {
+    border-color: var(--hud-accent);
+    box-shadow: 0 0 12px 2px rgba(0, 212, 170, 0.3);
+  }
+}
+
+.hud-overlay-extraction-value {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--hud-accent);
+  line-height: 1;
+}
+
+.hud-overlay-extraction-label {
+  font-family: var(--font-mono);
+  font-size: 0.45rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--hud-text-dim);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.hud-overlay-bottom {
+  position: absolute;
+  bottom: 70px; /* Above video controls */
+  right: 12px;
+}
+
+.hud-overlay-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--hud-bg);
+  backdrop-filter: blur(8px);
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--hud-border);
+}
+
+.hud-overlay-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hud-accent);
+  box-shadow: 0 0 8px var(--hud-accent);
+  animation: hud-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes hud-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.hud-overlay-status-text {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--hud-text-dim);
+  text-transform: uppercase;
+}
+
+/* Mobile HUD adjustments */
+@media (max-width: 480px) {
+  .hud-overlay-top {
+    top: 8px;
+    left: 8px;
+    gap: 8px;
+  }
+
+  .hud-overlay-reps {
+    padding: 6px 10px;
+  }
+
+  .hud-overlay-reps-value {
+    font-size: 1.25rem;
+  }
+
+  .hud-overlay-angle {
+    padding: 4px 8px;
+    min-width: 40px;
+  }
+
+  .hud-overlay-angle-value {
+    font-size: 0.875rem;
+  }
+
+  .hud-overlay-top-right {
+    top: 8px;
+    right: 8px;
+  }
+
+  .hud-overlay-extraction {
+    padding: 6px 10px;
+  }
+
+  .hud-overlay-extraction-value {
+    font-size: 1.25rem;
+  }
+
+  .hud-overlay-bottom {
+    bottom: 60px;
+    right: 8px;
+  }
+
+  .hud-overlay-status {
+    padding: 4px 10px;
+  }
+}
+
 /* For portrait videos */
-.video-portrait #video,
-.video-portrait #output-canvas {
+.video-portrait #video {
   max-width: 100%;
   height: auto;
 }
 
 /* For landscape videos */
-.video-landscape #video,
-.video-landscape #output-canvas {
+.video-landscape #video {
   width: 100%;
   height: auto;
 }
+/* Canvas position/size is controlled via JS syncCanvasToVideo() */
 
 /* Video Controls */
 .video-controls {
@@ -338,16 +561,42 @@ main {
   color: rgba(255, 255, 255, 0.7);
 }
 
-#stop-btn {
-  background: rgba(220, 53, 69, 0.6);
+/* Play button - compact */
+#play-pause-btn {
+  min-width: 70px;
+  flex: 0.5 !important;
 }
 
-#stop-btn:hover {
-  background: rgba(220, 53, 69, 0.8);
+/* Frame navigation buttons - prominent orange */
+#prev-frame-btn,
+#next-frame-btn {
+  min-width: 50px;
+  flex: 0.8;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+#prev-frame-btn:hover,
+#next-frame-btn:hover {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+/* Checkpoint navigation buttons - most prominent purple */
+#prev-checkpoint-btn,
+#next-checkpoint-btn {
+  min-width: 60px;
+  flex: 1;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+#prev-checkpoint-btn:hover,
+#next-checkpoint-btn:hover {
+  background: linear-gradient(135deg, #a78bfa, #8b5cf6);
 }
 
 .toggle-button {
-  min-width: 120px;
+  min-width: 70px;
 }
 
 /* Mobile-specific video controls */
@@ -368,228 +617,173 @@ main {
     display: none; /* Hide text on mobile */
   }
 
+  /* Play button compact on mobile too */
   #play-pause-btn {
     min-width: 0;
-    flex: 2;
+    flex: 0.6;
   }
 
-  /* Make frame buttons prominent on mobile */
+  /* Frame buttons prominent on mobile */
   #prev-frame-btn,
   #next-frame-btn {
     min-width: 44px;
     min-height: 44px;
     flex: 1;
     padding: 10px;
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    border: 2px solid rgba(255, 255, 255, 0.3);
   }
 
-  #prev-frame-btn:hover,
-  #next-frame-btn:hover {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  }
-
-  #stop-btn {
-    flex: 1;
+  /* Checkpoint buttons most prominent on mobile */
+  #prev-checkpoint-btn,
+  #next-checkpoint-btn {
+    min-width: 48px;
+    min-height: 48px;
+    flex: 1.2;
+    padding: 10px;
   }
 }
 
-/* Checkpoint Filmstrip */
+/* ============================================
+   FILMSTRIP - Matches HUD aesthetic
+   ============================================ */
+
 .filmstrip-section {
-  background-color: white;
+  --filmstrip-bg: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0d1117 100%);
+  --filmstrip-accent: #00d4aa;
+  --filmstrip-text: rgba(255, 255, 255, 0.7);
+  --filmstrip-border: rgba(255, 255, 255, 0.08);
+
+  background: var(--filmstrip-bg);
   border-radius: 12px;
-  padding: 15px;
-  margin-top: 15px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+  margin-top: 1rem;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--filmstrip-border);
 }
 
 .filmstrip-container {
-  width: 100%;
-}
-
-.filmstrip {
   display: flex;
-  gap: 10px;
+  gap: 0.75rem;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
-.filmstrip-thumb {
+/* Thumbnail wrapper - uses .filmstrip-thumbnail from JS */
+.filmstrip-thumbnail {
   position: relative;
-  flex: 1;
-  max-width: 120px;
-  aspect-ratio: 3 / 4;
-  background-color: #1e1e1e;
+  flex: 0 0 auto;
+  width: 90px;
   border-radius: 8px;
   overflow: hidden;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--filmstrip-border);
+  transition: all 0.2s ease;
 }
 
-.filmstrip-thumb:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+.filmstrip-thumbnail:hover {
+  transform: translateY(-3px) scale(1.02);
+  border-color: var(--filmstrip-accent);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--filmstrip-accent);
 }
 
-.filmstrip-thumb canvas {
+/* Canvas inside thumbnail - portrait aspect ratio matching capture */
+.filmstrip-canvas {
   width: 100%;
-  height: 100%;
+  height: auto;
+  display: block;
+  aspect-ratio: 3 / 4;
   object-fit: cover;
 }
 
+/* Position label */
 .filmstrip-label {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  color: white;
-  padding: 20px 8px 6px;
-  font-size: 11px;
+  display: block;
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--filmstrip-accent);
+  padding: 0.375rem 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
   font-weight: 600;
   text-align: center;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.1em;
 }
 
-.filmstrip-empty-thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #666;
-  font-size: 11px;
-  text-align: center;
-  padding: 10px;
-}
-
+/* Empty state */
 .filmstrip-empty {
   text-align: center;
-  color: #888;
-  padding: 20px;
-  font-size: 14px;
+  color: var(--filmstrip-text);
+  padding: 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
 }
 
+/* Navigation controls */
 .filmstrip-nav {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 15px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e9ecef;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--filmstrip-border);
 }
 
 .filmstrip-nav-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--filmstrip-border);
   border-radius: 50%;
-  background: linear-gradient(135deg, #6c757d, #495057);
-  color: white;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .filmstrip-nav-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7d8690, #5a6268);
-  transform: scale(1.1);
+  background: rgba(0, 212, 170, 0.15);
+  border-color: var(--filmstrip-accent);
+  color: var(--filmstrip-accent);
 }
 
 .filmstrip-nav-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .filmstrip-rep-indicator {
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
-  color: #495057;
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.75rem;
   min-width: 80px;
   text-align: center;
+  letter-spacing: 0.05em;
 }
 
 /* Mobile filmstrip */
 @media (max-width: 480px) {
-  .filmstrip {
-    gap: 6px;
+  .filmstrip-container {
+    gap: 0.5rem;
   }
 
-  .filmstrip-thumb {
-    max-width: none;
+  .filmstrip-thumbnail {
+    width: 70px;
   }
 
   .filmstrip-label {
-    font-size: 10px;
-    padding: 15px 4px 4px;
+    font-size: 0.5rem;
+    padding: 0.25rem;
   }
 }
 
-/* Analysis Section */
-.analysis-section {
-  margin-bottom: 30px;
-}
-
-/* Metrics */
-.metrics {
-  background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-}
-
-.metrics-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.metrics-header h2 {
-  margin: 0;
-  color: #1a2a6c;
-  font-size: 20px;
-}
-
-.status-indicator {
-  color: #6c757d;
-  font-size: 14px;
-  background-color: #f8f9fa;
-  padding: 6px 12px;
-  border-radius: 20px;
-}
-
-.metrics-inline {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.metric-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: linear-gradient(135deg, #1a73e8, #1557b0);
-  border-radius: 2rem;
-  padding: 0.5rem 1rem;
-  color: white;
-}
-
-.metric-pill .metric-label {
-  font-size: 0.75rem;
-  opacity: 0.85;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.metric-pill .metric-value {
-  font-size: 1rem;
-  font-weight: 600;
-}
+/* Analysis Section - Styles moved to AnalysisSection.css */
 
 /* Form Checkpoints */
 .form-checkpoints {
@@ -679,7 +873,7 @@ main {
   }
 }
 
-/* Mobile styles for all controls */
+/* Mobile styles for all controls - additional breakpoint */
 @media (max-width: 768px) {
   .video-controls {
     gap: 8px;
@@ -694,22 +888,6 @@ main {
 
   .video-controls .button-text {
     display: none; /* Hide text on mobile */
-  }
-
-  #play-pause-btn {
-    min-width: 0;
-    flex: 2; /* Give play/pause button more space */
-  }
-
-  #prev-frame-btn,
-  #next-frame-btn {
-    min-width: 0;
-    flex: 1;
-    padding: 8px;
-  }
-
-  #stop-btn {
-    flex: 1;
   }
 }
 

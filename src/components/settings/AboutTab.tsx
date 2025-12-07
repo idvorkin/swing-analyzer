@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import {
   BUILD_TIMESTAMP,
   GIT_BRANCH,
@@ -6,44 +5,30 @@ import {
   GIT_SHA_SHORT,
 } from '../../generated_version';
 import { DeviceService } from '../../services/DeviceService';
-import { ActionButton } from './ActionButton';
-import { ClockIcon, GitHubIcon, KeyboardIcon, WrenchIcon } from './Icons';
-import { SettingsRow } from './SettingsRow';
+import { GitHubIcon } from './Icons';
 import { Toggle } from './Toggle';
 
 function formatBuildDate(timestamp: string): string {
   try {
     const date = new Date(timestamp);
-    if (Number.isNaN(date.getTime())) {
-      return 'Unknown';
-    }
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    if (Number.isNaN(date.getTime())) return '?';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   } catch {
-    return 'Unknown';
+    return '?';
   }
 }
 
 interface AboutTabProps {
-  // Bug reporting
   shakeEnabled?: boolean;
   onShakeToggle?: () => void;
   isShakeSupported?: boolean;
   shortcut?: string;
   onReportBug?: () => void;
-  // Version check
   updateAvailable?: boolean;
   lastCheckTime?: Date | null;
   isCheckingUpdate?: boolean;
   onCheckForUpdate?: () => void;
   onReload?: () => void;
-  // Modal control
-  onClose?: () => void;
 }
 
 export function AboutTab({
@@ -57,7 +42,6 @@ export function AboutTab({
   isCheckingUpdate = false,
   onCheckForUpdate,
   onReload,
-  onClose,
 }: AboutTabProps) {
   const buildDate = formatBuildDate(BUILD_TIMESTAMP);
   const isMobile = DeviceService.isMobileDevice();
@@ -72,145 +56,106 @@ export function AboutTab({
     : 'Never';
 
   return (
-    <div className="settings-section">
-      {/* App Info Card */}
-      <div className="settings-about-card">
-        <div className="settings-about-icon">🏋️</div>
-        <div className="settings-about-title">Swing Analyzer</div>
-        <div className="settings-about-subtitle">
-          Kettlebell form analysis powered by AI
-        </div>
-      </div>
-
-      {/* Version Info */}
-      <div className="settings-version-card">
-        <div className="settings-version-rows">
-          <div className="settings-version-row">
-            <span className="settings-version-label">Version</span>
-            <a
-              href={GIT_COMMIT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="settings-version-link"
-            >
-              {GIT_SHA_SHORT}
-            </a>
-          </div>
-          <div className="settings-version-row">
-            <span className="settings-version-label">Branch</span>
-            <span className="settings-version-value">{GIT_BRANCH}</span>
-          </div>
-          <div className="settings-version-row">
-            <span className="settings-version-label">Built</span>
-            <span className="settings-version-value">{buildDate}</span>
-          </div>
-        </div>
+    <div className="settings-section settings-section--compact">
+      {/* Version Row */}
+      <div className="settings-info-row">
+        <span className="settings-info-label">Version</span>
+        <span className="settings-info-value">
+          <a
+            href={GIT_COMMIT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="settings-info-link"
+          >
+            {GIT_SHA_SHORT}
+          </a>
+          <span className="settings-info-sep">·</span>
+          {GIT_BRANCH}
+          <span className="settings-info-sep">·</span>
+          {buildDate}
+        </span>
       </div>
 
       {/* Update Available Banner */}
       {updateAvailable && onReload && (
-        <div className="settings-update-banner">
-          <div className="settings-update-banner-header">
-            <span className="settings-update-banner-icon">✨</span>
-            <div className="settings-update-banner-title">
-              New Version Available!
-            </div>
-          </div>
+        <div className="settings-update-row">
+          <span>✨ Update available</span>
           <button
             type="button"
-            className="settings-update-banner-btn"
+            className="settings-inline-btn settings-inline-btn--green"
             onClick={onReload}
           >
-            Reload to Update
+            Reload
           </button>
         </div>
       )}
 
-      {/* Updates Check */}
+      {/* Update Check Row */}
       {onCheckForUpdate && (
-        <>
-          <SettingsRow
-            icon={<ClockIcon />}
-            iconVariant="blue"
-            title="Last Update Check"
-            subtitle={formattedLastCheck}
-          />
-          <ActionButton
-            variant="blue"
-            onClick={onCheckForUpdate}
-            disabled={isCheckingUpdate}
-          >
-            {isCheckingUpdate ? (
-              <>
-                <span className="settings-spinner">⟳</span>
-                Checking...
-              </>
-            ) : (
-              <>🔄 Check for Updates</>
-            )}
-          </ActionButton>
-        </>
+        <div className="settings-info-row">
+          <span className="settings-info-label">Last check</span>
+          <span className="settings-info-value">
+            {formattedLastCheck}
+            <button
+              type="button"
+              className="settings-inline-btn"
+              onClick={onCheckForUpdate}
+              disabled={isCheckingUpdate}
+            >
+              {isCheckingUpdate ? '...' : 'Check'}
+            </button>
+          </span>
+        </div>
       )}
 
-      {/* Bug Report Section */}
+      {/* Bug Report Row */}
+      <div className="settings-info-row">
+        <span className="settings-info-label">Bug report</span>
+        <span className="settings-info-value">
+          <kbd className="settings-kbd-inline">{shortcut}</kbd>
+          {onReportBug && (
+            <button
+              type="button"
+              className="settings-inline-btn settings-inline-btn--red"
+              onClick={onReportBug}
+            >
+              Report
+            </button>
+          )}
+        </span>
+      </div>
+
+      {/* Shake Toggle (Mobile Only) */}
       {isShakeSupported && isMobile && onShakeToggle && (
-        <SettingsRow
-          icon="📱"
-          iconVariant="orange"
-          title="Shake to Report"
-          subtitle="Shake device to open bug reporter"
-          action={
-            <Toggle
-              checked={shakeEnabled}
-              onChange={onShakeToggle}
-              aria-label="Toggle shake to report"
-            />
-          }
-        />
-      )}
-
-      {shortcut && (
-        <SettingsRow
-          icon={<KeyboardIcon />}
-          iconVariant="purple"
-          title="Bug Report Shortcut"
-          subtitle="Quick access to bug reporter"
-          action={<kbd className="settings-kbd">{shortcut}</kbd>}
-        />
-      )}
-
-      {onReportBug && (
-        <ActionButton variant="red" onClick={onReportBug}>
-          🐛 Report a Bug
-        </ActionButton>
+        <div className="settings-info-row">
+          <span className="settings-info-label">Shake to report</span>
+          <Toggle
+            checked={shakeEnabled}
+            onChange={onShakeToggle}
+            aria-label="Toggle shake to report"
+          />
+        </div>
       )}
 
       {/* Links */}
-      <div className="settings-links">
+      <div className="settings-links-compact">
         <a
           href="https://github.com/idvorkin/swing-analyzer"
           target="_blank"
           rel="noopener noreferrer"
-          className="settings-link"
+          className="settings-link-compact"
         >
-          <GitHubIcon />
-          GitHub
+          <GitHubIcon /> GitHub
         </a>
         <a
           href="https://idvork.in/kettlebell"
           target="_blank"
           rel="noopener noreferrer"
-          className="settings-link"
+          className="settings-link-compact"
         >
-          📖 Learn More
+          📖 Docs
         </a>
       </div>
-
-      {/* Debug Tools Link */}
-      <Link to="/debug" className="settings-debug-link" onClick={onClose}>
-        <WrenchIcon />
-        Debug Tools
-      </Link>
     </div>
   );
 }

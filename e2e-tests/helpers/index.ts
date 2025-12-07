@@ -11,6 +11,8 @@ export {
   listPoseTrackHashes,
   seedPoseTrackData,
   seedPoseTrackFixture,
+  seedPoseTrackToIndexedDB,
+  setPoseTrackStorageMode,
 } from './indexeddb';
 // Mock pose detector helpers
 export {
@@ -21,6 +23,8 @@ export {
 } from './mockPoseDetector';
 // Video helpers
 export {
+  clearVideoTestId,
+  generateTestId,
   getVideoState,
   loadHardcodedVideo,
   loadHardcodedVideoAndPlay,
@@ -28,8 +32,17 @@ export {
   playVideo,
   playVideoToEnd,
   seekToTime,
+  setVideoTestId,
   stopVideo,
   togglePlayPause,
   waitForCachedPoseTrack,
   waitForModelReady,
 } from './video';
+// Video route interception for fast tests
+export {
+  serveLocalVideos,
+  setupFastTestVideo,
+  setupIgorTestVideo,
+  useIgorTestVideo,
+  useShortTestVideo,
+} from './video-route';

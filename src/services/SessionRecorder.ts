@@ -2,7 +2,7 @@
  * SessionRecorder
  *
  * Records user interactions and pipeline state for debugging.
- * Always active, stores everything in memory, downloadable from Settings.
+ * Always active, stores in memory AND IndexedDB for crash recovery.
  *
  * Captures:
  * - User clicks/interactions with element info
@@ -10,7 +10,22 @@
  * - Start/stop events (extraction, playback, etc.)
  * - Console errors
  * - Key state changes (rep count, extraction progress)
+ * - Environment info (browser, WebGL, codecs, build version)
+ *
+ * Persistence:
+ * - Auto-saves to IndexedDB every 5 seconds
+ * - Keeps last 10 sessions for crash debugging
+ * - Use getPersistedSessions() to retrieve after crash
  */
+
+import { GIT_SHA_SHORT, BUILD_TIMESTAMP, GIT_BRANCH } from '../generated_version';
+
+// IndexedDB configuration
+const SESSION_DB_NAME = 'swing-analyzer-sessions';
+const SESSION_STORE_NAME = 'sessions';
+const SESSION_DB_VERSION = 1;
+const MAX_PERSISTED_SESSIONS = 10;
+const AUTO_SAVE_INTERVAL_MS = 5000;
 
 export interface InteractionEvent {
   type: 'click' | 'keydown' | 'keyup';
@@ -53,37 +68,274 @@ export interface StateChangeEvent {
   details?: Record<string, unknown>;
 }
 
+export interface MemorySnapshot {
+  timestamp: number;
+  // From performance.memory (Chrome only)
+  usedJSHeapSize?: number;      // JS heap currently in use (bytes)
+  totalJSHeapSize?: number;     // Total allocated JS heap (bytes)
+  jsHeapSizeLimit?: number;     // Max heap size (bytes)
+  // Calculated
+  usedMB?: number;              // usedJSHeapSize in MB
+  totalMB?: number;             // totalJSHeapSize in MB
+  limitMB?: number;             // jsHeapSizeLimit in MB
+  percentUsed?: number;         // usedJSHeapSize / jsHeapSizeLimit * 100
+}
+
+/**
+ * Environment/debug info captured at session start
+ * Useful for bug reports to understand the user's setup
+ */
+export interface EnvironmentInfo {
+  // Build info
+  buildVersion?: string;        // App version from package.json
+  buildCommit?: string;         // Git commit hash
+  buildTime?: string;           // When the build was created
+
+  // Browser/OS
+  userAgent: string;
+  platform: string;             // navigator.platform
+  language: string;             // navigator.language
+  cookiesEnabled: boolean;
+  onLine: boolean;
+
+  // Display
+  screenWidth: number;
+  screenHeight: number;
+  windowWidth: number;
+  windowHeight: number;
+  devicePixelRatio: number;
+  colorDepth: number;
+
+  // Hardware/Performance
+  hardwareConcurrency?: number; // CPU cores
+  deviceMemory?: number;        // RAM in GB (Chrome only)
+
+  // WebGL (for ML model debugging)
+  webglRenderer?: string;
+  webglVendor?: string;
+  webglVersion?: string;
+
+  // Video codec support
+  videoCodecs: {
+    h264: boolean;
+    h265: boolean;
+    vp8: boolean;
+    vp9: boolean;
+    av1: boolean;
+    webm: boolean;
+  };
+
+  // App settings (set by the app)
+  appSettings?: Record<string, unknown>;
+}
+
 export interface SessionRecording {
   version: string;
   sessionId: string;
   startTime: number;
   endTime?: number;
-  userAgent: string;
-  screenSize: { width: number; height: number };
+  environment: EnvironmentInfo;
   interactions: InteractionEvent[];
   pipelineSnapshots: PipelineSnapshot[];
   stateChanges: StateChangeEvent[];
+  memorySnapshots: MemorySnapshot[];
+}
+
+// IndexedDB helpers
+function openSessionDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(SESSION_DB_NAME, SESSION_DB_VERSION);
+
+    request.onerror = () => {
+      reject(new Error('Failed to open session database'));
+    };
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+
+      if (!db.objectStoreNames.contains(SESSION_STORE_NAME)) {
+        const store = db.createObjectStore(SESSION_STORE_NAME, {
+          keyPath: 'sessionId',
+        });
+        store.createIndex('startTime', 'startTime', { unique: false });
+      }
+    };
+  });
+}
+
+async function saveSessionToDB(recording: SessionRecording): Promise<void> {
+  try {
+    const db = await openSessionDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([SESSION_STORE_NAME], 'readwrite');
+
+      transaction.onerror = () => {
+        db.close();
+        reject(new Error('Failed to save session'));
+      };
+
+      const store = transaction.objectStore(SESSION_STORE_NAME);
+      const request = store.put(recording);
+
+      request.onerror = () => {
+        reject(new Error('Failed to save session record'));
+      };
+
+      request.onsuccess = () => {
+        resolve();
+      };
+
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (e) {
+    // Silently fail - don't break the app if IndexedDB fails
+    console.warn('[SessionRecorder] Failed to persist session:', e);
+  }
+}
+
+async function pruneOldSessions(): Promise<void> {
+  try {
+    const db = await openSessionDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([SESSION_STORE_NAME], 'readwrite');
+
+      transaction.onerror = () => {
+        db.close();
+        reject(new Error('Failed to prune sessions'));
+      };
+
+      const store = transaction.objectStore(SESSION_STORE_NAME);
+      const index = store.index('startTime');
+      const request = index.openCursor(null, 'prev'); // Newest first
+
+      let count = 0;
+      const toDelete: string[] = [];
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          count++;
+          if (count > MAX_PERSISTED_SESSIONS) {
+            toDelete.push(cursor.value.sessionId);
+          }
+          cursor.continue();
+        } else {
+          // Done iterating, delete old sessions
+          toDelete.forEach((id) => store.delete(id));
+        }
+      };
+
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+    });
+  } catch (e) {
+    console.warn('[SessionRecorder] Failed to prune old sessions:', e);
+  }
+}
+
+/**
+ * Retrieve all persisted sessions from IndexedDB.
+ * Use this after a crash to see what happened.
+ */
+export async function getPersistedSessions(): Promise<SessionRecording[]> {
+  try {
+    const db = await openSessionDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([SESSION_STORE_NAME], 'readonly');
+
+      transaction.onerror = () => {
+        db.close();
+        reject(new Error('Failed to load sessions'));
+      };
+
+      const store = transaction.objectStore(SESSION_STORE_NAME);
+      const index = store.index('startTime');
+      const request = index.getAll();
+
+      request.onerror = () => {
+        reject(new Error('Failed to load session records'));
+      };
+
+      request.onsuccess = () => {
+        // Return newest first
+        const sessions = (request.result || []).reverse();
+        resolve(sessions);
+      };
+
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (e) {
+    console.warn('[SessionRecorder] Failed to load persisted sessions:', e);
+    return [];
+  }
+}
+
+/**
+ * Clear all persisted sessions from IndexedDB.
+ */
+export async function clearPersistedSessions(): Promise<void> {
+  try {
+    const db = await openSessionDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([SESSION_STORE_NAME], 'readwrite');
+
+      transaction.onerror = () => {
+        db.close();
+        reject(new Error('Failed to clear sessions'));
+      };
+
+      const store = transaction.objectStore(SESSION_STORE_NAME);
+      store.clear();
+
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+    });
+  } catch (e) {
+    console.warn('[SessionRecorder] Failed to clear sessions:', e);
+  }
 }
 
 class SessionRecorderImpl {
   private recording: SessionRecording;
   private snapshotInterval: number | null = null;
+  private autoSaveInterval: number | null = null;
+  private memoryInterval: number | null = null;
   private pipelineStateGetter: (() => Partial<PipelineSnapshot>) | null = null;
   private maxSnapshots = 10000; // ~40 minutes at 4 FPS
   private maxInteractions = 5000;
   private maxStateChanges = 2000;
+  private maxMemorySnapshots = 1800; // ~1 hour at 2 second intervals
 
   // Event handler references for cleanup
   private clickHandler: ((e: MouseEvent) => void) | null = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private errorHandler: ((e: ErrorEvent) => void) | null = null;
   private rejectionHandler: ((e: PromiseRejectionEvent) => void) | null = null;
+  private beforeUnloadHandler: (() => void) | null = null;
   private originalConsoleError: ((...args: unknown[]) => void) | null = null;
 
   constructor() {
     this.recording = this.createNewRecording();
     this.setupEventListeners();
     this.startSnapshotting();
+    this.startAutoSave();
+    this.startMemoryTracking();
   }
 
   private createNewRecording(): SessionRecording {
@@ -91,15 +343,109 @@ class SessionRecorderImpl {
       version: '1.0.0',
       sessionId: `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       startTime: Date.now(),
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-      screenSize:
-        typeof window !== 'undefined'
-          ? { width: window.innerWidth, height: window.innerHeight }
-          : { width: 0, height: 0 },
+      environment: this.captureEnvironment(),
       interactions: [],
       pipelineSnapshots: [],
       stateChanges: [],
+      memorySnapshots: [],
     };
+  }
+
+  /**
+   * Capture environment/debug info at session start
+   */
+  private captureEnvironment(): EnvironmentInfo {
+    const nav = typeof navigator !== 'undefined' ? navigator : null;
+    const win = typeof window !== 'undefined' ? window : null;
+    const screen = typeof window !== 'undefined' ? window.screen : null;
+
+    // Get WebGL info for ML debugging
+    const webglInfo = this.getWebGLInfo();
+
+    // Check video codec support
+    const videoCodecs = this.checkVideoCodecs();
+
+    // Get build info from generated version file
+    const buildVersion = `1.0.0-${GIT_BRANCH}`;
+    const buildCommit = GIT_SHA_SHORT;
+    const buildTime = BUILD_TIMESTAMP;
+
+    return {
+      // Build info
+      buildVersion,
+      buildCommit,
+      buildTime,
+
+      // Browser/OS
+      userAgent: nav?.userAgent ?? 'unknown',
+      platform: nav?.platform ?? 'unknown',
+      language: nav?.language ?? 'unknown',
+      cookiesEnabled: nav?.cookieEnabled ?? false,
+      onLine: nav?.onLine ?? true,
+
+      // Display
+      screenWidth: screen?.width ?? 0,
+      screenHeight: screen?.height ?? 0,
+      windowWidth: win?.innerWidth ?? 0,
+      windowHeight: win?.innerHeight ?? 0,
+      devicePixelRatio: win?.devicePixelRatio ?? 1,
+      colorDepth: screen?.colorDepth ?? 24,
+
+      // Hardware
+      hardwareConcurrency: nav?.hardwareConcurrency,
+      deviceMemory: (nav as Navigator & { deviceMemory?: number })?.deviceMemory,
+
+      // WebGL
+      ...webglInfo,
+
+      // Video codecs
+      videoCodecs,
+    };
+  }
+
+  /**
+   * Get WebGL renderer info for debugging ML model issues
+   */
+  private getWebGLInfo(): { webglRenderer?: string; webglVendor?: string; webglVersion?: string } {
+    if (typeof document === 'undefined') return {};
+
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      if (!gl) return {};
+
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      return {
+        webglRenderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : undefined,
+        webglVendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : undefined,
+        webglVersion: gl.getParameter(gl.VERSION),
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Check which video codecs are supported
+   */
+  private checkVideoCodecs(): EnvironmentInfo['videoCodecs'] {
+    if (typeof document === 'undefined') {
+      return { h264: false, h265: false, vp8: false, vp9: false, av1: false, webm: false };
+    }
+
+    try {
+      const video = document.createElement('video');
+      return {
+        h264: video.canPlayType('video/mp4; codecs="avc1.42E01E"') !== '',
+        h265: video.canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"') !== '',
+        vp8: video.canPlayType('video/webm; codecs="vp8"') !== '',
+        vp9: video.canPlayType('video/webm; codecs="vp9"') !== '',
+        av1: video.canPlayType('video/mp4; codecs="av01.0.01M.08"') !== '',
+        webm: video.canPlayType('video/webm') !== '',
+      };
+    } catch {
+      return { h264: false, h265: false, vp8: false, vp9: false, av1: false, webm: false };
+    }
   }
 
   private setupEventListeners(): void {
@@ -222,6 +568,98 @@ class SessionRecorderImpl {
     }, 250);
   }
 
+  private startAutoSave(): void {
+    if (typeof window === 'undefined') return;
+
+    // Auto-save to IndexedDB every 5 seconds
+    this.autoSaveInterval = window.setInterval(() => {
+      this.persistToStorage();
+    }, AUTO_SAVE_INTERVAL_MS);
+
+    // Also save on page unload (store reference for cleanup)
+    this.beforeUnloadHandler = () => {
+      this.persistToStorage();
+    };
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
+
+    // Initial save after setup
+    setTimeout(() => this.persistToStorage(), 1000);
+  }
+
+  private async persistToStorage(): Promise<void> {
+    const recording = this.getRecording();
+    await saveSessionToDB(recording);
+    await pruneOldSessions();
+  }
+
+  private startMemoryTracking(): void {
+    if (typeof window === 'undefined') return;
+
+    // Check if performance.memory is available (Chrome only)
+    const perf = performance as Performance & {
+      memory?: {
+        usedJSHeapSize: number;
+        totalJSHeapSize: number;
+        jsHeapSizeLimit: number;
+      };
+    };
+
+    if (!perf.memory) {
+      console.log('[SessionRecorder] Memory tracking not available (Chrome only)');
+      return;
+    }
+
+    // Track memory every 2 seconds
+    this.memoryInterval = window.setInterval(() => {
+      this.captureMemorySnapshot();
+    }, 2000);
+
+    // Initial capture
+    this.captureMemorySnapshot();
+    console.log('[SessionRecorder] Memory tracking started (2s intervals)');
+  }
+
+  private captureMemorySnapshot(): void {
+    const perf = performance as Performance & {
+      memory?: {
+        usedJSHeapSize: number;
+        totalJSHeapSize: number;
+        jsHeapSizeLimit: number;
+      };
+    };
+
+    if (!perf.memory) return;
+
+    const { usedJSHeapSize, totalJSHeapSize, jsHeapSizeLimit } = perf.memory;
+    const usedMB = Math.round(usedJSHeapSize / 1024 / 1024 * 100) / 100;
+    const totalMB = Math.round(totalJSHeapSize / 1024 / 1024 * 100) / 100;
+    const limitMB = Math.round(jsHeapSizeLimit / 1024 / 1024 * 100) / 100;
+    const percentUsed = Math.round(usedJSHeapSize / jsHeapSizeLimit * 10000) / 100;
+
+    const snapshot: MemorySnapshot = {
+      timestamp: Date.now(),
+      usedJSHeapSize,
+      totalJSHeapSize,
+      jsHeapSizeLimit,
+      usedMB,
+      totalMB,
+      limitMB,
+      percentUsed,
+    };
+
+    this.recording.memorySnapshots.push(snapshot);
+
+    // Trim old snapshots if over limit
+    if (this.recording.memorySnapshots.length > this.maxMemorySnapshots) {
+      this.recording.memorySnapshots = this.recording.memorySnapshots.slice(-this.maxMemorySnapshots);
+    }
+
+    // Log warning if memory usage is high
+    if (percentUsed > 80) {
+      console.warn(`[SessionRecorder] HIGH MEMORY: ${usedMB}MB / ${limitMB}MB (${percentUsed}%)`);
+    }
+  }
+
   private captureSnapshot(): void {
     if (!this.pipelineStateGetter) return;
 
@@ -255,6 +693,21 @@ class SessionRecorderImpl {
    */
   setPipelineStateGetter(getter: () => Partial<PipelineSnapshot>): void {
     this.pipelineStateGetter = getter;
+  }
+
+  /**
+   * Set app settings for debugging (e.g., model type, exercise type)
+   * Called by the app to include current settings in bug reports
+   */
+  setAppSettings(settings: Record<string, unknown>): void {
+    this.recording.environment.appSettings = settings;
+  }
+
+  /**
+   * Get current environment info
+   */
+  getEnvironment(): EnvironmentInfo {
+    return this.recording.environment;
   }
 
   /**
@@ -309,13 +762,17 @@ class SessionRecorderImpl {
   downloadRecording(): void {
     const blob = this.getRecordingAsBlob();
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `swing-session-${this.recording.sessionId}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `swing-session-${this.recording.sessionId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      // Always revoke URL, even if click/remove fails
+      URL.revokeObjectURL(url);
+    }
   }
 
   /**
@@ -354,6 +811,19 @@ class SessionRecorderImpl {
       this.snapshotInterval = null;
     }
 
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+      this.autoSaveInterval = null;
+    }
+
+    if (this.memoryInterval) {
+      clearInterval(this.memoryInterval);
+      this.memoryInterval = null;
+    }
+
+    // Final save before disposing
+    this.persistToStorage();
+
     if (typeof window !== 'undefined') {
       if (this.clickHandler) {
         window.removeEventListener('click', this.clickHandler, { capture: true });
@@ -370,6 +840,10 @@ class SessionRecorderImpl {
       if (this.rejectionHandler) {
         window.removeEventListener('unhandledrejection', this.rejectionHandler);
         this.rejectionHandler = null;
+      }
+      if (this.beforeUnloadHandler) {
+        window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+        this.beforeUnloadHandler = null;
       }
     }
 
@@ -474,4 +948,113 @@ export function recordCheckpointDetected(
     timestamp: Date.now(),
     details: { position, ...details },
   });
+}
+
+// Expose debug functions on window for easy console access
+// Available in all environments - crash logs are useful in production too
+if (typeof window !== 'undefined') {
+  const swingDebug = {
+    /**
+     * Get all persisted sessions from IndexedDB.
+     * Usage: await swingDebug.getCrashLogs()
+     */
+    getCrashLogs: getPersistedSessions,
+
+    /**
+     * Clear all persisted sessions from IndexedDB.
+     * Usage: await swingDebug.clearCrashLogs()
+     */
+    clearCrashLogs: clearPersistedSessions,
+
+    /**
+     * Get the current session recording (in memory).
+     * Usage: swingDebug.getCurrentSession()
+     */
+    getCurrentSession: () => sessionRecorder.getRecording(),
+
+    /**
+     * Download the current session as JSON file.
+     * Usage: swingDebug.downloadSession()
+     */
+    downloadSession: () => sessionRecorder.downloadRecording(),
+
+    /**
+     * Get session stats.
+     * Usage: swingDebug.getStats()
+     */
+    getStats: () => sessionRecorder.getStats(),
+
+    /**
+     * Get current memory usage (Chrome only).
+     * Usage: swingDebug.getMemory()
+     */
+    getMemory: () => {
+      const perf = performance as Performance & {
+        memory?: {
+          usedJSHeapSize: number;
+          totalJSHeapSize: number;
+          jsHeapSizeLimit: number;
+        };
+      };
+      if (!perf.memory) return { error: 'Memory API not available (Chrome only)' };
+      const { usedJSHeapSize, totalJSHeapSize, jsHeapSizeLimit } = perf.memory;
+      return {
+        usedMB: Math.round(usedJSHeapSize / 1024 / 1024 * 100) / 100,
+        totalMB: Math.round(totalJSHeapSize / 1024 / 1024 * 100) / 100,
+        limitMB: Math.round(jsHeapSizeLimit / 1024 / 1024 * 100) / 100,
+        percentUsed: Math.round(usedJSHeapSize / jsHeapSizeLimit * 10000) / 100,
+      };
+    },
+
+    /**
+     * Get memory history from current session.
+     * Usage: swingDebug.getMemoryHistory()
+     */
+    getMemoryHistory: () => sessionRecorder.getRecording().memorySnapshots,
+
+    /**
+     * Analyze memory trend (is it growing?).
+     * Usage: swingDebug.analyzeMemory()
+     */
+    analyzeMemory: () => {
+      const snapshots = sessionRecorder.getRecording().memorySnapshots;
+      if (snapshots.length < 10) {
+        return { error: 'Not enough data yet (need 10+ snapshots)' };
+      }
+      const recent = snapshots.slice(-30); // Last minute
+      const first = recent[0];
+      const last = recent[recent.length - 1];
+      const growthMB = (last.usedMB ?? 0) - (first.usedMB ?? 0);
+      const growthPercent = first.usedMB ? (growthMB / first.usedMB) * 100 : 0;
+      const durationSec = (last.timestamp - first.timestamp) / 1000;
+      const mbPerMinute = durationSec > 0 ? (growthMB / durationSec) * 60 : 0;
+
+      return {
+        currentMB: last.usedMB,
+        limitMB: last.limitMB,
+        percentUsed: last.percentUsed,
+        growthMB: Math.round(growthMB * 100) / 100,
+        growthPercent: Math.round(growthPercent * 100) / 100,
+        mbPerMinute: Math.round(mbPerMinute * 100) / 100,
+        trend: mbPerMinute > 1 ? 'GROWING (possible leak)' : mbPerMinute < -1 ? 'SHRINKING' : 'STABLE',
+        samples: recent.length,
+        durationSec: Math.round(durationSec),
+      };
+    },
+
+    /**
+     * Get environment/debug info (browser, WebGL, codecs, etc.).
+     * Usage: swingDebug.getEnvironment()
+     */
+    getEnvironment: () => sessionRecorder.getEnvironment(),
+
+    /**
+     * Set app settings for bug reports.
+     * Usage: swingDebug.setAppSettings({ model: 'blazepose', exercise: 'swing' })
+     */
+    setAppSettings: (settings: Record<string, unknown>) => sessionRecorder.setAppSettings(settings),
+  };
+
+  (window as unknown as { swingDebug: typeof swingDebug }).swingDebug = swingDebug;
+  console.log('[SessionRecorder] Debug functions available at window.swingDebug');
 }

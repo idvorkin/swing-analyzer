@@ -1,5 +1,3 @@
-import type { Skeleton } from './models/Skeleton';
-
 export interface Point {
   x: number;
   y: number;
@@ -35,26 +33,6 @@ export enum SwingPositionName {
   Release = 'release',
 }
 
-export interface FormCheckpoint {
-  position: SwingPositionName;
-  timestamp: number;
-  videoTime?: number; // Video currentTime in seconds when checkpoint was captured
-  image: ImageData;
-  spineAngle: number;
-  armToSpineAngle: number;
-  armToVerticalAngle: number; // Angle between arm and vertical (0° is down, 180° is up)
-  skeleton: Skeleton;
-  // Enhanced biomechanics (optional for backwards compatibility)
-  hipAngle?: number; // Knee-Hip-Shoulder angle (~180° standing, ~100° bottom)
-  kneeAngle?: number; // Hip-Knee-Ankle angle (~180° straight, ~90° squat)
-  hingeScore?: number; // -1 (squat) to +1 (hinge) movement pattern
-  angularVelocity?: {
-    // Degrees per second at this frame
-    spine: number;
-    hip: number;
-  };
-}
-
 /**
  * Form quality assessment for a rep or session
  */
@@ -67,17 +45,12 @@ export interface FormQualityMetrics {
   overallScore: number; // 0-100, weighted composite
 }
 
-export interface RepData {
-  repNumber: number;
-  checkpoints: Map<SwingPositionName, FormCheckpoint>;
-}
+export type DisplayMode = 'both' | 'video' | 'overlay';
 
 export interface AppState {
   isModelLoaded: boolean;
   isProcessing: boolean;
-  usingCamera: boolean;
-  cameraMode: 'environment' | 'user'; // Track which camera is active (environment = back camera, user = front camera)
-  displayMode: 'both' | 'video' | 'overlay'; // Track the current display mode
+  displayMode: DisplayMode; // Track the current display mode
   repCounter: RepCounter;
   showBodyParts: boolean;
   bodyPartDisplayTime: number; // in seconds

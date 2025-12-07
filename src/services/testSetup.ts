@@ -12,6 +12,11 @@ import {
   createMockPoseDetectorFactory,
   type PoseDetectorFactory,
 } from './MockPoseDetector';
+import {
+  setPoseTrackStorageMode as setStorageMode,
+  savePoseTrackToStorage,
+  type PoseTrackStorageMode,
+} from './PoseTrackService';
 
 // Map of session IDs to mock detector factories (supports parallel tests)
 const mockDetectorFactories = new Map<string, PoseDetectorFactory>();
@@ -102,6 +107,24 @@ export function getMockDetectorFactoryBySession(sessionId: string): PoseDetector
   return mockDetectorFactories.get(sessionId);
 }
 
+/**
+ * Set the storage mode for pose tracks
+ * - 'memory': Session-only storage (default, cleared on reload)
+ * - 'indexeddb': Persistent storage across page loads
+ */
+export function setPoseTrackStorageMode(mode: PoseTrackStorageMode): void {
+  setStorageMode(mode);
+  console.log(`[Test] Pose track storage mode set to: ${mode}`);
+}
+
+/**
+ * Seed a pose track into storage (respects current storage mode)
+ */
+export async function seedPoseTrack(poseTrack: PoseTrackFile): Promise<void> {
+  await savePoseTrackToStorage(poseTrack);
+  console.log(`[Test] Seeded pose track: ${poseTrack.metadata.sourceVideoHash}`);
+}
+
 // Expose to window for E2E tests (only in development)
 // Check both Vite's DEV flag and MODE to ensure we're in dev mode
 // @ts-expect-error Vite-specific import.meta.env
@@ -114,6 +137,8 @@ if (typeof window !== 'undefined' && isDev) {
     setCurrentSession,
     getMockDetectorFactory,
     getMockDetectorFactoryBySession,
+    setPoseTrackStorageMode,
+    seedPoseTrack,
   };
   console.log('[Test] Test setup exposed on window.__testSetup');
 }
@@ -125,6 +150,8 @@ const testSetup = {
   setCurrentSession,
   getMockDetectorFactory,
   getMockDetectorFactoryBySession,
+  setPoseTrackStorageMode,
+  seedPoseTrack,
 };
 
 export default testSetup;

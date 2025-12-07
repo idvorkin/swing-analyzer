@@ -6,6 +6,7 @@
  */
 
 import type {
+  CropRegion,
   PoseModel,
   PoseTrackFile,
   PoseTrackMetadata,
@@ -16,6 +17,40 @@ import { isValidSha256Hash } from '../utils/videoHash';
 const POSETRACK_DB_NAME = 'swing-analyzer-posetracks';
 const POSETRACK_STORE_NAME = 'posetracks';
 const POSETRACK_DB_VERSION = 1;
+
+/**
+ * Storage mode for pose tracks
+ * - 'memory': Session-only, cleared on page reload (default)
+ * - 'indexeddb': Persistent across page loads
+ */
+export type PoseTrackStorageMode = 'memory' | 'indexeddb';
+
+// In-memory storage for session-only mode
+const memoryStore = new Map<string, PoseTrackFile>();
+
+// Current storage mode - defaults to memory for simplicity
+let currentStorageMode: PoseTrackStorageMode = 'memory';
+
+/**
+ * Set the storage mode for pose tracks
+ */
+export function setPoseTrackStorageMode(mode: PoseTrackStorageMode): void {
+  currentStorageMode = mode;
+}
+
+/**
+ * Get the current storage mode
+ */
+export function getPoseTrackStorageMode(): PoseTrackStorageMode {
+  return currentStorageMode;
+}
+
+/**
+ * Clear the in-memory store (useful for tests)
+ */
+export function clearMemoryStore(): void {
+  memoryStore.clear();
+}
 
 /**
  * File extension for pose track files
@@ -205,11 +240,19 @@ function openPoseTrackDB(): Promise<IDBDatabase> {
 }
 
 /**
- * Save a pose track to IndexedDB
+ * Save a pose track to storage (memory or IndexedDB based on current mode)
  */
 export async function savePoseTrackToStorage(
   poseTrack: PoseTrackFile
 ): Promise<void> {
+  const videoHash = poseTrack.metadata.sourceVideoHash;
+
+  if (currentStorageMode === 'memory') {
+    memoryStore.set(videoHash, poseTrack);
+    return;
+  }
+
+  // IndexedDB mode
   const db = await openPoseTrackDB();
 
   return new Promise((resolve, reject) => {
@@ -257,11 +300,16 @@ export async function savePoseTrackToStorage(
 }
 
 /**
- * Load a pose track from IndexedDB by video hash
+ * Load a pose track from storage by video hash
  */
 export async function loadPoseTrackFromStorage(
   videoHash: string
 ): Promise<PoseTrackFile | null> {
+  if (currentStorageMode === 'memory') {
+    return memoryStore.get(videoHash) ?? null;
+  }
+
+  // IndexedDB mode
   const db = await openPoseTrackDB();
 
   return new Promise((resolve, reject) => {
@@ -303,11 +351,17 @@ export async function loadPoseTrackFromStorage(
 }
 
 /**
- * Delete a pose track from IndexedDB
+ * Delete a pose track from storage
  */
 export async function deletePoseTrackFromStorage(
   videoHash: string
 ): Promise<void> {
+  if (currentStorageMode === 'memory') {
+    memoryStore.delete(videoHash);
+    return;
+  }
+
+  // IndexedDB mode
   const db = await openPoseTrackDB();
 
   return new Promise((resolve, reject) => {
@@ -347,6 +401,28 @@ export async function deletePoseTrackFromStorage(
  * List all saved pose tracks
  */
 export async function listSavedPoseTracks(): Promise<SavedPoseTrackInfo[]> {
+  if (currentStorageMode === 'memory') {
+    const infos: SavedPoseTrackInfo[] = [];
+    for (const pt of memoryStore.values()) {
+      const json = JSON.stringify(pt);
+      infos.push({
+        filename: generatePoseTrackFilename(
+          pt.metadata.sourceVideoName || 'video',
+          pt.metadata.model
+        ),
+        videoHash: pt.metadata.sourceVideoHash,
+        videoName: pt.metadata.sourceVideoName,
+        model: pt.metadata.model,
+        frameCount: pt.metadata.frameCount,
+        duration: pt.metadata.sourceVideoDuration,
+        fileSize: new Blob([json]).size,
+        createdAt: pt.metadata.extractedAt,
+      });
+    }
+    return infos;
+  }
+
+  // IndexedDB mode
   const db = await openPoseTrackDB();
 
   return new Promise((resolve, reject) => {
@@ -425,6 +501,7 @@ export function createPoseTrackMetadata(params: {
   fps: number;
   videoWidth: number;
   videoHeight: number;
+  cropRegion?: CropRegion;
 }): PoseTrackMetadata {
   return {
     version: '1.0',
@@ -438,6 +515,7 @@ export function createPoseTrackMetadata(params: {
     fps: params.fps,
     videoWidth: params.videoWidth,
     videoHeight: params.videoHeight,
+    cropRegion: params.cropRegion,
   };
 }
 

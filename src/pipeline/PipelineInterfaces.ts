@@ -1,6 +1,6 @@
 import type { Observable } from 'rxjs';
 import type { Skeleton } from '../models/Skeleton';
-import type { FormCheckpoint, RepData, SwingPositionName } from '../types';
+import type { SwingPositionName } from '../types';
 import type { PoseEvent } from './PoseSkeletonTransformer';
 
 /**
@@ -51,10 +51,16 @@ export interface SkeletonTransformer {
   initialize(): Promise<void>;
 
   /**
-   * Transform a frame event into a skeleton
-   * Returns an Observable that emits the skeleton event
+   * Transform a frame event into a skeleton (Observable - for streaming pipelines)
+   * @deprecated Use transformToSkeletonAsync for video-event-driven processing
    */
   transformToSkeleton(frameEvent: FrameEvent): Observable<SkeletonEvent>;
+
+  /**
+   * Transform a frame event into a skeleton (Promise-based)
+   * Use this for video-event-driven processing without RxJS subscriptions.
+   */
+  transformToSkeletonAsync(frameEvent: FrameEvent): Promise<SkeletonEvent>;
 }
 
 /**
@@ -83,24 +89,23 @@ export interface FormProcessor {
 }
 
 /**
- * A checkpoint event with the checkpoint and skeleton data
+ * A form event with the detected position and skeleton data
  */
 export interface FormEvent {
-  checkpoint: FormCheckpoint | null;
   position: SwingPositionName | null;
   skeletonEvent: SkeletonEvent;
 }
 
 /**
- * Rep processor stage - processes form checkpoints to count and analyze repetitions
+ * Rep processor stage - processes form events to count repetitions
  * Maintains state for repetition tracking
  */
 export interface RepProcessor {
   /**
-   * Update rep count based on checkpoint event
+   * Update rep count based on form event
    * Returns an Observable that emits rep count updates
    */
-  updateRepCount(checkpointEvent: FormEvent): Observable<RepEvent>;
+  updateRepCount(formEvent: FormEvent): Observable<RepEvent>;
 
   /**
    * Get the current rep count
@@ -111,17 +116,12 @@ export interface RepProcessor {
    * Reset rep counter
    */
   reset(): void;
-
-  /**
-   * Get all completed reps
-   */
-  getAllReps(): RepData[];
 }
 
 /**
- * A rep event with the rep count and checkpoint data
+ * A rep event with the rep count and form data
  */
 export interface RepEvent {
   repCount: number;
-  checkpointEvent: FormEvent;
+  formEvent: FormEvent;
 }

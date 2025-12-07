@@ -6,15 +6,11 @@ import { CachedPoseSkeletonTransformer } from './CachedPoseSkeletonTransformer';
 import type { LivePoseCache } from './LivePoseCache';
 import { Pipeline } from './Pipeline';
 import type {
-  FormProcessor,
   FrameAcquisition,
-  RepProcessor,
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
 import { PoseSkeletonTransformer } from './PoseSkeletonTransformer';
-import { SwingFormProcessor } from './SwingFormProcessor';
-import { SwingRepProcessor } from './SwingRepProcessor';
 import { VideoFrameAcquisition } from './VideoFrameAcquisition';
 
 /**
@@ -39,6 +35,13 @@ export interface CreatePipelineOptions {
    * Allows switching between MoveNet and BlazePose.
    */
   modelConfig?: ModelConfig;
+
+  /**
+   * Custom form analyzer for exercise-specific analysis.
+   * When provided, uses this analyzer instead of the default.
+   * Defaults to KettlebellSwingFormAnalyzer.
+   */
+  formAnalyzer?: import('../analyzers').FormAnalyzer;
 }
 
 /**
@@ -74,16 +77,8 @@ export function createPipeline(
     skeletonTransformer = createSkeletonTransformer(options.modelConfig);
   }
 
-  const formProcessor = createFormProcessor(videoElement, canvasElement);
-  const repProcessor = createRepProcessor();
-
-  // Create the pipeline with all stages
-  return new Pipeline(
-    frameAcquisition,
-    skeletonTransformer,
-    formProcessor,
-    repProcessor
-  );
+  // Create the pipeline with optional custom analyzer
+  return new Pipeline(frameAcquisition, skeletonTransformer, options.formAnalyzer);
 }
 
 /**
@@ -120,23 +115,6 @@ export function createCachedSkeletonTransformer(
 }
 
 /**
- * Create a form processor component
- */
-export function createFormProcessor(
-  videoElement: HTMLVideoElement,
-  canvasElement: HTMLCanvasElement
-): FormProcessor {
-  return new SwingFormProcessor(videoElement, canvasElement);
-}
-
-/**
- * Create a rep processor component
- */
-export function createRepProcessor(): RepProcessor {
-  return new SwingRepProcessor();
-}
-
-/**
  * Build a SkeletonEvent from a PoseTrackFrame
  * Useful for processing cached pose data
  */
@@ -155,7 +133,7 @@ export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEven
         frame: null as unknown as HTMLCanvasElement, // Not needed for extraction
         timestamp: frame.timestamp,
         videoTime: frame.videoTime,
-        frameImage: frame.frameImage,
+        frameImage: frame.frameImage, // Pass through thumbnail for filmstrip
       },
     },
   };

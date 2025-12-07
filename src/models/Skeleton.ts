@@ -25,8 +25,8 @@ export class Skeleton {
   // Arm-to-spine angle cache (computed lazily)
   private _armToSpineAngle: number | null = null;
 
-  // Arm-to-vertical angle cache (computed lazily)
-  private _armToVerticalAngle: number | null = null;
+  // Arm-to-vertical angle cache (computed lazily, keyed by preferredSide)
+  private _armToVerticalAngleCache: Map<string, number> = new Map();
 
   // Hip angle cache (knee-hip-shoulder angle)
   private _hipAngle: number | null = null;
@@ -36,6 +36,9 @@ export class Skeleton {
 
   // Elbow angle cache (shoulder-elbow-wrist angle)
   private _elbowAngle: number | null = null;
+
+  // Wrist height cache (wrist Y relative to shoulder, positive = above)
+  private _wristHeight: number | null = null;
 
   // Timestamp for velocity calculations
   private _timestamp: number = 0;
@@ -180,25 +183,127 @@ export class Skeleton {
   }
 
   /**
+   * Detect which direction the body is facing based on ankle/knee positions.
+   * In a side view, the knee is slightly in front of the ankle.
+   * Returns 'right' if facing right (knee X > ankle X), 'left' otherwise.
+   */
+  getFacingDirection(): 'left' | 'right' | null {
+    const leftAnkle = this.getKeypointByName('leftAnkle');
+    const rightAnkle = this.getKeypointByName('rightAnkle');
+    const leftKnee = this.getKeypointByName('leftKnee');
+    const rightKnee = this.getKeypointByName('rightKnee');
+
+    // Average both sides for stability
+    let ankleX = 0, kneeX = 0, count = 0;
+    if (leftAnkle && leftKnee) {
+      ankleX += leftAnkle.x;
+      kneeX += leftKnee.x;
+      count++;
+    }
+    if (rightAnkle && rightKnee) {
+      ankleX += rightAnkle.x;
+      kneeX += rightKnee.x;
+      count++;
+    }
+    if (count === 0) return null;
+
+    ankleX /= count;
+    kneeX /= count;
+
+    // Knee ahead of ankle indicates facing direction
+    // Need significant offset to be confident (>10px)
+    const offset = kneeX - ankleX;
+    if (Math.abs(offset) < 10) return null;
+    return offset > 0 ? 'right' : 'left';
+  }
+
+  /**
+   * Get wrist X position for a given side (used for dominant arm detection)
+   */
+  getWristX(side: 'left' | 'right'): number | null {
+    const wrist = this.getKeypointByName(side === 'left' ? 'leftWrist' : 'rightWrist');
+    return wrist?.x ?? null;
+  }
+
+  /**
    * Get the arm-to-vertical angle
    * This is the angle between the arm vector (shoulder to elbow) and
    * a vertical line pointing downward (0° is arm pointing straight down, 90° is horizontal, 180° is pointing up)
    * Negative values indicate the arm is pointing to the left, positive to the right
+   *
+   * @param preferredSide - If specified, use this arm (set by FormAnalyzer after detecting dominant arm)
+   *                        If not specified, fall back to heuristics (more vertical arm)
    */
-  getArmToVerticalAngle(): number {
-    // If already calculated, return cached value
-    if (this._armToVerticalAngle !== null) {
-      return this._armToVerticalAngle;
+  getArmToVerticalAngle(preferredSide?: 'left' | 'right'): number {
+    // Check cache keyed by preferredSide (undefined becomes 'auto')
+    const cacheKey = preferredSide ?? 'auto';
+    const cached = this._armToVerticalAngleCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
     }
 
     try {
-      // Get shoulder and elbow keypoints
-      const shoulder =
-        this.getKeypointByName('rightShoulder') ||
-        this.getKeypointByName('leftShoulder');
-      const elbow =
-        this.getKeypointByName('rightElbow') ||
-        this.getKeypointByName('leftElbow');
+      // Get both sides
+      const rightShoulder = this.getKeypointByName('rightShoulder');
+      const rightElbow = this.getKeypointByName('rightElbow');
+      const leftShoulder = this.getKeypointByName('leftShoulder');
+      const leftElbow = this.getKeypointByName('leftElbow');
+
+      // Calculate angle for each side if keypoints available
+      const calcAngle = (shoulder: PoseKeypoint, elbow: PoseKeypoint): number => {
+        const dx = elbow.x - shoulder.x;
+        const dy = elbow.y - shoulder.y;
+        const magnitude = Math.sqrt(dx * dx + dy * dy);
+        if (magnitude === 0) return 90;
+        const cosAngle = Math.min(Math.max(dy / magnitude, -1), 1);
+        return Math.acos(cosAngle) * (180 / Math.PI);
+      };
+
+      let rightAngle = 90, leftAngle = 90;
+      const rightConf = (rightElbow?.score ?? rightElbow?.visibility ?? 0);
+      const leftConf = (leftElbow?.score ?? leftElbow?.visibility ?? 0);
+      const minConf = 0.3; // Minimum confidence to consider
+
+      const rightValid = rightShoulder && rightElbow && rightConf > minConf;
+      const leftValid = leftShoulder && leftElbow && leftConf > minConf;
+
+      if (rightValid) {
+        rightAngle = calcAngle(rightShoulder!, rightElbow!);
+      }
+      if (leftValid) {
+        leftAngle = calcAngle(leftShoulder!, leftElbow!);
+      }
+
+      let shoulder: PoseKeypoint | undefined;
+      let elbow: PoseKeypoint | undefined;
+
+      // Strategy 1: Use preferred side if specified and valid
+      if (preferredSide === 'right' && rightValid) {
+        shoulder = rightShoulder;
+        elbow = rightElbow;
+      } else if (preferredSide === 'left' && leftValid) {
+        shoulder = leftShoulder;
+        elbow = leftElbow;
+      } else if (rightValid && leftValid) {
+        // Strategy 2: When no preference, use most vertical arm
+        if (rightAngle <= leftAngle) {
+          shoulder = rightShoulder;
+          elbow = rightElbow;
+        } else {
+          shoulder = leftShoulder;
+          elbow = leftElbow;
+        }
+      } else {
+        // Strategy 3: Fallback to whichever arm has valid keypoints
+        if (rightShoulder && rightElbow) {
+          shoulder = rightShoulder;
+          elbow = rightElbow;
+        } else if (leftShoulder && leftElbow) {
+          shoulder = leftShoulder;
+          elbow = leftElbow;
+        }
+        // If neither complete pair available, shoulder/elbow remain undefined
+      }
 
       if (shoulder && elbow) {
         // Calculate arm vector (from shoulder to elbow)
@@ -239,16 +344,17 @@ export class Skeleton {
           angleDeg = -angleDeg;
         }
 
-        this._armToVerticalAngle = angleDeg;
+        this._armToVerticalAngleCache.set(cacheKey, angleDeg);
         return angleDeg;
       } else {
+        // No complete arm pair found - log for debugging
         console.warn('Missing keypoints for arm-to-vertical angle calculation');
-        this._armToVerticalAngle = 0; // Default if keypoints not available
+        this._armToVerticalAngleCache.set(cacheKey, 0); // Default if keypoints not available
         return 0;
       }
     } catch (e) {
       console.error('Error calculating arm-to-vertical angle:', e);
-      this._armToVerticalAngle = 0;
+      this._armToVerticalAngleCache.set(cacheKey, 0);
       return 0;
     }
   }
@@ -538,6 +644,55 @@ export class Skeleton {
     } catch (e) {
       console.error('Error calculating elbow angle:', e);
       this._elbowAngle = 0;
+      return 0;
+    }
+  }
+
+  /**
+   * Get the average wrist height relative to shoulder midpoint
+   *
+   * BIOMECHANICS: This measures how high the hands (and thus kettlebell) are.
+   * - Positive values = wrists above shoulder level (arms raised high)
+   * - Negative values = wrists below shoulder level (arms down)
+   * - Zero = wrists at shoulder height
+   *
+   * In a kettlebell swing:
+   * - At Top (lockout): wrists near shoulder level or slightly above (0 to +50)
+   * - At Bottom (hinge): wrists well below, often behind body (-200 to -300)
+   *
+   * For detecting the "Top" position, look for the PEAK (maximum) of this value
+   * during each rep cycle, rather than a fixed threshold.
+   */
+  getWristHeight(): number {
+    if (this._wristHeight !== null) {
+      return this._wristHeight;
+    }
+
+    try {
+      // Get shoulder keypoints to calculate midpoint
+      const leftShoulder = this.getKeypointByName('leftShoulder');
+      const rightShoulder = this.getKeypointByName('rightShoulder');
+      const leftWrist = this.getKeypointByName('leftWrist');
+      const rightWrist = this.getKeypointByName('rightWrist');
+
+      if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist) {
+        this._wristHeight = 0;
+        return 0;
+      }
+
+      // Calculate shoulder midpoint Y
+      const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
+
+      // Calculate average wrist Y
+      const avgWristY = (leftWrist.y + rightWrist.y) / 2;
+
+      // In screen coordinates, Y increases downward
+      // So shoulder_y - wrist_y = positive when wrist is ABOVE shoulder
+      this._wristHeight = shoulderMidY - avgWristY;
+      return this._wristHeight;
+    } catch (e) {
+      console.error('Error calculating wrist height:', e);
+      this._wristHeight = 0;
       return 0;
     }
   }

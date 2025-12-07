@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  getSavedBlazePoseVariant,
-  getSavedModelPreference,
-} from '../components/settings/AnalysisTab';
+import { take } from 'rxjs';
+import { getSavedBlazePoseVariant } from '../components/settings/SettingsTab';
 import {
   BLAZEPOSE_FULL_CONFIG,
   BLAZEPOSE_HEAVY_CONFIG,
@@ -26,6 +24,44 @@ import {
 } from '../services/SessionRecorder';
 import type { AppState } from '../types';
 import type { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
+
+/**
+ * Get a user-friendly error message for video playback errors.
+ */
+function getVideoPlaybackErrorMessage(error: unknown): string {
+  if (error instanceof DOMException) {
+    switch (error.name) {
+      case 'NotAllowedError':
+        return 'Error: Autoplay blocked. Click Play to start video.';
+      case 'NotSupportedError':
+        return 'Error: Video format not supported by this browser.';
+      case 'AbortError':
+        return 'Error: Video playback interrupted. Please try again.';
+    }
+  }
+  return 'Error: Could not play video. Please try again.';
+}
+
+/**
+ * Get a user-friendly error message for video loading errors.
+ */
+function getVideoLoadErrorMessage(error: unknown, isNetwork = false): string {
+  if (isNetwork) {
+    return 'Error: Network error loading video. Check your connection.';
+  }
+  if (error instanceof DOMException) {
+    switch (error.name) {
+      case 'NotSupportedError':
+        return 'Error: Video format not supported. Try MP4 or WebM.';
+      case 'AbortError':
+        return 'Error: Video loading was cancelled.';
+    }
+  }
+  if (error instanceof Error && error.message.includes('Failed to fetch')) {
+    return 'Error: Could not download video. Check your connection.';
+  }
+  return 'Error: Could not load video. Please try a different file.';
+}
 
 export interface UseVideoControlsParams {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -125,21 +161,18 @@ export function useVideoControls({
         const { createSkeletonTransformer } = await import(
           '../pipeline/PipelineFactory'
         );
-        // Use saved model preference for consistency with main pipeline
-        const savedModel = getSavedModelPreference();
+        // Use saved BlazePose variant preference for consistency with main pipeline
         const blazePoseVariant = getSavedBlazePoseVariant();
         let modelConfig = DEFAULT_MODEL_CONFIG;
-        if (savedModel === 'blazepose') {
-          switch (blazePoseVariant) {
-            case 'full':
-              modelConfig = BLAZEPOSE_FULL_CONFIG;
-              break;
-            case 'heavy':
-              modelConfig = BLAZEPOSE_HEAVY_CONFIG;
-              break;
-            default:
-              modelConfig = BLAZEPOSE_LITE_CONFIG;
-          }
+        switch (blazePoseVariant) {
+          case 'full':
+            modelConfig = BLAZEPOSE_FULL_CONFIG;
+            break;
+          case 'heavy':
+            modelConfig = BLAZEPOSE_HEAVY_CONFIG;
+            break;
+          default:
+            modelConfig = BLAZEPOSE_LITE_CONFIG;
         }
         directSkeletonTransformerRef.current =
           createSkeletonTransformer(modelConfig);
@@ -176,7 +209,7 @@ export function useVideoControls({
         })
         .catch((err) => {
           console.error('Error playing video:', err);
-          setStatus('Error: Could not play video.');
+          setStatus(getVideoPlaybackErrorMessage(err));
         });
     } else {
       videoRef.current.pause();
@@ -200,8 +233,10 @@ export function useVideoControls({
     };
 
     // Use the direct transformer to process the frame
+    // Use take(1) to auto-complete subscription after one emission (prevents memory leak)
     directSkeletonTransformerRef.current
       .transformToSkeleton(frameEvent)
+      .pipe(take(1))
       .subscribe({
         next: (skeletonEvent: SkeletonEvent) => {
           if (skeletonEvent?.skeleton) {
@@ -343,7 +378,6 @@ export function useVideoControls({
       // Use blob URL to avoid double-fetching the video
       const blobUrl = URL.createObjectURL(blob);
       await frameAcquisitionRef.current.loadVideoFromURL(blobUrl);
-      setAppState((prev) => ({ ...prev, usingCamera: false }));
       setStatus('Video loaded. Press Play to start.');
       recordVideoLoad({ source: 'hardcoded', fileName: 'sample-video.mp4' });
 
@@ -362,7 +396,7 @@ export function useVideoControls({
       // the pipeline with the live pose cache before playback starts.
     } catch (error) {
       console.error('Error loading hardcoded video:', error);
-      setStatus('Error: Could not load hardcoded video.');
+      setStatus(getVideoLoadErrorMessage(error));
     }
   }, [
     frameAcquisitionRef,
@@ -398,7 +432,6 @@ export function useVideoControls({
         .loadVideoFromURL(fileURL)
         .then(() => {
           setStatus(`Loaded: ${file.name}. Press Play to start.`);
-          setAppState((prev) => ({ ...prev, usingCamera: false }));
 
           // Don't auto-play - let user press Play button manually.
           // This ensures React effects have time to run and reinitialize
@@ -406,7 +439,7 @@ export function useVideoControls({
         })
         .catch((error) => {
           console.error('Error loading video:', error);
-          setStatus('Error: Could not load video.');
+          setStatus(getVideoLoadErrorMessage(error));
         });
     },
     [frameAcquisitionRef, videoRef, resetVideoAndState, setStatus, setAppState]

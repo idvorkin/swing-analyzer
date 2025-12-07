@@ -13,7 +13,21 @@ import type { PoseKeypoint } from '../types';
 /**
  * Supported pose detection models
  */
-export type PoseModel = 'movenet-lightning' | 'movenet-thunder' | 'blazepose';
+export type PoseModel = 'blazepose';
+
+/**
+ * Crop region for auto-centering on person in landscape videos
+ */
+export interface CropRegion {
+  /** Left edge in source video pixels */
+  x: number;
+  /** Top edge in source video pixels */
+  y: number;
+  /** Width in source video pixels */
+  width: number;
+  /** Height in source video pixels */
+  height: number;
+}
 
 /**
  * Metadata about the pose track file
@@ -51,6 +65,9 @@ export interface PoseTrackMetadata {
 
   /** Height of the source video in pixels */
   videoHeight: number;
+
+  /** Auto-detected crop region for landscape videos (optional) */
+  cropRegion?: CropRegion;
 }
 
 /**

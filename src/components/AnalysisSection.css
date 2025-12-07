@@ -1,0 +1,249 @@
+/* ============================================
+   SWING ANALYZER HUD
+   Sports dashboard aesthetic with bold typography
+   ============================================ */
+
+/* Variables */
+.hud-section {
+  --hud-bg: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0d1117 100%);
+  --hud-accent: #00d4aa;
+  --hud-accent-glow: rgba(0, 212, 170, 0.3);
+  --hud-text-primary: #ffffff;
+  --hud-text-secondary: rgba(255, 255, 255, 0.5);
+  --hud-border: rgba(255, 255, 255, 0.08);
+  --hud-surface: rgba(255, 255, 255, 0.03);
+
+  --font-display: 'Bebas Neue', Impact, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+/* Container */
+.hud-section {
+  margin: 1rem 0;
+}
+
+.hud-container {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--hud-bg);
+  border-radius: 16px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--hud-border),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle noise texture overlay */
+.hud-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+}
+
+/* ============================================
+   REP COUNTER - The Hero Element
+   ============================================ */
+
+.hud-reps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+  position: relative;
+}
+
+.hud-reps-value {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  line-height: 1;
+  color: var(--hud-text-primary);
+  text-shadow:
+    0 0 40px var(--hud-accent-glow),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.02em;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    text-shadow:
+      0 0 40px var(--hud-accent-glow),
+      0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    text-shadow:
+      0 0 60px var(--hud-accent-glow),
+      0 0 20px var(--hud-accent-glow),
+      0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.hud-reps-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--hud-accent);
+  text-transform: uppercase;
+  margin-top: 0.25rem;
+}
+
+/* ============================================
+   DIVIDER
+   ============================================ */
+
+.hud-divider {
+  width: 1px;
+  height: 48px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--hud-border) 20%,
+    rgba(255, 255, 255, 0.15) 50%,
+    var(--hud-border) 80%,
+    transparent 100%
+  );
+}
+
+/* ============================================
+   ANGLE GAUGES
+   ============================================ */
+
+.hud-gauges {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.hud-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.5rem 0.75rem;
+  background: var(--hud-surface);
+  border-radius: 8px;
+  border: 1px solid var(--hud-border);
+  min-width: 72px;
+  transition: all 0.2s ease;
+}
+
+.hud-gauge:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.hud-gauge-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  color: var(--hud-text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 0.125rem;
+}
+
+.hud-gauge-value {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--hud-text-primary);
+  line-height: 1.1;
+  display: flex;
+  align-items: baseline;
+}
+
+.hud-gauge-unit {
+  font-size: 0.875rem;
+  color: var(--hud-text-secondary);
+  margin-left: 1px;
+}
+
+/* ============================================
+   STATUS BADGE
+   ============================================ */
+
+.hud-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  padding: 0.375rem 0.75rem;
+  background: var(--hud-surface);
+  border-radius: 20px;
+  border: 1px solid var(--hud-border);
+}
+
+.hud-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hud-accent);
+  box-shadow: 0 0 8px var(--hud-accent);
+  animation: status-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 8px var(--hud-accent);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 4px var(--hud-accent);
+  }
+}
+
+.hud-status-text {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--hud-text-secondary);
+  text-transform: uppercase;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 600px) {
+  .hud-container {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .hud-reps-value {
+    font-size: 3rem;
+  }
+
+  .hud-divider {
+    display: none;
+  }
+
+  .hud-gauges {
+    gap: 0.75rem;
+  }
+
+  .hud-gauge {
+    min-width: 60px;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .hud-gauge-value {
+    font-size: 1.25rem;
+  }
+
+  .hud-status {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}

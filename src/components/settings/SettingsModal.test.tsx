@@ -32,7 +32,7 @@ const localStorageMock = {
 };
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
-// Mock the SwingAnalyzerContext for GeneralTab and DebugTab
+// Mock the SwingAnalyzerContext for GeneralTab
 vi.mock('../../contexts/SwingAnalyzerContext', () => ({
   useSwingAnalyzerContext: vi.fn(() => ({
     appState: { displayMode: 'both' },
@@ -79,7 +79,7 @@ describe('SettingsModal', () => {
   it('renders when isOpen is true', () => {
     renderWithRouter(<SettingsModal {...defaultProps} />);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
   });
 
   it('does not render when isOpen is false', () => {
@@ -120,57 +120,51 @@ describe('SettingsModal', () => {
   });
 
   describe('Tab Navigation', () => {
-    it('shows General tab by default with display mode options', () => {
+    it('shows Settings tab by default with display and model options', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
-      expect(screen.getByText('Display Mode')).toBeInTheDocument();
+      expect(screen.getByText('Display')).toBeInTheDocument();
+      expect(screen.getByText('Model')).toBeInTheDocument();
     });
 
-    it('has four tabs: General, Analysis, Debug, About', () => {
+    it('has three tabs: Settings, Developer, About', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
-      expect(screen.getByText('General')).toBeInTheDocument();
-      expect(screen.getByText('Analysis')).toBeInTheDocument();
-      expect(screen.getByText('Debug')).toBeInTheDocument();
+      // Get all tab buttons
+      const tabs = screen.getAllByRole('button').filter(btn =>
+        btn.classList.contains('settings-tab')
+      );
+      expect(tabs).toHaveLength(3);
+      expect(screen.getByText('Developer')).toBeInTheDocument();
       expect(screen.getByText('About')).toBeInTheDocument();
     });
 
-    it('switches to Debug tab when clicked', () => {
+    it('switches to Developer tab when clicked', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Debug'));
-      expect(screen.getByText('Session Recording')).toBeInTheDocument();
-    });
-
-    it('switches to Analysis tab when clicked', () => {
-      renderWithRouter(<SettingsModal {...defaultProps} />);
-
-      fireEvent.click(screen.getByText('Analysis'));
-      expect(screen.getByText('Pose Detection Model')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Developer'));
+      expect(screen.getByText('Download Log')).toBeInTheDocument();
     });
 
     it('switches to About tab when clicked', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('Swing Analyzer')).toBeInTheDocument();
+      expect(screen.getByText('Version')).toBeInTheDocument();
     });
   });
 
-  describe('General Tab', () => {
-    it('shows display mode options', () => {
+  describe('Settings Tab', () => {
+    it('shows display mode options in segmented control', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       expect(screen.getByText('Both')).toBeInTheDocument();
-      expect(screen.getByText('Video Only')).toBeInTheDocument();
-      expect(screen.getByText('Overlay Only')).toBeInTheDocument();
+      expect(screen.getByText('Video')).toBeInTheDocument();
+      expect(screen.getByText('Skeleton')).toBeInTheDocument();
     });
-  });
 
-  describe('Analysis Tab', () => {
-    it('shows pose model options', () => {
+    it('shows BlazePose variant options in segmented control', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
-
-      fireEvent.click(screen.getByText('Analysis'));
-      expect(screen.getByText('MoveNet Lightning')).toBeInTheDocument();
-      expect(screen.getByText('BlazePose')).toBeInTheDocument();
+      expect(screen.getByText('Lite')).toBeInTheDocument();
+      expect(screen.getByText('Full')).toBeInTheDocument();
+      expect(screen.getByText('Heavy')).toBeInTheDocument();
     });
   });
 
@@ -180,15 +174,15 @@ describe('SettingsModal', () => {
 
       fireEvent.click(screen.getByText('About'));
       expect(screen.getByText('abc123')).toBeInTheDocument();
-      expect(screen.getByText('main')).toBeInTheDocument();
+      expect(screen.getByText(/main/)).toBeInTheDocument();
     });
 
     it('displays external links', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
       fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('GitHub')).toBeInTheDocument();
-      expect(screen.getByText(/Learn More/)).toBeInTheDocument();
+      expect(screen.getByText(/GitHub/)).toBeInTheDocument();
+      expect(screen.getByText(/Docs/)).toBeInTheDocument();
     });
 
     it('displays keyboard shortcut for bug report', () => {
@@ -197,7 +191,7 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Cmd+I')).toBeInTheDocument();
     });
 
-    it('calls onOpenBugReporter and onClose when Report a Bug is clicked', () => {
+    it('calls onOpenBugReporter and onClose when Report button is clicked', () => {
       const onClose = vi.fn();
       const onOpenBugReporter = vi.fn();
       renderWithRouter(
@@ -209,7 +203,7 @@ describe('SettingsModal', () => {
       );
 
       fireEvent.click(screen.getByText('About'));
-      fireEvent.click(screen.getByText(/Report a Bug/));
+      fireEvent.click(screen.getByText('Report'));
       expect(onClose).toHaveBeenCalledTimes(1);
       expect(onOpenBugReporter).toHaveBeenCalledTimes(1);
     });
@@ -239,10 +233,10 @@ describe('SettingsModal', () => {
       );
 
       fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('New Version Available!')).toBeInTheDocument();
+      expect(screen.getByText(/Update available/)).toBeInTheDocument();
     });
 
-    it('calls onReload when Reload to Update is clicked', () => {
+    it('calls onReload when Reload button is clicked', () => {
       const onReload = vi.fn();
       renderWithRouter(
         <SettingsModal
@@ -253,35 +247,41 @@ describe('SettingsModal', () => {
       );
 
       fireEvent.click(screen.getByText('About'));
-      fireEvent.click(screen.getByText('Reload to Update'));
+      fireEvent.click(screen.getByText('Reload'));
       expect(onReload).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onCheckForUpdate when Check for Updates is clicked', async () => {
+    it('calls onCheckForUpdate when Check button is clicked', async () => {
       const onCheckForUpdate = vi.fn().mockResolvedValue(undefined);
       renderWithRouter(
         <SettingsModal {...defaultProps} onCheckForUpdate={onCheckForUpdate} />
       );
 
       fireEvent.click(screen.getByText('About'));
-      fireEvent.click(screen.getByText(/Check for Updates/));
+      fireEvent.click(screen.getByText('Check'));
       expect(onCheckForUpdate).toHaveBeenCalledTimes(1);
     });
 
-    it('shows Checking... when isCheckingUpdate is true', () => {
+    it('shows ... when isCheckingUpdate is true', () => {
       renderWithRouter(
         <SettingsModal {...defaultProps} isCheckingUpdate={true} />
       );
 
       fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('Checking...')).toBeInTheDocument();
+      expect(screen.getByText('...')).toBeInTheDocument();
     });
 
-    it('has debug tools link', () => {
+  });
+
+  describe('Developer Tab', () => {
+    it('has download log button and session stats', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('About'));
-      expect(screen.getByText('Debug Tools')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Developer'));
+      expect(screen.getByText('Download Log')).toBeInTheDocument();
+      // Session stats are shown (clicks, snaps)
+      expect(screen.getByText(/clicks/)).toBeInTheDocument();
+      expect(screen.getByText(/snaps/)).toBeInTheDocument();
     });
   });
 });

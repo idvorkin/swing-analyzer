@@ -15,16 +15,20 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { SWING_SAMPLE_VIDEO_HASH } from './fixtures';
+import { SWING_SAMPLE_4REPS_VIDEO_HASH } from './fixtures';
 import {
   clearPoseTrackDB,
   getPoseTrackFromDB,
   seedPoseTrackFixture,
   seekToTime,
+  setPoseTrackStorageMode,
+  useShortTestVideo,
 } from './helpers';
 
 test.describe('User Journey: Load and Analyze Sample Video', () => {
   test.beforeEach(async ({ page }) => {
+    // Intercept GitHub video URL and serve short local video for faster tests
+    await useShortTestVideo(page);
     await page.goto('/');
     await clearPoseTrackDB(page);
   });
@@ -44,15 +48,14 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
       // Sample button
       await expect(page.locator('#load-hardcoded-btn')).toBeVisible();
-
-      // Camera button
-      await expect(page.locator('#camera-btn')).toBeVisible();
     });
 
-    test('analysis section shows initial metrics at 0', async ({ page }) => {
-      await expect(page.locator('#rep-counter')).toHaveText('0');
-      await expect(page.locator('#spine-angle')).toHaveText('0°');
-      await expect(page.locator('#arm-angle')).toHaveText('0°');
+    test('HUD is hidden before poses exist', async ({ page }) => {
+      // New design: HUD is only visible when poses exist for current frame
+      // Before loading a video, the HUD should be hidden
+      await expect(page.locator('#rep-counter')).not.toBeVisible();
+      await expect(page.locator('#spine-angle')).not.toBeVisible();
+      await expect(page.locator('#arm-angle')).not.toBeVisible();
     });
   });
 
@@ -89,7 +92,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       // Seed pose data first so cached path is used
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
 
       // Wait for video element to appear
@@ -119,7 +122,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       // Seed pose data first so cached path is used
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
 
       await page.waitForFunction(
@@ -133,18 +136,14 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       );
 
       await expect(page.locator('#play-pause-btn')).not.toBeDisabled();
-      await expect(page.locator('#stop-btn')).not.toBeDisabled();
       await expect(page.locator('#prev-frame-btn')).not.toBeDisabled();
       await expect(page.locator('#next-frame-btn')).not.toBeDisabled();
     });
   });
 
   test.describe('Step 3: Video Playback Controls', () => {
-    // SKIPPED: App bug - play button click doesn't start video playback (swing-o6o)
-    // WebM/VP9 codec IS supported in headless Chromium - this is NOT a codec issue
-
-    test.skip('play button starts video playback', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+    test('play button starts video playback', async ({ page }) => {
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -176,8 +175,8 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(isPlaying).toBe(true);
     });
 
-    test.skip('pause button stops video playback', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+    test('pause button stops video playback', async ({ page }) => {
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -222,62 +221,32 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(isPaused).toBe(true);
     });
 
-    test.skip('stop button resets video to beginning', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+  });
+
+  test.describe('Step 4-5: Rep Counting', () => {
+    test('rep counter displays correctly', async ({ page }) => {
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
+      // Wait for pipeline to fully initialize (controls become enabled)
       await page.waitForFunction(
         () => {
-          const btn = document.querySelector(
-            '#play-pause-btn'
-          ) as HTMLButtonElement;
+          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
           return btn && !btn.disabled;
         },
         { timeout: 20000 }
       );
 
-      // Start playback and wait for it to actually play
-      await page.click('#play-pause-btn');
-      await page.waitForFunction(
-        () => {
-          const video = document.querySelector('video');
-          return video && !video.paused && video.currentTime > 0;
-        },
-        { timeout: 5000 }
-      );
-
-      await page.click('#stop-btn');
-
-      // Wait for video to reset
-      await page.waitForFunction(
-        () => {
-          const video = document.querySelector('video');
-          return video && video.currentTime === 0;
-        },
-        { timeout: 5000 }
-      );
-
-      const currentTime = await page.evaluate(() => {
-        const video = document.querySelector('video');
-        return video?.currentTime || -1;
-      });
-      expect(currentTime).toBe(0);
-    });
-  });
-
-  test.describe('Step 4-5: Rep Counting', () => {
-    test('rep counter displays correctly', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
-      await page.click('#load-hardcoded-btn');
-
-      // Rep counter should exist and show 0 initially
-      await expect(page.locator('#rep-counter')).toBeVisible();
-      await expect(page.locator('#rep-counter')).toHaveText('0');
+      // Wait for HUD to be visible (requires poses to exist for current frame)
+      await expect(page.locator('#rep-counter')).toBeVisible({ timeout: 5000 });
+      // Seeded fixture contains ~4 swings which produces 3 detected reps
+      // Format is "current/total" e.g. "1/3"
+      await expect(page.locator('#rep-counter')).toHaveText(/\d+\/3/, { timeout: 5000 });
     });
 
     test('angle displays update during playback', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -292,20 +261,22 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
         { timeout: 20000 }
       );
 
+      // Wait for HUD to be visible (poses exist for frame 0)
+      await expect(page.locator('#spine-angle')).toBeVisible({ timeout: 5000 });
+
       // Start playback
       await page.click('#play-pause-btn');
       await page.waitForTimeout(500);
 
-      // Angle displays should be visible and have values
+      // Angle displays should still be visible during playback
       await expect(page.locator('#spine-angle')).toBeVisible();
       await expect(page.locator('#arm-angle')).toBeVisible();
     });
 
-    // SKIPPED: Depends on video playback working (blocked by swing-o6o)
-    test.skip('rep counter increments after completing swing cycle', async ({
+    test('rep counter increments after completing swing cycle', async ({
       page,
     }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -346,7 +317,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
   test.describe('Step 6: Frame-by-Frame Navigation', () => {
     test('next frame button advances video', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -386,7 +357,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     });
 
     test('prev frame button goes back in video', async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
       await page.waitForSelector('video', { timeout: 10000 });
 
@@ -441,13 +412,15 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
   test.describe('Pose Track Caching', () => {
     test('seeded pose data is found when loading video', async ({ page }) => {
+      // These tests read from IndexedDB directly with getPoseTrackFromDB
+      await setPoseTrackStorageMode(page, 'indexeddb');
       // Seed data first
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Verify it was stored
       const storedTrack = await getPoseTrackFromDB(
         page,
-        SWING_SAMPLE_VIDEO_HASH
+        SWING_SAMPLE_4REPS_VIDEO_HASH
       );
       expect(storedTrack).not.toBeNull();
       expect(storedTrack?.frames.length).toBeGreaterThan(0);
@@ -457,7 +430,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       // Seed data
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Load video
       await page.click('#load-hardcoded-btn');
@@ -475,18 +448,18 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   });
 
   test.describe('Skeleton Redraw on Seek', () => {
-    // Skip: Canvas drawing requires ML model which isn't available in headless browser
-    // The spine angle updates work from cached poses, but canvas overlay requires live model
-    test.skip('skeleton redraws when video is seeked manually', async ({
+    test('skeleton redraws when video is seeked manually', async ({
       page,
     }) => {
+      // These tests read from IndexedDB directly with getPoseTrackFromDB
+      await setPoseTrackStorageMode(page, 'indexeddb');
       // Seed pose data first
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Verify data was seeded
       const storedTrack = await getPoseTrackFromDB(
         page,
-        SWING_SAMPLE_VIDEO_HASH
+        SWING_SAMPLE_4REPS_VIDEO_HASH
       );
       expect(storedTrack).not.toBeNull();
 
@@ -556,7 +529,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       // Seed pose data
-      await seedPoseTrackFixture(page, 'swing-sample');
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Load video
       await page.click('#load-hardcoded-btn');

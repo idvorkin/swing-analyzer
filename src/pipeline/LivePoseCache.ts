@@ -77,8 +77,10 @@ export class LivePoseCache {
     if (metadata) {
       this.metadata = { ...this.metadata, ...metadata };
     }
-    // Complete the Subject to allow any waiters to clean up
-    this.frameAdded$.complete();
+    // Complete the Subject to allow any waiters to clean up (idempotent)
+    if (!this.frameAdded$.closed) {
+      this.frameAdded$.complete();
+    }
   }
 
   /**
@@ -226,7 +228,7 @@ export class LivePoseCache {
     return {
       metadata: {
         version: '1.0',
-        model: this.metadata.model ?? 'movenet-lightning',
+        model: this.metadata.model ?? 'blazepose',
         modelVersion: this.metadata.modelVersion ?? '1.0.0',
         sourceVideoHash: this.videoHash ?? '',
         sourceVideoName: this.metadata.sourceVideoName,
@@ -257,12 +259,29 @@ export class LivePoseCache {
   }
 
   /**
-   * Clear all cached frames
+   * Clear all cached frames and reset state
+   * Completes the Subject if it wasn't already completed to prevent memory leaks
    */
   clear(): void {
+    // Complete the subject to release any subscribers
+    if (!this.frameAdded$.closed) {
+      this.frameAdded$.complete();
+    }
+    // Create a fresh subject for potential reuse
+    this.frameAdded$ = new Subject<FrameCachedEvent>();
     this.frames.clear();
     this.sortedVideoTimes = [];
     this.isComplete = false;
+  }
+
+  /**
+   * Abort extraction on error - completes Subject to release subscribers
+   */
+  abort(): void {
+    this.isComplete = true;
+    if (!this.frameAdded$.closed) {
+      this.frameAdded$.complete();
+    }
   }
 
   /**

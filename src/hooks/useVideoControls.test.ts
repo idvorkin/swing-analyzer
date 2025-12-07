@@ -32,7 +32,7 @@ vi.mock('../pipeline/PipelineFactory', () => ({
 }));
 
 // Mock the settings
-vi.mock('../components/settings/AnalysisTab', () => ({
+vi.mock('../components/settings/SettingsTab', () => ({
   getSavedModelPreference: vi.fn(() => 'movenet-lightning'),
   getSavedBlazePoseVariant: vi.fn(() => 'lite'),
 }));
@@ -78,8 +78,6 @@ describe('useVideoControls', () => {
     // Create mock frame acquisition
     mockFrameAcquisition = {
       loadVideoFromURL: vi.fn().mockResolvedValue(undefined),
-      stopCamera: vi.fn().mockResolvedValue(undefined),
-      startCamera: vi.fn().mockResolvedValue(undefined),
     };
 
     // Create mock skeleton renderer
@@ -93,8 +91,6 @@ describe('useVideoControls', () => {
     mockAppState = {
       isModelLoaded: true,
       isProcessing: false,
-      usingCamera: false,
-      cameraMode: 'environment',
       displayMode: 'both',
       repCounter: {
         count: 0,
@@ -207,7 +203,7 @@ describe('useVideoControls', () => {
         result.current.togglePlayPause();
       });
 
-      expect(setStatus).toHaveBeenCalledWith('Error: Could not play video.');
+      expect(setStatus).toHaveBeenCalledWith('Error: Could not play video. Please try again.');
     });
 
     it('does nothing when video ref is null', async () => {
@@ -582,34 +578,6 @@ describe('useVideoControls', () => {
       expect(setStatus).toHaveBeenCalledWith('Video loaded. Press Play to start.');
     });
 
-    it('updates app state to not using camera', async () => {
-      const { result } = renderHook(() =>
-        useVideoControls({
-          videoRef: { current: mockVideoElement as HTMLVideoElement },
-          canvasRef: { current: mockCanvasElement as HTMLCanvasElement },
-          frameAcquisitionRef: {
-            current: mockFrameAcquisition as VideoFrameAcquisition,
-          },
-          skeletonRendererRef: {
-            current: mockSkeletonRenderer as SkeletonRenderer,
-          },
-          appState: mockAppState,
-          setStatus,
-          setSpineAngle,
-          setArmToSpineAngle,
-          setAppState,
-          setDisplayMode,
-          resetPipeline,
-        })
-      );
-
-      await act(async () => {
-        await result.current.loadHardcodedVideo();
-      });
-
-      expect(setAppState).toHaveBeenCalledWith(expect.any(Function));
-    });
-
     it('handles fetch errors gracefully', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
@@ -641,7 +609,7 @@ describe('useVideoControls', () => {
       });
 
       expect(setStatus).toHaveBeenCalledWith(
-        'Error: Could not load hardcoded video.'
+        'Error: Could not download video. Check your connection.'
       );
     });
 
@@ -789,7 +757,7 @@ describe('useVideoControls', () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
       });
 
-      expect(setStatus).toHaveBeenCalledWith('Error: Could not load video.');
+      expect(setStatus).toHaveBeenCalledWith('Error: Could not load video. Please try a different file.');
     });
   });
 

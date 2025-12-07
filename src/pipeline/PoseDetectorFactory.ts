@@ -1,9 +1,7 @@
 /**
  * PoseDetectorFactory - Factory for creating pose detection models
  *
- * Supports:
- * - MoveNet (Lightning/Thunder variants)
- * - BlazePose (Lite/Full/Heavy variants with TFJS or MediaPipe runtime)
+ * Supports BlazePose (Lite/Full/Heavy variants with TFJS or MediaPipe runtime)
  */
 
 import * as poseDetection from '@tensorflow-models/pose-detection';
@@ -13,7 +11,7 @@ import { DEFAULT_MODEL_CONFIG } from '../config/modelConfig';
 export interface PoseDetectorResult {
   detector: poseDetection.PoseDetector;
   modelName: string;
-  keypointFormat: 'coco' | 'mediapipe';
+  keypointFormat: 'mediapipe';
 }
 
 /**
@@ -29,57 +27,7 @@ export class PoseDetectorFactory {
   static async create(
     config: ModelConfig = DEFAULT_MODEL_CONFIG
   ): Promise<PoseDetectorResult> {
-    if (config.model === 'blazepose') {
-      return PoseDetectorFactory.createBlazePose(config);
-    }
-    return PoseDetectorFactory.createMoveNet(config);
-  }
-
-  /**
-   * Create a MoveNet detector
-   */
-  private static async createMoveNet(
-    config: ModelConfig
-  ): Promise<PoseDetectorResult> {
-    const variant = config.moveNetVariant || 'lightning';
-
-    const modelType =
-      variant === 'thunder'
-        ? poseDetection.movenet.modelType.SINGLEPOSE_THUNDER
-        : poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING;
-
-    const detectorConfig: poseDetection.MoveNetModelConfig = {
-      modelType,
-      enableSmoothing: config.enableSmoothing ?? true,
-    };
-
-    // Use custom model URL if provided
-    if (config.modelUrl) {
-      detectorConfig.modelUrl = config.modelUrl;
-    } else {
-      // Use local model files
-      detectorConfig.modelUrl = `/models/movenet-${variant}/model.json`;
-    }
-
-    console.log(`PoseDetectorFactory: Creating MoveNet ${variant}`);
-
-    try {
-      const detector = await poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
-        detectorConfig
-      );
-
-      return {
-        detector,
-        modelName: `MoveNet ${variant}`,
-        keypointFormat: 'coco',
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `Failed to create MoveNet ${variant} detector: ${message}`
-      );
-    }
+    return PoseDetectorFactory.createBlazePose(config);
   }
 
   /**

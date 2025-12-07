@@ -1,19 +1,16 @@
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Route, Routes } from 'react-router-dom';
+import { NavLink, Route, Routes } from 'react-router-dom';
 import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
 import { GIT_BRANCH } from '../generated_version';
-import AnalysisSection from './AnalysisSection';
-import VideoSection from './VideoSection';
+import VideoSectionV2 from './VideoSectionV2';
 import './App.css';
 import { useBugReporter } from '../hooks/useBugReporter';
 import { useShakeDetector } from '../hooks/useShakeDetector';
 import { useVersionCheck } from '../hooks/useVersionCheck';
 import { BugReportModal } from './BugReportModal';
 import { CrashFallback } from './CrashFallback';
-import DebugModelLoaderPage from './DebugModelLoaderPage';
-import { PoseStudioPage } from './PoseStudioPage';
 import { SettingsModal } from './SettingsModal';
 import { VersionNotification } from './VersionNotification';
 
@@ -37,8 +34,7 @@ const SettingsIconSmall = () => (
 const MainApplication: React.FC = () => {
   return (
     <main>
-      <VideoSection />
-      <AnalysisSection />
+      <VideoSectionV2 />
     </main>
   );
 };
@@ -73,6 +69,9 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         )}
       </h1>
       <nav>
+        <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
+          <span>Analyzer</span>
+        </NavLink>
         <button
           type="button"
           onClick={onOpenSettings}
@@ -125,8 +124,6 @@ const AppContent: React.FC = () => {
       <Header onOpenSettings={() => setSettingsOpen(true)} />
       <Routes>
         <Route path="/" element={<MainApplication />} />
-        <Route path="/poses" element={<PoseStudioPage />} />
-        <Route path="/debug" element={<DebugModelLoaderPage />} />
       </Routes>
       <VersionNotification />
       <BugReportModal

@@ -7,19 +7,111 @@ import {
   Subject,
 } from 'rxjs';
 import { map, startWith, switchMap, takeUntil } from 'rxjs/operators';
+import type { CropRegion } from '../types/posetrack';
 import type { FrameAcquisition, FrameEvent } from './PipelineInterfaces';
 
 /**
- * Video frame acquisition - handles frame acquisition from video element or camera
+ * Video frame acquisition - handles frame acquisition from video element
  */
 export class VideoFrameAcquisition implements FrameAcquisition {
   private stop$ = new Subject<void>();
   private frameRate = 30; // Default frame rate in fps
+  private cropRegion: CropRegion | null = null;
+  private cropEnabled = false;
 
   constructor(
     private videoElement: HTMLVideoElement,
     private canvasElement: HTMLCanvasElement
   ) {}
+
+  /**
+   * Set the crop region for auto-centering on person
+   * @param crop The crop region, or null to disable cropping
+   */
+  setCropRegion(crop: CropRegion | null): void {
+    this.cropRegion = crop;
+    if (crop) {
+      console.log(
+        `[VideoFrameAcquisition] Crop region set: ${crop.width}x${crop.height} at (${crop.x}, ${crop.y})`
+      );
+    }
+    this.applyCropTransform();
+  }
+
+  /**
+   * Get the current crop region
+   */
+  getCropRegion(): CropRegion | null {
+    return this.cropRegion;
+  }
+
+  /**
+   * Enable or disable crop mode
+   */
+  setCropEnabled(enabled: boolean): void {
+    this.cropEnabled = enabled;
+    this.applyCropTransform();
+  }
+
+  /**
+   * Check if crop is currently enabled
+   */
+  isCropEnabled(): boolean {
+    return this.cropEnabled && this.cropRegion !== null;
+  }
+
+  /**
+   * Apply CSS transform to video and canvas for cropping
+   */
+  private applyCropTransform(): void {
+    const crop = this.cropRegion;
+    const video = this.videoElement;
+    const canvas = this.canvasElement;
+
+    if (!crop || !this.cropEnabled) {
+      // Reset transforms
+      video.style.transform = '';
+      video.style.transformOrigin = '';
+      canvas.style.transform = '';
+      canvas.style.transformOrigin = '';
+      return;
+    }
+
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+
+    if (!videoWidth || !videoHeight) {
+      return;
+    }
+
+    // Calculate scale to fill the display area
+    // For square crop, scale based on the larger dimension fill
+    const scaleX = videoWidth / crop.width;
+    const scaleY = videoHeight / crop.height;
+    const scale = Math.min(scaleX, scaleY);
+
+    // Calculate translation to center the crop region
+    // Transform origin is at top-left, so we translate to move crop center to view center
+    const cropCenterX = crop.x + crop.width / 2;
+    const cropCenterY = crop.y + crop.height / 2;
+    const viewCenterX = videoWidth / 2;
+    const viewCenterY = videoHeight / 2;
+
+    const translateX = (viewCenterX - cropCenterX * scale) / scale;
+    const translateY = (viewCenterY - cropCenterY * scale) / scale;
+
+    const transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+    const transformOrigin = '0 0';
+
+    video.style.transform = transform;
+    video.style.transformOrigin = transformOrigin;
+    canvas.style.transform = transform;
+    canvas.style.transformOrigin = transformOrigin;
+
+    console.log(
+      `[VideoFrameAcquisition] Applied crop transform: scale=${scale.toFixed(2)}, translate=(${translateX.toFixed(0)}, ${translateY.toFixed(0)})`
+    );
+  }
 
   /**
    * Get the current frame
@@ -56,61 +148,7 @@ export class VideoFrameAcquisition implements FrameAcquisition {
    */
   stop(): void {
     this.stop$.next();
-  }
-
-  /**
-   * Start camera with specified mode
-   * @param mode 'user' for front camera, 'environment' for back camera
-   */
-  async startCamera(
-    mode: 'user' | 'environment' = 'environment'
-  ): Promise<void> {
-    try {
-      const constraints = {
-        video: {
-          facingMode: mode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      };
-
-      // Get camera stream
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      // Stop any existing stream
-      this.stopCamera();
-
-      // Connect stream to video element
-      this.videoElement.srcObject = stream;
-      this.videoElement.play();
-
-      // Wait for video to be ready
-      return new Promise<void>((resolve) => {
-        this.videoElement.onloadedmetadata = () => {
-          // Update canvas dimensions
-          this.updateCanvasDimensions();
-          resolve();
-        };
-      });
-    } catch (error) {
-      console.error('Error starting camera:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Stop camera stream
-   */
-  stopCamera(): void {
-    const stream = this.videoElement.srcObject as MediaStream;
-
-    if (stream) {
-      const tracks = stream.getTracks();
-      for (const track of tracks) {
-        track.stop();
-      }
-      this.videoElement.srcObject = null;
-    }
+    this.stop$.complete();
   }
 
   /**
@@ -118,8 +156,6 @@ export class VideoFrameAcquisition implements FrameAcquisition {
    */
   loadVideo(file: File): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      // Stop camera if running
-      this.stopCamera();
 
       // Create object URL for the file
       const videoURL = URL.createObjectURL(file);
@@ -129,22 +165,26 @@ export class VideoFrameAcquisition implements FrameAcquisition {
         URL.revokeObjectURL(this.videoElement.src);
       }
 
+      // Cleanup function to remove listeners
+      const cleanup = () => {
+        this.videoElement.removeEventListener('error', handleError);
+        this.videoElement.removeEventListener('loadedmetadata', handleLoaded);
+      };
+
       // Set up event listeners
       const handleError = () => {
+        cleanup();
         URL.revokeObjectURL(videoURL);
         reject(new Error('Failed to load video file'));
       };
 
       const handleLoaded = () => {
+        cleanup();
         this.updateCanvasDimensions();
         console.log(
           `Video loaded: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`
         );
         resolve();
-
-        // Remove listeners
-        this.videoElement.removeEventListener('error', handleError);
-        this.videoElement.removeEventListener('loadedmetadata', handleLoaded);
       };
 
       // Set up listeners
@@ -173,11 +213,15 @@ export class VideoFrameAcquisition implements FrameAcquisition {
     }
 
     return new Promise<void>((resolve, reject) => {
-      // Stop camera if running
-      this.stopCamera();
+      // Cleanup function to remove listeners
+      const cleanup = () => {
+        this.videoElement.removeEventListener('error', handleError);
+        this.videoElement.removeEventListener('loadedmetadata', handleLoaded);
+      };
 
       // Set up event listeners
       const handleError = () => {
+        cleanup();
         console.error(
           `[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Error event triggered for ${url}`
         );
@@ -185,6 +229,7 @@ export class VideoFrameAcquisition implements FrameAcquisition {
       };
 
       const handleLoaded = () => {
+        cleanup();
         console.log(
           '[DEBUG] VideoFrameAcquisition.loadVideoFromURL: loadedmetadata event triggered'
         );
@@ -193,10 +238,6 @@ export class VideoFrameAcquisition implements FrameAcquisition {
           `[DEBUG] VideoFrameAcquisition.loadVideoFromURL: Video loaded: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`
         );
         resolve();
-
-        // Remove listeners
-        this.videoElement.removeEventListener('error', handleError);
-        this.videoElement.removeEventListener('loadedmetadata', handleLoaded);
       };
 
       // Set up listeners
@@ -279,6 +320,8 @@ export class VideoFrameAcquisition implements FrameAcquisition {
           videoContainer.classList.add('landscape-video');
           videoContainer.classList.remove('portrait-video');
         }
+        // Ensure video container has overflow hidden for crop to work
+        videoContainer.style.overflow = 'hidden';
       }
 
       // Log dimensions for debugging
@@ -292,6 +335,9 @@ export class VideoFrameAcquisition implements FrameAcquisition {
       this.canvasElement.style.left = '0';
       this.canvasElement.style.width = '100%';
       this.canvasElement.style.height = '100%';
+
+      // Re-apply crop transform if enabled
+      this.applyCropTransform();
     }
   }
 }

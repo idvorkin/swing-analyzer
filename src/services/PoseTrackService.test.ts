@@ -18,7 +18,7 @@ function createValidPoseTrack(): PoseTrackFile {
   return {
     metadata: {
       version: '1.0',
-      model: 'movenet-lightning',
+      model: 'blazepose',
       modelVersion: '4.0.0',
       sourceVideoHash: 'a'.repeat(64), // Valid SHA-256 hash
       sourceVideoName: 'test-video.mp4',
@@ -116,8 +116,8 @@ describe('PoseTrackService', () => {
 
     it('accepts all valid model types', () => {
       const models = [
-        'movenet-lightning',
-        'movenet-thunder',
+        'blazepose',
+        'blazepose',
         'blazepose',
       ] as const;
       for (const model of models) {
@@ -170,18 +170,18 @@ describe('PoseTrackService', () => {
     it('generates filename with video name, model, and date', () => {
       const filename = generatePoseTrackFilename(
         'my-video.mp4',
-        'movenet-thunder',
+        'blazepose',
         new Date('2024-01-15')
       );
       expect(filename).toBe(
-        `my-video_movenet-thunder_2024-01-15${POSETRACK_EXTENSION}`
+        `my-video_blazepose_2024-01-15${POSETRACK_EXTENSION}`
       );
     });
 
     it('removes video extension', () => {
       const filename = generatePoseTrackFilename(
         'video.mov',
-        'movenet-lightning'
+        'blazepose'
       );
       expect(filename).toContain('video_');
       expect(filename).not.toContain('.mov');
@@ -190,18 +190,18 @@ describe('PoseTrackService', () => {
     it('sanitizes special characters in video name', () => {
       const filename = generatePoseTrackFilename(
         'my video (1).mp4',
-        'movenet-lightning',
+        'blazepose',
         new Date('2024-01-15')
       );
       expect(filename).toBe(
-        `my_video__1__movenet-lightning_2024-01-15${POSETRACK_EXTENSION}`
+        `my_video__1__blazepose_2024-01-15${POSETRACK_EXTENSION}`
       );
     });
 
     it('uses current date when not provided', () => {
       const filename = generatePoseTrackFilename(
         'video.mp4',
-        'movenet-lightning'
+        'blazepose'
       );
       const today = new Date().toISOString().split('T')[0];
       expect(filename).toContain(today);
@@ -211,7 +211,7 @@ describe('PoseTrackService', () => {
   describe('createPoseTrackMetadata', () => {
     it('creates valid metadata with all fields', () => {
       const metadata = createPoseTrackMetadata({
-        model: 'movenet-thunder',
+        model: 'blazepose',
         modelVersion: '4.0.0',
         sourceVideoHash: 'a'.repeat(64),
         sourceVideoName: 'test.mp4',
@@ -223,7 +223,7 @@ describe('PoseTrackService', () => {
       });
 
       expect(metadata.version).toBe('1.0');
-      expect(metadata.model).toBe('movenet-thunder');
+      expect(metadata.model).toBe('blazepose');
       expect(metadata.modelVersion).toBe('4.0.0');
       expect(metadata.sourceVideoHash).toBe('a'.repeat(64));
       expect(metadata.sourceVideoName).toBe('test.mp4');
@@ -235,7 +235,7 @@ describe('PoseTrackService', () => {
 
     it('works without optional sourceVideoName', () => {
       const metadata = createPoseTrackMetadata({
-        model: 'movenet-lightning',
+        model: 'blazepose',
         modelVersion: '4.0.0',
         sourceVideoHash: 'b'.repeat(64),
         sourceVideoDuration: 10,

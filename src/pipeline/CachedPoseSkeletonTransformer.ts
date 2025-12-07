@@ -64,7 +64,24 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
   }
 
   /**
-   * Transform a frame event into a skeleton using cached pose data.
+   * Transform a frame event into a skeleton using cached pose data (Observable version).
+   * @deprecated Use transformToSkeletonAsync for video-event-driven processing
+   */
+  transformToSkeleton(frameEvent: FrameEvent): Observable<SkeletonEvent> {
+    return of(this.transformToSkeletonSync(frameEvent));
+  }
+
+  /**
+   * Transform a frame event into a skeleton using cached pose data (Promise version).
+   * Use this for video-event-driven processing without RxJS subscriptions.
+   */
+  async transformToSkeletonAsync(frameEvent: FrameEvent): Promise<SkeletonEvent> {
+    // Cached lookup is synchronous, so just wrap in Promise
+    return this.transformToSkeletonSync(frameEvent);
+  }
+
+  /**
+   * Transform a frame event into a skeleton using cached pose data (sync version).
    *
    * During streaming (extraction in progress):
    * - Only uses frames within tolerance of requested time
@@ -73,7 +90,7 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
    * After extraction complete:
    * - Uses closest available frame regardless of distance
    */
-  transformToSkeleton(frameEvent: FrameEvent): Observable<SkeletonEvent> {
+  private transformToSkeletonSync(frameEvent: FrameEvent): SkeletonEvent {
     const videoTime = frameEvent.videoTime ?? 0;
     const isComplete = this.cache.isExtractionComplete();
 
@@ -83,14 +100,14 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
     const cachedFrame = this.cache.getFrame(videoTime, tolerance);
 
     if (cachedFrame) {
-      return of(this.buildSkeletonEvent(cachedFrame, frameEvent));
+      return this.buildSkeletonEvent(cachedFrame, frameEvent);
     }
 
     // No frame within tolerance - return null skeleton
-    return of({
+    return {
       skeleton: null,
       poseEvent: this.createPoseEvent(null, frameEvent),
-    });
+    };
   }
 
   /**
