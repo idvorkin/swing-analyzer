@@ -1,5 +1,6 @@
 import { type Observable, Subject, type Subscription } from 'rxjs';
 import { share, switchMap, tap } from 'rxjs/operators';
+import { KettlebellSwingDetector, type ExerciseDetector } from '../detectors';
 import type { Skeleton } from '../models/Skeleton';
 import type { ExerciseDefinition, PositionCandidate } from '../types/exercise';
 import type { CropRegion } from '../types/posetrack';
@@ -45,8 +46,11 @@ export class Pipeline {
   private skeletonSubject = new Subject<SkeletonEvent>();
   private thumbnailSubject = new Subject<ThumbnailEvent>();
 
-  // Form analyzer for position detection and rep counting
+  // Form analyzer for position detection (legacy, kept for thumbnails)
   private formAnalyzer: FormAnalyzer;
+
+  // State machine detector for accurate rep counting (peak-based Top detection)
+  private detector: ExerciseDetector;
 
   // Current exercise definition
   private exerciseDefinition: ExerciseDefinition;
@@ -58,6 +62,7 @@ export class Pipeline {
   ) {
     this.exerciseDefinition = exerciseDefinition;
     this.formAnalyzer = new FormAnalyzer(exerciseDefinition);
+    this.detector = new KettlebellSwingDetector();
   }
 
   /**
@@ -89,7 +94,7 @@ export class Pipeline {
           this.skeletonTransformer.transformToSkeleton(frameEvent)
         ),
 
-        // Stage 2: Process skeleton through FormAnalyzer
+        // Stage 2: Process skeleton through detector and form analyzer
         tap((skeletonEvent) => {
           // Emit the skeleton event to subscribers (for rendering)
           this.skeletonSubject.next(skeletonEvent);
@@ -98,20 +103,19 @@ export class Pipeline {
           if (skeletonEvent.skeleton) {
             this.latestSkeleton = skeletonEvent.skeleton;
 
-            // Process through FormAnalyzer for position detection and rep counting
-            const result = this.formAnalyzer.processFrame(
+            // Process through detector for rep counting (peak-based Top detection)
+            const detectorResult = this.detector.processFrame(
               skeletonEvent.skeleton,
-              skeletonEvent.poseEvent.frameEvent.timestamp,
-              skeletonEvent.poseEvent.frameEvent.videoTime
+              skeletonEvent.poseEvent.frameEvent.timestamp
             );
 
-            // Update rep count
-            this.repCount = result.repCount;
+            // Update rep count from detector
+            this.repCount = detectorResult.repCount;
 
             // Emit result
             this.resultSubject.next({
               skeleton: skeletonEvent.skeleton,
-              repCount: result.repCount,
+              repCount: detectorResult.repCount,
             });
           }
         }),
@@ -177,6 +181,7 @@ export class Pipeline {
    */
   reset(): void {
     this.formAnalyzer.reset();
+    this.detector.reset();
     this.latestSkeleton = null;
     this.repCount = 0;
   }
@@ -235,22 +240,21 @@ export class Pipeline {
     // Store latest skeleton
     this.latestSkeleton = skeletonEvent.skeleton;
 
-    // Process through FormAnalyzer
-    const result = this.formAnalyzer.processFrame(
+    // Process through detector for rep counting (peak-based Top detection)
+    const detectorResult = this.detector.processFrame(
       skeletonEvent.skeleton,
-      frameEvent.timestamp,
-      frameEvent.videoTime
+      frameEvent.timestamp
     );
 
-    // Update rep count
-    this.repCount = result.repCount;
+    // Update rep count from detector
+    this.repCount = detectorResult.repCount;
 
     return {
       skeleton: skeletonEvent.skeleton,
-      repCount: result.repCount,
-      position: result.position,
-      angles: result.angles,
-      repCompleted: result.repCompleted,
+      repCount: detectorResult.repCount,
+      position: detectorResult.phase,
+      angles: detectorResult.angles,
+      repCompleted: detectorResult.repCompleted,
     };
   }
 
@@ -270,31 +274,37 @@ export class Pipeline {
       // Emit skeleton event for real-time rendering during extraction
       this.skeletonSubject.next(skeletonEvent);
 
-      // Process through FormAnalyzer (pass frameImage for filmstrip thumbnails)
-      const result = this.formAnalyzer.processFrame(
+      // Process through detector for rep counting (peak-based Top detection)
+      const detectorResult = this.detector.processFrame(
+        skeletonEvent.skeleton,
+        skeletonEvent.poseEvent.frameEvent.timestamp
+      );
+
+      // Update rep count from detector
+      this.repCount = detectorResult.repCount;
+
+      // Also process through FormAnalyzer for filmstrip thumbnails (cyclePositions)
+      const analyzerResult = this.formAnalyzer.processFrame(
         skeletonEvent.skeleton,
         skeletonEvent.poseEvent.frameEvent.timestamp,
         skeletonEvent.poseEvent.frameEvent.videoTime,
         skeletonEvent.poseEvent.frameEvent.frameImage
       );
 
-      // Update rep count
-      this.repCount = result.repCount;
-
       // Emit thumbnail event when cycle completes (has position candidates)
       // This is based on angle thresholds and may happen BEFORE rep completes
-      if (result.cyclePositions && result.cyclePositions.size > 0) {
+      if (analyzerResult.cyclePositions && analyzerResult.cyclePositions.size > 0) {
         this.thumbnailSubject.next({
-          repNumber: result.repCount + 1, // Next rep number since cycle just completed
-          positions: result.cyclePositions,
+          repNumber: detectorResult.repCount + 1, // Next rep number since cycle just completed
+          positions: analyzerResult.cyclePositions,
         });
       }
 
-      // Emit result when rep completes (position sequence detected)
-      if (result.repCompleted) {
+      // Emit result when rep completes (from detector)
+      if (detectorResult.repCompleted) {
         this.resultSubject.next({
           skeleton: skeletonEvent.skeleton,
-          repCount: result.repCount,
+          repCount: detectorResult.repCount,
         });
       }
     }
