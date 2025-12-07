@@ -16,9 +16,11 @@ Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) 
 ## Multi-Agent Setup
 
 - **Use full clones**, not worktrees - worktrees cause issues with parallel agents
-- **Remote setup**: `origin` = idvorkin-ai-tools fork (push here), `upstream` = idvorkin (fetch from here)
+- **Remote setup**:
+  - `origin` = **idvorkin-ai-tools** fork (agents push here, can merge to main directly)
+  - `upstream` = **idvorkin** (human-only repo, requires PR approval to merge)
 - **Clone command**: `git clone https://github.com/idvorkin-ai-tools/swing-analyzer.git swing-N`
-- **After cloning**: `cd swing-N && just setup && git remote add upstream https://github.com/idvorkin/swing-analyzer.git && git checkout dev`
+- **After cloning**: `cd swing-N && just setup && git remote add upstream https://github.com/idvorkin/swing-analyzer.git`
 
 ### Per-Clone Branches (Recommended)
 
@@ -84,20 +86,21 @@ Always push after every commit - keeps your work visible in dashboard.
 
 **Stay current (rebase often):**
 ```bash
-git fetch origin dev && git rebase origin/dev
+git fetch origin main && git rebase origin/main
 git push origin agent/swing-N --force-with-lease
 ```
-Rebase on dev:
+Rebase on main:
 - Every 15 minutes during active work
 - Before starting any major new task
-- Before merging to dev
+- Before merging to main
 
 This keeps your branch up-to-date with changes from other agents.
 
-**Human merges to dev** when ready:
+**Merging to main** (on origin/idvorkin-ai-tools):
 ```bash
-git checkout dev && git merge agent/swing-N && git push
+git checkout main && git merge agent/swing-N && git push
 ```
+Agents can merge directly to main on origin. For upstream (idvorkin), create a PR.
 
 ### Collaborative Feature Branches
 
@@ -277,14 +280,15 @@ This avoids downloading browsers separately for each project.
 The `.githooks/` directory contains:
 - `pre-commit` - Syncs beads before commits
 - `post-merge` - Syncs beads after pulls
-- `pre-push` - Blocks direct pushes to `main`
+- `pre-push` - Blocks direct pushes to `main` (use `--no-verify` after merge)
 
 ### Branch Strategy
 
-- **feature branches**: Agents work here, one branch per task
-- **dev branch**: Feature branches merge here after local review
-- **main branch**: Nothing merges without a PR and human approval
-- **PR merge process**: Periodically diff dev from main, split into clean PRs, merge to main
+- **agent/swing-N branches**: Each agent works on its own branch
+- **feature branches**: Collaborative work, multiple agents can join
+- **main branch**:
+  - On **origin** (idvorkin-ai-tools): Agents can merge directly
+  - On **upstream** (idvorkin): Requires PR and human approval
 
 ### Branch Hygiene (Every Few Days)
 
@@ -293,8 +297,8 @@ Run branch audit to prevent stale branch accumulation:
 ```bash
 # List remote branches by last commit date with behind/ahead counts
 for branch in $(git branch -r | grep -v HEAD | head -20); do
-  behind=$(git rev-list --count origin/dev ^$branch 2>/dev/null || echo "?")
-  ahead=$(git rev-list --count $branch ^origin/dev 2>/dev/null || echo "?")
+  behind=$(git rev-list --count origin/main ^$branch 2>/dev/null || echo "?")
+  ahead=$(git rev-list --count $branch ^origin/main 2>/dev/null || echo "?")
   date=$(git log -1 --format='%ci' $branch 2>/dev/null | cut -d' ' -f1)
   echo "$date | $branch | +$ahead -$behind"
 done | sort -r
@@ -308,11 +312,13 @@ done | sort -r
 **Keep criteria:**
 - Active agent branches (`agent/swing-N`)
 - Branches with open PRs
-- `main`, `dev`, `beads-metadata`
+- `main`, `beads-metadata`
 
-**⚠️ CRITICAL: Only humans merge to main. Agents must NEVER merge PRs to main unless the user explicitly says "YES" (uppercase). Phrases like "get it to main" or "merge it" are NOT sufficient - you must ask for confirmation and receive "YES" before merging any PR to main.**
+**⚠️ UPSTREAM MERGES (idvorkin repo)**: Only humans merge to upstream/main. Agents must NEVER merge PRs to upstream unless the user explicitly says "YES" (uppercase). Phrases like "get it to main" or "merge it" are NOT sufficient - you must ask for confirmation and receive "YES" before merging any PR to upstream.
 
-**📦 MINIMAL PRs**: When creating PRs to main, include ONLY the changes the user explicitly requested. Do not bundle unrelated changes from the branch. If unsure what to include, ask the user to confirm scope before creating the PR.
+**✅ ORIGIN MERGES (idvorkin-ai-tools fork)**: Agents can merge directly to origin/main. This is the working repo for agents.
+
+**📦 MINIMAL PRs**: When creating PRs to upstream, include ONLY the changes the user explicitly requested. Do not bundle unrelated changes from the branch. If unsure what to include, ask the user to confirm scope before creating the PR.
 
 **🚫 NO --no-verify**: Never use `git commit --no-verify` unless absolutely necessary.
 
@@ -320,43 +326,25 @@ done | sort -r
 
 **🚫 NO FORCE PUSH**: Never use `git push --force` or `git push -f` unless the user explicitly types "yes" to confirm. If you have conflicts or diverged history, resolve them with rebase and regular push. Messy history on a branch is okay - losing other people's work is not.
 
-**🔄 REBASE OFTEN**: Multiple agents push to dev constantly. Always rebase before starting work:
+**🔄 REBASE OFTEN**: Multiple agents push to main constantly. Always rebase before starting work:
 
 ```bash
-git fetch origin && git rebase origin/dev
+git fetch origin && git rebase origin/main
 ```
 
-**🔀 REBASE vs MERGE**: When rebase has many conflicts, check if branches have diverged due to PR squash/merge creating duplicate commits with different hashes:
+**🔀 REBASE vs MERGE**: When rebase has many conflicts, check if branches have diverged due to PR squash/merge creating duplicate commits with different hashes. If commits have matching messages but different hashes, **merge is cleaner than rebase**.
 
-```bash
-# Check divergence
-git rev-list --count main..dev   # commits on dev not in main
-git rev-list --count dev..main   # commits on main not in dev
+### Merging Feature Branches to Main
 
-# If both are high (e.g., 100+), branches likely have same changes with different hashes
-# Compare commit messages to confirm:
-git log --oneline main | head -10
-git log --oneline dev | head -10
-```
+**⚠️ MANDATORY: Run PR review agents before ANY merge to main.**
 
-If commits have matching messages but different hashes (from PR merges), **merge is cleaner than rebase**:
-- `git merge main` - single merge commit, no conflict per duplicate commit
-- Rebase would stop at every "duplicate" commit asking to resolve
+Before merging your feature branch to main:
 
-Use rebase for: feature branches with unique work, staying current with small changes
-Use merge for: syncing branches that diverged due to PR workflow
-
-### Merging Feature Branches to Dev
-
-**⚠️ MANDATORY: Run PR review agents before ANY merge to dev.**
-
-Before merging your feature branch to dev:
-
-1. **Rebase on dev**: `git fetch origin && git rebase origin/dev`
+1. **Rebase on main**: `git fetch origin && git rebase origin/main`
 2. **Run PR review agents**: `/code-review:code-review` or `/pr-review-toolkit:review-pr`
 3. **Fix all issues** found by the review - do NOT skip this
 4. **Run tests**: `npx playwright test && npx tsc --noEmit`
-5. **Merge to dev**: `git checkout dev && git merge feature-branch && git push`
+5. **Merge to main**: `git checkout main && git merge feature-branch && git push`
 
 **🏗️ BIG ARCHITECTURAL CHANGES**: For refactoring or architecture changes (new state machines, new patterns, multiple new files), run comprehensive review:
 
@@ -379,21 +367,6 @@ Fix all critical and important issues before merging.
 - Bug fixes for user-facing issues
 
 If E2E tests don't exist for the affected area, create them before merging.
-
-### Splitting Dev Branch into Clean PRs
-
-When dev has accumulated many unrelated changes:
-
-1. **Diff dev from main**: `git diff main..dev --stat` to see all changes
-2. **Analyze commits**: `git log main..dev --oneline` to see commit history
-3. **Categorize changes** into logical groups (e.g., bug fixes, new features, refactors)
-4. **Create beads issues** for each PR: `bd create --title="Merge PR #X: description" --priority=1`
-5. **Add dependencies** between PRs: `bd dep add <blocked> <blocker>`
-6. **Create feature branches** from main, cherry-pick or manually copy changes
-7. **Rebase each branch** on main: `git rebase origin/main`
-8. **Run code review agent** on each PR to find issues
-9. **Fix issues**, run tests, push
-10. **Merge PRs** in dependency order, then sync dev with main
 
 ### PR Review Checklist
 
