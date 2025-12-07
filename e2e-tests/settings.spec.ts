@@ -10,6 +10,7 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { seedPoseTrackFixture, clearPoseTrackDB, useShortTestVideo } from './helpers';
 
 test.describe('Settings Modal', () => {
   test.beforeEach(async ({ page }) => {
@@ -163,6 +164,117 @@ test.describe('Settings Modal', () => {
 
       // Stats row shows duration, clicks, snaps
       await expect(page.locator('.settings-stats-row')).toBeVisible();
+    });
+
+    test('should show Download Poses button', async ({ page }) => {
+      await page.click('button[aria-label="Open settings"]');
+      await page.locator('.settings-tab').nth(1).click();
+
+      await expect(page.locator('.settings-action-btn', { hasText: 'Download Poses' })).toBeVisible();
+    });
+
+    test('Download Poses button should be disabled when no video loaded', async ({ page }) => {
+      await page.click('button[aria-label="Open settings"]');
+      await page.locator('.settings-tab').nth(1).click();
+
+      const downloadPosesBtn = page.locator('.settings-action-btn', { hasText: 'Download Poses' });
+      await expect(downloadPosesBtn).toBeVisible();
+      await expect(downloadPosesBtn).toBeDisabled();
+      await expect(downloadPosesBtn).toHaveAttribute('title', 'Load a video first');
+    });
+
+    test('Download Poses button should be enabled after loading video with poses', async ({ page }) => {
+      // Intercept GitHub video and serve local short video
+      await useShortTestVideo(page);
+
+      // Navigate and clear/seed data
+      await page.goto('/');
+      await clearPoseTrackDB(page);
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+
+      // Load the video
+      await page.click('#load-hardcoded-btn');
+
+      // Wait for video to load
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && video.src && video.src.startsWith('blob:');
+        },
+        { timeout: 15000 }
+      );
+
+      // Wait for pose track to be available (cache lookup)
+      await page.waitForFunction(() => {
+        const debug = (window as any).swingDebug;
+        return debug?.getPoseTrack() !== null;
+      }, { timeout: 15000 });
+
+      // Open settings
+      await page.click('button[aria-label="Open settings"]');
+      await page.locator('.settings-tab').nth(1).click();
+
+      const downloadPosesBtn = page.locator('.settings-action-btn', { hasText: 'Download Poses' });
+      await expect(downloadPosesBtn).toBeVisible();
+      await expect(downloadPosesBtn).toBeEnabled();
+      await expect(downloadPosesBtn).toHaveAttribute('title', 'Download extracted pose data');
+    });
+
+    test('Download Poses should download valid JSON file', async ({ page }) => {
+      // Intercept GitHub video and serve local short video
+      await useShortTestVideo(page);
+
+      // Navigate and clear/seed data
+      await page.goto('/');
+      await clearPoseTrackDB(page);
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+
+      // Load the video
+      await page.click('#load-hardcoded-btn');
+
+      // Wait for video to load
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && video.src && video.src.startsWith('blob:');
+        },
+        { timeout: 15000 }
+      );
+
+      // Wait for pose track to be available (cache lookup)
+      await page.waitForFunction(() => {
+        const debug = (window as any).swingDebug;
+        return debug?.getPoseTrack() !== null;
+      }, { timeout: 15000 });
+
+      // Get pose track via swingDebug API
+      const poseTrack = await page.evaluate(() => {
+        return (window as any).swingDebug.getPoseTrack();
+      });
+
+      // Verify pose track data structure
+      expect(poseTrack).not.toBeNull();
+      expect(poseTrack.metadata).toBeDefined();
+      expect(poseTrack.metadata.sourceVideoHash).toBeDefined();
+      expect(poseTrack.frames).toBeDefined();
+      expect(poseTrack.frames.length).toBeGreaterThan(0);
+
+      // Test the download function returns a filename
+      const filename = await page.evaluate(() => {
+        return (window as any).swingDebug.downloadPoseTrack();
+      });
+      expect(filename).toMatch(/\.posetrack\.json$/);
+    });
+
+    test('swingDebug.downloadPoseTrack should return null when no video loaded', async ({ page }) => {
+      const result = await page.evaluate(() => {
+        return (window as any).swingDebug.downloadPoseTrack();
+      });
+      expect(result).toBeNull();
     });
   });
 
