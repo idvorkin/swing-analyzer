@@ -22,7 +22,6 @@ import { SwingPositionName } from '../types';
 import type { ExerciseDefinition } from '../types/exercise';
 import { ExerciseType } from '../types/exercise';
 import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
-import { FormAnalyzer } from './FormAnalyzer';
 import type { FormEvent, RepEvent, SkeletonEvent } from './PipelineInterfaces';
 import type { PoseEvent } from './PoseSkeletonTransformer';
 
@@ -87,9 +86,6 @@ export class PoseTrackPipeline {
   private detector: ExerciseDetector;
   private exerciseDefinition: ExerciseDefinition;
 
-  // Legacy form analyzer (kept for compatibility)
-  private formAnalyzer: FormAnalyzer;
-
   // RxJS subjects for event streams
   private skeletonSubject = new Subject<SkeletonEvent>();
   private formSubject = new Subject<FormEvent>();
@@ -115,9 +111,6 @@ export class PoseTrackPipeline {
       // TODO: Add detectors for other exercises
       this.detector = new KettlebellSwingDetector();
     }
-
-    // Legacy form analyzer (kept for compatibility with existing tests)
-    this.formAnalyzer = new FormAnalyzer(this.exerciseDefinition);
   }
 
   /**
@@ -160,13 +153,6 @@ export class PoseTrackPipeline {
    */
   getExerciseDefinition(): ExerciseDefinition {
     return this.exerciseDefinition;
-  }
-
-  /**
-   * Get the form analyzer
-   */
-  getFormAnalyzer(): FormAnalyzer {
-    return this.formAnalyzer;
   }
 
   /**
@@ -283,7 +269,6 @@ export class PoseTrackPipeline {
         if (loop) {
           this.currentFrameIndex = startFrame;
           this.detector.reset();
-          this.formAnalyzer.reset();
         } else {
           this.stopPlayback();
           return;
@@ -339,7 +324,6 @@ export class PoseTrackPipeline {
   reset(): void {
     this.currentFrameIndex = 0;
     this.detector.reset();
-    this.formAnalyzer.reset();
     this.stopPlayback();
   }
 
