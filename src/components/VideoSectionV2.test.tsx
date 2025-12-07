@@ -15,7 +15,9 @@ const mockNavigateToPreviousCheckpoint = vi.fn();
 const mockNavigateToNextCheckpoint = vi.fn();
 const mockToggleCrop = vi.fn();
 
-const createMockContext = (overrides = {}) => ({
+// Partial mock - only includes fields used by VideoSectionV2
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const createMockContext = (overrides = {}): any => ({
   videoRef: { current: document.createElement('video') },
   canvasRef: { current: document.createElement('canvas') },
   fileInputRef: { current: document.createElement('input') },
@@ -241,15 +243,14 @@ describe('VideoSectionV2', () => {
       expect(screen.getByRole('button', { name: /play/i })).not.toBeDisabled();
     });
 
-    it('disables checkpoint buttons when no reps', () => {
+    it('hides rep-nav-strip when no reps', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
         appState: { isModelLoaded: true, currentRepIndex: 0 },
         currentVideoFile: new File([], 'test.mp4'),
         repCount: 0,
       }));
       render(<VideoSectionV2 />);
-      const checkpointBtns = document.querySelectorAll('#prev-checkpoint-btn, #next-checkpoint-btn');
-      checkpointBtns.forEach(btn => expect(btn).toBeDisabled());
+      expect(document.querySelector('.rep-nav-strip')).not.toBeInTheDocument();
     });
   });
 
@@ -271,6 +272,7 @@ describe('VideoSectionV2', () => {
         repCount: 2,
         repThumbnails: thumbnails,
         appState: { isModelLoaded: true, currentRepIndex: 0 },
+        currentVideoFile: new File([], 'test.mp4'),
       }));
       render(<VideoSectionV2 />);
       expect(screen.getByText('Rep 1/2')).toBeInTheDocument();

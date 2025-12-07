@@ -35,7 +35,6 @@ const VideoSectionV2: React.FC = () => {
     getVideoContainerClass,
     navigateToPreviousRep,
     navigateToNextRep,
-    navigateToPreviousCheckpoint,
     navigateToNextCheckpoint,
     clearPositionLabel,
     repThumbnails,
@@ -182,6 +181,57 @@ const VideoSectionV2: React.FC = () => {
         onChange={handleVideoUpload}
         className="sr-only"
       />
+
+      {/* Rep navigation strip - shown when reps are detected */}
+      {repCount > 0 && currentVideoFile && (
+        <div className="rep-nav-strip">
+          <button
+            type="button"
+            className="rep-nav-btn"
+            onClick={navigateToPreviousRep}
+            disabled={appState.currentRepIndex <= 0}
+            aria-label="Previous rep"
+            title="Previous rep"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+            </svg>
+          </button>
+
+          <span className="rep-nav-label">
+            Rep {appState.currentRepIndex + 1}/{repCount}
+          </span>
+
+          <button
+            type="button"
+            className="rep-nav-btn"
+            onClick={navigateToNextRep}
+            disabled={appState.currentRepIndex >= repCount - 1}
+            aria-label="Next rep"
+            title="Next rep"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+            </svg>
+          </button>
+
+          <span className="rep-nav-divider" />
+
+          <button
+            type="button"
+            className="rep-nav-pill"
+            onClick={navigateToNextCheckpoint}
+            title="Cycle through checkpoints: Top → Connect → Bottom → Release"
+          >
+            <span className="rep-nav-position">
+              {currentPosition ? (POSITION_LABELS[currentPosition] || currentPosition) : 'Checkpoint'}
+            </span>
+            <svg className="rep-nav-cycle-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* biome-ignore lint/a11y/useKeyboardEquivalent: Double-tap is supplementary to existing button controls */}
       <div
@@ -333,32 +383,6 @@ const VideoSectionV2: React.FC = () => {
             </svg>
           </button>
 
-          {/* 4. Prev Checkpoint */}
-          <button
-            id="prev-checkpoint-btn"
-            disabled={!appState.isModelLoaded || !currentVideoFile || repCount === 0}
-            onClick={navigateToPreviousCheckpoint}
-            title="Previous Checkpoint"
-            type="button"
-          >
-            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M18.41 16.59L13.82 12l4.59-4.59L17 6l-6 6 6 6 1.41-1.41zM6 6h2v12H6V6z" />
-            </svg>
-          </button>
-
-          {/* 5. Next Checkpoint */}
-          <button
-            id="next-checkpoint-btn"
-            disabled={!appState.isModelLoaded || !currentVideoFile || repCount === 0}
-            onClick={navigateToNextCheckpoint}
-            title="Next Checkpoint"
-            type="button"
-          >
-            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6-1.41 1.41zM16 6h2v12h-2V6z" />
-            </svg>
-          </button>
-
           {/* Crop toggle button - only show when crop region is available */}
           {hasCropRegion && (
             <button
@@ -381,50 +405,9 @@ const VideoSectionV2: React.FC = () => {
         </div>
       </div>
 
-      {/* Checkpoint Filmstrip */}
+      {/* Checkpoint Filmstrip - thumbnails only, no nav (nav is in strip above) */}
       <div className="filmstrip-section">
         <div className="filmstrip-container" ref={filmstripRef} onClick={handleFilmstripClick} />
-        {repCount > 0 && (
-          <div className="filmstrip-nav">
-            <button
-              type="button"
-              className="filmstrip-nav-btn"
-              disabled={appState.currentRepIndex <= 0}
-              onClick={navigateToPreviousRep}
-              aria-label="Previous rep"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-              </svg>
-            </button>
-            <span className="filmstrip-rep-indicator">
-              Rep {appState.currentRepIndex + 1}/{repCount}
-            </span>
-            <button
-              type="button"
-              className="filmstrip-nav-btn"
-              disabled={appState.currentRepIndex >= repCount - 1}
-              onClick={navigateToNextRep}
-              aria-label="Next rep"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-              </svg>
-            </button>
-          </div>
-        )}
       </div>
     </section>
   );
