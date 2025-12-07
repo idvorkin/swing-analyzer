@@ -36,6 +36,9 @@ const VideoSectionV2: React.FC = () => {
     getVideoContainerClass,
     navigateToPreviousRep,
     navigateToNextRep,
+    navigateToPreviousCheckpoint,
+    navigateToNextCheckpoint,
+    clearPositionLabel,
     repThumbnails,
     extractionProgress,
     isExtracting,
@@ -45,11 +48,11 @@ const VideoSectionV2: React.FC = () => {
     isCropEnabled,
     toggleCrop,
     // HUD data
-    status,
     spineAngle,
     armToSpineAngle,
     // HUD visibility (based on pose availability, not extraction state)
     hasPosesForCurrentFrame,
+    currentPosition,
   } = useSwingAnalyzerContext();
 
   // Ref for the filmstrip container
@@ -199,9 +202,9 @@ const VideoSectionV2: React.FC = () => {
                 <div className="hud-overlay-top">
                   <div className="hud-overlay-reps">
                     <span id="rep-counter" className="hud-overlay-reps-value">
-                      {repCount}
+                      {repCount > 0 ? `${appState.currentRepIndex + 1}/${repCount}` : '0'}
                     </span>
-                    <span className="hud-overlay-reps-label">REPS</span>
+                    <span className="hud-overlay-reps-label">REP</span>
                   </div>
                   <div className="hud-overlay-angles">
                     <div className="hud-overlay-angle">
@@ -214,53 +217,32 @@ const VideoSectionV2: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="hud-overlay-bottom">
-                  <div className="hud-overlay-status">
-                    <span className="hud-overlay-status-dot" />
-                    <span className="hud-overlay-status-text">{status}</span>
+                {/* Position label - only shown during checkpoint navigation */}
+                {currentPosition && (
+                  <div className="hud-overlay-bottom">
+                    <div className="hud-overlay-status">
+                      <span className="hud-overlay-status-dot" />
+                      <span className="hud-overlay-status-text">
+                        {POSITION_LABELS[currentPosition] || currentPosition}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
           </div>
         )}
 
         <div className="video-controls">
-          <button
-            id="prev-frame-btn"
-            disabled={!appState.isModelLoaded || !currentVideoFile}
-            onClick={previousFrame}
-            title="Previous Frame (Shortcut: ,)"
-            type="button"
-          >
-            <svg
-              className="icon"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M7 6c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1s-1-.45-1-1V7c0-.55.45-1 1-1zm3.66 6.82l5.77 4.07c.66.47 1.58-.01 1.58-.82V7.93c0-.81-.91-1.28-1.58-.82l-5.77 4.07c-.57.4-.57 1.24 0 1.64z" />
-            </svg>
-            <span className="button-text">Prev</span>
-          </button>
-
+          {/* 1. Play/Pause */}
           <button
             id="play-pause-btn"
             className="toggle-button"
             disabled={!appState.isModelLoaded || !currentVideoFile}
-            onClick={togglePlayPause}
+            onClick={() => { clearPositionLabel(); togglePlayPause(); }}
             type="button"
           >
-            <svg
-              className="icon"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
+            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               {isPlaying ? (
                 <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
               ) : (
@@ -270,43 +252,69 @@ const VideoSectionV2: React.FC = () => {
             <span className="button-text">{isPlaying ? 'Pause' : 'Play'}</span>
           </button>
 
+          {/* 2. Prev Frame */}
+          <button
+            id="prev-frame-btn"
+            disabled={!appState.isModelLoaded || !currentVideoFile}
+            onClick={() => { clearPositionLabel(); previousFrame(); }}
+            title="Previous Frame (Shortcut: ,)"
+            type="button"
+          >
+            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+            </svg>
+          </button>
+
+          {/* 3. Next Frame */}
           <button
             id="next-frame-btn"
             disabled={!appState.isModelLoaded || !currentVideoFile}
-            onClick={nextFrame}
+            onClick={() => { clearPositionLabel(); nextFrame(); }}
             title="Next Frame (Shortcut: .)"
             type="button"
           >
-            <svg
-              className="icon"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M7.58 16.89l5.77-4.07c.56-.4.56-1.24 0-1.63L7.58 7.11C6.91 6.65 6 7.12 6 7.93v8.14c0 .81.91 1.28 1.58.82zM16 7v10c0 .55.45 1 1 1s1-.45 1-1V7c0-.55-.45-1-1-1s-1 .45-1 1z" />
+            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
             </svg>
-            <span className="button-text">Next</span>
           </button>
 
+          {/* 4. Prev Checkpoint */}
+          <button
+            id="prev-checkpoint-btn"
+            disabled={!appState.isModelLoaded || !currentVideoFile || repCount === 0}
+            onClick={navigateToPreviousCheckpoint}
+            title="Previous Checkpoint"
+            type="button"
+          >
+            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18.41 16.59L13.82 12l4.59-4.59L17 6l-6 6 6 6 1.41-1.41zM6 6h2v12H6V6z" />
+            </svg>
+          </button>
+
+          {/* 5. Next Checkpoint */}
+          <button
+            id="next-checkpoint-btn"
+            disabled={!appState.isModelLoaded || !currentVideoFile || repCount === 0}
+            onClick={navigateToNextCheckpoint}
+            title="Next Checkpoint"
+            type="button"
+          >
+            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6-1.41 1.41zM16 6h2v12h-2V6z" />
+            </svg>
+          </button>
+
+          {/* 6. Reset/Stop */}
           <button
             id="stop-btn"
             disabled={!appState.isModelLoaded || !currentVideoFile}
-            onClick={stopVideo}
+            onClick={() => { clearPositionLabel(); stopVideo(); }}
+            title="Reset to start"
             type="button"
           >
-            <svg
-              className="icon"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
+            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M6 6h12v12H6z" />
             </svg>
-            <span className="button-text">Stop</span>
           </button>
 
           {/* Crop toggle button - only show when crop region is available */}
@@ -318,19 +326,10 @@ const VideoSectionV2: React.FC = () => {
               type="button"
               title={isCropEnabled ? 'Show full frame' : 'Zoom to person'}
             >
-              <svg
-                className="icon"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
+              <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 {isCropEnabled ? (
-                  // Zoom out icon (show full frame)
                   <path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z" />
                 ) : (
-                  // Zoom in / crop icon (zoom to person)
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-2h2v-4h4v-2h-4V7h-2v4H7v2h4z" />
                 )}
               </svg>
