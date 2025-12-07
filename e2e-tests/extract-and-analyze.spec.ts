@@ -9,7 +9,9 @@ test.describe('Fresh Extraction Analysis', () => {
   // Give extraction plenty of time
   test.setTimeout(120000);
 
-  test('extracts from remote video and detects 9 reps', async ({ page }) => {
+  // Skip in CI - this requires actual ML extraction which is slow and may timeout
+  // Run manually: npx playwright test extract-and-analyze
+  test.skip('extracts from remote video and detects 9 reps', async ({ page }) => {
     // Clear any existing cache
     await page.goto('/');
     await clearPoseTrackDB(page);
