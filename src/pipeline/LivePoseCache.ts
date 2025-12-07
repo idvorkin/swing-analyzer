@@ -252,14 +252,14 @@ export class LivePoseCache {
     const cache = new LivePoseCache(poseTrack.metadata.sourceVideoHash);
     cache.setMetadata(poseTrack.metadata);
 
-    // Validate keypoint format
+    // Validate keypoint format - fail fast on invalid data
     if (
       poseTrack.frames.length > 0 &&
       poseTrack.frames[0].keypoints &&
       poseTrack.frames[0].keypoints.length > 0 &&
       !isMediaPipeFormat(poseTrack.frames[0].keypoints)
     ) {
-      console.error(
+      throw new Error(
         `LivePoseCache: Invalid keypoint format - expected ${MEDIAPIPE_KEYPOINT_COUNT} keypoints (MediaPipe-33), ` +
           `got ${poseTrack.frames[0].keypoints.length}. Legacy COCO-17 format is no longer supported. ` +
           `Please regenerate pose data with BlazePose-33 format.`

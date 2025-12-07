@@ -40,7 +40,7 @@ export function validateMediaPipeFormat(keypoints: PoseKeypoint[]): void {
 
 /**
  * Normalize keypoints - now just validates MediaPipe format.
- * @deprecated Use validateMediaPipeFormat instead. This function is kept for backwards compatibility.
+ * @deprecated Use validateMediaPipeFormat instead. This function throws on invalid data.
  */
 export function normalizeToMediaPipeFormat(
   keypoints: PoseKeypoint[]
@@ -49,12 +49,8 @@ export function normalizeToMediaPipeFormat(
     return keypoints;
   }
 
-  // Log warning for legacy data
-  console.error(
+  throw new Error(
     `KeypointAdapter: Legacy keypoint format detected (${keypoints.length} keypoints). ` +
-      `Only MediaPipe-33 format is supported. Please regenerate pose data.`
+      `Only MediaPipe-33 format is supported. Please regenerate pose data with BlazePose-33 format.`
   );
-
-  // Return as-is but this will likely cause issues downstream
-  return keypoints;
 }
