@@ -35,6 +35,7 @@ export interface SwingThresholds {
   // TOP position
   topSpineMax: number; // Spine must be below this (upright)
   topHipMin: number; // Hip must be above this (extended)
+  topArmMin: number; // Arm must be above this (near horizontal)
 
   // BOTTOM position
   bottomArmMax: number; // Arm must be below this (behind body)
@@ -56,6 +57,7 @@ export interface SwingThresholds {
 const DEFAULT_THRESHOLDS: SwingThresholds = {
   topSpineMax: 25,
   topHipMin: 150,
+  topArmMin: 60, // Arm must be >60° from vertical (near horizontal)
   // bottomArmMax was 0, increased to 10 for mirrored video tolerance
   // (transition threshold becomes |arm| < 25 instead of < 15)
   bottomArmMax: 10,
@@ -203,7 +205,8 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     const spine = skeleton.getSpineAngle();
     const hip = skeleton.getHipAngle();
     const knee = skeleton.getKneeAngle();
-    const wristHeight = skeleton.getWristHeight();
+    // Use dominant arm's wrist for height - critical for one-handed swings
+    const wristHeight = skeleton.getWristHeight(this.dominantArm ?? undefined);
     const angles = { arm, spine, hip, knee, wristHeight };
 
     // Track wrist height history for peak detection
@@ -253,7 +256,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
         break;
 
       case 'release':
-        if (this.shouldTransitionToTop(spine, hip)) {
+        if (this.shouldTransitionToTop(arm, spine, hip)) {
           this.finalizePhasePeak('release');
           this.phase = 'top';
           this.framesInPhase = 0;
@@ -444,30 +447,61 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   /**
    * Check if we should transition from RELEASE to TOP (rep complete)
    *
-   * Uses PEAK DETECTION: Top is when wrist height reaches its maximum
-   * and starts descending. More accurate than threshold-based detection.
+   * Uses ARM ANGLE as primary criterion: Top position is when arm reaches
+   * near-horizontal (>60° from vertical). This is more reliable than wrist
+   * height peak detection, especially for one-handed swings where the
+   * non-working arm can have noisy tracking.
+   *
+   * Also uses peak detection as secondary confirmation to catch the exact
+   * moment when the kettlebell starts descending.
    */
-  private shouldTransitionToTop(spine: number, hip: number): boolean {
+  private shouldTransitionToTop(
+    arm: number,
+    spine: number,
+    hip: number
+  ): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
-    if (this.wristHeightHistory.length < 3) return false;
 
     // Check posture requirements (must be standing upright)
     if (spine > this.thresholds.topSpineMax || hip < this.thresholds.topHipMin) {
       return false;
     }
 
-    // Peak detection: check if wrist height was increasing and is now decreasing
-    const h = this.wristHeightHistory;
-    const len = h.length;
+    // Primary criterion: arm must be near horizontal (kettlebell at shoulder height)
+    // Use absolute value to handle both mirrored and normal video
+    const armNearHorizontal = Math.abs(arm) > this.thresholds.topArmMin;
+    if (!armNearHorizontal) {
+      return false;
+    }
 
-    const prev2 = this.smoothedWristHeight(len - 3, 2);
-    const prev1 = this.smoothedWristHeight(len - 2, 2);
-    const curr = this.smoothedWristHeight(len - 1, 2);
+    // Secondary confirmation: wrist height peak detection
+    // This catches the exact moment when kettlebell starts descending
+    if (this.wristHeightHistory.length >= 3) {
+      const h = this.wristHeightHistory;
+      const len = h.length;
 
-    const isPeak = prev1 >= prev2 && prev1 > curr;
-    const wristHighEnough = prev1 > -80;
+      const prev2 = this.smoothedWristHeight(len - 3, 2);
+      const prev1 = this.smoothedWristHeight(len - 2, 2);
+      const curr = this.smoothedWristHeight(len - 1, 2);
 
-    return isPeak && wristHighEnough;
+      // Peak or plateau starting to descend
+      const isPeakOrDescending = prev1 >= prev2 && curr < prev1;
+      const wristHighEnough = prev1 > -80;
+
+      if (isPeakOrDescending && wristHighEnough) {
+        return true;
+      }
+    }
+
+    // Fallback: if arm has been horizontal for multiple frames, transition anyway
+    // This handles fast swings where peak detection might miss the exact moment.
+    // At 30fps, minFramesInPhase(2) + 2 = 4 frames = ~133ms which is reasonable
+    // for detecting the top of a swing. For 60fps video this would be ~67ms.
+    if (this.framesInPhase >= this.minFramesInPhase + 2) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

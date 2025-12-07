@@ -38,7 +38,8 @@ export class Skeleton {
   private _elbowAngle: number | null = null;
 
   // Wrist height cache (wrist Y relative to shoulder, positive = above)
-  private _wristHeight: number | null = null;
+  // Keyed by preferred side ('left', 'right', or 'auto')
+  private _wristHeightCache: Map<string, number> = new Map();
 
   // Timestamp for velocity calculations
   private _timestamp: number = 0;
@@ -621,7 +622,7 @@ export class Skeleton {
   }
 
   /**
-   * Get the average wrist height relative to shoulder midpoint
+   * Get wrist height relative to shoulder midpoint
    *
    * BIOMECHANICS: This measures how high the hands (and thus kettlebell) are.
    * - Positive values = wrists above shoulder level (arms raised high)
@@ -634,10 +635,16 @@ export class Skeleton {
    *
    * For detecting the "Top" position, look for the PEAK (maximum) of this value
    * during each rep cycle, rather than a fixed threshold.
+   *
+   * @param preferredSide - If specified, use this wrist (set by FormAnalyzer after detecting dominant arm).
+   *                        For one-handed exercises, this should match the working arm.
+   *                        If not specified, uses the wrist with higher confidence score.
    */
-  getWristHeight(): number {
-    if (this._wristHeight !== null) {
-      return this._wristHeight;
+  getWristHeight(preferredSide?: 'left' | 'right'): number {
+    const cacheKey = preferredSide ?? 'auto';
+    const cached = this._wristHeightCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
     }
 
     try {
@@ -647,24 +654,50 @@ export class Skeleton {
       const leftWrist = this.getKeypointByName('leftWrist');
       const rightWrist = this.getKeypointByName('rightWrist');
 
-      if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist) {
-        this._wristHeight = 0;
+      if (!leftShoulder || !rightShoulder) {
+        this._wristHeightCache.set(cacheKey, 0);
         return 0;
       }
 
       // Calculate shoulder midpoint Y
       const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
 
-      // Calculate average wrist Y
-      const avgWristY = (leftWrist.y + rightWrist.y) / 2;
+      // Get confidence scores
+      const leftConf = leftWrist?.score ?? leftWrist?.visibility ?? 0;
+      const rightConf = rightWrist?.score ?? rightWrist?.visibility ?? 0;
+      const minConf = 0.3;
+
+      let wristY: number | null = null;
+
+      if (preferredSide === 'right' && rightWrist && rightConf > minConf) {
+        // Use right wrist (dominant arm specified)
+        wristY = rightWrist.y;
+      } else if (preferredSide === 'left' && leftWrist && leftConf > minConf) {
+        // Use left wrist (dominant arm specified)
+        wristY = leftWrist.y;
+      } else if (leftWrist && rightWrist && leftConf > minConf && rightConf > minConf) {
+        // Both wrists have good confidence - use average (two-handed swing)
+        wristY = (leftWrist.y + rightWrist.y) / 2;
+      } else if (rightWrist && rightConf > minConf) {
+        // Only right wrist reliable
+        wristY = rightWrist.y;
+      } else if (leftWrist && leftConf > minConf) {
+        // Only left wrist reliable
+        wristY = leftWrist.y;
+      } else {
+        // No reliable wrist data
+        this._wristHeightCache.set(cacheKey, 0);
+        return 0;
+      }
 
       // In screen coordinates, Y increases downward
       // So shoulder_y - wrist_y = positive when wrist is ABOVE shoulder
-      this._wristHeight = shoulderMidY - avgWristY;
-      return this._wristHeight;
+      const height = shoulderMidY - wristY;
+      this._wristHeightCache.set(cacheKey, height);
+      return height;
     } catch (e) {
       console.error('Error calculating wrist height:', e);
-      this._wristHeight = 0;
+      this._wristHeightCache.set(cacheKey, 0);
       return 0;
     }
   }
