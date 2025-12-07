@@ -352,17 +352,37 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       // Don't reset rep count when video ends - just stop processing
     };
 
-    const handleTimeUpdate = () => {
-      // During playback, look up skeleton from cache
-      const session = inputSessionRef.current;
-      if (!session || !isPlayingRef.current) return;
+    // RAF-throttled skeleton rendering for smooth playback (swing-8h3 fix)
+    let rafId: number | null = null;
+    let pendingVideoTime: number | null = null;
 
-      const skeleton = session.getSkeletonAtTime(video.currentTime);
+    const renderSkeletonFrame = () => {
+      rafId = null;
+      if (pendingVideoTime === null) return;
+
+      const session = inputSessionRef.current;
+      if (!session || !isPlayingRef.current) {
+        pendingVideoTime = null;
+        return;
+      }
+
+      const skeleton = session.getSkeletonAtTime(pendingVideoTime);
       if (skeleton) {
         skeletonHandlerRef.current?.(skeleton);
-      } else {
-        // Debug: log when we can't find a skeleton for the current time
-        console.log('[DEBUG] handleTimeUpdate: no skeleton at time', video.currentTime);
+      }
+      pendingVideoTime = null;
+    };
+
+    const handleTimeUpdate = () => {
+      // During playback, throttle skeleton updates via RAF
+      if (!isPlayingRef.current) return;
+
+      // Store the latest video time
+      pendingVideoTime = video.currentTime;
+
+      // Request animation frame if not already pending
+      if (rafId === null) {
+        rafId = requestAnimationFrame(renderSkeletonFrame);
       }
     };
 
@@ -392,6 +412,10 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       video.removeEventListener('ended', handleEnded);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('seeked', handleSeeked);
+      // Cancel any pending RAF on cleanup
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, []); // No dependencies needed - uses refs for stable access
 

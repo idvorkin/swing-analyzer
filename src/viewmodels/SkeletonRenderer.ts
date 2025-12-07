@@ -3,6 +3,12 @@ import { CocoBodyParts, type PoseKeypoint } from '../types';
 
 /**
  * Responsible for rendering skeleton and pose data on a canvas
+ *
+ * Performance optimizations (swing-8h3):
+ * - Batched canvas operations (single beginPath for all keypoints)
+ * - Cached canvas context
+ * - No unnecessary keypoint copying
+ * - Cached angle calculations
  */
 export class SkeletonRenderer {
   // Rendering configuration
@@ -18,48 +24,53 @@ export class SkeletonRenderer {
   // Debug mode flag
   private debugMode = false;
 
-  constructor(private canvas: HTMLCanvasElement) {}
+  // Cached canvas context for performance
+  private ctx: CanvasRenderingContext2D | null = null;
+
+  constructor(private canvas: HTMLCanvasElement) {
+    // Cache the context on construction
+    this.ctx = canvas.getContext('2d');
+  }
 
   /**
    * Render a skeleton on the canvas
+   *
+   * Performance: Uses cached context and batched drawing operations
    */
   renderSkeleton(skeleton: Skeleton, timestamp: number): void {
     if (!skeleton) {
-      console.warn('SkeletonRenderer: No skeleton provided');
-      return;
+      return; // Silent return - no console.warn in hot path
     }
 
-    const ctx = this.canvas.getContext('2d');
+    // Get context (try cache first, then refresh if needed)
+    let ctx = this.ctx;
     if (!ctx) {
-      console.error('SkeletonRenderer: Could not get canvas context');
-      return;
+      this.ctx = this.canvas.getContext('2d');
+      ctx = this.ctx;
+      if (!ctx) return;
     }
 
     // Clear previous drawing
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Get keypoints from skeleton
+    // Get keypoints directly - no copying needed
     const keypoints = skeleton.getKeypoints();
 
     // Draw connections first (so they appear behind the points)
     this.drawConnections(ctx, keypoints);
 
-    // Draw keypoints
+    // Draw keypoints (batched)
     this.drawKeypoints(ctx, keypoints, timestamp);
 
-    // Always draw the arm-to-vertical angle visualization
-    this.visualizeArmToVerticalAngle(ctx, skeleton);
+    // Cache the angle calculation once for this frame
+    const armToVerticalAngle = skeleton.getArmToVerticalAngle();
 
-    // Draw debug info if enabled
+    // Draw angle visualization (uses cached angle)
+    this.visualizeArmToVerticalAngle(ctx, skeleton, armToVerticalAngle);
+
+    // Draw debug info if enabled (angle text is drawn in visualize, not duplicated here)
     if (this.debugMode) {
-      this.drawDebugInfo(ctx, skeleton);
-    } else {
-      // Even if debug mode is off, still show the arm-vertical angle
-      const armToVerticalAngle = skeleton.getArmToVerticalAngle().toFixed(1);
-      ctx.font = '14px monospace';
-      ctx.fillStyle = '#ffff00';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Arm-Vertical Angle: ${armToVerticalAngle}°`, 10, 40);
+      this.drawDebugInfo(ctx, skeleton, armToVerticalAngle);
     }
   }
 
@@ -178,6 +189,8 @@ export class SkeletonRenderer {
 
   /**
    * Draw keypoints with optional labels
+   *
+   * Performance: Batches all keypoint circles into a single path operation
    */
   private drawKeypoints(
     ctx: CanvasRenderingContext2D,
@@ -189,38 +202,48 @@ export class SkeletonRenderer {
       this.showBodyParts &&
       timestamp - this.lastLabelTimestamp < this.bodyPartDisplayTime * 1000;
 
-    // Set text style for labels
-    if (showLabels) {
+    // BATCHED: Draw all keypoint circles in a single path
+    ctx.beginPath();
+    ctx.fillStyle = this.keyPointColor;
+
+    const visiblePoints: Array<{ point: PoseKeypoint; index: number }> = [];
+
+    for (let index = 0; index < keypoints.length; index++) {
+      const point = keypoints[index];
+      if (this.isPointVisible(point)) {
+        // Add arc to the current path (no beginPath per point!)
+        ctx.moveTo(point.x + this.keyPointRadius, point.y);
+        ctx.arc(point.x, point.y, this.keyPointRadius, 0, 2 * Math.PI);
+        if (showLabels) {
+          visiblePoints.push({ point, index });
+        }
+      }
+    }
+
+    // Single fill for all keypoints
+    ctx.fill();
+
+    // Draw labels separately (text can't be batched)
+    if (showLabels && visiblePoints.length > 0) {
       ctx.font = `${this.fontSize}px Arial`;
       ctx.fillStyle = this.fontColor;
       ctx.textAlign = 'center';
-    }
-
-    // Draw each keypoint
-    keypoints.forEach((point, index) => {
-      if (this.isPointVisible(point)) {
-        // Draw point circle
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, this.keyPointRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = this.keyPointColor;
-        ctx.fill();
-
-        // Draw label if needed
-        if (showLabels) {
-          const bodyPartName = this.getBodyPartName(index);
-          ctx.fillStyle = this.fontColor;
-          ctx.fillText(bodyPartName, point.x, point.y - 10);
-        }
+      for (const { point, index } of visiblePoints) {
+        const bodyPartName = this.getBodyPartName(index);
+        ctx.fillText(bodyPartName, point.x, point.y - 10);
       }
-    });
+    }
   }
 
   /**
    * Draw debug information on canvas
+   *
+   * Performance: Uses pre-calculated armToVerticalAngle instead of recalculating
    */
   private drawDebugInfo(
     ctx: CanvasRenderingContext2D,
-    skeleton: Skeleton
+    skeleton: Skeleton,
+    armToVerticalAngle: number
   ): void {
     // Set text style for debug info
     ctx.font = '14px monospace';
@@ -230,83 +253,77 @@ export class SkeletonRenderer {
     // Draw spine angle
     const spineAngle = skeleton.getSpineAngle().toFixed(1);
     ctx.fillText(`Spine Angle: ${spineAngle}°`, 10, 20);
-    
-    // Draw arm-to-vertical angle
-    const armToVerticalAngle = skeleton.getArmToVerticalAngle().toFixed(1);
-    ctx.fillText(`Arm-Vertical Angle: ${armToVerticalAngle}°`, 10, 40);
 
-    // Always visualize the arm-to-vertical angle, regardless of debug mode
-    this.visualizeArmToVerticalAngle(ctx, skeleton);
+    // Draw arm-to-vertical angle (using cached value)
+    ctx.fillText(`Arm-Vertical Angle: ${armToVerticalAngle.toFixed(1)}°`, 10, 40);
 
-    // Draw grid if needed
-    if (this.debugMode) {
-      this.drawDebugGrid(ctx);
-    }
+    // Draw grid in debug mode
+    this.drawDebugGrid(ctx);
   }
 
   /**
    * Visualize the arm-to-vertical angle calculation
+   *
+   * Performance: Uses pre-calculated angle, batched drawing operations
    */
   private visualizeArmToVerticalAngle(
     ctx: CanvasRenderingContext2D,
-    skeleton: Skeleton
+    skeleton: Skeleton,
+    armToVerticalAngle: number
   ): void {
     // Get required keypoints
     const shoulder = skeleton.getKeypointByName('rightShoulder') || skeleton.getKeypointByName('leftShoulder');
     const elbow = skeleton.getKeypointByName('rightElbow') || skeleton.getKeypointByName('leftElbow');
 
     if (!shoulder || !elbow) {
-      // Draw error message if keypoints not found
-      ctx.fillStyle = '#ff0000';
-      ctx.fillText('Error: Missing keypoints for arm-vertical angle', 10, 60);
-      
-      // Log which keypoints are missing
-      ctx.fillText(`  Shoulder: ${shoulder ? 'Found' : 'Missing'}`, 10, 80);
-      ctx.fillText(`  Elbow: ${elbow ? 'Found' : 'Missing'}`, 10, 100);
+      // Silent return - don't draw error text in hot path
       return;
     }
 
-    // Set styles for vectors
+    // BATCHED: Draw both vectors in fewer operations
+    // Draw vertical vector (cyan)
+    ctx.beginPath();
+    ctx.strokeStyle = '#00ffff';
     ctx.lineWidth = 3;
-    
-    // Draw vertical vector
-    ctx.beginPath();
-    ctx.strokeStyle = '#00ffff'; // Cyan
     ctx.moveTo(shoulder.x, shoulder.y);
-    ctx.lineTo(shoulder.x, shoulder.y + 100); // 100px down from shoulder
+    ctx.lineTo(shoulder.x, shoulder.y + 100);
     ctx.stroke();
-    
-    // Draw arm vector in bright yellow - this is what we want to highlight
+
+    // Draw arm vector (yellow, thicker)
     ctx.beginPath();
-    ctx.strokeStyle = '#ffff00'; // Bright yellow
-    ctx.lineWidth = 5; // Make it thicker for emphasis
+    ctx.strokeStyle = '#ffff00';
+    ctx.lineWidth = 5;
     ctx.moveTo(shoulder.x, shoulder.y);
     ctx.lineTo(elbow.x, elbow.y);
     ctx.stroke();
-    
-    // Draw dots at the keypoints with labels
-    ctx.fillStyle = '#00ffff';
+
+    // BATCHED: Draw all dots in a single path
     ctx.beginPath();
+    ctx.fillStyle = '#00ffff';
+    ctx.moveTo(shoulder.x + 106, shoulder.y + 100);
     ctx.arc(shoulder.x, shoulder.y + 100, 6, 0, 2 * Math.PI);
     ctx.fill();
-    ctx.fillText('Vertical', shoulder.x + 10, shoulder.y + 100);
-    
+
+    ctx.beginPath();
     ctx.fillStyle = '#ffff00';
-    ctx.beginPath();
+    ctx.moveTo(shoulder.x + 6, shoulder.y);
     ctx.arc(shoulder.x, shoulder.y, 6, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.fillText('Shoulder', shoulder.x + 10, shoulder.y);
-    
-    ctx.fillStyle = '#ffff00'; // Match the arm color
-    ctx.beginPath();
+    ctx.moveTo(elbow.x + 6, elbow.y);
     ctx.arc(elbow.x, elbow.y, 6, 0, 2 * Math.PI);
     ctx.fill();
+
+    // Draw labels and angle (text can't be batched)
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#00ffff';
+    ctx.fillText('Vertical', shoulder.x + 10, shoulder.y + 100);
+    ctx.fillStyle = '#ffff00';
+    ctx.fillText('Shoulder', shoulder.x + 10, shoulder.y);
     ctx.fillText('Elbow', elbow.x + 10, elbow.y);
-    
-    // Draw calculated arm-to-vertical angle
-    const armToVerticalAngle = skeleton.getArmToVerticalAngle().toFixed(1);
+
+    // Draw the angle value (using cached calculation)
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`${armToVerticalAngle}°`, shoulder.x - 20, shoulder.y - 10);
+    ctx.fillText(`${armToVerticalAngle.toFixed(1)}°`, shoulder.x - 20, shoulder.y - 10);
   }
 
   /**
