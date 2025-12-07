@@ -205,31 +205,40 @@ main {
   flex-shrink: 0;
 }
 
-/* Mobile-specific top controls - even more compact */
+/* Mobile-specific top controls - icon-only buttons to save space */
 @media (max-width: 480px) {
   .top-controls {
-    margin-bottom: 8px;
-    padding: 8px;
+    margin-bottom: 6px;
+    padding: 6px;
     border-radius: 8px;
   }
 
   .control-row {
     gap: 6px;
+    justify-content: flex-start;
   }
 
+  /* Icon-only buttons on mobile - hide text labels */
   .file-label,
   .hardcoded-btn {
-    min-height: 36px;
-    padding: 6px 10px;
-    font-size: 13px;
-    border-radius: 6px;
+    min-height: 40px;
+    min-width: 40px;
+    width: 40px;
+    padding: 0;
+    font-size: 0; /* Hide text */
+    border-radius: 8px;
+    flex: 0 0 auto;
   }
 
   .file-label .icon,
   .hardcoded-btn .icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 4px;
+    width: 20px;
+    height: 20px;
+    margin: 0; /* Remove margin since no text */
+  }
+
+  .file-input {
+    flex: 0 0 auto;
   }
 }
 
