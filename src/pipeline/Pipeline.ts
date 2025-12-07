@@ -107,7 +107,8 @@ export class Pipeline {
             const result = this.formAnalyzer.processFrame(
               skeletonEvent.skeleton,
               skeletonEvent.poseEvent.frameEvent.timestamp,
-              skeletonEvent.poseEvent.frameEvent.videoTime
+              skeletonEvent.poseEvent.frameEvent.videoTime,
+              skeletonEvent.poseEvent.frameEvent.frameImage
             );
 
             // Update rep count
@@ -246,7 +247,8 @@ export class Pipeline {
     const result = this.formAnalyzer.processFrame(
       skeletonEvent.skeleton,
       frameEvent.timestamp,
-      frameEvent.videoTime
+      frameEvent.videoTime,
+      frameEvent.frameImage
     );
 
     // Update rep count
@@ -281,7 +283,8 @@ export class Pipeline {
       const result = this.formAnalyzer.processFrame(
         skeletonEvent.skeleton,
         skeletonEvent.poseEvent.frameEvent.timestamp,
-        skeletonEvent.poseEvent.frameEvent.videoTime
+        skeletonEvent.poseEvent.frameEvent.videoTime,
+        skeletonEvent.poseEvent.frameEvent.frameImage
       );
 
       // Update rep count

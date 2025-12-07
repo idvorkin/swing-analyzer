@@ -174,8 +174,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
             videoTime: pos.videoTime,
             angles: pos.angles,
             score: pos.score,
-            // Note: frameImage not available from peak-based detection
-            // Filmstrip will show placeholder until frame capture is added
+            frameImage: pos.frameImage,
           });
         }
         updated.set(event.repNumber, positionMap);
