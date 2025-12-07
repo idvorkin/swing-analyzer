@@ -223,18 +223,16 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       return;
     }
 
-    // Process through pipeline
+    // Process through pipeline (updates rep count, form state, etc.)
     const result = pipeline.processSkeletonEvent(event);
 
-    // Update UI state
+    // Update rep count (cumulative across all extracted frames)
     setRepCount(result);
-    const spineAngle = Math.round(event.skeleton.getSpineAngle() || 0);
-    setSpineAngle(spineAngle);
-    setArmToSpineAngle(Math.round(event.skeleton.getArmToVerticalAngle() || 0));
 
-    // Note: Skeleton rendering happens during playback via requestVideoFrameCallback,
-    // not during extraction. The visible video isn't synced to the extraction frame,
-    // so rendering here would show skeleton in wrong position.
+    // NOTE: Do NOT update spineAngle/armToSpineAngle here!
+    // This is called for every extraction frame, but the visible video isn't synced
+    // to extraction. HUD angles should only reflect video.currentTime, updated via
+    // updateHudFromSkeleton() during playback/seek.
   }, []);
 
   // ========================================

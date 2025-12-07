@@ -114,6 +114,34 @@ test.describe('Swing Analyzer', () => {
     await expect(page.locator('.hud-overlay-extraction')).not.toBeVisible();
   });
 
+  test('HUD angles stay fixed when video is paused', async ({ page }) => {
+    // This test catches the bug where extraction skeletons update HUD angles
+    // even though the visible video is paused at a single frame.
+
+    // Seed fixture
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+
+    // Load video (starts paused)
+    await page.click('#load-hardcoded-btn');
+
+    // Wait for HUD to appear
+    await expect(page.locator('.hud-overlay-angles')).toBeVisible({ timeout: 15000 });
+
+    // Record the initial angle value
+    const getSpineAngle = () =>
+      page.locator('.hud-overlay-angle-value').first().textContent();
+
+    const initialAngle = await getSpineAngle();
+    expect(initialAngle).toBeTruthy();
+
+    // Wait 500ms (during which extraction skeletons might stream if bug exists)
+    await page.waitForTimeout(500);
+
+    // Angle should be exactly the same (video is paused at same frame)
+    const angleAfterWait = await getSpineAngle();
+    expect(angleAfterWait).toBe(initialAngle);
+  });
+
   test('should load hardcoded video when sample button clicked', async ({
     page,
   }) => {
