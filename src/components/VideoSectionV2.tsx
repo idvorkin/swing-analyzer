@@ -9,6 +9,7 @@
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import { RepGalleryModal } from './RepGalleryModal';
 
 // Position display order for swing positions
 const POSITION_ORDER = ['top', 'connect', 'bottom', 'release'] as const;
@@ -52,6 +53,8 @@ const VideoSectionV2: React.FC = () => {
     // HUD visibility (based on pose availability, not extraction state)
     hasPosesForCurrentFrame,
     currentPosition,
+    // Rep gallery
+    setCurrentRepIndex,
   } = useSwingAnalyzerContext();
 
   // Ref for the filmstrip container
@@ -59,6 +62,16 @@ const VideoSectionV2: React.FC = () => {
 
   // Mobile source picker state - show when no video OR when user taps header camera button
   const [showSourcePicker, setShowSourcePicker] = useState(false);
+
+  // Rep gallery modal state
+  const [showGallery, setShowGallery] = useState(false);
+
+  const handleGallerySeek = useCallback((time: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+      videoRef.current.pause();
+    }
+  }, [videoRef]);
 
   // Listen for header camera button click via custom event
   useEffect(() => {
@@ -436,7 +449,34 @@ const VideoSectionV2: React.FC = () => {
       {/* Checkpoint Filmstrip - thumbnails only, no nav (nav is in strip above) */}
       <div className="filmstrip-section">
         <div className="filmstrip-container" ref={filmstripRef} onClick={handleFilmstripClick} />
+        {/* Gallery button - show when there are reps */}
+        {repCount > 0 && repThumbnails.size > 0 && (
+          <button
+            type="button"
+            className="filmstrip-gallery-btn"
+            onClick={() => setShowGallery(true)}
+            aria-label="View all reps"
+            title="View all reps"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+          </button>
+        )}
       </div>
+
+      {/* Rep Gallery Modal */}
+      <RepGalleryModal
+        isOpen={showGallery}
+        onClose={() => setShowGallery(false)}
+        repThumbnails={repThumbnails}
+        currentRepIndex={appState.currentRepIndex}
+        onSeek={handleGallerySeek}
+        onRepSelect={setCurrentRepIndex}
+      />
     </section>
   );
 };

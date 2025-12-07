@@ -907,6 +907,7 @@ main {
   --filmstrip-text: rgba(255, 255, 255, 0.7);
   --filmstrip-border: rgba(255, 255, 255, 0.08);
 
+  position: relative;
   background: var(--filmstrip-bg);
   border-radius: 12px;
   padding: 1rem;
@@ -974,6 +975,35 @@ main {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
+}
+
+/* Gallery button */
+.filmstrip-gallery-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--filmstrip-border);
+  color: var(--filmstrip-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.filmstrip-gallery-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--filmstrip-accent);
+  border-color: var(--filmstrip-accent);
+}
+
+.filmstrip-gallery-btn:focus-visible {
+  outline: 2px solid var(--filmstrip-accent);
+  outline-offset: 2px;
 }
 
 /* Navigation controls */

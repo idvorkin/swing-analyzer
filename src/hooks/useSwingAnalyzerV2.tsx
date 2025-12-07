@@ -874,6 +874,15 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     }));
   }, [repCount, appState.currentRepIndex, repThumbnails]);
 
+  // Set current rep index directly (used by gallery modal)
+  const setCurrentRepIndex = useCallback((index: number) => {
+    if (index < 0 || index >= repCount) return;
+    setAppState(prev => ({
+      ...prev,
+      currentRepIndex: index,
+    }));
+  }, [repCount]);
+
   // ========================================
   // Checkpoint Navigation
   // ========================================
@@ -1083,6 +1092,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     navigateToNextRep,
     navigateToPreviousCheckpoint,
     navigateToNextCheckpoint,
+    setCurrentRepIndex,
     clearPositionLabel,
     getVideoContainerClass,
     reinitializeWithCachedPoses: async () => {}, // No-op in V2
