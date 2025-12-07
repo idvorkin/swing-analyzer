@@ -71,10 +71,9 @@ test.describe('Fresh Extraction Analysis', () => {
       const d = e.details;
       const t = d.videoTime?.toFixed(2) ?? 'N/A';
       const armV = d.angles?.armToVertical?.toFixed(1) ?? 'N/A';
-      const armVAuto = d.angles?.armToVerticalAuto?.toFixed(1) ?? 'N/A';
       const spine = d.angles?.spine?.toFixed(1) ?? 'N/A';
       const hip = d.angles?.hip?.toFixed(0) ?? 'N/A';
-      console.log(`  Rep ${d.repNumber}: t=${t}s arm=${armV} (auto=${armVAuto}) spine=${spine} hip=${hip} dominant=${d.dominantArm}`);
+      console.log(`  Rep ${d.repNumber}: t=${t}s arm=${armV} spine=${spine} hip=${hip}`);
     });
 
     // Check if we got fresh extraction or cache
