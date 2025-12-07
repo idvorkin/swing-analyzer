@@ -187,6 +187,10 @@ export class Skeleton {
    * This is the angle between the arm vector (shoulder to elbow) and
    * a vertical line pointing downward (0° is arm pointing straight down, 90° is horizontal, 180° is pointing up)
    * Negative values indicate the arm is pointing to the left, positive to the right
+   *
+   * For mirrored video support: uses the arm with higher confidence instead of
+   * always preferring right. This ensures the swinging arm is tracked correctly
+   * regardless of video orientation.
    */
   getArmToVerticalAngle(): number {
     // If already calculated, return cached value
@@ -195,13 +199,56 @@ export class Skeleton {
     }
 
     try {
-      // Get shoulder and elbow keypoints
-      const shoulder =
-        this.getKeypointByName('rightShoulder') ||
-        this.getKeypointByName('leftShoulder');
-      const elbow =
-        this.getKeypointByName('rightElbow') ||
-        this.getKeypointByName('leftElbow');
+      // Get both sides
+      const rightShoulder = this.getKeypointByName('rightShoulder');
+      const rightElbow = this.getKeypointByName('rightElbow');
+      const leftShoulder = this.getKeypointByName('leftShoulder');
+      const leftElbow = this.getKeypointByName('leftElbow');
+
+      // Calculate angle for each side if keypoints available
+      const calcAngle = (shoulder: PoseKeypoint, elbow: PoseKeypoint): number => {
+        const dx = elbow.x - shoulder.x;
+        const dy = elbow.y - shoulder.y;
+        const magnitude = Math.sqrt(dx * dx + dy * dy);
+        if (magnitude === 0) return 90;
+        const cosAngle = Math.min(Math.max(dy / magnitude, -1), 1);
+        return Math.acos(cosAngle) * (180 / Math.PI);
+      };
+
+      let rightAngle = 90, leftAngle = 90;
+      const rightConf = (rightElbow?.score ?? rightElbow?.visibility ?? 0);
+      const leftConf = (leftElbow?.score ?? leftElbow?.visibility ?? 0);
+      const minConf = 0.3; // Minimum confidence to consider
+
+      if (rightShoulder && rightElbow && rightConf > minConf) {
+        rightAngle = calcAngle(rightShoulder, rightElbow);
+      }
+      if (leftShoulder && leftElbow && leftConf > minConf) {
+        leftAngle = calcAngle(leftShoulder, leftElbow);
+      }
+
+      // Choose the arm that's MORE VERTICAL (smaller angle from vertical).
+      // This helps with kettlebell swings where the swinging arm should be
+      // more vertical at the bottom position than the non-swinging arm.
+      let shoulder: PoseKeypoint | undefined;
+      let elbow: PoseKeypoint | undefined;
+
+      if (rightAngle <= leftAngle && rightShoulder && rightElbow && rightConf > minConf) {
+        shoulder = rightShoulder;
+        elbow = rightElbow;
+      } else if (leftShoulder && leftElbow && leftConf > minConf) {
+        shoulder = leftShoulder;
+        elbow = leftElbow;
+      } else {
+        // Fallback to any available with reasonable confidence
+        if (rightConf >= leftConf && rightShoulder && rightElbow) {
+          shoulder = rightShoulder;
+          elbow = rightElbow;
+        } else {
+          shoulder = leftShoulder || rightShoulder;
+          elbow = leftElbow || rightElbow;
+        }
+      }
 
       if (shoulder && elbow) {
         // Calculate arm vector (from shoulder to elbow)
@@ -245,7 +292,6 @@ export class Skeleton {
         this._armToVerticalAngle = angleDeg;
         return angleDeg;
       } else {
-        console.warn('Missing keypoints for arm-to-vertical angle calculation');
         this._armToVerticalAngle = 0; // Default if keypoints not available
         return 0;
       }
