@@ -58,6 +58,17 @@ download-test-videos:
 
     echo "✓ Test videos ready in $VIDEOS_DIR"
 
+    # Update fixture hashes to match downloaded videos
+    just update-fixture-hashes
+
+# Check if fixture hashes match video files
+check-fixture-hashes:
+    node scripts/update-fixture-hashes.cjs --check
+
+# Update fixture hashes to match current video files
+update-fixture-hashes:
+    node scripts/update-fixture-hashes.cjs
+
 # Run the development server
 dev:
     npm run dev

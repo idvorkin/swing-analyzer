@@ -553,6 +553,41 @@ Project documentation lives in `docs/tech-pack/`:
 - `e2e-tests/swing-analyzer.spec.ts` - Fast: Core app functionality
 - `e2e-tests/fixtures/` - Pose data fixtures and factory
 
+### Fixture Management
+
+**IMPORTANT**: E2E test fixtures contain video hashes that must match the actual video files.
+
+**When tests fail with "Error: Could not load sample video" or hash mismatch errors:**
+
+1. **Check if video files changed**: Run `just check-fixture-hashes`
+2. **Update hashes if needed**: Run `just update-fixture-hashes`
+3. **Re-run tests**: `just e2e`
+
+**When to regenerate fixtures:**
+- After running `just download-test-videos` (videos may have been updated upstream)
+- After any changes to video files in `public/videos/`
+- When E2E tests fail with cache lookup errors
+
+**Manual hash update** (if script unavailable):
+```bash
+# Compute hash for a video file
+node -e "
+const fs = require('fs');
+const crypto = require('crypto');
+const buffer = fs.readFileSync('public/videos/swing-sample-4reps.webm');
+const chunk = buffer.slice(0, 64 * 1024);
+const hash = crypto.createHash('sha256')
+  .update(chunk)
+  .update(buffer.length.toString())
+  .digest('hex');
+console.log(hash);
+"
+```
+
+Then update:
+- `e2e-tests/fixtures/pose-factory.ts` - the hash constant
+- `e2e-tests/fixtures/poses/*.posetrack.json` - the `sourceVideoHash` field
+
 ### Unit Tests (Vitest)
 
 - Pipeline tests: `src/pipeline/*.test.ts`
