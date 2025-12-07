@@ -69,13 +69,18 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         )}
       </h1>
       <nav>
-        {/* Mobile: swap video button - triggers the file input in VideoSectionV2 */}
-        <label htmlFor="video-upload" className="header-swap-btn" title="Load different video">
+        {/* Mobile: swap video button - shows source picker overlay */}
+        <button
+          type="button"
+          className="header-swap-btn"
+          title="Load different video"
+          onClick={() => window.dispatchEvent(new CustomEvent('show-source-picker'))}
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
             <circle cx="12" cy="13" r="4" />
           </svg>
-        </label>
+        </button>
         <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
           <span>Analyzer</span>
         </NavLink>

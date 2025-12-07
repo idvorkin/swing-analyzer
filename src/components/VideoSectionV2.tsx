@@ -57,6 +57,23 @@ const VideoSectionV2: React.FC = () => {
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);
 
+  // Mobile source picker state - show when no video OR when user taps header camera button
+  const [showSourcePicker, setShowSourcePicker] = useState(false);
+
+  // Listen for header camera button click via custom event
+  useEffect(() => {
+    const handleShowSourcePicker = () => setShowSourcePicker(true);
+    window.addEventListener('show-source-picker', handleShowSourcePicker);
+    return () => window.removeEventListener('show-source-picker', handleShowSourcePicker);
+  }, []);
+
+  // Hide source picker when video loads
+  useEffect(() => {
+    if (currentVideoFile) {
+      setShowSourcePicker(false);
+    }
+  }, [currentVideoFile]);
+
   // Double-tap to play/pause state
   const lastTapRef = useRef<number>(0);
   const [showPlayPauseOverlay, setShowPlayPauseOverlay] = useState<'play' | 'pause' | null>(null);
@@ -206,10 +223,10 @@ const VideoSectionV2: React.FC = () => {
         className={`video-container ${getVideoContainerClass()}`}
         onClick={handleVideoDoubleTap}
       >
-        {/* Mobile: Empty state - big welcoming buttons */}
-        {!currentVideoFile && (
-          <div className="mobile-empty-state">
-            <div className="mobile-empty-buttons">
+        {/* Mobile: Source picker - shown when no video OR when user taps header camera button */}
+        {(!currentVideoFile || showSourcePicker) && (
+          <div className="mobile-empty-state" onClick={() => setShowSourcePicker(false)}>
+            <div className="mobile-empty-buttons" onClick={(e) => e.stopPropagation()}>
               <label htmlFor="video-upload" className="mobile-empty-btn camera-roll-btn">
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
