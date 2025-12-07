@@ -101,14 +101,13 @@ This keeps your branch up-to-date with changes from other agents.
 git checkout main && git merge agent/swing-N
 # If merge had conflicts, run tests before pushing:
 npx playwright test && npx tsc --noEmit
-git push --no-verify
+git push origin main
 ```
 
 **Merge criteria:**
 - Feature/task is complete
 - Rebased on latest main (no conflicts, or conflicts resolved)
 - If merge had conflicts: **must run test suite before pushing**
-- Use `--no-verify` on push (pre-push hook blocks main, but origin merges are allowed)
 
 **If merge conflicts occur:**
 1. Resolve conflicts carefully
@@ -117,7 +116,7 @@ git push --no-verify
 4. If tests fail, fix issues before pushing
 
 **If main is broken after merge:**
-1. `git revert HEAD && git push --no-verify` (quick rollback)
+1. `git revert HEAD && git push origin main` (quick rollback)
 2. Fix the issue on your agent branch
 3. Re-merge after fixing
 
@@ -303,7 +302,7 @@ This avoids downloading browsers separately for each project.
 The `.githooks/` directory contains:
 - `pre-commit` - Syncs beads before commits
 - `post-merge` - Syncs beads after pulls
-- `pre-push` - Blocks direct pushes to `main` (use `--no-verify` after merge)
+- `pre-push` - Blocks pushes to upstream/main only (origin/main is allowed)
 
 ### Branch Strategy
 
@@ -343,7 +342,7 @@ done | sort -r
 
 **📦 MINIMAL PRs**: When creating PRs to upstream, include ONLY the changes the user explicitly requested. Do not bundle unrelated changes from the branch. If unsure what to include, ask the user to confirm scope before creating the PR.
 
-**🚫 NO --no-verify on commits**: Never use `git commit --no-verify` unless absolutely necessary. (Note: `git push --no-verify` IS required for origin/main merges due to pre-push hook.)
+**🚫 NO --no-verify**: Never use `--no-verify` unless absolutely necessary. The pre-push hook now allows origin/main pushes, so `--no-verify` shouldn't be needed.
 
 **🧹 LINT FIRST**: Before making code changes, run pre-commit on affected files to fix existing lint issues. Commit those fixes first, then make your actual change. This keeps your logic commits clean and focused.
 

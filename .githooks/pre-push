@@ -1,24 +1,39 @@
 #!/bin/bash
-# Block direct pushes to main branch
-# All changes to main must go through PRs
+# Block direct pushes to main branch on UPSTREAM (idvorkin) only
+# Origin (idvorkin-ai-tools) is the agent working repo - pushes allowed
+#
+# This hook receives: $1 = remote name, $2 = remote URL
+
+remote_name="$1"
+remote_url="$2"
 
 protected_branch="main"
 
+# Check if pushing to upstream (idvorkin repo) vs origin (idvorkin-ai-tools)
+is_upstream=false
+if [[ "$remote_url" == *"idvorkin/swing-analyzer"* ]] || [[ "$remote_name" == "upstream" ]]; then
+    is_upstream=true
+fi
+
 while read local_ref local_sha remote_ref remote_sha; do
     if [[ "$remote_ref" == "refs/heads/$protected_branch" ]]; then
-        echo ""
-        echo "🚫 Direct push to '$protected_branch' is blocked!"
-        echo ""
-        echo "   Per CLAUDE.md: 'Nothing merges without a PR and human approval'"
-        echo ""
-        echo "   Instead:"
-        echo "   1. Create a feature branch: git checkout -b fix/my-change"
-        echo "   2. Push the branch: git push -u origin fix/my-change"
-        echo "   3. Create a PR: gh pr create"
-        echo ""
-        echo "   To bypass (emergencies only): git push --no-verify"
-        echo ""
-        exit 1
+        if $is_upstream; then
+            echo ""
+            echo "🚫 Direct push to '$protected_branch' on UPSTREAM is blocked!"
+            echo ""
+            echo "   The upstream repo (idvorkin) requires PRs for all changes."
+            echo ""
+            echo "   Instead:"
+            echo "   1. Push to origin: git push origin main"
+            echo "   2. Create PR to upstream: gh pr create --repo idvorkin/swing-analyzer"
+            echo ""
+            echo "   To bypass (emergencies only): git push --no-verify"
+            echo ""
+            exit 1
+        else
+            # Pushing to origin (idvorkin-ai-tools) - this is allowed
+            echo "✅ Pushing to origin/main (agent working repo)"
+        fi
     fi
 done
 
