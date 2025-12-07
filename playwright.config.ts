@@ -16,6 +16,45 @@ function isTailscaleRunning(): boolean {
   }
 }
 
+// Get process working directory - cross-platform
+function getProcessCwd(pid: string): string | null {
+  try {
+    if (process.platform === 'darwin') {
+      // macOS: use lsof to get cwd
+      const output = execSync(`lsof -p ${pid} 2>/dev/null | grep cwd | awk '{print $NF}'`, {
+        encoding: 'utf-8',
+      }).trim();
+      return output || null;
+    } else {
+      // Linux: use /proc filesystem
+      return execSync(`readlink -f /proc/${pid}/cwd 2>/dev/null`, {
+        encoding: 'utf-8',
+      }).trim() || null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+// Get process command line - cross-platform
+function getProcessCmd(pid: string): string | null {
+  try {
+    if (process.platform === 'darwin') {
+      // macOS: use ps
+      return execSync(`ps -p ${pid} -o command= 2>/dev/null`, {
+        encoding: 'utf-8',
+      }).trim() || null;
+    } else {
+      // Linux: use /proc filesystem
+      return execSync(`cat /proc/${pid}/cmdline 2>/dev/null | tr '\\0' ' '`, {
+        encoding: 'utf-8',
+      }).trim() || null;
+    }
+  } catch {
+    return null;
+  }
+}
+
 // Find a running vite server in the current directory
 function findRunningViteServer(): { port: number; https: boolean } | null {
   try {
@@ -37,20 +76,17 @@ function findRunningViteServer(): { port: number; https: boolean } | null {
       const port = parseInt(portMatch[1], 10);
       if (port < 5000 || port > 6000) continue; // Only check typical vite ports
 
-      // Check if this process is running from our directory
+      // Check if this process is running from our directory (cross-platform)
       try {
-        const processCwd = execSync(`readlink -f /proc/${pid}/cwd 2>/dev/null`, {
-          encoding: 'utf-8',
-        }).trim();
-        const cmdline = execSync(`cat /proc/${pid}/cmdline 2>/dev/null | tr '\\0' ' '`, {
-          encoding: 'utf-8',
-        });
+        const processCwd = getProcessCwd(pid);
+        const cmdline = getProcessCmd(pid);
 
-        if (processCwd === cwd && cmdline.includes('vite')) {
-          // Check if it's HTTPS
+        if (processCwd === cwd && cmdline?.includes('vite')) {
+          // Check if it's HTTPS (timeout command differs on macOS)
+          const timeoutCmd = process.platform === 'darwin' ? 'gtimeout' : 'timeout';
           const isHttps =
             execSync(
-              `timeout 1 bash -c "echo | openssl s_client -connect localhost:${port} 2>/dev/null | grep -q 'CONNECTED' && echo yes" || true`,
+              `${timeoutCmd} 1 bash -c "echo | openssl s_client -connect localhost:${port} 2>/dev/null | grep -q 'CONNECTED' && echo yes" 2>/dev/null || true`,
               { encoding: 'utf-8' }
             ).trim() === 'yes';
           return { port, https: isHttps };

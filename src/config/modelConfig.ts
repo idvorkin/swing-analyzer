@@ -4,7 +4,10 @@
  * BlazePose is the only supported model (33 MediaPipe keypoints normalized to COCO-17)
  */
 
-export type PoseModel = 'blazepose';
+// Import PoseModel from types (single source of truth)
+import type { PoseModel } from '../types/posetrack';
+// Re-export for convenience
+export type { PoseModel };
 
 export type BlazePoseVariant = 'lite' | 'full' | 'heavy';
 
@@ -32,16 +35,6 @@ export interface ModelConfig {
 }
 
 /**
- * Default configuration - BlazePose Lite
- */
-export const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  model: 'blazepose',
-  blazePoseVariant: 'lite',
-  blazePoseRuntime: 'tfjs',
-  enableSmoothing: true,
-};
-
-/**
  * BlazePose Lite configuration - fastest BlazePose variant
  */
 export const BLAZEPOSE_LITE_CONFIG: ModelConfig = {
@@ -50,6 +43,11 @@ export const BLAZEPOSE_LITE_CONFIG: ModelConfig = {
   blazePoseRuntime: 'tfjs',
   enableSmoothing: true,
 };
+
+/**
+ * Default configuration - BlazePose Lite
+ */
+export const DEFAULT_MODEL_CONFIG: ModelConfig = BLAZEPOSE_LITE_CONFIG;
 
 /**
  * BlazePose Full configuration - balanced accuracy/speed

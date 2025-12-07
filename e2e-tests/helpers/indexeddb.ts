@@ -14,17 +14,21 @@ const POSETRACK_STORE_NAME = 'posetracks';
 /**
  * Set the app's pose track storage mode.
  * Call this before seeding data if you need IndexedDB persistence.
+ *
+ * @returns true if storage mode was set, false if testSetup not available
  */
 export async function setPoseTrackStorageMode(
   page: Page,
   mode: 'memory' | 'indexeddb'
-): Promise<void> {
-  await page.evaluate((storageMode) => {
+): Promise<boolean> {
+  return page.evaluate((storageMode) => {
     // Access the service through the test setup
     const testSetup = (window as unknown as { __testSetup?: { setPoseTrackStorageMode?: (mode: string) => void } }).__testSetup;
     if (testSetup?.setPoseTrackStorageMode) {
       testSetup.setPoseTrackStorageMode(storageMode);
+      return true;
     }
+    return false;
   }, mode);
 }
 

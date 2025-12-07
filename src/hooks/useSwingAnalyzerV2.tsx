@@ -346,19 +346,23 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     // Set up session recorder pipeline state getter for debugging
     const video = videoRef.current;
-    sessionRecorder.setPipelineStateGetter(() => ({
-      repCount: pipelineRef.current?.getRepCount() ?? 0,
-      isPlaying: video ? !video.paused : false,
-      videoTime: video?.currentTime ?? 0,
-      skeletonAngles: pipelineRef.current?.getLatestSkeleton()
-        ? {
-            spine: pipelineRef.current.getLatestSkeleton()?.getSpineAngle() ?? 0,
-            arm: pipelineRef.current.getLatestSkeleton()?.getArmToSpineAngle() ?? 0,
-            hip: pipelineRef.current.getLatestSkeleton()?.getHipAngle() ?? 0,
-            knee: pipelineRef.current.getLatestSkeleton()?.getKneeAngle() ?? 0,
-          }
-        : undefined,
-    }));
+    sessionRecorder.setPipelineStateGetter(() => {
+      // Cache skeleton to avoid multiple calls that could return different results
+      const skeleton = pipelineRef.current?.getLatestSkeleton();
+      return {
+        repCount: pipelineRef.current?.getRepCount() ?? 0,
+        isPlaying: video ? !video.paused : false,
+        videoTime: video?.currentTime ?? 0,
+        skeletonAngles: skeleton
+          ? {
+              spine: skeleton.getSpineAngle(),
+              arm: skeleton.getArmToSpineAngle(),
+              hip: skeleton.getHipAngle(),
+              knee: skeleton.getKneeAngle(),
+            }
+          : undefined,
+      };
+    });
 
     return () => {
       stateSubscription.unsubscribe();

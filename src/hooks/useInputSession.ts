@@ -75,6 +75,19 @@ export function useInputSession(
   // Session instance
   const sessionRef = useRef<InputSession | null>(null);
 
+  // Store callbacks in refs to avoid session recreation when callbacks change
+  const onSkeletonRef = useRef(onSkeleton);
+  const onExtractionProgressRef = useRef(onExtractionProgress);
+
+  // Keep refs in sync with current callbacks
+  useEffect(() => {
+    onSkeletonRef.current = onSkeleton;
+  }, [onSkeleton]);
+
+  useEffect(() => {
+    onExtractionProgressRef.current = onExtractionProgress;
+  }, [onExtractionProgress]);
+
   // State
   const [state, setState] = useState<InputSessionState>({ type: 'idle' });
   const [extractionProgress, setExtractionProgress] = useState<ExtractionProgress | null>(null);
@@ -98,15 +111,15 @@ export function useInputSession(
       setState(newState);
     });
 
-    // Subscribe to skeleton events
+    // Subscribe to skeleton events (use ref for callback stability)
     const skeletonSubscription = session.skeletons$.subscribe((skeleton) => {
-      onSkeleton?.(skeleton);
+      onSkeletonRef.current?.(skeleton);
     });
 
-    // Subscribe to extraction progress
+    // Subscribe to extraction progress (use ref for callback stability)
     const progressSubscription = session.extractionProgress$.subscribe((progress) => {
       setExtractionProgress(progress);
-      onExtractionProgress?.(progress);
+      onExtractionProgressRef.current?.(progress);
     });
 
     // Cleanup
@@ -117,7 +130,7 @@ export function useInputSession(
       session.dispose();
       sessionRef.current = null;
     };
-  }, [videoElement, canvasElement, onSkeleton, onExtractionProgress]);
+  }, [videoElement, canvasElement]); // Callbacks excluded - handled via refs
 
   // Start video file
   const startVideoFile = useCallback(async (file: File) => {

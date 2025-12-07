@@ -57,6 +57,17 @@ const VideoSectionV2: React.FC = () => {
   // Ref for the filmstrip container
   const filmstripRef = useRef<HTMLDivElement>(null);
 
+  // Event delegation handler for filmstrip clicks (avoids individual event listeners)
+  const handleFilmstripClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'CANVAS' && target.dataset.seekTime) {
+      const seekTime = parseFloat(target.dataset.seekTime);
+      if (!isNaN(seekTime) && videoRef.current) {
+        videoRef.current.currentTime = seekTime;
+      }
+    }
+  }, [videoRef]);
+
   // Render the filmstrip with actual thumbnails
   const renderFilmstrip = useCallback(() => {
     const container = filmstripRef.current;
@@ -99,15 +110,10 @@ const VideoSectionV2: React.FC = () => {
         ctx.putImageData(candidate.frameImage, 0, 0);
       }
 
-      // Add click handler to seek video to this position
-      if (candidate.videoTime !== undefined && videoRef.current) {
+      // Store seek time as data attribute (click handled by event delegation)
+      if (candidate.videoTime !== undefined) {
         canvas.style.cursor = 'pointer';
-        const seekTime = candidate.videoTime;
-        canvas.addEventListener('click', () => {
-          if (videoRef.current) {
-            videoRef.current.currentTime = seekTime;
-          }
-        });
+        canvas.dataset.seekTime = candidate.videoTime.toString();
       }
 
       // Add position label
@@ -119,7 +125,7 @@ const VideoSectionV2: React.FC = () => {
       wrapper.appendChild(label);
       container.appendChild(wrapper);
     }
-  }, [repCount, repThumbnails, appState.currentRepIndex, videoRef]);
+  }, [repCount, repThumbnails, appState.currentRepIndex]);
 
   // Re-render filmstrip when rep changes or thumbnails update
   useEffect(() => {
@@ -327,7 +333,7 @@ const VideoSectionV2: React.FC = () => {
 
       {/* Checkpoint Filmstrip */}
       <div className="filmstrip-section">
-        <div className="filmstrip-container" ref={filmstripRef} />
+        <div className="filmstrip-container" ref={filmstripRef} onClick={handleFilmstripClick} />
         {repCount > 0 && (
           <div className="filmstrip-nav">
             <button

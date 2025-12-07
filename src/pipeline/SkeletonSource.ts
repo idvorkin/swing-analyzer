@@ -106,6 +106,4 @@ export interface VideoFileSourceConfig {
   autoExtract?: boolean;
   /** Model to use for extraction */
   model?: 'blazepose';
-  /** BlazePose variant (lite, full, heavy) */
-  modelVariant?: 'lite' | 'full' | 'heavy';
 }

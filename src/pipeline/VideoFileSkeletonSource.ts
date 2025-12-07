@@ -48,7 +48,6 @@ export class VideoFileSkeletonSource implements SkeletonSource {
   private readonly videoFile: File;
   private readonly autoExtract: boolean;
   private readonly model: PoseModel;
-  private readonly modelVariant: 'lite' | 'full' | 'heavy';
 
   constructor(config: VideoFileSourceConfig) {
     this.videoFile = config.videoFile;
@@ -57,7 +56,6 @@ export class VideoFileSkeletonSource implements SkeletonSource {
     // They're kept in the config interface for API consistency with CameraSkeletonSource.
     this.autoExtract = config.autoExtract ?? true;
     this.model = config.model ?? 'blazepose';
-    this.modelVariant = config.modelVariant ?? 'full';
     this.stateSubject = new BehaviorSubject<SkeletonSourceState>({
       type: 'idle',
     });
@@ -249,7 +247,6 @@ export class VideoFileSkeletonSource implements SkeletonSource {
     try {
       const result = await extractPosesFromVideo(this.videoFile, {
         model: this.model,
-        modelVariant: this.modelVariant,
         precomputeAngles: true,
         signal: this.abortController.signal,
         onProgress: (progress) => {

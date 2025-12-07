@@ -25,8 +25,8 @@ export class Skeleton {
   // Arm-to-spine angle cache (computed lazily)
   private _armToSpineAngle: number | null = null;
 
-  // Arm-to-vertical angle cache (computed lazily)
-  private _armToVerticalAngle: number | null = null;
+  // Arm-to-vertical angle cache (computed lazily, keyed by preferredSide)
+  private _armToVerticalAngleCache: Map<string, number> = new Map();
 
   // Hip angle cache (knee-hip-shoulder angle)
   private _hipAngle: number | null = null;
@@ -235,9 +235,11 @@ export class Skeleton {
    *                        If not specified, fall back to heuristics (more vertical arm)
    */
   getArmToVerticalAngle(preferredSide?: 'left' | 'right'): number {
-    // If already calculated, return cached value
-    if (this._armToVerticalAngle !== null) {
-      return this._armToVerticalAngle;
+    // Check cache keyed by preferredSide (undefined becomes 'auto')
+    const cacheKey = preferredSide ?? 'auto';
+    const cached = this._armToVerticalAngleCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
     }
 
     try {
@@ -342,17 +344,17 @@ export class Skeleton {
           angleDeg = -angleDeg;
         }
 
-        this._armToVerticalAngle = angleDeg;
+        this._armToVerticalAngleCache.set(cacheKey, angleDeg);
         return angleDeg;
       } else {
         // No complete arm pair found - log for debugging
         console.warn('Missing keypoints for arm-to-vertical angle calculation');
-        this._armToVerticalAngle = 0; // Default if keypoints not available
+        this._armToVerticalAngleCache.set(cacheKey, 0); // Default if keypoints not available
         return 0;
       }
     } catch (e) {
       console.error('Error calculating arm-to-vertical angle:', e);
-      this._armToVerticalAngle = 0;
+      this._armToVerticalAngleCache.set(cacheKey, 0);
       return 0;
     }
   }

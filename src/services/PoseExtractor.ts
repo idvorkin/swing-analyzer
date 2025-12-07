@@ -161,13 +161,13 @@ export async function extractPosesFromVideo(
   const videoUrl = URL.createObjectURL(videoFile);
   video.src = videoUrl;
 
-  // Add to DOM - required for video to load in many browsers
-  document.body.appendChild(video);
-
   // Track detector for cleanup
   let detector: poseDetection.PoseDetector | null = null;
 
   try {
+    // Add to DOM inside try block - ensures cleanup in finally runs
+    // Required for video to load in many browsers
+    document.body.appendChild(video);
     // Wait for video metadata to load with timeout
     await new Promise<void>((resolve, reject) => {
       const METADATA_TIMEOUT_MS = 30000; // 30 second timeout

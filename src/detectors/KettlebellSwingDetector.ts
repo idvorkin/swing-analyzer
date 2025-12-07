@@ -39,7 +39,7 @@ export interface SwingThresholds {
   topHipMin: number; // Hip must be above this (extended)
 
   // BOTTOM position
-  bottomArmMax: number; // Arm must be below this (behind body)
+  bottomArmMax: number; // Arm must be within this angle of vertical (abs value)
   bottomSpineMin: number; // Spine must be above this (hinged)
   bottomHipMax: number; // Hip must be below this (hinged)
 
@@ -62,7 +62,8 @@ const DEFAULT_THRESHOLDS: SwingThresholds = {
   topHipMin: 150, // Hip angle > 150° (nearly straight)
 
   // BOTTOM: arm behind, bent over, hips back
-  bottomArmMax: 0, // Arm behind vertical (negative)
+  // Note: arm angle is absolute value (works for both video orientations)
+  bottomArmMax: 15, // Arm within 15° of vertical (close to body)
   bottomSpineMin: 35, // Spine at least 35° forward
   bottomHipMax: 140, // Hip angle < 140° (hinged)
 
@@ -132,7 +133,9 @@ export class KettlebellSwingDetector implements ExerciseDetector {
    */
   processFrame(skeleton: Skeleton, timestamp: number = Date.now()): DetectorResult {
     // Get all angles
-    const arm = skeleton.getArmToVerticalAngle();
+    // Use Math.abs for arm angle to support mirrored videos (person facing either direction)
+    const armRaw = skeleton.getArmToVerticalAngle();
+    const arm = Math.abs(armRaw);
     const spine = skeleton.getSpineAngle();
     const hip = skeleton.getHipAngle();
     const knee = skeleton.getKneeAngle();

@@ -7,28 +7,16 @@
   },
   "annotations": [
     {
-      "frame_index": 40,
-      "video_time": 1.363,
-      "position": "top",
-      "notes": "Arms at peak height, spine upright (3.9 deg)"
-    },
-    {
-      "frame_index": 83,
-      "video_time": 2.797,
-      "position": "top",
-      "notes": "Arms at peak height, spine upright (8.7 deg)"
-    },
-    {
-      "frame_index": 126,
-      "video_time": 4.23,
-      "position": "top",
-      "notes": "Arms at peak height, spine upright (9.0 deg)"
-    },
-    {
       "frame_index": 18,
       "video_time": 0.63,
       "position": "bottom",
       "notes": "Deepest hinge (spine 58.2 deg)"
+    },
+    {
+      "frame_index": 40,
+      "video_time": 1.363,
+      "position": "top",
+      "notes": "Arms at peak height, spine upright (3.9 deg)"
     },
     {
       "frame_index": 61,
@@ -37,10 +25,22 @@
       "notes": "Deepest hinge (spine 71.5 deg)"
     },
     {
+      "frame_index": 83,
+      "video_time": 2.797,
+      "position": "top",
+      "notes": "Arms at peak height, spine upright (8.7 deg)"
+    },
+    {
       "frame_index": 104,
       "video_time": 3.497,
       "position": "bottom",
       "notes": "Deepest hinge (spine 64.9 deg)"
+    },
+    {
+      "frame_index": 126,
+      "video_time": 4.23,
+      "position": "top",
+      "notes": "Arms at peak height, spine upright (9.0 deg)"
     },
     {
       "frame_index": 146,
