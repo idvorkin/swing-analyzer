@@ -461,7 +461,7 @@ export class PoseTrackPipeline {
 
     // Emit rep event
     const repEvent: RepEvent = {
-      repCount: this.formAnalyzer.getRepCount(),
+      repCount: this.detector.getRepCount(),
       formEvent,
     };
     this.repSubject.next(repEvent);
