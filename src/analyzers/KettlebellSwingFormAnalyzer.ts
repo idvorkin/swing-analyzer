@@ -56,7 +56,9 @@ export interface SwingThresholds {
 const DEFAULT_THRESHOLDS: SwingThresholds = {
   topSpineMax: 25,
   topHipMin: 150,
-  bottomArmMax: 0,
+  // bottomArmMax was 0, increased to 10 for mirrored video tolerance
+  // (transition threshold becomes |arm| < 25 instead of < 15)
+  bottomArmMax: 10,
   bottomSpineMin: 35,
   bottomHipMax: 140,
   connectArmMax: 30,
