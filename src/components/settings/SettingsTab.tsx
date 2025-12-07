@@ -74,16 +74,20 @@ export function SettingsTab() {
 
   const [isClearing, setIsClearing] = useState(false);
   const [clearSuccess, setClearSuccess] = useState(false);
+  const [clearError, setClearError] = useState(false);
 
   const handleClearCache = async () => {
     setIsClearing(true);
     setClearSuccess(false);
+    setClearError(false);
     try {
       await clearAllPoseTracks();
       setClearSuccess(true);
       setTimeout(() => setClearSuccess(false), 2000);
     } catch (error) {
-      console.error('Failed to clear cache:', error);
+      console.error('[SettingsTab] Failed to clear pose cache:', error);
+      setClearError(true);
+      setTimeout(() => setClearError(false), 3000);
     } finally {
       setIsClearing(false);
     }
@@ -149,7 +153,13 @@ export function SettingsTab() {
           onClick={handleClearCache}
           disabled={isClearing}
         >
-          {isClearing ? 'Clearing...' : clearSuccess ? 'Cleared!' : 'Clear'}
+          {isClearing
+            ? 'Clearing...'
+            : clearSuccess
+              ? 'Cleared!'
+              : clearError
+                ? 'Failed!'
+                : 'Clear'}
         </button>
       </div>
 

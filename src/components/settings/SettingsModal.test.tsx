@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SettingsModal } from '../SettingsModal';
@@ -184,7 +190,7 @@ describe('SettingsModal', () => {
       expect(screen.getByLabelText('Toggle pose caching')).toBeInTheDocument();
     });
 
-    it('toggles pose caching when clicked', () => {
+    it('toggles pose caching from enabled to disabled', () => {
       mockGetPoseTrackStorageMode.mockReturnValue('indexeddb');
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
@@ -192,6 +198,16 @@ describe('SettingsModal', () => {
       fireEvent.click(toggle);
 
       expect(mockSetPoseTrackStorageMode).toHaveBeenCalledWith('memory');
+    });
+
+    it('toggles pose caching from disabled to enabled', () => {
+      mockGetPoseTrackStorageMode.mockReturnValue('memory');
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      const toggle = screen.getByLabelText('Toggle pose caching');
+      fireEvent.click(toggle);
+
+      expect(mockSetPoseTrackStorageMode).toHaveBeenCalledWith('indexeddb');
     });
 
     it('shows Clear Cache button', () => {
@@ -207,6 +223,18 @@ describe('SettingsModal', () => {
       fireEvent.click(clearButton);
 
       expect(mockClearAllPoseTracks).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows Failed! when clearAllPoseTracks fails', async () => {
+      mockClearAllPoseTracks.mockRejectedValueOnce(new Error('IndexedDB error'));
+      renderWithRouter(<SettingsModal {...defaultProps} />);
+
+      const clearButton = screen.getByRole('button', { name: 'Clear' });
+      fireEvent.click(clearButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Failed!' })).toBeInTheDocument();
+      });
     });
   });
 

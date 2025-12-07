@@ -20,8 +20,8 @@ const POSETRACK_DB_VERSION = 1;
 
 /**
  * Storage mode for pose tracks
- * - 'memory': Session-only, cleared on page reload (default)
- * - 'indexeddb': Persistent across page loads
+ * - 'memory': Session-only, cleared on page reload
+ * - 'indexeddb': Persistent across page loads (default)
  */
 export type PoseTrackStorageMode = 'memory' | 'indexeddb';
 
@@ -40,8 +40,13 @@ function loadStorageModePreference(): PoseTrackStorageMode {
     if (saved === 'memory' || saved === 'indexeddb') {
       return saved;
     }
-  } catch {
+  } catch (error) {
     // localStorage not available (private browsing, etc.)
+    console.warn(
+      '[PoseTrackService] Failed to read storage mode preference. ' +
+        'Defaulting to IndexedDB. This may occur in private browsing mode.',
+      error
+    );
   }
   return 'indexeddb'; // Default to persistent caching
 }
@@ -52,8 +57,13 @@ function loadStorageModePreference(): PoseTrackStorageMode {
 function saveStorageModePreference(mode: PoseTrackStorageMode): void {
   try {
     localStorage.setItem(STORAGE_MODE_KEY, mode);
-  } catch {
-    // localStorage not available
+  } catch (error) {
+    // localStorage not available (private browsing, quota exceeded, etc.)
+    console.warn(
+      '[PoseTrackService] Failed to save storage mode preference. ' +
+        'The setting will not persist after page reload.',
+      error
+    );
   }
 }
 
@@ -449,6 +459,17 @@ export async function clearAllPoseTracks(): Promise<void> {
 
     request.onerror = () => {
       reject(new Error('Failed to clear pose track cache'));
+    };
+
+    request.onblocked = () => {
+      console.warn(
+        '[PoseTrackService] Database deletion blocked - other tabs may have it open.'
+      );
+      reject(
+        new Error(
+          'Cache clear blocked. Please close other tabs using this app and try again.'
+        )
+      );
     };
 
     request.onsuccess = () => {
