@@ -13,7 +13,6 @@ import { resolve } from 'node:path';
 import { describe, expect, it, beforeEach } from 'vitest';
 import { Skeleton } from '../models/Skeleton';
 import type { PoseTrackFile } from '../types/posetrack';
-import { KettlebellSwingDetector } from '../detectors/KettlebellSwingDetector';
 import { PoseTrackPipeline } from './PoseTrackPipeline';
 
 /**
@@ -341,7 +340,7 @@ describe('Position Detection with Ground Truth', () => {
   describe('Rep counting with peak detection', () => {
     it('counts reps correctly using peak-based Top detection', () => {
       const pipeline = new PoseTrackPipeline(posetrack);
-      const results = pipeline.processAllFrames();
+      pipeline.processAllFrames(); // Process all frames to count reps
 
       // Get final rep count
       const finalRepCount = pipeline.getRepCount();
