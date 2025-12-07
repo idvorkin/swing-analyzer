@@ -2,7 +2,7 @@
 /**
  * Update E2E test fixture hashes to match current video files.
  *
- * This script computes the quick hash (first 64KB + file size) for each video
+ * This script computes the quick hash (first 1MB + last 1MB + file size) for each video
  * and updates the corresponding fixture files.
  *
  * Usage:
