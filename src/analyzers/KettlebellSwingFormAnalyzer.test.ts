@@ -348,6 +348,95 @@ describe('KettlebellSwingFormAnalyzer', () => {
       expect(result.angles.wristHeight).toBe(20);
     });
   });
+
+  describe('mirrored video support', () => {
+    /**
+     * In mirrored video (selfie mode), arm angles have opposite sign
+     * but the same magnitude. The algorithm should work with either sign.
+     */
+
+    it('detects phases correctly with negative arm angles (normal video)', () => {
+      // Normal video: arm behind body = negative angle
+      const normalAngles = {
+        top: { arm: 80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
+        connect: { arm: 20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
+        bottom: { arm: -10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
+        release: { arm: 20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
+      };
+
+      // Process through all phases
+      for (let i = 0; i < 3; i++) {
+        analyzer.processFrame(createMockSkeleton(normalAngles.top), i * 10);
+      }
+      expect(analyzer.getPhase()).toBe('top');
+
+      for (let i = 0; i < 3; i++) {
+        analyzer.processFrame(createMockSkeleton(normalAngles.connect), 30 + i * 10);
+      }
+      expect(analyzer.getPhase()).toBe('connect');
+
+      for (let i = 0; i < 3; i++) {
+        analyzer.processFrame(createMockSkeleton(normalAngles.bottom), 60 + i * 10);
+      }
+      expect(analyzer.getPhase()).toBe('bottom');
+    });
+
+    it('detects phases correctly with positive arm angles (mirrored video)', () => {
+      // Mirrored video: arm behind body = positive angle (same magnitude, opposite sign)
+      const mirroredAngles = {
+        top: { arm: 80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
+        connect: { arm: 20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
+        bottom: { arm: 10, spine: 50, hip: 120, knee: 160, wristHeight: -100 }, // +10 instead of -10
+        release: { arm: 20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
+      };
+
+      // Process through all phases - should work identically
+      for (let i = 0; i < 3; i++) {
+        analyzer.processFrame(createMockSkeleton(mirroredAngles.top), i * 10);
+      }
+      expect(analyzer.getPhase()).toBe('top');
+
+      for (let i = 0; i < 3; i++) {
+        analyzer.processFrame(createMockSkeleton(mirroredAngles.connect), 30 + i * 10);
+      }
+      expect(analyzer.getPhase()).toBe('connect');
+
+      for (let i = 0; i < 3; i++) {
+        analyzer.processFrame(createMockSkeleton(mirroredAngles.bottom), 60 + i * 10);
+      }
+      expect(analyzer.getPhase()).toBe('bottom');
+    });
+
+    it('counts reps with mirrored arm angles', () => {
+      // Use positive arm angles throughout (mirrored video style)
+      const mirroredPhases = {
+        top: { arm: 80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
+        connect: { arm: 20, spine: 25, hip: 155, knee: 165, wristHeight: 0 },
+        bottom: { arm: 10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
+        release: { arm: 20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
+      };
+
+      let time = 0;
+
+      // Complete one rep with mirrored angles
+      for (const phase of ['top', 'connect', 'bottom', 'release'] as const) {
+        for (let i = 0; i < 3; i++) {
+          analyzer.processFrame(createMockSkeleton(mirroredPhases[phase]), time);
+          time += 10;
+        }
+      }
+
+      // Peak detection for TOP
+      const wristPattern = [10, 20, 30, 50, 50, 50, 40, 30];
+      for (const wrist of wristPattern) {
+        const angles = { ...mirroredPhases.top, wristHeight: wrist };
+        analyzer.processFrame(createMockSkeleton(angles), time);
+        time += 10;
+      }
+
+      expect(analyzer.getRepCount()).toBe(1);
+    });
+  });
 });
 
 // ========================================
