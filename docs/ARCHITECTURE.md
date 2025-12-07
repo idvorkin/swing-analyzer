@@ -296,6 +296,38 @@ Both modes use the same `Pipeline` and `FormAnalyzer` - only the source differs.
 - **Frame throttling**: Pipeline can skip frames if processing lags
 - **Canvas reuse**: `SkeletonRenderer` reuses canvas context
 
+### Throttled Playback Sync
+
+During video playback, we need to update UI state (rep counter, position display) based on the current video time. The naive approach would be:
+
+1. **Separate interval timer** - Creates a second timing loop alongside the frame callback, leading to more complexity and potential race conditions.
+2. **Per-frame updates** - Updates state on every frame (~30/60 fps), which is wasteful for UI that only needs 1Hz updates.
+
+**Our approach**: Throttle within the existing `requestVideoFrameCallback` loop.
+
+```typescript
+// In renderVideoFrame callback (fires every video frame)
+if (now - lastRepSyncTimeRef.current >= REP_SYNC_INTERVAL_MS) {
+  lastRepSyncTimeRef.current = now;
+  updateRepAndPositionFromTime(metadata.mediaTime);
+}
+```
+
+**Benefits:**
+- **No additional timers** - Uses the existing frame loop
+- **Automatic cleanup** - No interval to manage on pause/end
+- **Synced with playback** - Uses `metadata.mediaTime` (actual video time)
+- **Configurable frequency** - `REP_SYNC_INTERVAL_MS` (default 1000ms)
+
+**When to use this pattern:**
+- Any UI update during playback that doesn't need per-frame precision
+- State that depends on video time but changes infrequently
+- Expensive calculations that shouldn't run every frame
+
+**Example locations:**
+- `useSwingAnalyzerV2.tsx`: Rep counter and position sync during playback
+- Future: Form quality indicators, coaching cues
+
 ## Testing Strategy
 
 See [TEST_STRATEGY.md](./tech-pack/TEST_STRATEGY.md) for details.

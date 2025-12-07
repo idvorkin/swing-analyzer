@@ -35,6 +35,13 @@ import type { CropRegion } from '../types/posetrack';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 
+// Throttle interval for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
+const REP_SYNC_INTERVAL_MS = 1000; // 1 second
+
+// Helper for consistent position display (e.g., "top" → "Top")
+const formatPositionForDisplay = (position: string): string =>
+  position.charAt(0).toUpperCase() + position.slice(1).toLowerCase();
+
 export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   // ========================================
   // Core State
@@ -86,6 +93,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const currentVideoUrlRef = useRef<string | null>(null);
   // Track if we're in the middle of loading a video (to abort on switch)
   const videoLoadAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Throttle for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
+  const lastRepSyncTimeRef = useRef<number>(0);
+  // Ref to hold the rep sync handler (enables stable reference from event handlers)
+  const repSyncHandlerRef = useRef<((videoTime: number) => void) | null>(null);
 
   // Crop state for auto-centering on person in landscape videos
   const [cropRegion, setCropRegionState] = useState<CropRegion | null>(null);
@@ -534,6 +546,14 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
           // Update HUD with current frame's data
           updateHudFromSkeleton(skeletonEvent.skeleton);
         }
+
+        // Throttled rep/position sync (every REP_SYNC_INTERVAL_MS)
+        // This updates the rep counter and position display as video plays.
+        // See ARCHITECTURE.md "Throttled Playback Sync" for rationale.
+        if (now - lastRepSyncTimeRef.current >= REP_SYNC_INTERVAL_MS) {
+          lastRepSyncTimeRef.current = now;
+          repSyncHandlerRef.current?.(metadata.mediaTime);
+        }
       }
 
       // Request next frame callback if still playing
@@ -587,6 +607,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
         // Update HUD with current frame's data
         updateHudFromSkeleton(skeletonEvent.skeleton);
       }
+
+      // Sync rep counter and position to seek location (immediate, not throttled)
+      repSyncHandlerRef.current?.(video.currentTime);
     };
 
     video.addEventListener('play', handlePlayWithCallback);
@@ -601,7 +624,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       video.removeEventListener('seeked', handleSeeked);
       stopVideoFrameCallback();
     };
-  }, [updateHudFromSkeleton]); // updateHudFromSkeleton is stable (useCallback with no deps)
+  }, [updateHudFromSkeleton]); // repSyncHandlerRef is stable (ref), updateHudFromSkeleton is stable (useCallback)
 
   // ========================================
   // Video File Controls
@@ -837,7 +860,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     if (firstCheckpoint?.videoTime !== undefined) {
       video.currentTime = firstCheckpoint.videoTime;
       if (actualPosition) {
-        setCurrentPosition(actualPosition);
+        setCurrentPosition(formatPositionForDisplay(actualPosition));
       }
     }
     setAppState(prev => ({
@@ -865,7 +888,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     if (firstCheckpoint?.videoTime !== undefined) {
       video.currentTime = firstCheckpoint.videoTime;
       if (actualPosition) {
-        setCurrentPosition(actualPosition);
+        setCurrentPosition(formatPositionForDisplay(actualPosition));
       }
     }
     setAppState(prev => ({
@@ -910,6 +933,49 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     return checkpoints;
   }, [repThumbnails]);
 
+  // ========================================
+  // Auto-Sync Rep & Position During Playback
+  // ========================================
+  // Updates currentRepIndex and currentPosition based on video time.
+  // Called from throttled playback loop and on seek events.
+  // See ARCHITECTURE.md "Throttled Playback Sync" for design rationale.
+  const updateRepAndPositionFromTime = useCallback((videoTime: number) => {
+    const checkpoints = getAllCheckpoints();
+    if (checkpoints.length === 0) return;
+
+    // Find which rep/position we're in: last checkpoint where time >= checkpoint.videoTime
+    // Default to rep 1 before first checkpoint (per spec: show rep 1 before first rep)
+    let foundRepNum = 1;
+    let foundPosition: string | null = null;
+
+    for (const cp of checkpoints) {
+      if (videoTime >= cp.videoTime - 0.05) {  // Small tolerance for frame timing
+        foundRepNum = cp.repNum;
+        foundPosition = cp.position;
+      } else {
+        break; // Checkpoints are sorted, so we've passed current time
+      }
+    }
+
+    // Update rep index if changed (repNum is 1-indexed, currentRepIndex is 0-indexed)
+    // Use functional update to avoid stale closure on appState.currentRepIndex
+    const newRepIndex = foundRepNum - 1;
+    setAppState(prev => {
+      if (newRepIndex !== prev.currentRepIndex) {
+        return { ...prev, currentRepIndex: newRepIndex };
+      }
+      return prev; // Return same reference to avoid unnecessary re-render
+    });
+
+    // Update position if found
+    if (foundPosition) {
+      setCurrentPosition(formatPositionForDisplay(foundPosition));
+    }
+  }, [getAllCheckpoints]); // No appState dependency needed with functional update
+
+  // Keep ref up to date for use in event handlers (avoids stale closure)
+  repSyncHandlerRef.current = updateRepAndPositionFromTime;
+
   const navigateToNextCheckpoint = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -925,7 +991,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     if (nextCheckpoint) {
       video.pause(); // Pause when seeking to checkpoint
       video.currentTime = nextCheckpoint.videoTime;
-      setCurrentPosition(nextCheckpoint.position);
+      setCurrentPosition(formatPositionForDisplay(nextCheckpoint.position));
       // Update rep index if needed
       setAppState(prev => ({
         ...prev,
@@ -951,7 +1017,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     if (prevCheckpoint) {
       video.pause(); // Pause when seeking to checkpoint
       video.currentTime = prevCheckpoint.videoTime;
-      setCurrentPosition(prevCheckpoint.position);
+      setCurrentPosition(formatPositionForDisplay(prevCheckpoint.position));
       // Update rep index if needed
       setAppState(prev => ({
         ...prev,
