@@ -284,13 +284,15 @@ main {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Left and right button groups */
+/* Left and right button groups - fixed width so they don't move */
 .rep-nav-left,
 .rep-nav-right {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
+
 
 .rep-nav-btn {
   display: flex;
@@ -334,8 +336,9 @@ main {
   background: rgba(139, 92, 246, 0.5);
 }
 
-/* Center display: Rep X/Y • Checkpoint */
+/* Center display: Rep X/Y • Checkpoint - flex:1 so right buttons stay fixed */
 .rep-nav-display {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -344,6 +347,7 @@ main {
   font-size: 0.9375rem;
   font-weight: 600;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .rep-nav-label {
