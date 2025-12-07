@@ -161,6 +161,8 @@ export class FormAnalyzer {
         angles[angle.name] = skeleton.getElbowAngle();
       } else if (angle.name === 'armToVertical') {
         angles[angle.name] = skeleton.getArmToVerticalAngle();
+      } else if (angle.name === 'wristHeight') {
+        angles[angle.name] = skeleton.getWristHeight();
       } else {
         // Use generic angle calculation
         const value = skeleton.getAngle(

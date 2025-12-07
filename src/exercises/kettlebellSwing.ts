@@ -74,6 +74,22 @@ export const kettlebellSwingDefinition: ExerciseDefinition = {
       },
       required: false,
     },
+    {
+      angle: {
+        name: 'wristHeight',
+        point1: 'leftShoulder',
+        vertex: 'midShoulder', // Virtual point
+        point2: 'leftWrist',
+        description: 'Wrist height relative to shoulder (positive = above)',
+      },
+      targets: {
+        top: { ideal: 0, tolerance: 80, weight: 0.8 }, // Near or above shoulder
+        connect: { ideal: -150, tolerance: 100, weight: 0.3 },
+        bottom: { ideal: -250, tolerance: 100, weight: 0.3 },
+        release: { ideal: -100, tolerance: 100, weight: 0.3 },
+      },
+      required: false,
+    },
   ],
 
   positions: [
