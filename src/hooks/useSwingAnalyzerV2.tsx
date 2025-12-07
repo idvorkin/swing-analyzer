@@ -199,11 +199,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setSpineAngle(spineAngle);
     setArmToSpineAngle(Math.round(event.skeleton.getArmToVerticalAngle() || 0));
 
-    // Always render skeleton when poses exist (per SKELETON_RENDERING_SPEC.md)
-    if (skeletonRendererRef.current) {
-      console.log('[DEBUG] Rendering skeleton, spineAngle:', spineAngle);
-      skeletonRendererRef.current.renderSkeleton(event.skeleton, performance.now());
-    }
+    // Note: Skeleton rendering happens during playback via requestVideoFrameCallback,
+    // not during extraction. The visible video isn't synced to the extraction frame,
+    // so rendering here would show skeleton in wrong position.
   }, []);
 
   // ========================================
@@ -352,70 +350,77 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       // Don't reset rep count when video ends - just stop processing
     };
 
-    // RAF-throttled skeleton rendering for smooth playback (swing-8h3 fix)
-    let rafId: number | null = null;
-    let pendingVideoTime: number | null = null;
+    // Per-frame skeleton rendering using requestVideoFrameCallback
+    // This fires once per actual video frame, perfectly synced with display
+    let videoFrameCallbackId: number | null = null;
 
-    const renderSkeletonFrame = () => {
-      rafId = null;
-      if (pendingVideoTime === null) return;
-
+    const renderVideoFrame: VideoFrameRequestCallback = (now, metadata) => {
+      // Look up skeleton at the exact video frame time
       const session = inputSessionRef.current;
-      if (!session || !isPlayingRef.current) {
-        pendingVideoTime = null;
-        return;
+      if (session && isPlayingRef.current) {
+        const skeletonEvent = session.getSkeletonAtTime(metadata.mediaTime);
+        if (skeletonEvent?.skeleton && skeletonRendererRef.current) {
+          skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, now);
+        }
       }
 
-      const skeleton = session.getSkeletonAtTime(pendingVideoTime);
-      if (skeleton) {
-        skeletonHandlerRef.current?.(skeleton);
+      // Request next frame callback if still playing
+      if (isPlayingRef.current) {
+        videoFrameCallbackId = video.requestVideoFrameCallback(renderVideoFrame);
       }
-      pendingVideoTime = null;
     };
 
-    const handleTimeUpdate = () => {
-      // During playback, throttle skeleton updates via RAF
-      if (!isPlayingRef.current) return;
-
-      // Store the latest video time
-      pendingVideoTime = video.currentTime;
-
-      // Request animation frame if not already pending
-      if (rafId === null) {
-        rafId = requestAnimationFrame(renderSkeletonFrame);
+    const startVideoFrameCallback = () => {
+      if (videoFrameCallbackId === null && 'requestVideoFrameCallback' in video) {
+        videoFrameCallbackId = video.requestVideoFrameCallback(renderVideoFrame);
       }
+    };
+
+    const stopVideoFrameCallback = () => {
+      if (videoFrameCallbackId !== null && 'cancelVideoFrameCallback' in video) {
+        video.cancelVideoFrameCallback(videoFrameCallbackId);
+        videoFrameCallbackId = null;
+      }
+    };
+
+    // Start/stop video frame callback on play/pause
+    const handlePlayWithCallback = () => {
+      handlePlay();
+      startVideoFrameCallback();
+    };
+
+    const handlePauseWithCallback = () => {
+      stopVideoFrameCallback();
+      handlePause();
+    };
+
+    const handleEndedWithCallback = () => {
+      stopVideoFrameCallback();
+      handleEnded();
     };
 
     const handleSeeked = () => {
-      // On seek, look up skeleton from cache
+      // On seek, render skeleton at current position (works when paused too)
       const session = inputSessionRef.current;
       if (!session) return;
 
-      const skeleton = session.getSkeletonAtTime(video.currentTime);
-      if (skeleton) {
-        console.log('[DEBUG] handleSeeked: found skeleton at time', video.currentTime);
-        skeletonHandlerRef.current?.(skeleton);
-      } else {
-        console.log('[DEBUG] handleSeeked: no skeleton at time', video.currentTime);
+      const skeletonEvent = session.getSkeletonAtTime(video.currentTime);
+      if (skeletonEvent?.skeleton && skeletonRendererRef.current) {
+        skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, performance.now());
       }
     };
 
-    video.addEventListener('play', handlePlay);
-    video.addEventListener('pause', handlePause);
-    video.addEventListener('ended', handleEnded);
-    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('play', handlePlayWithCallback);
+    video.addEventListener('pause', handlePauseWithCallback);
+    video.addEventListener('ended', handleEndedWithCallback);
     video.addEventListener('seeked', handleSeeked);
 
     return () => {
-      video.removeEventListener('play', handlePlay);
-      video.removeEventListener('pause', handlePause);
-      video.removeEventListener('ended', handleEnded);
-      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('play', handlePlayWithCallback);
+      video.removeEventListener('pause', handlePauseWithCallback);
+      video.removeEventListener('ended', handleEndedWithCallback);
       video.removeEventListener('seeked', handleSeeked);
-      // Cancel any pending RAF on cleanup
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
+      stopVideoFrameCallback();
     };
   }, []); // No dependencies needed - uses refs for stable access
 

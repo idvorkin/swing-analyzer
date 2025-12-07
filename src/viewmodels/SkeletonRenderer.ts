@@ -297,10 +297,10 @@ export class SkeletonRenderer {
     ctx.lineTo(elbow.x, elbow.y);
     ctx.stroke();
 
-    // BATCHED: Draw all dots in a single path
+    // Draw vertical reference dot
     ctx.beginPath();
     ctx.fillStyle = '#00ffff';
-    ctx.moveTo(shoulder.x + 106, shoulder.y + 100);
+    ctx.moveTo(shoulder.x + 6, shoulder.y + 100);
     ctx.arc(shoulder.x, shoulder.y + 100, 6, 0, 2 * Math.PI);
     ctx.fill();
 
