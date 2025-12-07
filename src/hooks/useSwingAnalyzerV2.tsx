@@ -15,6 +15,8 @@ import type { AppState } from '../types';
 import {
   DEFAULT_SAMPLE_VIDEO,
   LOCAL_SAMPLE_VIDEO,
+  PISTOL_SQUAT_SAMPLE_VIDEO,
+  LOCAL_PISTOL_SQUAT_VIDEO,
 } from '../config/sampleVideos';
 import { InputSession, type InputSessionState } from '../pipeline/InputSession';
 import type { Skeleton } from '../models/Skeleton';
@@ -841,6 +843,69 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     }
   }, [loadVideoSafely]);
 
+  const loadPistolSquatSample = useCallback(async () => {
+    const session = inputSessionRef.current;
+    const video = videoRef.current;
+    if (!session || !video) {
+      console.error('loadPistolSquatSample: session or video element not initialized');
+      setStatus('Error: App not initialized. Please refresh.');
+      return;
+    }
+
+    // Abort any in-progress video load
+    videoLoadAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    videoLoadAbortControllerRef.current = abortController;
+
+    setStatus('Loading pistol squat sample...');
+
+    try {
+      // Reset state
+      setRepCount(0);
+      setRepThumbnails(new Map());
+      pipelineRef.current?.reset();
+      hasRecordedExtractionStartRef.current = false;
+
+      // Try remote URL first, fall back to local
+      let videoURL = PISTOL_SQUAT_SAMPLE_VIDEO;
+      let response = await fetch(videoURL);
+
+      if (!response.ok) {
+        console.log('Remote pistol squat sample failed, falling back to local:', response.status);
+        videoURL = LOCAL_PISTOL_SQUAT_VIDEO;
+        response = await fetch(videoURL);
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch video: ${response.status}`);
+      }
+
+      // Fetch the video as a File for pose extraction
+      const blob = await response.blob();
+      const videoFile = new File([blob], 'pistol-squat-sample.webm', {
+        type: 'video/webm',
+      });
+
+      // Load video safely
+      const blobUrl = URL.createObjectURL(blob);
+      await loadVideoSafely(video, blobUrl, abortController.signal);
+
+      setCurrentVideoFile(videoFile);
+      recordVideoLoad({ source: 'hardcoded', fileName: 'pistol-squat-sample.webm' });
+
+      // Start extraction/cache lookup
+      await session.startVideoFile(videoFile);
+
+      setStatus('Video loaded. Press Play to start.');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+      console.error('Error loading pistol squat sample:', error);
+      setStatus('Error: Could not load sample video');
+    }
+  }, [loadVideoSafely]);
+
   // ========================================
   // Playback Controls
   // ========================================
@@ -1225,6 +1290,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     // Actions
     handleVideoUpload,
     loadHardcodedVideo,
+    loadPistolSquatSample,
     togglePlayPause,
     stopVideo,
     startProcessing: () => {}, // No-op in V2 (handled by InputSession)

@@ -15,6 +15,9 @@ export const SAMPLE_VIDEOS = {
     good: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/swing-sample.webm`,
     igor1h: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/igor-1h-swing.webm`,
   },
+  pistolSquat: {
+    sample: `${SAMPLES_BASE_URL}/exercises/pistol-squat/pistol-squat-sample.webm`,
+  },
 } as const;
 
 /**
@@ -27,6 +30,16 @@ export const DEFAULT_SAMPLE_VIDEO: string = SAMPLE_VIDEOS.kettlebellSwing.igor1h
  * Local fallback path (for development/offline use).
  */
 export const LOCAL_SAMPLE_VIDEO: string = '/videos/swing-sample.webm';
+
+/**
+ * Pistol squat sample video URL.
+ */
+export const PISTOL_SQUAT_SAMPLE_VIDEO: string = SAMPLE_VIDEOS.pistolSquat.sample;
+
+/**
+ * Local fallback for pistol squat (for development/offline use).
+ */
+export const LOCAL_PISTOL_SQUAT_VIDEO: string = '/videos/pistol-squat-sample.webm';
 
 /**
  * Short test video for E2E tests (4 reps, ~5.5 seconds).
