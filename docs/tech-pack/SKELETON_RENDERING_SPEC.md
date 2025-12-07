@@ -11,11 +11,17 @@
 
 | State | Skeleton Behavior |
 |-------|-------------------|
-| Video playing | Updates on each `timeupdate` event |
+| Video playing | Updates on each video frame via `requestVideoFrameCallback` |
 | Video paused | Shows pose at `video.currentTime` |
 | Video seeked | Updates immediately after seek completes |
-| During extraction | Shows pose at current video frame as extraction progresses |
+| During extraction | No skeleton rendered (extraction uses hidden video element) |
 | No poses cached | No skeleton (canvas cleared or hidden) |
+
+**Note on extraction**: Skeleton does NOT render during extraction because:
+- Extraction uses a hidden video element for ML inference
+- The visible video isn't synced to extraction frames
+- Rendering would show skeleton in wrong position
+- Playback works immediately for any frames already extracted (progressive playback)
 
 ### Canvas Alignment
 
@@ -40,10 +46,10 @@ Filmstrip thumbnails SHOULD include skeleton overlay:
 
 E2E tests must verify:
 1. Canvas dimensions match video dimensions after load
-2. Skeleton renders during playback
+2. Skeleton renders during playback (per-frame sync)
 3. Skeleton renders when paused (at current frame)
 4. Skeleton renders after seeking
-5. Skeleton renders during extraction
+5. Skeleton does NOT render during extraction
 6. Skeleton position aligns with person in video
 
 ### Architecture
@@ -51,7 +57,7 @@ E2E tests must verify:
 Single source of truth for skeleton rendering:
 - All skeleton rendering goes through `SkeletonRenderer.renderSkeleton()`
 - Skeleton lookup uses `InputSession.getSkeletonAtTime()`
-- Rendering triggered by: `timeupdate`, `seeked`, and extraction events
+- Rendering triggered by: `requestVideoFrameCallback` (playback) and `seeked` event (manual seek)
 
 ### Known Failure Modes
 

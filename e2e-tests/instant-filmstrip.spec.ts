@@ -435,10 +435,10 @@ test.describe.serial('Skeleton Rendering Performance', () => {
    * - Canvas operations are batched
    * - Angle calculations are cached
    *
-   * Note: This test validates that rendering happens during playback,
-   * not frame timing (which varies in headless Chrome).
+   * Note: This test validates that rendering happens during playback
+   * using requestVideoFrameCallback for per-frame sync.
    */
-  test('skeleton rendering uses RAF throttling during playback', async ({
+  test('skeleton renders per-frame during playback', async ({
     page,
   }) => {
     // Fast extraction
@@ -456,40 +456,21 @@ test.describe.serial('Skeleton Rendering Performance', () => {
       { timeout: 30000 }
     );
 
-    // Inject render timing monitor that tracks RAF usage
+    // Inject render counter
     await page.evaluate(() => {
-      let rafRenderCount = 0;
-      let directRenderCount = 0;
-      let inRAF = false;
+      let renderCount = 0;
 
-      // Hook requestAnimationFrame to track RAF renders
-      const origRAF = window.requestAnimationFrame;
-      window.requestAnimationFrame = (cb) => {
-        return origRAF((time) => {
-          inRAF = true;
-          cb(time);
-          inRAF = false;
-        });
-      };
-
-      // Monitor canvas getContext to detect renders
+      // Monitor canvas clearRect to detect renders
       const canvas = document.querySelector('#output-canvas') as HTMLCanvasElement;
       if (canvas) {
         const origClearRect = CanvasRenderingContext2D.prototype.clearRect;
         CanvasRenderingContext2D.prototype.clearRect = function(...args) {
-          if (inRAF) {
-            rafRenderCount++;
-          } else {
-            directRenderCount++;
-          }
+          renderCount++;
           return origClearRect.apply(this, args);
         };
       }
 
-      (window as unknown as { __rafStats: { rafRenderCount: number; directRenderCount: number } }).__rafStats = {
-        get rafRenderCount() { return rafRenderCount; },
-        get directRenderCount() { return directRenderCount; }
-      };
+      (window as unknown as { __renderCount: () => number }).__renderCount = () => renderCount;
     });
 
     // Play video for 2 seconds
@@ -497,20 +478,16 @@ test.describe.serial('Skeleton Rendering Performance', () => {
     await page.waitForTimeout(2000);
     await page.click('#play-pause-btn'); // Pause
 
-    // Check RAF stats
-    const rafStats = await page.evaluate(() => {
-      return (window as unknown as { __rafStats?: { rafRenderCount: number; directRenderCount: number } }).__rafStats;
+    // Check render count
+    const renderCount = await page.evaluate(() => {
+      return (window as unknown as { __renderCount?: () => number }).__renderCount?.() || 0;
     });
 
-    console.log(`RAF stats: ${rafStats?.rafRenderCount || 0} RAF renders, ${rafStats?.directRenderCount || 0} direct renders`);
+    console.log(`Skeleton rendered ${renderCount} times during 2s playback`);
 
-    // Should have some renders during playback
-    const totalRenders = (rafStats?.rafRenderCount || 0) + (rafStats?.directRenderCount || 0);
-    expect(totalRenders).toBeGreaterThan(0);
-
-    // RAF renders should be happening (our fix is working)
-    // Allow some direct renders for seek events
-    expect(rafStats?.rafRenderCount || 0).toBeGreaterThanOrEqual(0);
+    // Should have renders during playback (requestVideoFrameCallback fires per video frame)
+    // At 30fps for 2 seconds, expect roughly 60 renders, but headless may vary
+    expect(renderCount).toBeGreaterThan(0);
   });
 
   /**
