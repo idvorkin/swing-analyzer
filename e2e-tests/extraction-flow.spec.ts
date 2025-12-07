@@ -128,13 +128,11 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     try {
       await page.waitForFunction(
         () => {
-          // Check for ready status anywhere on page
-          const pageText = document.body.textContent || '';
           // Check controls enabled and filmstrip has thumbnails
-        const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
-        return playBtn && !playBtn.disabled && thumbnails > 0;
+          const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          const filmstrip = document.querySelector('.filmstrip-container');
+          const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+          return playBtn && !playBtn.disabled && thumbnails > 0;
         },
         { timeout: 120000 } // 2 minutes - video seeking is ~500ms/frame in headless Chrome
       );
@@ -323,12 +321,11 @@ test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
     try {
       await page.waitForFunction(
         () => {
-          const pageText = document.body.textContent || '';
           // Check controls enabled and filmstrip has thumbnails
-        const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
-        return playBtn && !playBtn.disabled && thumbnails > 0;
+          const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          const filmstrip = document.querySelector('.filmstrip-container');
+          const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+          return playBtn && !playBtn.disabled && thumbnails > 0;
         },
         { timeout: 300000 } // 5 minutes for full video extraction
       );
@@ -383,7 +380,6 @@ test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
     // Wait for extraction to complete
     await page.waitForFunction(
       () => {
-        const pageText = document.body.textContent || '';
         // Check controls enabled and filmstrip has thumbnails
         const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
         const filmstrip = document.querySelector('.filmstrip-container');

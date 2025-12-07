@@ -539,7 +539,14 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     const session = inputSessionRef.current;
     const video = videoRef.current;
-    if (!session || !video) return;
+    if (!session || !video) {
+      console.error('handleVideoUpload: session or video element not initialized', {
+        hasSession: !!session,
+        hasVideo: !!video,
+      });
+      setStatus('Error: App not initialized. Please refresh.');
+      return;
+    }
 
     // Reset state
     setRepCount(0);
@@ -566,7 +573,25 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
       video.onerror = () => {
         clearTimeout(timeoutId);
-        reject(new Error('Failed to load video file'));
+        const mediaError = video.error;
+        let message = 'Failed to load video file';
+        if (mediaError) {
+          switch (mediaError.code) {
+            case MediaError.MEDIA_ERR_ABORTED:
+              message = 'Video load was aborted';
+              break;
+            case MediaError.MEDIA_ERR_NETWORK:
+              message = 'Network error loading video';
+              break;
+            case MediaError.MEDIA_ERR_DECODE:
+              message = 'Video format could not be decoded';
+              break;
+            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              message = 'Video format not supported';
+              break;
+          }
+        }
+        reject(new Error(message));
       };
     });
 
@@ -577,14 +602,31 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       await session.startVideoFile(file);
     } catch (error) {
       console.error('Failed to process video:', error);
-      setStatus('Error: Could not process video');
+      let userMessage = 'Could not process video';
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        userMessage = 'Storage full. Clear browser data and try again.';
+      } else if (error instanceof Error) {
+        if (error.message.includes('model')) {
+          userMessage = 'Failed to load pose detection. Check network and refresh.';
+        } else if (error.message.includes('format')) {
+          userMessage = 'Invalid video format. Try a different file.';
+        }
+      }
+      setStatus(`Error: ${userMessage}`);
     }
   }, [syncCanvasToVideo]);
 
   const loadHardcodedVideo = useCallback(async () => {
     const session = inputSessionRef.current;
     const video = videoRef.current;
-    if (!session || !video) return;
+    if (!session || !video) {
+      console.error('loadHardcodedVideo: session or video element not initialized', {
+        hasSession: !!session,
+        hasVideo: !!video,
+      });
+      setStatus('Error: App not initialized. Please refresh.');
+      return;
+    }
 
     setStatus('Loading sample video...');
 
@@ -634,7 +676,25 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
         video.onerror = () => {
           clearTimeout(timeoutId);
-          reject(new Error('Failed to load sample video'));
+          const mediaError = video.error;
+          let message = 'Failed to load sample video';
+          if (mediaError) {
+            switch (mediaError.code) {
+              case MediaError.MEDIA_ERR_ABORTED:
+                message = 'Video load was aborted';
+                break;
+              case MediaError.MEDIA_ERR_NETWORK:
+                message = 'Network error loading video';
+                break;
+              case MediaError.MEDIA_ERR_DECODE:
+                message = 'Video format could not be decoded';
+                break;
+              case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                message = 'Video format not supported';
+                break;
+            }
+          }
+          reject(new Error(message));
         };
       });
 
