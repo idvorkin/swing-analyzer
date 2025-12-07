@@ -2,78 +2,85 @@
 
 > **Part of the [HUD](./HUD_SPEC.md)** - The skeleton is one component of the heads-up display that overlays the video.
 
-## Expected Behavior
+## The One Rule
 
-### Visibility Rules
-1. **Skeleton is visible whenever poses exist for the current video frame**
-2. Skeleton updates on any frame change (playback, seek, step forward/backward)
-3. Visibility is independent of play/pause state
+**Skeleton is visible when pose data exists for `video.currentTime`.**
 
-### Timing
+That's it. No other conditions matter:
+- Playing, paused, seeking? Doesn't matter - check if poses exist
+- Extraction running? Doesn't matter - check if poses exist
+- First frame or last frame? Doesn't matter - check if poses exist
 
-| State | Skeleton Behavior |
-|-------|-------------------|
-| Video playing | Updates on each video frame via `requestVideoFrameCallback` |
-| Video paused | Shows pose at `video.currentTime` |
-| Video seeked | Updates immediately after seek completes |
-| No poses for current frame | No skeleton (canvas cleared or hidden) |
+## Progressive Playback
 
-### Progressive Playback (Key Concept)
+Extraction and playback are **decoupled**:
 
-**The skeleton renders whenever poses exist for `video.currentTime`, regardless of extraction state.**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  HIDDEN VIDEO (extraction)      VISIBLE VIDEO (user controls)  │
+│  ┌─────────────────────┐        ┌─────────────────────────┐    │
+│  │ ML model processes  │        │ User plays/pauses/seeks │    │
+│  │ frame 0, 1, 2, 3... │        │ independently           │    │
+│  │ Saves to cache      │───────→│ Reads from cache        │    │
+│  └─────────────────────┘        └─────────────────────────┘    │
+│                                                                 │
+│  As extraction progresses, more frames become available.        │
+│  User sees skeleton instantly for any frame already cached.     │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-During extraction:
-- Extraction runs on a **hidden** video element (for ML inference)
-- The **visible** video is independent - user can play, pause, seek freely
-- If user plays to a frame that's already extracted → skeleton renders
-- If user plays to a frame not yet extracted → no skeleton (no data yet)
+**Result**: User gets immediate feedback. No waiting for extraction to finish.
 
-This means:
-- User sees results **immediately** as frames are extracted
-- No waiting for full extraction to complete
-- Skeleton appears progressively as more frames become available
+## When Skeleton Updates
 
-### Canvas Alignment
+| Event | What Happens |
+|-------|--------------|
+| Video plays | `requestVideoFrameCallback` fires → lookup poses → render |
+| Video paused | Show skeleton at paused `currentTime` |
+| User seeks | `seeked` event fires → lookup poses → render |
+| Poses don't exist | Clear canvas (nothing to show) |
 
-The skeleton canvas MUST:
-1. Have internal dimensions (`canvas.width`, `canvas.height`) equal to video dimensions (`video.videoWidth`, `video.videoHeight`)
-2. Be CSS-positioned to exactly overlay the video's rendered content area
-3. Account for `object-fit: contain` letterboxing on video
-4. Handle both portrait and landscape video orientations
+## Canvas Alignment
 
-**Note**: Canvas elements don't support `object-fit`. To align canvas with video:
-- Calculate video's actual rendered position/size within container
-- Set canvas CSS `width`, `height`, `left`, `top` to match
-- Use internal canvas dimensions for coordinate space
+The skeleton canvas MUST overlay the video exactly:
 
-### Filmstrip Thumbnails
+1. Internal dimensions = video dimensions (`videoWidth` × `videoHeight`)
+2. CSS position = video's rendered content area (accounting for letterboxing)
+3. Works for both portrait and landscape video
 
-Filmstrip thumbnails SHOULD include skeleton overlay:
-- When generating thumbnails, draw skeleton on top of video frame
-- Ensures visual consistency between filmstrip and main view
+```
+Video with letterboxing:        Canvas positioned to match:
+┌───────────────────────┐       ┌───────────────────────┐
+│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│       │                       │
+│▓▓┌─────────────────┐▓▓│       │  ┌─────────────────┐  │
+│▓▓│                 │▓▓│       │  │ CANVAS HERE     │  │
+│▓▓│  VIDEO CONTENT  │▓▓│  -->  │  │ (matches video) │  │
+│▓▓│                 │▓▓│       │  │                 │  │
+│▓▓└─────────────────┘▓▓│       │  └─────────────────┘  │
+│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│       │                       │
+└───────────────────────┘       └───────────────────────┘
+```
 
-### Test Coverage Required
+## Architecture
 
-E2E tests must verify:
-1. Canvas dimensions match video dimensions after load
-2. Skeleton renders during playback (per-frame sync)
-3. Skeleton renders when paused (at current frame)
-4. Skeleton renders after seeking
-5. Skeleton does NOT render during extraction
-6. Skeleton position aligns with person in video
+```
+video.currentTime
+       │
+       ▼
+InputSession.getSkeletonAtTime(t)
+       │
+       ▼
+SkeletonRenderer.renderSkeleton(skeleton, canvas)
+```
 
-### Architecture
+All skeleton rendering goes through this path. Triggered by:
+- `requestVideoFrameCallback` (during playback)
+- `seeked` event (after user seeks)
 
-Single source of truth for skeleton rendering:
-- All skeleton rendering goes through `SkeletonRenderer.renderSkeleton()`
-- Skeleton lookup uses `InputSession.getSkeletonAtTime()`
-- Rendering triggered by: `requestVideoFrameCallback` (playback) and `seeked` event (manual seek)
-
-### Known Failure Modes
+## Troubleshooting
 
 | Symptom | Likely Cause |
 |---------|--------------|
-| Skeleton not visible | Canvas dimensions not synced to video |
-| Skeleton offset from person | CSS scaling mismatch, or canvas not positioned at (0,0) |
-| Skeleton not updating | `video.paused` check blocking render, or cache miss |
-| Skeleton during extraction only | `timeupdate` handler not connected |
+| Skeleton not visible | Canvas dimensions wrong, or no poses in cache |
+| Skeleton offset | CSS doesn't account for letterboxing |
+| Skeleton not updating | Missing event handler for playback/seek |

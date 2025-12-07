@@ -1,196 +1,111 @@
 # HUD (Heads-Up Display) Specification
 
-The HUD is the overlay layer rendered on top of the video. It provides real-time feedback without obscuring the main content.
+The HUD overlays the video with real-time feedback: skeleton, angles, rep count, and position.
 
-## HUD Components
+## The One Rule
+
+**HUD elements are visible when pose data exists for `video.currentTime`.**
+
+This applies to: skeleton, status overlay (reps/angles), and position indicator.
+
+The only exception is **extraction %**, which shows when extraction is running (independent of pose availability).
+
+## Visual Layout
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ┌───────┐ ┌──────┐ ┌──────┐                                 │
-│ │ 2/4   │ │SPINE │ │ ARM  │     ← Status Overlay            │
-│ │ REPS  │ │ 45°  │ │ 12°  │                                 │
-│ └───────┘ └──────┘ └──────┘                                 │
+│ ┌───────┐ ┌──────┐ ┌──────┐                    ┌────────┐  │
+│ │ 2/4   │ │SPINE │ │ ARM  │                    │  75%   │  │
+│ │ REPS  │ │ 45°  │ │ 12°  │                    │EXTRACT │  │
+│ └───────┘ └──────┘ └──────┘                    └────────┘  │
+│            ↑ Status Overlay                  Extraction %  │
 │                                                             │
-│              ┌─────────────┐                                │
-│              │    ╭─╮      │                                │
-│              │   ╱   ╲     │     ← Skeleton Overlay         │
-│              │  ╱     ╲    │       (pose visualization)     │
-│              │ ╱   ●   ╲   │                                │
-│              │╱    │    ╲  │                                │
-│              │    ╱ ╲     │                                │
-│              └─────────────┘                                │
+│                    ┌─────────────┐                         │
+│                    │    ╭─╮      │                         │
+│                    │   ╱   ╲     │  ← Skeleton             │
+│                    │  ╱     ╲    │                         │
+│                    │ ╱   ●   ╲   │                         │
+│                    │╱    │    ╲  │                         │
+│                    │    ╱ ╲     │                         │
+│                    └─────────────┘                         │
 │                                                             │
-│                                      ┌───────────────────┐  │
-│                                      │ ● Connect         │  │
-│                                      └───────────────────┘  │
-│                                            ↑                │
-│                                     Position Indicator      │
+│                                      ┌───────────────────┐ │
+│                                      │ ● Connect         │ │
+│                                      └───────────────────┘ │
+│                                        ↑ Position Indicator│
 └─────────────────────────────────────────────────────────────┘
 ```
 
-| Component | Purpose | Updates When |
-|-----------|---------|--------------|
-| **Skeleton** | Visualizes detected pose keypoints and connections | Every video frame |
-| **Status Overlay** | Shows rep count, spine angle, arm angle | Every video frame |
-| **Position Indicator** | Shows current swing position (Top/Connect/Bottom/Release) | Position changes |
-
-## Design Principles
-
-### 1. HUD Follows the Frame
-
-The HUD renders **on whatever is currently visible**. This means:
-
-- During playback: HUD shows data for the current frame
-- When paused: HUD shows data for the paused frame
-- After seeking: HUD updates immediately to match new position
-- No poses for frame: HUD hidden (no data to display)
-
-### 2. Non-Intrusive
-
-- Semi-transparent backgrounds with blur
-- Positioned in corners to minimize content obstruction
-- Small, readable typography
-- No interaction required (informational only)
-
-### 3. Single Source of Truth
-
-All HUD elements derive from the same data source:
-- `InputSession.getSkeletonAtTime(t)` → skeleton, angles, position
-- Skeleton → visual overlay
-- Skeleton.angles → status overlay numbers
-- FormState → position indicator
-
-## Component Specifications
-
-### Skeleton Overlay
-
-See [SKELETON_RENDERING_SPEC.md](./SKELETON_RENDERING_SPEC.md) for detailed skeleton behavior.
-
-Key points:
-- Canvas element positioned over video
-- Matches video's rendered dimensions (accounting for letterboxing)
-- Renders keypoints and bone connections
-- Color-coded by body segment
-
-### Status Overlay
-
-Located: **Top-left corner** of video
+## Two Independent Conditions
 
 ```
-┌───────┐ ┌──────┐ ┌──────┐
-│ 2/4   │ │SPINE │ │ ARM  │
-│ REPS  │ │ 45°  │ │ 12°  │
-└───────┘ └──────┘ └──────┘
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│   1. Do poses exist for video.currentTime?                   │
+│      YES → Show skeleton + status overlay + position         │
+│      NO  → Hide them                                         │
+│                                                              │
+│   2. Is extraction running?                                  │
+│      YES → Show extraction %                                 │
+│      NO  → Hide extraction %                                 │
+│                                                              │
+│   These are INDEPENDENT. Both can be true at once.           │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-| Element | Shows | Format |
+**Example during extraction:**
+- User seeks to frame 50
+- Frame 50 already extracted? → Skeleton + HUD + extraction % all visible
+- Frame 50 not yet extracted? → Only extraction % visible
+
+## Components
+
+### Status Overlay (top-left)
+
+| Element | Shows | Source |
 |---------|-------|--------|
-| Reps | Current rep / Total reps | `{current}/{total}` |
-| Spine | Spine angle from vertical | `{angle}°` |
-| Arm | Arm-to-spine angle | `{angle}°` |
+| Reps | `{current}/{total}` | Rep processor state |
+| Spine | `{angle}°` | `skeleton.getSpineAngle()` |
+| Arm | `{angle}°` | `skeleton.getArmToVerticalAngle()` |
 
-Styling:
-- Background: `rgba(15, 20, 25, 0.85)` with `backdrop-filter: blur(8px)`
-- Font: Monospace (JetBrains Mono)
-- Accent color: `#00d4aa` (teal)
-
-### Position Indicator
-
-Located: **Bottom-right corner** of video (above controls)
-
-```
-┌───────────────────┐
-│ ● Connect         │
-└───────────────────┘
-```
+### Position Indicator (bottom-right)
 
 | Position | Meaning |
 |----------|---------|
-| Top | Arms at highest point, kettlebell overhead |
-| Connect | Arms touching body/legs, beginning hinge |
-| Bottom | Maximum hinge, kettlebell between legs |
-| Release | Arms leaving body, beginning float |
+| Top | Arms at highest point |
+| Connect | Arms touching body |
+| Bottom | Maximum hinge |
+| Release | Arms leaving body |
 
-Styling:
-- Pulsing dot indicates active tracking
-- Pill-shaped container
-- Same styling as status overlay
+### Extraction % (top-right)
 
-## Visibility States
+Shows `{percentage}% EXTRACTING` while extraction is in progress.
 
-**Core rule**: Skeleton and HUD are visible whenever poses exist for `video.currentTime`.
+### Skeleton
 
-Extraction state and pose availability are **independent**:
-- Extraction % → visible when extraction is running
-- Skeleton/HUD → visible when poses exist for current frame
-
-| Condition | Skeleton | Status Overlay | Extraction % | Position |
-|-----------|----------|----------------|--------------|----------|
-| No video loaded | Hidden | Hidden | Hidden | Hidden |
-| Video loading | Hidden | Hidden | Hidden | Hidden |
-| Poses exist for current frame | **Visible** | **Visible** | (see below) | **Visible** |
-| No poses for current frame | Hidden | Hidden | (see below) | Hidden |
-| Extraction running | (see above) | (see above) | **Visible** | (see above) |
-| Extraction complete | (see above) | (see above) | Hidden | (see above) |
-
-### Progressive Playback
-
-During extraction, **both** can be true simultaneously:
-- Extraction is running (show extraction %)
-- Poses exist for current frame (show skeleton + HUD)
-
-Example: User loads video, extraction starts at frame 0. By the time user seeks to frame 50:
-- If frame 50 already extracted → skeleton + HUD visible + extraction % visible
-- If frame 50 not yet extracted → no skeleton/HUD + extraction % visible
-
-**This gives users immediate feedback** - they see results as soon as available, no waiting.
-
-**Key Rule**: The entire HUD overlay is only visible when `currentVideoFile` is set.
-
-### E2E Test Coverage
-
-Visibility rules are tested in `e2e-tests/swing-analyzer.spec.ts`:
-
-- `HUD should be hidden before video loads`
-- `HUD should appear after video loads`
-- `HUD should show extraction progress during extraction`
+See [SKELETON_RENDERING_SPEC.md](./SKELETON_RENDERING_SPEC.md) for details.
 
 ## Z-Index Layering
 
 ```
 z-index: 20  ─── Video Controls (buttons)
-z-index: 15  ─── HUD Overlay (status, position)
+z-index: 15  ─── HUD Overlay (status, position, extraction)
 z-index: 10  ─── Skeleton Canvas
 z-index:  0  ─── Video Element
 ```
 
-## Responsive Behavior
+## Styling
 
-### Mobile (< 480px)
+- Background: `rgba(15, 20, 25, 0.85)` with `backdrop-filter: blur(8px)`
+- Font: Monospace (JetBrains Mono)
+- Accent color: `#00d4aa` (teal)
 
-- Smaller fonts and padding
-- Status overlay remains in corner
-- Skeleton scales with video
-- Position indicator moves closer to controls
-
-### Desktop
-
-- Full-size typography
-- More padding and spacing
-- Hover states on interactive elements (if any)
-
-## Implementation Files
+## Implementation
 
 | Component | File |
 |-----------|------|
-| Skeleton rendering | `src/services/SkeletonRenderer.ts` |
-| Status overlay | `src/components/VideoSectionV2.tsx` (`.hud-overlay-*` classes) |
-| HUD styles | `src/components/App.css` (HUD OVERLAY section) |
-| Angle calculations | `src/models/Skeleton.ts` |
-
-## Future Considerations
-
-1. **Configurable HUD** - Let users show/hide individual elements
-2. **Color coding** - Change angle colors based on form quality (green=good, red=bad)
-3. **Recording mode** - Option to include/exclude HUD in exported clips
-4. **Compact mode** - Minimal HUD for small screens or focused viewing
+| Skeleton | `src/services/SkeletonRenderer.ts` |
+| Status overlay | `src/components/VideoSectionV2.tsx` |
+| Styles | `src/components/App.css` |
+| Angle math | `src/models/Skeleton.ts` |
