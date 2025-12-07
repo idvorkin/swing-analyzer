@@ -4,6 +4,10 @@ import {
   type FormAnalyzer,
   type RepPosition,
   KettlebellSwingFormAnalyzer,
+  PistolSquatFormAnalyzer,
+  ExerciseDetector,
+  type DetectionResult,
+  type DetectedExercise,
 } from '../analyzers';
 import type { Skeleton } from '../models/Skeleton';
 import type { CropRegion } from '../types/posetrack';
@@ -52,9 +56,15 @@ export class Pipeline {
   private resultSubject = new Subject<PipelineResult>();
   private skeletonSubject = new Subject<SkeletonEvent>();
   private thumbnailSubject = new Subject<ThumbnailEvent>();
+  private exerciseDetectionSubject = new Subject<DetectionResult>();
 
   // Form analyzer - plugin for exercise-specific analysis
   private formAnalyzer: FormAnalyzer;
+
+  // Exercise detection
+  private exerciseDetector = new ExerciseDetector();
+  private detectedExercise: DetectedExercise = 'unknown';
+  private autoSwitchAnalyzer = true; // Auto-switch analyzer when exercise detected
 
   constructor(
     private frameAcquisition: FrameAcquisition,
@@ -195,6 +205,9 @@ export class Pipeline {
    */
   reset(): void {
     this.formAnalyzer.reset();
+    this.exerciseDetector.reset();
+    this.detectedExercise = 'unknown';
+    this.autoSwitchAnalyzer = true;
     this.latestSkeleton = null;
     this.repCount = 0;
   }
@@ -288,6 +301,17 @@ export class Pipeline {
       // Emit skeleton event for real-time rendering during extraction
       this.skeletonSubject.next(skeletonEvent);
 
+      // Run exercise detection (only until locked)
+      if (!this.exerciseDetector.isLocked()) {
+        const detection = this.exerciseDetector.processFrame(skeletonEvent.skeleton);
+        this.exerciseDetectionSubject.next(detection);
+
+        // Auto-switch analyzer when detection is confident
+        if (this.autoSwitchAnalyzer && detection.confidence >= 70) {
+          this.switchToExercise(detection.exercise);
+        }
+      }
+
       // Process through form analyzer
       try {
         const result = this.formAnalyzer.processFrame(
@@ -321,6 +345,68 @@ export class Pipeline {
     }
 
     return this.repCount;
+  }
+
+  /**
+   * Switch to the appropriate FormAnalyzer for the detected exercise
+   */
+  private switchToExercise(exercise: DetectedExercise): void {
+    // Don't switch if already using the right analyzer
+    if (exercise === this.detectedExercise) return;
+    if (exercise === 'unknown') return;
+
+    this.detectedExercise = exercise;
+
+    // Create the appropriate analyzer
+    const newAnalyzer = exercise === 'pistol-squat'
+      ? new PistolSquatFormAnalyzer()
+      : new KettlebellSwingFormAnalyzer();
+
+    // Swap in the new analyzer (keeps any rep count from old analyzer)
+    this.formAnalyzer = newAnalyzer;
+
+    console.log(`[Pipeline] Switched to ${exercise} analyzer`);
+  }
+
+  // ========================================
+  // Exercise Detection API
+  // ========================================
+
+  /**
+   * Get an observable for exercise detection events
+   */
+  getExerciseDetectionEvents(): Observable<DetectionResult> {
+    return this.exerciseDetectionSubject.asObservable();
+  }
+
+  /**
+   * Get the currently detected exercise type
+   */
+  getDetectedExercise(): DetectedExercise {
+    return this.detectedExercise;
+  }
+
+  /**
+   * Get the current detection result (without processing a new frame)
+   */
+  getDetectionResult(): DetectionResult {
+    return this.exerciseDetector.getResult();
+  }
+
+  /**
+   * Manually set the exercise type (user override)
+   * This locks the detector and switches the analyzer immediately.
+   */
+  setExerciseType(exercise: DetectedExercise): void {
+    this.autoSwitchAnalyzer = false; // Disable auto-switch since user chose
+    this.switchToExercise(exercise);
+  }
+
+  /**
+   * Check if exercise detection is locked (confident or user-set)
+   */
+  isExerciseDetectionLocked(): boolean {
+    return this.exerciseDetector.isLocked();
   }
 
   // ========================================
