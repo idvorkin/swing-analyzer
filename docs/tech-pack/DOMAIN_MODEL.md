@@ -108,6 +108,6 @@ These terms should NOT be used in new code:
 |---------|--------------|
 | Position enum | `src/types.ts` |
 | Skeleton model | `src/models/Skeleton.ts` |
-| FormAnalyzer | `src/pipeline/FormAnalyzer.ts` |
+| FormAnalyzer | `src/analyzers/FormAnalyzer.ts` |
 | Pipeline | `src/pipeline/Pipeline.ts` |
 | Exercise definitions | `src/exercises/index.ts` |
