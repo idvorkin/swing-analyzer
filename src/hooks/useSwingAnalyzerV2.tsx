@@ -97,37 +97,50 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Calculate video's rendered dimensions within its CSS box
+    // Get video and container positions
     const videoRect = video.getBoundingClientRect();
+    const container = canvas.parentElement;
+    const containerRect = container?.getBoundingClientRect();
+
+    // Calculate video element's position relative to container
+    // (needed when flexbox centers video within container)
+    const videoOffsetX = containerRect ? videoRect.left - containerRect.left : 0;
+    const videoOffsetY = containerRect ? videoRect.top - containerRect.top : 0;
+
+    // Calculate video content's rendered dimensions within video element
+    // (object-fit: contain causes letterboxing)
     const videoAspect = video.videoWidth / video.videoHeight;
     const containerAspect = videoRect.width / videoRect.height;
 
     let renderedWidth: number;
     let renderedHeight: number;
-    let offsetX: number;
-    let offsetY: number;
+    let letterboxX: number;
+    let letterboxY: number;
 
     if (videoAspect > containerAspect) {
       // Video is wider - letterbox top/bottom
       renderedWidth = videoRect.width;
       renderedHeight = videoRect.width / videoAspect;
-      offsetX = 0;
-      offsetY = (videoRect.height - renderedHeight) / 2;
+      letterboxX = 0;
+      letterboxY = (videoRect.height - renderedHeight) / 2;
     } else {
       // Video is taller - letterbox left/right
       renderedHeight = videoRect.height;
       renderedWidth = videoRect.height * videoAspect;
-      offsetX = (videoRect.width - renderedWidth) / 2;
-      offsetY = 0;
+      letterboxX = (videoRect.width - renderedWidth) / 2;
+      letterboxY = 0;
     }
 
-    // Position canvas to overlay video content area
+    // Position canvas: video's position in container + letterbox offset
+    const finalX = videoOffsetX + letterboxX;
+    const finalY = videoOffsetY + letterboxY;
+
     canvas.style.width = `${renderedWidth}px`;
     canvas.style.height = `${renderedHeight}px`;
-    canvas.style.left = `${offsetX}px`;
-    canvas.style.top = `${offsetY}px`;
+    canvas.style.left = `${finalX}px`;
+    canvas.style.top = `${finalY}px`;
 
-    console.log(`[Canvas] Synced to video: ${canvas.width}x${canvas.height}, CSS: ${renderedWidth.toFixed(0)}x${renderedHeight.toFixed(0)} at (${offsetX.toFixed(0)},${offsetY.toFixed(0)})`);
+    console.log(`[Canvas] Synced: ${canvas.width}x${canvas.height}, CSS: ${renderedWidth.toFixed(0)}x${renderedHeight.toFixed(0)} at (${finalX.toFixed(0)},${finalY.toFixed(0)}) [video offset: ${videoOffsetX.toFixed(0)},${videoOffsetY.toFixed(0)}]`);
   }, []);
 
   // Re-sync canvas on window resize
