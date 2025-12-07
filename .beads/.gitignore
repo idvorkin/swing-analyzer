@@ -23,7 +23,15 @@ beads.left.meta.json
 beads.right.jsonl
 beads.right.meta.json
 
-# Keep JSONL exports and config (source of truth for git)
-!issues.jsonl
-!metadata.json
-!config.json
+# Data files - only tracked on beads-metadata branch
+# Use 'bd sync' to commit these to beads-metadata
+issues.jsonl
+metadata.json
+deletions.jsonl
+
+# Keep config tracked on all branches
+!config.yaml
+
+# Local version tracking (not needed in git)
+.local_version
+bd.sock.startlock
