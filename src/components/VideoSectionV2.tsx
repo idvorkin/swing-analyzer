@@ -206,6 +206,25 @@ const VideoSectionV2: React.FC = () => {
         className={`video-container ${getVideoContainerClass()}`}
         onClick={handleVideoDoubleTap}
       >
+        {/* Mobile floating source buttons - hidden on desktop via CSS */}
+        <div className="mobile-source-controls">
+          <label htmlFor="video-upload" className="mobile-source-btn file-btn" title="Upload video">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+            </svg>
+          </label>
+          <button
+            type="button"
+            className="mobile-source-btn sample-btn"
+            onClick={loadHardcodedVideo}
+            title="Load sample video"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z" />
+            </svg>
+          </button>
+        </div>
+
         {/* biome-ignore lint/a11y/useMediaCaption: This is a video analysis app, not media playback - no audio captions needed */}
         <video id="video" ref={videoRef} playsInline />
         <canvas id="output-canvas" ref={canvasRef} />
