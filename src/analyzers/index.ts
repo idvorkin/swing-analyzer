@@ -17,3 +17,9 @@ export {
   type SwingPhase,
   type SwingThresholds,
 } from './KettlebellSwingFormAnalyzer';
+
+export {
+  PistolSquatFormAnalyzer,
+  type PistolSquatPhase,
+  type PistolSquatThresholds,
+} from './PistolSquatFormAnalyzer';
