@@ -19,6 +19,7 @@ import {
 import { InputSession, type InputSessionState } from '../pipeline/InputSession';
 import type { Skeleton } from '../models/Skeleton';
 import type { Pipeline, ThumbnailEvent } from '../pipeline/Pipeline';
+import { kettlebellSwingDefinition } from '../exercises';
 import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { ExtractionProgress } from '../pipeline/SkeletonSource';
@@ -385,7 +386,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
         hip: skeleton.getHipAngle() || 0,
       };
       // Use the exercise definition to find best matching position
-      const exercise = pipeline.getExerciseDefinition();
+      const exercise = kettlebellSwingDefinition;
       let bestPosition: string | null = null;
       let bestScore = Number.POSITIVE_INFINITY;
 
