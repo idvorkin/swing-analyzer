@@ -82,6 +82,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentVideoFile, setCurrentVideoFile] = useState<File | null>(null);
 
+  // Track current video's object URL for cleanup on video switch
+  const currentVideoUrlRef = useRef<string | null>(null);
+  // Track if we're in the middle of loading a video (to abort on switch)
+  const videoLoadAbortControllerRef = useRef<AbortController | null>(null);
+
   // Crop state for auto-centering on person in landscape videos
   const [cropRegion, setCropRegionState] = useState<CropRegion | null>(null);
   const [isCropEnabled, setIsCropEnabled] = useState<boolean>(false); // Default to off - doesn't work well
@@ -153,6 +158,90 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, [syncCanvasToVideo]);
+
+  // ========================================
+  // Safe Video Loading Helper
+  // ========================================
+  // Handles all cleanup and race conditions when switching videos
+  const loadVideoSafely = useCallback(async (
+    videoElement: HTMLVideoElement,
+    url: string,
+    signal: AbortSignal
+  ): Promise<void> => {
+    // 1. Pause any current playback
+    videoElement.pause();
+    videoElement.currentTime = 0;
+
+    // 2. Clean up previous object URL if it was a blob URL
+    if (currentVideoUrlRef.current && currentVideoUrlRef.current.startsWith('blob:')) {
+      URL.revokeObjectURL(currentVideoUrlRef.current);
+    }
+
+    // 3. Set new source and track it
+    currentVideoUrlRef.current = url;
+    videoElement.src = url;
+
+    // 4. Wait for metadata with proper event handling (no property assignment)
+    await new Promise<void>((resolve, reject) => {
+      // Check if aborted before we even start
+      if (signal.aborted) {
+        reject(new DOMException('Video load aborted', 'AbortError'));
+        return;
+      }
+
+      const timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('Timeout loading video metadata'));
+      }, 10000);
+
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        videoElement.removeEventListener('error', handleError);
+        signal.removeEventListener('abort', handleAbort);
+      };
+
+      const handleLoadedMetadata = () => {
+        cleanup();
+        // Sync canvas to video after a small delay (wait for layout)
+        requestAnimationFrame(() => syncCanvasToVideo());
+        resolve();
+      };
+
+      const handleError = () => {
+        cleanup();
+        const mediaError = videoElement.error;
+        let message = 'Failed to load video';
+        if (mediaError) {
+          switch (mediaError.code) {
+            case MediaError.MEDIA_ERR_ABORTED:
+              message = 'Video load was aborted';
+              break;
+            case MediaError.MEDIA_ERR_NETWORK:
+              message = 'Network error loading video';
+              break;
+            case MediaError.MEDIA_ERR_DECODE:
+              message = 'Video format could not be decoded';
+              break;
+            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              message = 'Video format not supported';
+              break;
+          }
+        }
+        reject(new Error(message));
+      };
+
+      const handleAbort = () => {
+        cleanup();
+        reject(new DOMException('Video load aborted', 'AbortError'));
+      };
+
+      // Use addEventListener (not property assignment) to avoid race conditions
+      videoElement.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+      videoElement.addEventListener('error', handleError, { once: true });
+      signal.addEventListener('abort', handleAbort, { once: true });
+    });
   }, [syncCanvasToVideo]);
 
   // ========================================
@@ -520,52 +609,30 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       return;
     }
 
+    // Abort any in-progress video load
+    videoLoadAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    videoLoadAbortControllerRef.current = abortController;
+
     // Reset state
     setRepCount(0);
     setRepThumbnails(new Map());
     pipelineRef.current?.reset();
     hasRecordedExtractionStartRef.current = false; // Reset for new video
 
-    // Load video into element
+    // Load video safely (handles cleanup, pausing, and race conditions)
     const url = URL.createObjectURL(file);
-    video.src = url;
-
-    // Wait for video metadata with timeout
-    await new Promise<void>((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        reject(new Error('Timeout loading video metadata'));
-      }, 10000);
-
-      video.onloadedmetadata = () => {
-        clearTimeout(timeoutId);
-        // Sync canvas to video after a small delay (wait for layout)
-        requestAnimationFrame(() => syncCanvasToVideo());
-        resolve();
-      };
-
-      video.onerror = () => {
-        clearTimeout(timeoutId);
-        const mediaError = video.error;
-        let message = 'Failed to load video file';
-        if (mediaError) {
-          switch (mediaError.code) {
-            case MediaError.MEDIA_ERR_ABORTED:
-              message = 'Video load was aborted';
-              break;
-            case MediaError.MEDIA_ERR_NETWORK:
-              message = 'Network error loading video';
-              break;
-            case MediaError.MEDIA_ERR_DECODE:
-              message = 'Video format could not be decoded';
-              break;
-            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-              message = 'Video format not supported';
-              break;
-          }
-        }
-        reject(new Error(message));
-      };
-    });
+    try {
+      await loadVideoSafely(video, url, abortController.signal);
+    } catch (error) {
+      // AbortError means user switched videos - silently ignore
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+      console.error('Failed to load video:', error);
+      setStatus(`Error: ${error instanceof Error ? error.message : 'Failed to load video'}`);
+      return;
+    }
 
     setCurrentVideoFile(file);
 
@@ -586,7 +653,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       }
       setStatus(`Error: ${userMessage}`);
     }
-  }, [syncCanvasToVideo]);
+  }, [loadVideoSafely]);
 
   const loadHardcodedVideo = useCallback(async () => {
     const session = inputSessionRef.current;
@@ -599,6 +666,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setStatus('Error: App not initialized. Please refresh.');
       return;
     }
+
+    // Abort any in-progress video load
+    videoLoadAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    videoLoadAbortControllerRef.current = abortController;
 
     setStatus('Loading sample video...');
 
@@ -629,46 +701,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
         type: 'video/webm',
       });
 
-      // Load video into element
+      // Load video safely (handles cleanup, pausing, and race conditions)
       const blobUrl = URL.createObjectURL(blob);
-      video.src = blobUrl;
-
-      // Wait for video metadata with timeout
-      await new Promise<void>((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('Timeout loading video metadata'));
-        }, 10000);
-
-        video.onloadedmetadata = () => {
-          clearTimeout(timeoutId);
-          // Sync canvas to video after a small delay (wait for layout)
-          requestAnimationFrame(() => syncCanvasToVideo());
-          resolve();
-        };
-
-        video.onerror = () => {
-          clearTimeout(timeoutId);
-          const mediaError = video.error;
-          let message = 'Failed to load sample video';
-          if (mediaError) {
-            switch (mediaError.code) {
-              case MediaError.MEDIA_ERR_ABORTED:
-                message = 'Video load was aborted';
-                break;
-              case MediaError.MEDIA_ERR_NETWORK:
-                message = 'Network error loading video';
-                break;
-              case MediaError.MEDIA_ERR_DECODE:
-                message = 'Video format could not be decoded';
-                break;
-              case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                message = 'Video format not supported';
-                break;
-            }
-          }
-          reject(new Error(message));
-        };
-      });
+      await loadVideoSafely(video, blobUrl, abortController.signal);
 
       setCurrentVideoFile(videoFile);
       recordVideoLoad({ source: 'hardcoded', fileName: 'swing-sample.webm' });
@@ -678,10 +713,14 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
       setStatus('Video loaded. Press Play to start.');
     } catch (error) {
+      // AbortError means user switched videos - silently ignore
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
       console.error('Error loading hardcoded video:', error);
       setStatus('Error: Could not load sample video');
     }
-  }, [syncCanvasToVideo]);
+  }, [loadVideoSafely]);
 
   // ========================================
   // Playback Controls

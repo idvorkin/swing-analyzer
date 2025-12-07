@@ -578,4 +578,212 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(angleAt75).toMatch(/\d+°/);
     });
   });
+
+  test.describe('Video Switching', () => {
+    // Helper to click the reload button (header button when video loaded, or direct button when not)
+    async function clickLoadSampleButton(page: import('@playwright/test').Page) {
+      // Check if video is loaded (header reload button visible)
+      const headerBtn = page.locator('button[title="Load different video"]');
+      if (await headerBtn.isVisible()) {
+        // Click header button to show source picker
+        await headerBtn.click();
+        // Then click the Sample button in the source picker
+        await page.waitForSelector('#load-hardcoded-btn', { timeout: 5000 });
+      }
+      await page.click('#load-hardcoded-btn');
+    }
+
+    test('reloading sample video works correctly', async ({ page }) => {
+      // Seed pose data first
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
+
+      // Load video first time
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      // Wait for video to be fully loaded (blob URL assigned)
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && video.src && video.src.startsWith('blob:');
+        },
+        { timeout: 10000 }
+      );
+
+      // Store the first video's src for comparison
+      const firstSrc = await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video.src;
+      });
+
+      // Wait for controls to be enabled
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
+      // Reload video (uses header button + source picker when video is loaded)
+      await clickLoadSampleButton(page);
+
+      // Wait for new video to load (new blob URL)
+      await page.waitForFunction(
+        (oldSrc) => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && video.src && video.src.startsWith('blob:') && video.src !== oldSrc;
+        },
+        firstSrc,
+        { timeout: 10000 }
+      );
+
+      // Verify new blob URL is different (old was revoked, new was created)
+      const secondSrc = await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video.src;
+      });
+
+      expect(secondSrc).toMatch(/^blob:/);
+      expect(secondSrc).not.toBe(firstSrc);
+
+      // Controls should still be enabled
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+    });
+
+    test('switching video while playing pauses and loads new video', async ({ page }) => {
+      // Seed pose data first
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
+
+      // Load and start playing video
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
+      // Start playing
+      await page.click('#play-pause-btn');
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && !video.paused;
+        },
+        { timeout: 5000 }
+      );
+
+      // Store current src
+      const playingSrc = await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video.src;
+      });
+
+      // Reload while playing (uses header button + source picker)
+      await clickLoadSampleButton(page);
+
+      // Wait for new video to load
+      await page.waitForFunction(
+        (oldSrc) => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && video.src && video.src.startsWith('blob:') && video.src !== oldSrc;
+        },
+        playingSrc,
+        { timeout: 10000 }
+      );
+
+      // New video should be paused (not auto-playing)
+      const isPaused = await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video.paused;
+      });
+      expect(isPaused).toBe(true);
+
+      // New video should be at start
+      const currentTime = await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video.currentTime;
+      });
+      expect(currentTime).toBe(0);
+    });
+
+    test('rapid video reload attempts resolve correctly', async ({ page }) => {
+      // Seed pose data first
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
+
+      // Load video first time
+      await page.click('#load-hardcoded-btn');
+      await page.waitForSelector('video', { timeout: 10000 });
+
+      // Wait for first video to fully load
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && video.src && video.src.startsWith('blob:') && video.readyState >= 1;
+        },
+        { timeout: 15000 }
+      );
+
+      // Now rapidly reload via header button
+      await clickLoadSampleButton(page);
+      await page.waitForTimeout(100);
+      await clickLoadSampleButton(page);
+      await page.waitForTimeout(100);
+      await clickLoadSampleButton(page);
+
+      // Wait for video to fully load (should be the last request)
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && video.src && video.src.startsWith('blob:') && video.readyState >= 1;
+        },
+        { timeout: 15000 }
+      );
+
+      // Video should be loaded and functional
+      const videoState = await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return {
+          hasSrc: !!video.src,
+          isBlobUrl: video.src.startsWith('blob:'),
+          readyState: video.readyState,
+          paused: video.paused,
+        };
+      });
+
+      expect(videoState.hasSrc).toBe(true);
+      expect(videoState.isBlobUrl).toBe(true);
+      expect(videoState.readyState).toBeGreaterThanOrEqual(1); // HAVE_METADATA or higher
+      expect(videoState.paused).toBe(true);
+
+      // Wait for controls to be enabled
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
+      // Play button should work
+      await page.click('#play-pause-btn');
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && !video.paused;
+        },
+        { timeout: 5000 }
+      );
+    });
+  });
 });
