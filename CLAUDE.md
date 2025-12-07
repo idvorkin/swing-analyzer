@@ -43,6 +43,13 @@ git pull origin agent/swing-N --rebase 2>/dev/null || true
 just dev  # Runs vite dev server (auto-finds available port)
 ```
 
+**⚠️ After switching branches:** Always rebuild to ensure you're running the new code:
+```bash
+# Kill existing dev server if running, then restart
+# Vite usually hot-reloads, but for safety after branch switch:
+npm run build  # or just restart dev server
+```
+
 **⚠️ EVERY Claude instance runs its own server.** The dashboard detects servers by their working directory, so each clone (swing-1, swing-2, etc.) appears as a separate agent when its server is running. Vite auto-finds an available port (5173, 5174, etc.), so multiple servers can run simultaneously.
 
 This ensures:
