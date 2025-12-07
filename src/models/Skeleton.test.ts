@@ -338,4 +338,119 @@ describe('Skeleton', () => {
       expect(angle).toBeLessThan(180);
     });
   });
+
+  describe('mirrored video behavior', () => {
+    /**
+     * When video is mirrored (selfie mode), left/right labels swap but
+     * the visual appearance is the same. The algorithm should produce
+     * consistent results regardless of which side is labeled "right".
+     */
+
+    it('getArmToVerticalAngle returns same magnitude for mirrored pose', () => {
+      // Normal pose: right arm pointing down-right (positive angle)
+      const normalSkeleton = createCocoSkeleton({
+        rightShoulder: kp(100, 100),
+        rightElbow: kp(150, 200), // Elbow down and to the right
+      });
+
+      // Mirrored pose: arm pointing down-left (same visual, but mirrored)
+      const mirroredSkeleton = createCocoSkeleton({
+        leftShoulder: kp(200, 100),
+        leftElbow: kp(150, 200), // Elbow down and to the left
+      });
+
+      const normalAngle = normalSkeleton.getArmToVerticalAngle();
+      const mirroredAngle = mirroredSkeleton.getArmToVerticalAngle();
+
+      // Both should detect similar arm position (magnitude matters, not sign)
+      expect(Math.abs(normalAngle)).toBeCloseTo(Math.abs(mirroredAngle), 0);
+    });
+
+    it('getSpineAngle works with left-side keypoints', () => {
+      // Right side
+      const rightSkeleton = createCocoSkeleton({
+        rightHip: kp(100, 300),
+        rightShoulder: kp(120, 100), // Slightly leaned
+      });
+
+      // Left side (mirrored)
+      const leftSkeleton = createCocoSkeleton({
+        leftHip: kp(200, 300),
+        leftShoulder: kp(180, 100), // Same lean, mirrored
+      });
+
+      const rightAngle = rightSkeleton.getSpineAngle();
+      const leftAngle = leftSkeleton.getSpineAngle();
+
+      // Spine angle should be similar regardless of side
+      expect(rightAngle).toBeCloseTo(leftAngle, 0);
+    });
+
+    it('getHipAngle works with left-side keypoints', () => {
+      // Right side - bent hip
+      const rightSkeleton = createCocoSkeleton({
+        rightKnee: kp(100, 400),
+        rightHip: kp(100, 300),
+        rightShoulder: kp(150, 150), // Leaned forward
+      });
+
+      // Left side (mirrored)
+      const leftSkeleton = createCocoSkeleton({
+        leftKnee: kp(200, 400),
+        leftHip: kp(200, 300),
+        leftShoulder: kp(150, 150), // Same lean
+      });
+
+      const rightAngle = rightSkeleton.getHipAngle();
+      const leftAngle = leftSkeleton.getHipAngle();
+
+      // Hip angle should be similar
+      expect(rightAngle).toBeCloseTo(leftAngle, 1);
+    });
+
+    it('getKneeAngle works with left-side keypoints', () => {
+      // Right side - straight leg
+      const rightSkeleton = createCocoSkeleton({
+        rightHip: kp(100, 200),
+        rightKnee: kp(100, 300),
+        rightAnkle: kp(100, 400),
+      });
+
+      // Left side
+      const leftSkeleton = createCocoSkeleton({
+        leftHip: kp(200, 200),
+        leftKnee: kp(200, 300),
+        leftAnkle: kp(200, 400),
+      });
+
+      const rightAngle = rightSkeleton.getKneeAngle();
+      const leftAngle = leftSkeleton.getKneeAngle();
+
+      expect(rightAngle).toBeCloseTo(180, 0);
+      expect(leftAngle).toBeCloseTo(180, 0);
+    });
+
+    it('getWristHeight requires both sides (not mirrored-compatible)', () => {
+      // Only right side - should return 0
+      const rightOnlySkeleton = createCocoSkeleton({
+        rightShoulder: kp(100, 100),
+        rightWrist: kp(100, 50), // Wrist above shoulder
+      });
+
+      // Should return 0 because it needs BOTH sides
+      expect(rightOnlySkeleton.getWristHeight()).toBe(0);
+    });
+
+    it('getWristHeight works when both sides present', () => {
+      const skeleton = createCocoSkeleton({
+        leftShoulder: kp(80, 100),
+        rightShoulder: kp(120, 100),
+        leftWrist: kp(80, 50), // Above shoulders
+        rightWrist: kp(120, 50),
+      });
+
+      // Wrist 50px above shoulder midpoint
+      expect(skeleton.getWristHeight()).toBe(50);
+    });
+  });
 });
