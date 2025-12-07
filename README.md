@@ -1,6 +1,6 @@
 # Swing Analyzer
 
-A web-based swing motion analyzer that runs completely in the browser. This application uses TensorFlow.js and MoveNet for pose detection, optimized for iPhone and mobile devices.
+A web-based swing motion analyzer that runs completely in the browser. This application uses TensorFlow.js and BlazePose for pose detection, optimized for iPhone and mobile devices.
 
 ## Features
 
@@ -103,20 +103,11 @@ For detailed deployment instructions, see [DEPLOY.md](./DEPLOY.md)
 
 ## How It Works
 
-The application uses TensorFlow.js with the MoveNet pose detection model, which is optimized for mobile devices. It analyzes the angle of your spine relative to vertical and counts a rep when you go from a hinged position (bent forward) to an upright position.
+The application uses TensorFlow.js with the BlazePose pose detection model (33 keypoints normalized to COCO-17 format). It analyzes the angle of your spine relative to vertical and counts a rep when you go from a hinged position (bent forward) to an upright position.
 
 - **Spine Vertical**: Measures the angle of your spine from vertical (0° is perfectly upright)
 - **Rep Counting**: Counts a rep when you transition from a hinged position to upright
 - **Body part visualization**: Shows key body parts for the first 0.5 seconds of video/camera
-
-## Comparison to Original YOLO Implementation
-
-This web implementation replaces the original Python YOLO-based code with a browser-based solution that:
-
-1. Uses TensorFlow.js instead of PyTorch
-2. Uses MoveNet instead of YOLO for better mobile performance
-3. Performs all analysis in the browser with no server requirements
-4. Includes the same spine angle and rep counting logic
 
 ## License
 

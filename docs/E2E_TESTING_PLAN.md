@@ -402,7 +402,7 @@ Each fixture follows the `PoseTrackFile` schema:
 {
   "metadata": {
     "version": "1.0",
-    "model": "movenet-lightning",
+    "model": "blazepose",
     "modelVersion": "4.0.0",
     "sourceVideoHash": "<sha256-of-swing-sample.mp4>",
     "sourceVideoName": "swing-sample.mp4",
