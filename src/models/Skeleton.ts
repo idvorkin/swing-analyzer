@@ -1,4 +1,4 @@
-import { CocoBodyParts, MediaPipeBodyParts, type PoseKeypoint } from '../types';
+import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
 
 /**
  * Represents a skeleton constructed from keypoints
@@ -38,7 +38,8 @@ export class Skeleton {
   private _elbowAngle: number | null = null;
 
   // Wrist height cache (wrist Y relative to shoulder, positive = above)
-  private _wristHeight: number | null = null;
+  // Keyed by preferred side ('left', 'right', or 'auto')
+  private _wristHeightCache: Map<string, number> = new Map();
 
   // Timestamp for velocity calculations
   private _timestamp: number = 0;
@@ -67,26 +68,10 @@ export class Skeleton {
 
   /**
    * Initialize keypoint name -> index mapping
-   * Note: MediaPipe mappings are added AFTER COCO so they take precedence
-   * (since MediaPipe-33 is now the default keypoint format)
+   * Uses MediaPipe-33 keypoint format only.
    */
   private initKeypointMapping(): void {
     // Create a mapping from all body part names to their indices
-    // Add COCO first so it can be overwritten by MediaPipe
-    Object.entries(CocoBodyParts).forEach(([name, index]) => {
-      const lowerName = name.toLowerCase();
-      this.keypointMapping[lowerName] = index;
-      // Add without prefix for easier lookup
-      const withoutPrefix = lowerName
-        .replace('left_', '')
-        .replace('right_', '');
-      if (withoutPrefix !== lowerName) {
-        this.keypointMapping[withoutPrefix] = index;
-      }
-    });
-
-    // Add MediaPipe AFTER COCO so MediaPipe indices take precedence
-    // (since MediaPipe-33 is now the default keypoint format)
     Object.entries(MediaPipeBodyParts).forEach(([name, index]) => {
       const lowerName = name.toLowerCase();
       this.keypointMapping[lowerName] = index;
@@ -223,7 +208,7 @@ export class Skeleton {
   }
 
   /**
-   * Get wrist X position for a given side (used for dominant arm detection)
+   * Get wrist X position for a given side
    */
   getWristX(side: 'left' | 'right'): number | null {
     const wrist = this.getKeypointByName(side === 'left' ? 'leftWrist' : 'rightWrist');
@@ -236,8 +221,9 @@ export class Skeleton {
    * a vertical line pointing downward (0° is arm pointing straight down, 90° is horizontal, 180° is pointing up)
    * Negative values indicate the arm is pointing to the left, positive to the right
    *
-   * @param preferredSide - If specified, use this arm (set by FormAnalyzer after detecting dominant arm)
-   *                        If not specified, fall back to heuristics (more vertical arm)
+   * @param preferredSide - If specified, use this arm. The analyzer always uses 'right'.
+   *                        For left-handed users, mirror the input skeleton data.
+   *                        If not specified, falls back to heuristics (more vertical arm).
    */
   getArmToVerticalAngle(preferredSide?: 'left' | 'right'): number {
     // Check cache keyed by preferredSide (undefined becomes 'auto')
@@ -381,28 +367,21 @@ export class Skeleton {
   /**
    * Get a specific keypoint by name
    * This supports names like "rightShoulder", "leftElbow", etc.
+   * Uses MediaPipe-33 keypoint format.
    */
   getKeypointByName(name: string): PoseKeypoint | undefined {
-    // IMPORTANT: Determine format first to use correct indices
-    // MediaPipe-33 and COCO-17 have different index mappings for body parts
-    const isMediaPipeFormat = this.keypoints.length === 33;
-
     // Try different casing variations
     const variants = [
       name.toLowerCase(),
       name,
       name.toUpperCase(),
       // Convert camelCase to SNAKE_CASE
-      name
-        .replace(/([A-Z])/g, '_$1')
-        .toUpperCase(),
+      name.replace(/([A-Z])/g, '_$1').toUpperCase(),
       // Convert camelCase to snake_case
-      name
-        .replace(/([A-Z])/g, '_$1')
-        .toLowerCase(),
+      name.replace(/([A-Z])/g, '_$1').toLowerCase(),
     ];
 
-    // Try each variant with the correct body parts mapping for the format
+    // Try each variant with MediaPipe body parts mapping
     for (const variant of variants) {
       // Check direct mapping
       const index = this.keypointMapping[variant];
@@ -410,88 +389,52 @@ export class Skeleton {
         return this.keypoints[index];
       }
 
-      // Use the correct body parts mapping based on format
-      if (isMediaPipeFormat) {
-        // MediaPipe-33: Only check MediaPipeBodyParts
-        if (variant in MediaPipeBodyParts) {
-          // @ts-expect-error - We're checking if the key exists
-          const mediaPipeIndex = MediaPipeBodyParts[variant];
-          if (this.keypoints[mediaPipeIndex]) {
-            return this.keypoints[mediaPipeIndex];
-          }
-        }
-      } else {
-        // COCO-17: Only check CocoBodyParts
-        if (variant in CocoBodyParts) {
-          // @ts-expect-error - We're checking if the key exists
-          const cocoIndex = CocoBodyParts[variant];
-          if (this.keypoints[cocoIndex]) {
-            return this.keypoints[cocoIndex];
-          }
+      // Check MediaPipeBodyParts
+      if (variant in MediaPipeBodyParts) {
+        // @ts-expect-error - We're checking if the key exists
+        const mediaPipeIndex = MediaPipeBodyParts[variant];
+        if (this.keypoints[mediaPipeIndex]) {
+          return this.keypoints[mediaPipeIndex];
         }
       }
     }
 
     // Fallback: Direct access for common points by their standard names
-
     if (name === 'rightShoulder' || name === 'RIGHT_SHOULDER') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_SHOULDER : CocoBodyParts.RIGHT_SHOULDER;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_SHOULDER];
     }
-
     if (name === 'leftShoulder' || name === 'LEFT_SHOULDER') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_SHOULDER : CocoBodyParts.LEFT_SHOULDER;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_SHOULDER];
     }
-
     if (name === 'rightElbow' || name === 'RIGHT_ELBOW') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_ELBOW : CocoBodyParts.RIGHT_ELBOW;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_ELBOW];
     }
-
     if (name === 'leftElbow' || name === 'LEFT_ELBOW') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_ELBOW : CocoBodyParts.LEFT_ELBOW;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_ELBOW];
     }
-
     if (name === 'rightHip' || name === 'RIGHT_HIP') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_HIP : CocoBodyParts.RIGHT_HIP;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_HIP];
     }
-
     if (name === 'leftHip' || name === 'LEFT_HIP') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_HIP : CocoBodyParts.LEFT_HIP;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_HIP];
     }
-
     if (name === 'rightWrist' || name === 'RIGHT_WRIST') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_WRIST : CocoBodyParts.RIGHT_WRIST;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_WRIST];
     }
-
     if (name === 'leftWrist' || name === 'LEFT_WRIST') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_WRIST : CocoBodyParts.LEFT_WRIST;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_WRIST];
     }
-
     if (name === 'rightKnee' || name === 'RIGHT_KNEE') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_KNEE : CocoBodyParts.RIGHT_KNEE;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_KNEE];
     }
-
     if (name === 'leftKnee' || name === 'LEFT_KNEE') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_KNEE : CocoBodyParts.LEFT_KNEE;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_KNEE];
     }
-
     if (name === 'rightAnkle' || name === 'RIGHT_ANKLE') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.RIGHT_ANKLE : CocoBodyParts.RIGHT_ANKLE;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.RIGHT_ANKLE];
     }
-
     if (name === 'leftAnkle' || name === 'LEFT_ANKLE') {
-      const index = isMediaPipeFormat ? MediaPipeBodyParts.LEFT_ANKLE : CocoBodyParts.LEFT_ANKLE;
-      return this.keypoints[index];
+      return this.keypoints[MediaPipeBodyParts.LEFT_ANKLE];
     }
 
     console.warn(`Keypoint not found by name: ${name}`);
@@ -680,7 +623,7 @@ export class Skeleton {
   }
 
   /**
-   * Get the average wrist height relative to shoulder midpoint
+   * Get wrist height relative to shoulder midpoint
    *
    * BIOMECHANICS: This measures how high the hands (and thus kettlebell) are.
    * - Positive values = wrists above shoulder level (arms raised high)
@@ -693,10 +636,16 @@ export class Skeleton {
    *
    * For detecting the "Top" position, look for the PEAK (maximum) of this value
    * during each rep cycle, rather than a fixed threshold.
+   *
+   * @param preferredSide - If specified, use this wrist. The analyzer always uses 'right'.
+   *                        For left-handed users, mirror the input skeleton data.
+   *                        If not specified, uses the wrist with higher confidence score.
    */
-  getWristHeight(): number {
-    if (this._wristHeight !== null) {
-      return this._wristHeight;
+  getWristHeight(preferredSide?: 'left' | 'right'): number {
+    const cacheKey = preferredSide ?? 'auto';
+    const cached = this._wristHeightCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
     }
 
     try {
@@ -706,24 +655,50 @@ export class Skeleton {
       const leftWrist = this.getKeypointByName('leftWrist');
       const rightWrist = this.getKeypointByName('rightWrist');
 
-      if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist) {
-        this._wristHeight = 0;
+      if (!leftShoulder || !rightShoulder) {
+        this._wristHeightCache.set(cacheKey, 0);
         return 0;
       }
 
       // Calculate shoulder midpoint Y
       const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
 
-      // Calculate average wrist Y
-      const avgWristY = (leftWrist.y + rightWrist.y) / 2;
+      // Get confidence scores
+      const leftConf = leftWrist?.score ?? leftWrist?.visibility ?? 0;
+      const rightConf = rightWrist?.score ?? rightWrist?.visibility ?? 0;
+      const minConf = 0.3;
+
+      let wristY: number | null = null;
+
+      if (preferredSide === 'right' && rightWrist && rightConf > minConf) {
+        // Use right wrist (preferred side specified)
+        wristY = rightWrist.y;
+      } else if (preferredSide === 'left' && leftWrist && leftConf > minConf) {
+        // Use left wrist (preferred side specified)
+        wristY = leftWrist.y;
+      } else if (leftWrist && rightWrist && leftConf > minConf && rightConf > minConf) {
+        // Both wrists have good confidence - use average (two-handed swing)
+        wristY = (leftWrist.y + rightWrist.y) / 2;
+      } else if (rightWrist && rightConf > minConf) {
+        // Only right wrist reliable
+        wristY = rightWrist.y;
+      } else if (leftWrist && leftConf > minConf) {
+        // Only left wrist reliable
+        wristY = leftWrist.y;
+      } else {
+        // No reliable wrist data
+        this._wristHeightCache.set(cacheKey, 0);
+        return 0;
+      }
 
       // In screen coordinates, Y increases downward
       // So shoulder_y - wrist_y = positive when wrist is ABOVE shoulder
-      this._wristHeight = shoulderMidY - avgWristY;
-      return this._wristHeight;
+      const height = shoulderMidY - wristY;
+      this._wristHeightCache.set(cacheKey, height);
+      return height;
     } catch (e) {
       console.error('Error calculating wrist height:', e);
-      this._wristHeight = 0;
+      this._wristHeightCache.set(cacheKey, 0);
       return 0;
     }
   }

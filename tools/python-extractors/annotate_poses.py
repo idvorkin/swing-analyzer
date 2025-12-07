@@ -24,61 +24,34 @@ Usage:
 
 import argparse
 import json
-import math
 import sys
 from pathlib import Path
 
 import numpy as np
 
+from angle_utils import compute_angles as compute_standard_angles, compute_wrist_heights
+
 
 def compute_angles(keypoints: list[dict]) -> dict:
-    """Compute angles from keypoints"""
-    kp_map = {kp.get("name", f"kp_{i}"): kp for i, kp in enumerate(keypoints)}
+    """
+    Compute angles from keypoints for annotation purposes.
 
-    # Also map by index for COCO format
-    for i, kp in enumerate(keypoints):
-        kp_map[i] = kp
-
+    Returns a dict with 'spine', 'armToVertical', and wrist height info.
+    This is a thin wrapper around the shared angle_utils for backwards compatibility.
+    """
     angles = {}
 
-    try:
-        # Get keypoints
-        ls = kp_map.get("left_shoulder", kp_map.get(5))
-        rs = kp_map.get("right_shoulder", kp_map.get(6))
-        lh = kp_map.get("left_hip", kp_map.get(11))
-        rh = kp_map.get("right_hip", kp_map.get(12))
-        lw = kp_map.get("left_wrist", kp_map.get(9))
-        rw = kp_map.get("right_wrist", kp_map.get(10))
+    # Get standard angles
+    std_angles = compute_standard_angles(keypoints)
+    if std_angles.get("spineAngle"):
+        angles["spine"] = std_angles["spineAngle"]
+    if std_angles.get("armToVerticalAngle"):
+        angles["armToVertical"] = std_angles["armToVerticalAngle"]
 
-        if not all([ls, rs, lh, rh]):
-            return angles
-
-        shoulder_mid_y = (ls["y"] + rs["y"]) / 2
-        shoulder_mid_x = (ls["x"] + rs["x"]) / 2
-        hip_mid_y = (lh["y"] + rh["y"]) / 2
-        hip_mid_x = (lh["x"] + rh["x"]) / 2
-
-        # Spine angle
-        spine_vec = np.array([shoulder_mid_x - hip_mid_x, shoulder_mid_y - hip_mid_y])
-        vertical = np.array([0, -1])
-        cos_spine = np.dot(spine_vec, vertical) / (np.linalg.norm(spine_vec) + 1e-6)
-        angles["spine"] = math.degrees(math.acos(np.clip(cos_spine, -1, 1)))
-
-        # Wrist heights (relative to shoulder)
-        if lw and rw:
-            # In screen coords, lower Y = higher position
-            # So shoulder_y - wrist_y = positive when wrist is above shoulder
-            angles["leftWristHeight"] = shoulder_mid_y - lw["y"]
-            angles["rightWristHeight"] = shoulder_mid_y - rw["y"]
-            angles["avgWristHeight"] = (angles["leftWristHeight"] + angles["rightWristHeight"]) / 2
-
-            # Arm angle from vertical
-            arm_vec = np.array([lw["x"] - shoulder_mid_x, lw["y"] - shoulder_mid_y])
-            cos_arm = np.dot(arm_vec, vertical) / (np.linalg.norm(arm_vec) + 1e-6)
-            angles["armToVertical"] = math.degrees(math.acos(np.clip(cos_arm, -1, 1)))
-
-    except (KeyError, TypeError):
-        pass
+    # Get wrist heights
+    wrist_info = compute_wrist_heights(keypoints)
+    if wrist_info:
+        angles.update(wrist_info)
 
     return angles
 

@@ -27,13 +27,14 @@ Usage:
 
 import argparse
 import json
-import math
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
+
+from angle_utils import compute_angles as compute_standard_angles, compute_wrist_heights
 
 
 @dataclass
@@ -87,107 +88,29 @@ class AlgorithmMetrics:
 
 def compute_angles_from_keypoints(keypoints: list[dict]) -> dict:
     """
-    Compute angles from COCO-17 keypoints.
-    Returns dict with spine, hip, knee, armToVertical angles.
+    Compute angles from MediaPipe BlazePose-33 keypoints.
+    Returns dict with spine, hip, armToVertical, wristHeight, avgWristHeight angles.
+
+    This is a thin wrapper around the shared angle_utils for backwards compatibility.
     """
-    # Build keypoint map by name or index
-    kp_map = {}
-    for i, kp in enumerate(keypoints):
-        name = kp.get("name", f"kp_{i}")
-        kp_map[name] = kp
-        kp_map[i] = kp
-
-    def get_kp(name_or_idx):
-        """Get keypoint by name or index"""
-        if name_or_idx in kp_map:
-            return kp_map[name_or_idx]
-        # Try common name mappings
-        name_map = {
-            "left_shoulder": 5, "right_shoulder": 6,
-            "left_elbow": 7, "right_elbow": 8,
-            "left_wrist": 9, "right_wrist": 10,
-            "left_hip": 11, "right_hip": 12,
-            "left_knee": 13, "right_knee": 14,
-            "left_ankle": 15, "right_ankle": 16,
-        }
-        if name_or_idx in name_map:
-            return kp_map.get(name_map[name_or_idx])
-        return None
-
     angles = {}
 
-    try:
-        # Get key points
-        left_shoulder = get_kp("left_shoulder")
-        right_shoulder = get_kp("right_shoulder")
-        left_hip = get_kp("left_hip")
-        right_hip = get_kp("right_hip")
-        left_wrist = get_kp("left_wrist")
-        right_wrist = get_kp("right_wrist")
-        left_knee = get_kp("left_knee")
+    # Get standard angles
+    std_angles = compute_standard_angles(keypoints)
+    if std_angles.get("spineAngle"):
+        angles["spine"] = std_angles["spineAngle"]
+    if std_angles.get("armToVerticalAngle"):
+        angles["armToVertical"] = std_angles["armToVerticalAngle"]
+    if std_angles.get("hipAngle"):
+        angles["hip"] = std_angles["hipAngle"]
 
-        if not all([left_shoulder, right_shoulder, left_hip, right_hip]):
-            return angles
-
-        # Midpoints
-        shoulder_mid = {
-            "x": (left_shoulder["x"] + right_shoulder["x"]) / 2,
-            "y": (left_shoulder["y"] + right_shoulder["y"]) / 2,
-        }
-        hip_mid = {
-            "x": (left_hip["x"] + right_hip["x"]) / 2,
-            "y": (left_hip["y"] + right_hip["y"]) / 2,
-        }
-
-        # Spine angle (from vertical)
-        spine_vec = np.array([
-            shoulder_mid["x"] - hip_mid["x"],
-            shoulder_mid["y"] - hip_mid["y"]
-        ])
-        vertical = np.array([0, -1])  # Up in screen coords
-
-        cos_spine = np.dot(spine_vec, vertical) / (np.linalg.norm(spine_vec) + 1e-6)
-        cos_spine = np.clip(cos_spine, -1, 1)
-        angles["spine"] = math.degrees(math.acos(cos_spine))
-
-        # Arm to vertical angle (using left wrist)
-        if left_wrist:
-            arm_vec = np.array([
-                left_wrist["x"] - shoulder_mid["x"],
-                left_wrist["y"] - shoulder_mid["y"]
-            ])
-            cos_arm = np.dot(arm_vec, vertical) / (np.linalg.norm(arm_vec) + 1e-6)
-            cos_arm = np.clip(cos_arm, -1, 1)
-            angles["armToVertical"] = math.degrees(math.acos(cos_arm))
-
-            # Wrist Y position (lower = higher arm, in screen coords)
-            # Normalize to shoulder height
-            angles["wristHeight"] = shoulder_mid["y"] - left_wrist["y"]
-
-        # Average wrist height (both arms)
-        if left_wrist and right_wrist:
-            avg_wrist_y = (left_wrist["y"] + right_wrist["y"]) / 2
-            angles["avgWristHeight"] = shoulder_mid["y"] - avg_wrist_y
-
-        # Hip angle (knee-hip-shoulder)
-        if left_knee:
-            hip_angle = calculate_angle(left_knee, left_hip, left_shoulder)
-            angles["hip"] = hip_angle
-
-    except (KeyError, TypeError, ZeroDivisionError):
-        pass
+    # Get wrist heights
+    wrist_info = compute_wrist_heights(keypoints)
+    if wrist_info:
+        angles["wristHeight"] = wrist_info["leftWristHeight"]
+        angles["avgWristHeight"] = wrist_info["avgWristHeight"]
 
     return angles
-
-
-def calculate_angle(p1: dict, p2: dict, p3: dict) -> float:
-    """Calculate angle at p2 given three points."""
-    v1 = np.array([p1["x"] - p2["x"], p1["y"] - p2["y"]])
-    v2 = np.array([p3["x"] - p2["x"], p3["y"] - p2["y"]])
-
-    cos_angle = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-6)
-    cos_angle = np.clip(cos_angle, -1, 1)
-    return math.degrees(math.acos(cos_angle))
 
 
 class PositionDetector:

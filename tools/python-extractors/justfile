@@ -20,35 +20,21 @@ extract-clip: download-sample
     @ffmpeg -y -i /tmp/swing-sample.webm -t 10 -c copy /tmp/swing-10sec.webm 2>/dev/null
     @echo "Created /tmp/swing-10sec.webm"
 
-# Run MediaPipe extractor (BlazePose-33 keypoints, default)
+# Run MediaPipe extractor (BlazePose-33 keypoints)
 test-mediapipe: extract-clip
     @echo "Testing MediaPipe extractor (BlazePose-33)..."
     uv run tools/python-extractors/extract_poses.py /tmp/swing-10sec.webm \
         -o /tmp/poses-mediapipe.json
     @echo "Output: /tmp/poses-mediapipe.json"
 
-# Run MediaPipe extractor with legacy COCO-17 keypoints
-test-mediapipe-coco: extract-clip
-    @echo "Testing MediaPipe extractor (COCO-17)..."
-    uv run tools/python-extractors/extract_poses.py /tmp/swing-10sec.webm \
-        -o /tmp/poses-mediapipe-coco.json --coco
-    @echo "Output: /tmp/poses-mediapipe-coco.json"
-
-# Run TFLite extractor (BlazePose-33 keypoints, default)
+# Run TFLite extractor (BlazePose-33 keypoints)
 test-tflite: extract-clip
     @echo "Testing TFLite extractor (BlazePose-33)..."
     uv run tools/python-extractors/extract_poses_tflite.py /tmp/swing-10sec.webm \
         -o /tmp/poses-tflite.json
     @echo "Output: /tmp/poses-tflite.json"
 
-# Run TFLite extractor with legacy COCO-17 keypoints
-test-tflite-coco: extract-clip
-    @echo "Testing TFLite extractor (COCO-17)..."
-    uv run tools/python-extractors/extract_poses_tflite.py /tmp/swing-10sec.webm \
-        -o /tmp/poses-tflite-coco.json --coco
-    @echo "Output: /tmp/poses-tflite-coco.json"
-
-# Run smoke test on both extractors (default BlazePose-33)
+# Run smoke test on both extractors (BlazePose-33)
 smoke-test: test-mediapipe test-tflite
     @echo ""
     @echo "=== Smoke Test Results ==="
@@ -56,19 +42,8 @@ smoke-test: test-mediapipe test-tflite
     @python3 -c "import json; d=json.load(open('/tmp/poses-tflite.json')); print(f'TFLite:    {len(d[\"frames\"])} frames, {len(d[\"frames\"][0][\"keypoints\"])} keypoints')"
     @echo "=== All tests passed! ==="
 
-# Run full smoke test (both extractors, both formats)
-smoke-test-full: test-mediapipe test-mediapipe-coco test-tflite test-tflite-coco
-    @echo ""
-    @echo "=== Full Smoke Test Results ==="
-    @python3 -c "import json; d=json.load(open('/tmp/poses-mediapipe.json')); print(f'MediaPipe BlazePose:   {len(d[\"frames\"])} frames, {len(d[\"frames\"][0][\"keypoints\"])} keypoints')"
-    @python3 -c "import json; d=json.load(open('/tmp/poses-mediapipe-coco.json')); print(f'MediaPipe COCO-17:     {len(d[\"frames\"])} frames, {len(d[\"frames\"][0][\"keypoints\"])} keypoints')"
-    @python3 -c "import json; d=json.load(open('/tmp/poses-tflite.json')); print(f'TFLite BlazePose:      {len(d[\"frames\"])} frames, {len(d[\"frames\"][0][\"keypoints\"])} keypoints')"
-    @python3 -c "import json; d=json.load(open('/tmp/poses-tflite-coco.json')); print(f'TFLite COCO-17:        {len(d[\"frames\"])} frames, {len(d[\"frames\"][0][\"keypoints\"])} keypoints')"
-    @echo "=== All tests passed! ==="
-
 # Clean up test files
 clean:
     @rm -f /tmp/swing-sample.webm /tmp/swing-10sec.webm
-    @rm -f /tmp/poses-mediapipe.json /tmp/poses-mediapipe-coco.json
-    @rm -f /tmp/poses-tflite.json /tmp/poses-tflite-coco.json
+    @rm -f /tmp/poses-mediapipe.json /tmp/poses-tflite.json
     @echo "Cleaned up test files"

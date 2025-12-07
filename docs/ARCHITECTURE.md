@@ -105,7 +105,7 @@ Data processing orchestration. This is where frames become analysis results.
 | `PoseSkeletonTransformer.ts` | Converts ML poses → Skeleton objects |
 | `CachedPoseSkeletonTransformer.ts` | Uses pre-extracted poses |
 | `PipelineFactory.ts` | Creates pipeline instances |
-| `KeypointAdapter.ts` | Normalizes different keypoint formats (COCO/MediaPipe) |
+| `KeypointAdapter.ts` | Validates MediaPipe BlazePose-33 keypoint format |
 
 **Data flow:**
 ```

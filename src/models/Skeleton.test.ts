@@ -433,15 +433,15 @@ describe('Skeleton', () => {
       expect(leftAngle).toBeCloseTo(180, 0);
     });
 
-    it('getWristHeight requires both sides (not mirrored-compatible)', () => {
-      // Only right side - should return 0
-      const rightOnlySkeleton = createCocoSkeleton({
+    it('getWristHeight requires both shoulders', () => {
+      // Missing left shoulder - should return 0
+      const missingShoulderSkeleton = createCocoSkeleton({
         rightShoulder: kp(100, 100),
         rightWrist: kp(100, 50), // Wrist above shoulder
       });
 
-      // Should return 0 because it needs BOTH sides
-      expect(rightOnlySkeleton.getWristHeight()).toBe(0);
+      // Should return 0 because shoulder midpoint can't be calculated
+      expect(missingShoulderSkeleton.getWristHeight()).toBe(0);
     });
 
     it('getWristHeight works when both sides present', () => {
@@ -454,6 +454,47 @@ describe('Skeleton', () => {
 
       // Wrist 50px above shoulder midpoint
       expect(skeleton.getWristHeight()).toBe(50);
+    });
+
+    it('getWristHeight falls back to single wrist when one has low confidence', () => {
+      const skeleton = createCocoSkeleton({
+        leftShoulder: kp(80, 100),
+        rightShoulder: kp(120, 100),
+        leftWrist: kp(80, 200, 0.1), // Low confidence, way below shoulders
+        rightWrist: kp(120, 50), // High confidence, above shoulders
+      });
+
+      // Should use only right wrist (high confidence) = 100 - 50 = 50 above
+      expect(skeleton.getWristHeight()).toBe(50);
+    });
+
+    it('getWristHeight uses preferredSide when specified', () => {
+      const skeleton = createCocoSkeleton({
+        leftShoulder: kp(80, 100),
+        rightShoulder: kp(120, 100),
+        leftWrist: kp(80, 150), // Below shoulders
+        rightWrist: kp(120, 50), // Above shoulders
+      });
+
+      // Without preference: averages both = 100 - (150+50)/2 = 100 - 100 = 0
+      expect(skeleton.getWristHeight()).toBe(0);
+
+      // With right preference: uses right only = 100 - 50 = 50
+      expect(skeleton.getWristHeight('right')).toBe(50);
+
+      // With left preference: uses left only = 100 - 150 = -50
+      expect(skeleton.getWristHeight('left')).toBe(-50);
+    });
+
+    it('getWristHeight returns 0 when no reliable wrist data', () => {
+      const skeleton = createCocoSkeleton({
+        leftShoulder: kp(80, 100),
+        rightShoulder: kp(120, 100),
+        leftWrist: kp(80, 50, 0.1), // Both low confidence
+        rightWrist: kp(120, 50, 0.1),
+      });
+
+      expect(skeleton.getWristHeight()).toBe(0);
     });
   });
 

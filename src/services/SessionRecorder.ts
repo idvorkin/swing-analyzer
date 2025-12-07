@@ -63,6 +63,8 @@ export interface StateChangeEvent {
     | 'pipeline_reinit'
     | 'rep_detected'
     | 'checkpoint_detected'
+    | 'cache_load'
+    | 'skeleton_processing_complete'
     | 'error';
   timestamp: number;
   details?: Record<string, unknown>;
@@ -695,6 +697,24 @@ class SessionRecorderImpl {
     this.pipelineStateGetter = getter;
   }
 
+  // Pose track provider for debug downloads
+  private poseTrackProvider: (() => unknown | null) | null = null;
+
+  /**
+   * Set the pose track provider function
+   * Called by the app to provide access to current pose track data
+   */
+  setPoseTrackProvider(provider: () => unknown | null): void {
+    this.poseTrackProvider = provider;
+  }
+
+  /**
+   * Get current pose track data (if available)
+   */
+  getPoseTrack(): unknown | null {
+    return this.poseTrackProvider?.() ?? null;
+  }
+
   /**
    * Set app settings for debugging (e.g., model type, exercise type)
    * Called by the app to include current settings in bug reports
@@ -950,6 +970,31 @@ export function recordCheckpointDetected(
   });
 }
 
+export function recordCacheLoad(details: {
+  frameCount: number;
+  videoHash: string;
+  videoDuration?: number;
+}): void {
+  sessionRecorder.recordStateChange({
+    type: 'cache_load',
+    timestamp: Date.now(),
+    details,
+  });
+}
+
+export function recordSkeletonProcessingComplete(details: {
+  framesProcessed: number;
+  finalRepCount: number;
+  processingTimeMs?: number;
+  totalFramesProcessed?: number;
+}): void {
+  sessionRecorder.recordStateChange({
+    type: 'skeleton_processing_complete',
+    timestamp: Date.now(),
+    details,
+  });
+}
+
 // Expose debug functions on window for easy console access
 // Available in all environments - crash logs are useful in production too
 if (typeof window !== 'undefined') {
@@ -1053,6 +1098,76 @@ if (typeof window !== 'undefined') {
      * Usage: swingDebug.setAppSettings({ model: 'blazepose', exercise: 'swing' })
      */
     setAppSettings: (settings: Record<string, unknown>) => sessionRecorder.setAppSettings(settings),
+
+    /**
+     * Get current pose track data (if available).
+     * Usage: swingDebug.getPoseTrack()
+     */
+    getPoseTrack: () => sessionRecorder.getPoseTrack(),
+
+    /**
+     * Download current pose track as gzipped JSON file.
+     * Uses CompressionStream API for efficient gzip compression.
+     * Usage: swingDebug.downloadPoseTrack()
+     */
+    downloadPoseTrack: async () => {
+      const poseTrack = sessionRecorder.getPoseTrack();
+      if (!poseTrack) {
+        console.warn('[swingDebug] No pose track data available');
+        return null;
+      }
+
+      try {
+        // Serialize in chunks to avoid string length limits
+        // Exclude frameImage (runtime-only ImageData, not for serialization)
+        const track = poseTrack as { metadata: unknown; frames: Record<string, unknown>[] };
+        const chunks: string[] = [];
+        chunks.push('{"metadata":');
+        chunks.push(JSON.stringify(track.metadata));
+        chunks.push(',"frames":[');
+
+        // Add frames one by one, excluding frameImage to save space
+        const frames = track.frames;
+        for (let i = 0; i < frames.length; i++) {
+          if (i > 0) chunks.push(',');
+          // Omit frameImage - it's runtime-only ImageData for filmstrip thumbnails
+          const { frameImage, ...frameWithoutImage } = frames[i];
+          chunks.push(JSON.stringify(frameWithoutImage));
+        }
+        chunks.push(']}');
+
+        // Create blob from chunks
+        const jsonBlob = new Blob(chunks, { type: 'application/json' });
+        const uncompressedSize = jsonBlob.size;
+
+        // Compress with gzip using CompressionStream API
+        const compressionStream = new CompressionStream('gzip');
+        const compressedStream = jsonBlob.stream().pipeThrough(compressionStream);
+        const compressedBlob = await new Response(compressedStream).blob();
+
+        // Download the gzipped file
+        const url = URL.createObjectURL(compressedBlob);
+        const metadata = track.metadata as { sourceVideoName?: string };
+        const videoName = metadata?.sourceVideoName || 'video';
+        const filename = videoName.replace(/\.[^.]+$/, '') + '.posetrack.json.gz';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        const compressedSize = compressedBlob.size;
+        const ratio = ((1 - compressedSize / uncompressedSize) * 100).toFixed(1);
+        console.log(`[swingDebug] Downloaded pose track: ${filename}`);
+        console.log(`[swingDebug] Size: ${(compressedSize / 1024).toFixed(1)} KB (${ratio}% compression, was ${(uncompressedSize / 1024 / 1024).toFixed(2)} MB)`);
+        return filename;
+      } catch (error) {
+        console.error('[swingDebug] Failed to download pose track:', error);
+        return null;
+      }
+    },
   };
 
   (window as unknown as { swingDebug: typeof swingDebug }).swingDebug = swingDebug;

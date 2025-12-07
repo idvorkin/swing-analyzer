@@ -35,6 +35,7 @@ export interface SwingThresholds {
   // TOP position
   topSpineMax: number; // Spine must be below this (upright)
   topHipMin: number; // Hip must be above this (extended)
+  topArmMin: number; // Arm must be above this (near horizontal)
 
   // BOTTOM position
   bottomArmMax: number; // Arm must be below this (behind body)
@@ -56,9 +57,11 @@ export interface SwingThresholds {
 const DEFAULT_THRESHOLDS: SwingThresholds = {
   topSpineMax: 25,
   topHipMin: 150,
-  // bottomArmMax was 0, increased to 10 for mirrored video tolerance
-  // (transition threshold becomes |arm| < 25 instead of < 15)
-  bottomArmMax: 10,
+  topArmMin: 55, // Arm must be >55° from vertical (near horizontal, relaxed from 60 for one-handed swings)
+  // bottomArmMax controls CONNECT→BOTTOM transition: |arm| < bottomArmMax + 15
+  // Real swing data shows arm angles of 30-55° at bottom position (arms swing behind body)
+  // Set to 40 so threshold becomes |arm| < 55, capturing actual swing motion
+  bottomArmMax: 40,
   bottomSpineMin: 35,
   bottomHipMax: 140,
   // CONNECT: arms approaching vertical while spine still upright (before hinge)
@@ -125,69 +128,16 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   private wristHeightHistory: number[] = [];
   private readonly wristHeightWindowSize = 5;
 
-  // Dominant arm detection (set once during first hinged frames)
-  private dominantArm: 'left' | 'right' | null = null;
-  private dominantArmVotes = { left: 0, right: 0 };
-  private readonly votesNeededForLock = 5;
-
   constructor(thresholds: Partial<SwingThresholds> = {}) {
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
   }
 
   /**
-   * Detect the dominant (swinging) arm based on body facing direction.
-   * When hinged forward, the arm on the "front" side of the body is the swinging arm.
-   * Votes across multiple hinged frames to ensure stability.
-   */
-  private detectDominantArm(skeleton: Skeleton): void {
-    // Once locked, don't change (intentionally no logging - too noisy)
-    if (this.dominantArm !== null) return;
-
-    // Only detect during hinged position (spine > 30°)
-    const spine = skeleton.getSpineAngle();
-    if (spine <= 30) {
-      // Not hinged yet - skip detection (this is normal during TOP/RELEASE phases)
-      return;
-    }
-
-    // Need facing direction to determine front
-    const facing = skeleton.getFacingDirection();
-    if (!facing) {
-      console.debug('detectDominantArm: Cannot determine facing direction, skipping');
-      return;
-    }
-
-    // Compare wrist positions to determine front arm
-    const leftWristX = skeleton.getWristX('left');
-    const rightWristX = skeleton.getWristX('right');
-    if (leftWristX === null || rightWristX === null) {
-      console.debug('detectDominantArm: Missing wrist keypoints, skipping');
-      return;
-    }
-
-    // The swinging arm is on the "front" side (same direction as facing)
-    let frontArm: 'left' | 'right';
-    if (facing === 'right') {
-      // Facing right: front arm has wrist further right (higher X)
-      frontArm = rightWristX > leftWristX ? 'right' : 'left';
-    } else {
-      // Facing left: front arm has wrist further left (lower X)
-      frontArm = leftWristX < rightWristX ? 'left' : 'right';
-    }
-
-    // Vote for this arm
-    this.dominantArmVotes[frontArm]++;
-
-    // Lock in once we have enough votes
-    const totalVotes = this.dominantArmVotes.left + this.dominantArmVotes.right;
-    if (totalVotes >= this.votesNeededForLock) {
-      this.dominantArm = this.dominantArmVotes.right >= this.dominantArmVotes.left ? 'right' : 'left';
-      console.debug(`detectDominantArm: Locked in ${this.dominantArm} arm (votes: L=${this.dominantArmVotes.left}, R=${this.dominantArmVotes.right})`);
-    }
-  }
-
-  /**
-   * Process a skeleton frame through the state machine
+   * Process a skeleton frame through the state machine.
+   *
+   * Always uses the RIGHT arm for angle calculations. For left-handed users,
+   * mirror the input skeleton data so that their left arm becomes "right".
+   * This simplifies the algorithm and ensures consistent behavior.
    */
   processFrame(
     skeleton: Skeleton,
@@ -195,15 +145,12 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     videoTime?: number,
     frameImage?: ImageData
   ): FormAnalyzerResult {
-    // Detect dominant arm during first hinged frames
-    this.detectDominantArm(skeleton);
-
-    // Get all angles (pass dominant arm if detected)
-    const arm = skeleton.getArmToVerticalAngle(this.dominantArm ?? undefined);
+    // Always use right arm - for left-handed users, mirror the skeleton data
+    const arm = skeleton.getArmToVerticalAngle('right');
     const spine = skeleton.getSpineAngle();
     const hip = skeleton.getHipAngle();
     const knee = skeleton.getKneeAngle();
-    const wristHeight = skeleton.getWristHeight();
+    const wristHeight = skeleton.getWristHeight('right');
     const angles = { arm, spine, hip, knee, wristHeight };
 
     // Track wrist height history for peak detection
@@ -253,7 +200,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
         break;
 
       case 'release':
-        if (this.shouldTransitionToTop(spine, hip)) {
+        if (this.shouldTransitionToTop(arm, spine, hip)) {
           this.finalizePhasePeak('release');
           this.phase = 'top';
           this.framesInPhase = 0;
@@ -418,7 +365,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   ): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
     // Use absolute value - in mirrored video, "behind body" could be positive
-    // bottomArmMax is 0, so we check if arm is near vertical (close to 0)
+    // bottomArmMax is 40, so threshold becomes |arm| < 55 (captures arms swinging behind)
     return (
       Math.abs(arm) < Math.abs(this.thresholds.bottomArmMax) + 15 &&
       spine > this.thresholds.bottomSpineMin &&
@@ -444,30 +391,61 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   /**
    * Check if we should transition from RELEASE to TOP (rep complete)
    *
-   * Uses PEAK DETECTION: Top is when wrist height reaches its maximum
-   * and starts descending. More accurate than threshold-based detection.
+   * Uses ARM ANGLE as primary criterion: Top position is when arm reaches
+   * near-horizontal (>60° from vertical). This is more reliable than wrist
+   * height peak detection, especially for one-handed swings where the
+   * non-working arm can have noisy tracking.
+   *
+   * Also uses peak detection as secondary confirmation to catch the exact
+   * moment when the kettlebell starts descending.
    */
-  private shouldTransitionToTop(spine: number, hip: number): boolean {
+  private shouldTransitionToTop(
+    arm: number,
+    spine: number,
+    hip: number
+  ): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
-    if (this.wristHeightHistory.length < 3) return false;
 
     // Check posture requirements (must be standing upright)
     if (spine > this.thresholds.topSpineMax || hip < this.thresholds.topHipMin) {
       return false;
     }
 
-    // Peak detection: check if wrist height was increasing and is now decreasing
-    const h = this.wristHeightHistory;
-    const len = h.length;
+    // Primary criterion: arm must be near horizontal (kettlebell at shoulder height)
+    // Use absolute value to handle both mirrored and normal video
+    const armNearHorizontal = Math.abs(arm) > this.thresholds.topArmMin;
+    if (!armNearHorizontal) {
+      return false;
+    }
 
-    const prev2 = this.smoothedWristHeight(len - 3, 2);
-    const prev1 = this.smoothedWristHeight(len - 2, 2);
-    const curr = this.smoothedWristHeight(len - 1, 2);
+    // Secondary confirmation: wrist height peak detection
+    // This catches the exact moment when kettlebell starts descending
+    if (this.wristHeightHistory.length >= 3) {
+      const h = this.wristHeightHistory;
+      const len = h.length;
 
-    const isPeak = prev1 >= prev2 && prev1 > curr;
-    const wristHighEnough = prev1 > -80;
+      const prev2 = this.smoothedWristHeight(len - 3, 2);
+      const prev1 = this.smoothedWristHeight(len - 2, 2);
+      const curr = this.smoothedWristHeight(len - 1, 2);
 
-    return isPeak && wristHighEnough;
+      // Peak or plateau starting to descend
+      const isPeakOrDescending = prev1 >= prev2 && curr < prev1;
+      const wristHighEnough = prev1 > -80;
+
+      if (isPeakOrDescending && wristHighEnough) {
+        return true;
+      }
+    }
+
+    // Fallback: if arm has been horizontal for multiple frames, transition anyway
+    // This handles fast swings where peak detection might miss the exact moment.
+    // At 30fps, minFramesInPhase(2) + 2 = 4 frames = ~133ms which is reasonable
+    // for detecting the top of a swing. For 60fps video this would be ~67ms.
+    if (this.framesInPhase >= this.minFramesInPhase + 2) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -605,8 +583,6 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     this.currentPhasePeak = null;
     this.currentRepPeaks = {};
     this.wristHeightHistory = [];
-    this.dominantArm = null;
-    this.dominantArmVotes = { left: 0, right: 0 };
     this.resetMetrics();
   }
 

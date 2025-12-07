@@ -288,5 +288,5 @@ Buffer size: 10 frames (~333ms at 30fps)
 ## References
 
 - Kettlebell swing biomechanics studies
-- MoveNet pose estimation model
-- COCO keypoint format (17 points)
+- BlazePose pose estimation model
+- MediaPipe BlazePose-33 keypoint format (33 points)

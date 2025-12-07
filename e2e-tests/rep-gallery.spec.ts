@@ -64,27 +64,28 @@ test.describe('Rep Gallery Modal', () => {
 
       // Should have phase headers (dynamically detected)
       const phaseHeaders = page.locator('.gallery-phase-btn');
-      await expect(phaseHeaders).toHaveCount(4); // top, connect, bottom, release
+      await expect(phaseHeaders).toHaveCount(4); // bottom, release, top, connect
 
-      // Verify known phases are present
-      await expect(phaseHeaders.nth(0)).toHaveText('Top');
-      await expect(phaseHeaders.nth(1)).toHaveText('Connect');
-      await expect(phaseHeaders.nth(2)).toHaveText('Bottom');
-      await expect(phaseHeaders.nth(3)).toHaveText('Release');
+      // Verify known phases are present in display order (starting from bottom)
+      await expect(phaseHeaders.nth(0)).toHaveText('Bottom');
+      await expect(phaseHeaders.nth(1)).toHaveText('Release');
+      await expect(phaseHeaders.nth(2)).toHaveText('Top');
+      await expect(phaseHeaders.nth(3)).toHaveText('Connect');
     });
 
     test('RG-003: rep rows display with phase cells', async ({ page }) => {
       await loadVideoAndWaitForGallery(page);
       await page.click('.filmstrip-gallery-btn');
 
-      // Should have rep rows (seeded data has 3 detected reps)
+      // Should have rep rows (seeded data has 4 detected reps from swing-sample-4reps.webm)
       const repRows = page.locator('.gallery-grid-row');
-      await expect(repRows).toHaveCount(3);
+      await expect(repRows).toHaveCount(4);
 
       // Each row should have rep number
       await expect(repRows.nth(0).locator('.gallery-rep-number')).toHaveText('1');
       await expect(repRows.nth(1).locator('.gallery-rep-number')).toHaveText('2');
       await expect(repRows.nth(2).locator('.gallery-rep-number')).toHaveText('3');
+      await expect(repRows.nth(3).locator('.gallery-rep-number')).toHaveText('4');
 
       // Each row should have phase cells (4 phases + 1 rep cell = 5 cells per row)
       // Note: seeded fixtures don't have frameImage data, so thumbnails show "—"

@@ -1362,6 +1362,23 @@
   background: var(--settings-success);
 }
 
+.settings-action-btn--blue {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.settings-action-btn--blue:hover {
+  background: #3b82f6;
+}
+
+.settings-action-btn--blue:disabled {
+  background: #4b5563;
+  border-color: #6b7280;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .settings-stats-row {
   display: flex;
   justify-content: center;

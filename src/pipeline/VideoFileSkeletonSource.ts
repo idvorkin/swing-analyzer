@@ -28,6 +28,7 @@ import {
   loadPoseTrackFromStorage,
   savePoseTrackToStorage,
 } from '../services/PoseTrackService';
+import { recordCacheLoad } from '../services/SessionRecorder';
 import { computeQuickVideoHash } from '../utils/videoHash';
 
 /**
@@ -117,14 +118,33 @@ export class VideoFileSkeletonSource implements SkeletonSource {
         this.liveCache = LivePoseCache.fromPoseTrackFile(cached);
         this.stateSubject.next({ type: 'active' });
 
+        // Record cache load for session debugging
+        recordCacheLoad({
+          frameCount: cached.frames.length,
+          videoHash: this.videoHash!,
+          videoDuration: cached.metadata.sourceVideoDuration,
+        });
+
         // Emit all cached skeletons for initial pipeline processing
         // This allows the pipeline to count reps from cached data
-        console.log('[VideoFileSkeletonSource] Emitting', cached.frames.length, 'cached skeleton events');
-        for (const frame of cached.frames) {
-          const skeletonEvent = buildSkeletonEventFromFrame(frame);
-          this.skeletonSubject.next(skeletonEvent);
-        }
-        console.log('[VideoFileSkeletonSource] Done emitting cached skeleton events');
+        // Use setTimeout(0) to ensure all subscribers are set up before we emit
+        console.log('[VideoFileSkeletonSource] Scheduling emission of', cached.frames.length, 'cached skeleton events');
+        setTimeout(() => {
+          const startTime = performance.now();
+          console.log('[VideoFileSkeletonSource] Emitting', cached.frames.length, 'cached skeleton events');
+          let emitCount = 0;
+          for (const frame of cached.frames) {
+            const skeletonEvent = buildSkeletonEventFromFrame(frame);
+            this.skeletonSubject.next(skeletonEvent);
+            emitCount++;
+          }
+          const processingTime = performance.now() - startTime;
+          console.log('[VideoFileSkeletonSource] Done emitting', emitCount, 'cached skeleton events in', processingTime.toFixed(0), 'ms');
+
+          // Emit completion event after all skeletons processed
+          // This is a signal that batch processing is done
+          this.stateSubject.next({ type: 'active', batchComplete: true, framesProcessed: emitCount, processingTimeMs: processingTime } as SkeletonSourceState);
+        }, 0);
 
         return;
       }

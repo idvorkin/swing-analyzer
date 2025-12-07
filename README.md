@@ -103,7 +103,7 @@ For detailed deployment instructions, see [DEPLOY.md](./DEPLOY.md)
 
 ## How It Works
 
-The application uses TensorFlow.js with the BlazePose pose detection model (33 keypoints normalized to COCO-17 format). It analyzes the angle of your spine relative to vertical and counts a rep when you go from a hinged position (bent forward) to an upright position.
+The application uses TensorFlow.js with the BlazePose pose detection model (33 MediaPipe keypoints). It analyzes the angle of your spine relative to vertical and counts a rep when you go from a hinged position (bent forward) to an upright position.
 
 - **Spine Vertical**: Measures the angle of your spine from vertical (0° is perfectly upright)
 - **Rep Counting**: Counts a rep when you transition from a hinged position to upright

@@ -357,8 +357,9 @@ test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
 
     console.log(`Igor-1h-swing extraction completed: ${repCount} reps detected`);
 
-    // Igor video should have ~20+ reps
-    expect(repCount).toBeGreaterThan(15);
+    // Igor video is a one-handed swing, ~20 seconds, should have ~9 reps
+    // (Previously expected 20+ but that was incorrect - the video is ~20s, not 60s)
+    expect(repCount).toBeGreaterThanOrEqual(8);
   });
 
   test('skeleton renders after extraction and during playback', async ({ page }) => {

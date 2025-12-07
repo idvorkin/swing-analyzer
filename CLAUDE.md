@@ -23,24 +23,31 @@ Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) 
 - **Clone command**: `git clone https://github.com/idvorkin-ai-tools/swing-analyzer.git swing-N`
 - **After cloning**: `cd swing-N && just setup && git remote add upstream https://github.com/idvorkin/swing-analyzer.git`
 
-### Per-Clone Branches (Recommended)
+### Feature-Based Branches (Recommended)
 
-Each clone works on its own persistent branch for zero-conflict parallelization:
+Use **feature-based branch names**, not agent-number-based names:
 
 ```
-swing-1 → agent/swing-1
-swing-2 → agent/swing-2
-swing-3 → agent/swing-3
+# Good - describes what you're working on
+feature/pose-download
+fix/rep-detection-one-hand
+refactor/skeleton-rendering
+
+# Avoid - doesn't describe the work
+agent/swing-1
+agent/swing-2
 ```
 
-**Why:** Each agent pushes only to its own branch - no conflicts, no rebasing mid-work, full parallelization.
+**Why:** Feature names are self-documenting, make PRs clearer, and help when reviewing git history. Multiple agents can work on different features without confusion.
 
 **Session start:**
 ```bash
-# Create or switch to your agent branch
+# Create or switch to your feature branch
 git fetch origin
-git checkout agent/swing-N 2>/dev/null || git checkout -b agent/swing-N
-git pull origin agent/swing-N --rebase 2>/dev/null || true
+git checkout -b feature/your-feature-name  # New feature
+# OR
+git checkout feature/existing-feature      # Continue existing work
+git pull origin feature/existing-feature --rebase 2>/dev/null || true
 
 # IMPORTANT: Each Claude instance MUST start its own dev server
 just dev  # Runs vite dev server (auto-finds available port)
@@ -79,16 +86,16 @@ Only reuse a server if its cwd matches your working directory. Otherwise, start 
 
 **During work (commit → push immediately):**
 ```bash
-git pull origin agent/swing-N --rebase  # Get any updates first
+git pull origin feature/your-branch --rebase  # Get any updates first
 git add . && git commit -m "..."
-git push origin agent/swing-N           # Push right after commit!
+git push origin feature/your-branch           # Push right after commit!
 ```
 Always push after every commit - keeps your work visible in dashboard.
 
 **Stay current (rebase often):**
 ```bash
 git fetch origin main && git rebase origin/main
-git push origin agent/swing-N --force-with-lease
+git push origin feature/your-branch --force-with-lease
 ```
 Rebase on main:
 - Every 15 minutes during active work
@@ -99,7 +106,7 @@ This keeps your branch up-to-date with changes from other agents.
 
 **Merging to main** (on origin/idvorkin-ai-tools):
 ```bash
-git checkout main && git merge agent/swing-N
+git checkout main && git merge feature/your-branch
 # If merge had conflicts, run tests before pushing:
 npx playwright test && npx tsc --noEmit
 git push origin main
@@ -148,9 +155,9 @@ bd close swing-xyz --reason="Done"
 ```
 
 **Naming convention:**
-- `agent/swing-N` - Solo work, one agent per branch
-- `feature/description` - Collaborative, multiple agents can join via beads
-- `fix/description` - Bug fix collaboration
+- `feature/description` - Feature work (preferred)
+- `fix/description` - Bug fix work
+- `refactor/description` - Refactoring work
 
 ### Agent Dashboard
 
@@ -307,8 +314,7 @@ The `.githooks/` directory contains:
 
 ### Branch Strategy
 
-- **agent/swing-N branches**: Each agent works on its own branch
-- **feature branches**: Collaborative work, multiple agents can join
+- **feature/fix/refactor branches**: Feature-based branches for all work
 - **main branch**:
   - On **origin** (idvorkin-ai-tools): Agents can merge directly
   - On **upstream** (idvorkin): Requires PR and human approval
@@ -333,7 +339,7 @@ done | sort -r
 - Copilot/exploration branches older than 2 weeks
 
 **Keep criteria:**
-- Active agent branches (`agent/swing-N`)
+- Active feature branches with recent work
 - Branches with open PRs
 - `main`, `beads-metadata`
 
@@ -481,7 +487,7 @@ Observable<Frame>    Observable<Skeleton>    Observable<Form>   Observable<Rep>
 
 ### Current Model: BlazePose
 
-- MediaPipe-33 keypoint format (normalized to COCO-17 via `KeypointAdapter`)
+- MediaPipe BlazePose-33 keypoint format (33 keypoints)
 - Variants: Lite (default), Full, Heavy
 - Configured in `src/config/modelConfig.ts`
 
