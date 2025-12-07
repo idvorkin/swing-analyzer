@@ -118,14 +118,24 @@ Styling:
 
 ## Visibility States
 
-| App State | Skeleton | Status Overlay | Position |
-|-----------|----------|----------------|----------|
-| No video loaded | Hidden | Hidden | Hidden |
-| Video loading | Hidden | Hidden | Hidden |
-| Extraction in progress | Hidden | Hidden | Hidden |
-| Playback (poses available) | Visible | Visible | Visible |
-| Paused (poses available) | Visible | Visible | Visible |
-| Playback (no poses at frame) | Hidden | Shows last known | Shows last known |
+| App State | Skeleton | Status Overlay | Extraction % | Position |
+|-----------|----------|----------------|--------------|----------|
+| No video loaded | Hidden | Hidden | Hidden | Hidden |
+| Video loading | Hidden | Hidden | Hidden | Hidden |
+| Extraction in progress | Hidden | Visible | **Visible** | Visible |
+| Playback (poses available) | Visible | Visible | Hidden | Visible |
+| Paused (poses available) | Visible | Visible | Hidden | Visible |
+| Playback (no poses at frame) | Hidden | Shows last known | Hidden | Shows last known |
+
+**Key Rule**: The entire HUD overlay is only visible when `currentVideoFile` is set.
+
+### E2E Test Coverage
+
+Visibility rules are tested in `e2e-tests/swing-analyzer.spec.ts`:
+
+- `HUD should be hidden before video loads`
+- `HUD should appear after video loads`
+- `HUD should show extraction progress during extraction`
 
 ## Z-Index Layering
 
