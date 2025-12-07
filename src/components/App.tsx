@@ -2,7 +2,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { NavLink, Route, Routes } from 'react-router-dom';
-import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
+import { SwingAnalyzerProvider, useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 import { GIT_BRANCH } from '../generated_version';
 import VideoSectionV2 from './VideoSectionV2';
 import './App.css';
@@ -13,6 +13,14 @@ import { BugReportModal } from './BugReportModal';
 import { CrashFallback } from './CrashFallback';
 import { SettingsModal } from './SettingsModal';
 import { VersionNotification } from './VersionNotification';
+
+// Position labels for display
+const POSITION_LABELS: Record<string, string> = {
+  top: 'Top',
+  connect: 'Connect',
+  bottom: 'Bottom',
+  release: 'Release',
+};
 
 // Settings icon for header
 const SettingsIconSmall = () => (
@@ -51,12 +59,24 @@ const branchDisplayName = isFeatureBranch
   ? GIT_BRANCH.replace(/^feature\//, '')
   : null;
 
-// Header with navigation
+// Header with navigation and rep controls
 interface HeaderProps {
   onOpenSettings: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
+  const {
+    repCount,
+    appState,
+    currentPosition,
+    currentVideoFile,
+    navigateToPreviousRep,
+    navigateToNextRep,
+    navigateToNextCheckpoint,
+  } = useSwingAnalyzerContext();
+
+  const hasReps = repCount > 0 && currentVideoFile;
+
   return (
     <header>
       <h1>
@@ -68,8 +88,52 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
           </span>
         )}
       </h1>
+
+      {/* Rep navigation - shown when reps are detected */}
+      {hasReps && (
+        <div className="header-rep-nav">
+          <button
+            type="button"
+            className="header-rep-btn"
+            onClick={navigateToPreviousRep}
+            disabled={appState.currentRepIndex <= 0}
+            aria-label="Previous rep"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="header-rep-pill"
+            onClick={navigateToNextCheckpoint}
+            title="Tap to cycle through checkpoints"
+          >
+            <span className="header-rep-label">
+              Rep {appState.currentRepIndex + 1}/{repCount}
+            </span>
+            {currentPosition && (
+              <span className="header-position-label">
+                {POSITION_LABELS[currentPosition] || currentPosition}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            className="header-rep-btn"
+            onClick={navigateToNextRep}
+            disabled={appState.currentRepIndex >= repCount - 1}
+            aria-label="Next rep"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <nav>
-        {/* Mobile: swap video button - shows source picker overlay */}
+        {/* Swap video button - shows source picker overlay */}
         <button
           type="button"
           className="header-swap-btn"
@@ -81,9 +145,6 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
             <circle cx="12" cy="13" r="4" />
           </svg>
         </button>
-        <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
-          <span>Analyzer</span>
-        </NavLink>
         <button
           type="button"
           onClick={onOpenSettings}

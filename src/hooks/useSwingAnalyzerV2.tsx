@@ -750,22 +750,53 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   }, [frameStep]);
 
   // ========================================
-  // Rep Navigation
+  // Rep Navigation - seeks to first checkpoint of target rep and pauses
   // ========================================
   const navigateToPreviousRep = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const newRepIndex = Math.max(0, appState.currentRepIndex - 1);
+    if (newRepIndex === appState.currentRepIndex) return; // Already at first rep
+
+    // Find first checkpoint of the target rep
+    const targetRepNum = newRepIndex + 1; // repNum is 1-indexed
+    const positions = repThumbnails.get(targetRepNum);
+    const firstCheckpoint = positions?.get('top') || positions?.values().next().value;
+
+    video.pause(); // Pause when seeking to rep
+    if (firstCheckpoint?.videoTime !== undefined) {
+      video.currentTime = firstCheckpoint.videoTime;
+      setCurrentPosition('top');
+    }
     setAppState(prev => ({
       ...prev,
-      currentRepIndex: Math.max(0, prev.currentRepIndex - 1),
+      currentRepIndex: newRepIndex,
     }));
-  }, []);
+  }, [appState.currentRepIndex, repThumbnails]);
 
   const navigateToNextRep = useCallback(() => {
-    if (repCount <= 0) return;
+    const video = videoRef.current;
+    if (!video || repCount <= 0) return;
+
+    const newRepIndex = Math.min(repCount - 1, appState.currentRepIndex + 1);
+    if (newRepIndex === appState.currentRepIndex) return; // Already at last rep
+
+    // Find first checkpoint of the target rep
+    const targetRepNum = newRepIndex + 1; // repNum is 1-indexed
+    const positions = repThumbnails.get(targetRepNum);
+    const firstCheckpoint = positions?.get('top') || positions?.values().next().value;
+
+    video.pause(); // Pause when seeking to rep
+    if (firstCheckpoint?.videoTime !== undefined) {
+      video.currentTime = firstCheckpoint.videoTime;
+      setCurrentPosition('top');
+    }
     setAppState(prev => ({
       ...prev,
-      currentRepIndex: Math.min(repCount - 1, prev.currentRepIndex + 1),
+      currentRepIndex: newRepIndex,
     }));
-  }, [repCount]);
+  }, [repCount, appState.currentRepIndex, repThumbnails]);
 
   // ========================================
   // Checkpoint Navigation
@@ -807,6 +838,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const nextCheckpoint = checkpoints.find(cp => cp.videoTime > currentTime + 0.01);
 
     if (nextCheckpoint) {
+      video.pause(); // Pause when seeking to checkpoint
       video.currentTime = nextCheckpoint.videoTime;
       setCurrentPosition(nextCheckpoint.position);
       // Update rep index if needed
@@ -832,6 +864,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const prevCheckpoint = prevCheckpoints[prevCheckpoints.length - 1];
 
     if (prevCheckpoint) {
+      video.pause(); // Pause when seeking to checkpoint
       video.currentTime = prevCheckpoint.videoTime;
       setCurrentPosition(prevCheckpoint.position);
       // Update rep index if needed

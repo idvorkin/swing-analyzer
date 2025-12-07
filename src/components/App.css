@@ -273,6 +273,96 @@ main {
   transform: scale(0.97);
 }
 
+/* Header rep navigation - appears when reps are detected */
+.header-rep-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.header-rep-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-rep-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.header-rep-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.header-rep-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(139, 92, 246, 0.3);
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-rep-pill:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+.header-rep-label {
+  white-space: nowrap;
+}
+
+.header-position-label {
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Mobile: compact header rep nav */
+@media (max-width: 480px) {
+  .header-rep-nav {
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .header-rep-btn {
+    width: 24px;
+    height: 24px;
+  }
+
+  .header-rep-pill {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+
+  .header-position-label {
+    padding: 1px 4px;
+    font-size: 0.6875rem;
+  }
+}
+
 /* Header swap button - camera icon to load/switch video */
 .header-swap-btn {
   display: inline-flex;
