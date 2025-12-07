@@ -174,28 +174,12 @@ const VideoSectionV2: React.FC = () => {
         <video id="video" ref={videoRef} playsInline />
         <canvas id="output-canvas" ref={canvasRef} />
 
-        {/* HUD Overlay - Top left: rep counter, angles. Top right: extraction. Bottom right: position */}
+        {/* HUD Overlay - follows same visibility rules as skeleton:
+            - During extraction: only show extraction % (skeleton not rendered during extraction)
+            - After extraction (poses available): show reps, angles, position */}
         {currentVideoFile && (
           <div className="hud-overlay">
-            <div className="hud-overlay-top">
-              <div className="hud-overlay-reps">
-                <span className="hud-overlay-reps-value">
-                  {appState.currentRepIndex + 1}/{repCount}
-                </span>
-                <span className="hud-overlay-reps-label">REPS</span>
-              </div>
-              <div className="hud-overlay-angles">
-                <div className="hud-overlay-angle">
-                  <span className="hud-overlay-angle-label">SPINE</span>
-                  <span className="hud-overlay-angle-value">{spineAngle}°</span>
-                </div>
-                <div className="hud-overlay-angle">
-                  <span className="hud-overlay-angle-label">ARM</span>
-                  <span className="hud-overlay-angle-value">{armToSpineAngle}°</span>
-                </div>
-              </div>
-            </div>
-            {/* Top right: extraction progress */}
+            {/* During extraction: only show extraction progress */}
             {isExtracting && extractionProgress && (
               <div className="hud-overlay-top-right">
                 <div className="hud-overlay-extraction">
@@ -206,12 +190,35 @@ const VideoSectionV2: React.FC = () => {
                 </div>
               </div>
             )}
-            <div className="hud-overlay-bottom">
-              <div className="hud-overlay-status">
-                <span className="hud-overlay-status-dot" />
-                <span className="hud-overlay-status-text">{status}</span>
-              </div>
-            </div>
+            {/* After extraction: show status overlay (same timing as skeleton) */}
+            {!isExtracting && (
+              <>
+                <div className="hud-overlay-top">
+                  <div className="hud-overlay-reps">
+                    <span className="hud-overlay-reps-value">
+                      {appState.currentRepIndex + 1}/{repCount}
+                    </span>
+                    <span className="hud-overlay-reps-label">REPS</span>
+                  </div>
+                  <div className="hud-overlay-angles">
+                    <div className="hud-overlay-angle">
+                      <span className="hud-overlay-angle-label">SPINE</span>
+                      <span className="hud-overlay-angle-value">{spineAngle}°</span>
+                    </div>
+                    <div className="hud-overlay-angle">
+                      <span className="hud-overlay-angle-label">ARM</span>
+                      <span className="hud-overlay-angle-value">{armToSpineAngle}°</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="hud-overlay-bottom">
+                  <div className="hud-overlay-status">
+                    <span className="hud-overlay-status-dot" />
+                    <span className="hud-overlay-status-text">{status}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 

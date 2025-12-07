@@ -39,11 +39,14 @@ test.describe('Swing Analyzer', () => {
     await expect(page.locator('.hud-overlay')).not.toBeVisible();
   });
 
-  test('HUD should appear after video loads', async ({ page }) => {
-    // Load video
+  test('HUD status overlay should NOT show during extraction (follows skeleton rules)', async ({ page }) => {
+    // Clear cache to force extraction
+    await clearPoseTrackDB(page);
+
+    // Load video to trigger extraction
     await page.click('#load-hardcoded-btn');
 
-    // Wait for video to load
+    // Wait for extraction to start
     await page.waitForFunction(
       () => {
         const video = document.querySelector('video') as HTMLVideoElement;
@@ -52,30 +55,33 @@ test.describe('Swing Analyzer', () => {
       { timeout: 10000 }
     );
 
-    // HUD overlay should now be visible
-    await expect(page.locator('.hud-overlay')).toBeVisible();
-
-    // Check HUD contains expected elements
-    await expect(page.locator('.hud-overlay-reps')).toBeVisible();
-    await expect(page.locator('.hud-overlay-angles')).toBeVisible();
-    await expect(page.locator('.hud-overlay-status')).toBeVisible();
-  });
-
-  test('HUD should show extraction progress during extraction', async ({ page }) => {
-    // Load video to trigger extraction
-    await page.click('#load-hardcoded-btn');
-
-    // Wait for extraction indicator to appear (may be brief if cached)
-    // Note: This may not always show if poses are cached - that's OK
+    // During extraction: extraction % should be visible
+    // but reps/angles/status should NOT be visible (follows skeleton rules)
     try {
       await expect(page.locator('.hud-overlay-extraction')).toBeVisible({ timeout: 3000 });
-      // If visible, verify it shows a percentage
-      const text = await page.locator('.hud-overlay-extraction-value').textContent();
-      expect(text).toMatch(/\d+%/);
+      // Reps/angles/status should be hidden during extraction
+      await expect(page.locator('.hud-overlay-reps')).not.toBeVisible();
+      await expect(page.locator('.hud-overlay-angles')).not.toBeVisible();
+      await expect(page.locator('.hud-overlay-status')).not.toBeVisible();
     } catch {
-      // Extraction may have been instant (cached) - verify HUD still shows
-      await expect(page.locator('.hud-overlay')).toBeVisible();
+      // Extraction may have been instant (cached) - that's OK
     }
+  });
+
+  test('HUD status overlay should appear after extraction completes', async ({ page }) => {
+    // Seed fixture so extraction completes quickly
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+
+    // Load video
+    await page.click('#load-hardcoded-btn');
+
+    // Wait for extraction to complete (status overlay appears)
+    await expect(page.locator('.hud-overlay-reps')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.hud-overlay-angles')).toBeVisible();
+    await expect(page.locator('.hud-overlay-status')).toBeVisible();
+
+    // Extraction indicator should be hidden after completion
+    await expect(page.locator('.hud-overlay-extraction')).not.toBeVisible();
   });
 
   test('should load hardcoded video when sample button clicked', async ({
