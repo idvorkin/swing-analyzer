@@ -122,26 +122,6 @@ const VideoSectionV2: React.FC = () => {
     renderFilmstrip();
   }, [renderFilmstrip]);
 
-  // Get extraction status for display
-  const getExtractionStatus = () => {
-    if (!isExtracting || !extractionProgress) return null;
-
-    const { currentFrame, totalFrames, percentage } = extractionProgress;
-    return (
-      <div className="extraction-status pose-status-bar">
-        <div className="extraction-progress-bar">
-          <div
-            className="extraction-progress-fill"
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-        <span className="extraction-text">
-          Extracting: {currentFrame}/{totalFrames} ({Math.round(percentage)}%)
-        </span>
-      </div>
-    );
-  };
-
   return (
     <section className="video-section">
       <div className="top-controls">
@@ -194,7 +174,7 @@ const VideoSectionV2: React.FC = () => {
         <video id="video" ref={videoRef} playsInline />
         <canvas id="output-canvas" ref={canvasRef} />
 
-        {/* HUD Overlay - Top left: rep counter, angles. Bottom right: position */}
+        {/* HUD Overlay - Top left: rep counter, angles. Top right: extraction. Bottom right: position */}
         {currentVideoFile && (
           <div className="hud-overlay">
             <div className="hud-overlay-top">
@@ -215,6 +195,17 @@ const VideoSectionV2: React.FC = () => {
                 </div>
               </div>
             </div>
+            {/* Top right: extraction progress */}
+            {isExtracting && extractionProgress && (
+              <div className="hud-overlay-top-right">
+                <div className="hud-overlay-extraction">
+                  <span className="hud-overlay-extraction-value">
+                    {Math.round(extractionProgress.percentage)}%
+                  </span>
+                  <span className="hud-overlay-extraction-label">EXTRACTING</span>
+                </div>
+              </div>
+            )}
             <div className="hud-overlay-bottom">
               <div className="hud-overlay-status">
                 <span className="hud-overlay-status-dot" />
@@ -338,9 +329,6 @@ const VideoSectionV2: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Extraction Progress (replaces PoseTrackStatusBar) */}
-      {getExtractionStatus()}
 
       {/* Checkpoint Filmstrip */}
       <div className="filmstrip-section">
