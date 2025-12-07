@@ -49,10 +49,10 @@ test.describe('Pose Track Fixtures', () => {
       expect(videoExists).toBe(true);
     });
 
-    test('analysis section is visible', async ({ page }) => {
-      // The analysis section should be visible
-      await expect(page.locator('#rep-counter')).toBeVisible();
-      await expect(page.locator('#spine-angle')).toBeVisible();
+    test('HUD is hidden before poses exist', async ({ page }) => {
+      // New design: HUD is only visible when poses exist for current frame
+      await expect(page.locator('#rep-counter')).not.toBeVisible();
+      await expect(page.locator('#spine-angle')).not.toBeVisible();
     });
   });
 
@@ -223,15 +223,15 @@ test.describe('Pose Track Fixtures', () => {
       expect(await page.isVisible('video')).toBe(true);
     });
 
-    test('UI elements remain functional with seeded data', async ({ page }) => {
+    test('HUD visible with seeded data after video loads', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
       await page.click('#load-hardcoded-btn');
 
-      // Wait for video element to appear instead of arbitrary timeout
+      // Wait for video element to appear
       await page.waitForSelector('video', { timeout: 5000 });
 
-      // UI should still be responsive
-      await expect(page.locator('#rep-counter')).toBeVisible();
+      // Wait for HUD to become visible (poses exist for current frame)
+      await expect(page.locator('#rep-counter')).toBeVisible({ timeout: 10000 });
       await expect(page.locator('#spine-angle')).toBeVisible();
     });
   });

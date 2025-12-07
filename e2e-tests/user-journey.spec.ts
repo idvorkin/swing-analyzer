@@ -50,10 +50,12 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await expect(page.locator('#load-hardcoded-btn')).toBeVisible();
     });
 
-    test('analysis section shows initial metrics at 0', async ({ page }) => {
-      await expect(page.locator('#rep-counter')).toHaveText('0');
-      await expect(page.locator('#spine-angle')).toHaveText('0°');
-      await expect(page.locator('#arm-angle')).toHaveText('0°');
+    test('HUD is hidden before poses exist', async ({ page }) => {
+      // New design: HUD is only visible when poses exist for current frame
+      // Before loading a video, the HUD should be hidden
+      await expect(page.locator('#rep-counter')).not.toBeVisible();
+      await expect(page.locator('#spine-angle')).not.toBeVisible();
+      await expect(page.locator('#arm-angle')).not.toBeVisible();
     });
   });
 
@@ -279,8 +281,8 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
         { timeout: 20000 }
       );
 
-      // Rep counter should exist and show reps from seeded pose data
-      await expect(page.locator('#rep-counter')).toBeVisible();
+      // Wait for HUD to be visible (requires poses to exist for current frame)
+      await expect(page.locator('#rep-counter')).toBeVisible({ timeout: 5000 });
       // Seeded fixture contains ~4 swings which produces 3 detected reps
       await expect(page.locator('#rep-counter')).toHaveText('3', { timeout: 5000 });
     });
@@ -301,11 +303,14 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
         { timeout: 20000 }
       );
 
+      // Wait for HUD to be visible (poses exist for frame 0)
+      await expect(page.locator('#spine-angle')).toBeVisible({ timeout: 5000 });
+
       // Start playback
       await page.click('#play-pause-btn');
       await page.waitForTimeout(500);
 
-      // Angle displays should be visible and have values
+      // Angle displays should still be visible during playback
       await expect(page.locator('#spine-angle')).toBeVisible();
       await expect(page.locator('#arm-angle')).toBeVisible();
     });

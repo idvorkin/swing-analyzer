@@ -57,39 +57,32 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to start
+    // Wait for extraction to complete - controls enabled and filmstrip has thumbnails
+    // Note: With 0ms mock delay, extraction is instant, so we skip waiting for "Extracting" status
     await page.waitForFunction(
       () => {
-        const statusEl = document.querySelector('.pose-status-bar');
-        return statusEl?.textContent?.includes('Extracting');
-      },
-      { timeout: 10000 }
-    );
-
-    // Wait for extraction to complete - check both old (.pose-status-bar) and new (.ready-status) UI
-    await page.waitForFunction(
-      () => {
-        // Old UI used .pose-status-bar for ready state
-        const statusEl = document.querySelector('.pose-status-bar');
-        if (statusEl?.textContent?.includes('ready') || statusEl?.textContent?.includes('Ready')) {
-          return true;
-        }
-        // New UI shows .ready-status after extraction completes (no .pose-status-bar when ready)
-        const readyEl = document.querySelector('.ready-status');
-        if (readyEl?.textContent?.includes('Ready')) {
-          return true;
-        }
-        // Or check that extraction progress bar is gone and rep count > 0
-        const extractingEl = document.querySelector('.extraction-status');
-        const repCounter = document.querySelector('#rep-counter');
-        const repCount = parseInt(repCounter?.textContent || '0', 10);
-        return !extractingEl && repCount > 0;
+        const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+        const filmstrip = document.querySelector('.filmstrip-container');
+        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 30000 }
     );
 
-    // Wait a moment for UI to settle after extraction
+    // Seek to middle of video where poses should exist (HUD only visible when poses exist)
+    await page.evaluate(() => {
+      const video = document.querySelector('video') as HTMLVideoElement;
+      if (video && video.duration > 0) {
+        video.currentTime = video.duration / 2;
+      }
+    });
     await page.waitForTimeout(500);
+
+    // Wait for HUD to become visible
+    await page.waitForFunction(
+      () => document.querySelector('#rep-counter') !== null,
+      { timeout: 5000 }
+    );
 
     // Check rep count
     const repCount = await page.evaluate(() => {
@@ -137,7 +130,11 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
         () => {
           // Check for ready status anywhere on page
           const pageText = document.body.textContent || '';
-          return pageText.includes('Ready') && pageText.includes('reps detected');
+          // Check controls enabled and filmstrip has thumbnails
+        const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+        const filmstrip = document.querySelector('.filmstrip-container');
+        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        return playBtn && !playBtn.disabled && thumbnails > 0;
         },
         { timeout: 120000 } // 2 minutes - video seeking is ~500ms/frame in headless Chrome
       );
@@ -168,16 +165,17 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
   // Test that skeleton does NOT render during extraction (by design)
   // Skeleton rendering only happens during playback via requestVideoFrameCallback
   test('skeleton does not render during extraction', async ({ page }) => {
-    await setupMockPoseDetector(page, 'swing-sample', 10);
+    // Use longer delay so we can check during extraction
+    await setupMockPoseDetector(page, 'swing-sample', 50);
 
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to start
+    // Wait for extraction to start (HUD shows EXTRACTING text)
     await page.waitForFunction(
       () => {
-        const statusEl = document.querySelector('.pose-status-bar');
-        return statusEl?.textContent?.includes('Extracting');
+        const pageText = document.body.textContent || '';
+        return pageText.includes('EXTRACTING');
       },
       { timeout: 10000 }
     );
@@ -210,26 +208,30 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete - check both old (.pose-status-bar) and new (.ready-status) UI
+    // Wait for extraction to complete - controls enabled and filmstrip has thumbnails
     await page.waitForFunction(
       () => {
-        // Old UI used .pose-status-bar for ready state
-        const statusEl = document.querySelector('.pose-status-bar');
-        if (statusEl?.textContent?.includes('ready') || statusEl?.textContent?.includes('Ready')) {
-          return true;
-        }
-        // New UI shows .ready-status after extraction completes
-        const readyEl = document.querySelector('.ready-status');
-        if (readyEl?.textContent?.includes('Ready')) {
-          return true;
-        }
-        // Or check that extraction progress bar is gone and rep count > 0
-        const extractingEl = document.querySelector('.extraction-status');
-        const repCounter = document.querySelector('#rep-counter');
-        const repCount = parseInt(repCounter?.textContent || '0', 10);
-        return !extractingEl && repCount > 0;
+        const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+        const filmstrip = document.querySelector('.filmstrip-container');
+        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 30000 }
+    );
+
+    // Seek to middle of video where poses exist (HUD only visible when poses exist)
+    await page.evaluate(() => {
+      const video = document.querySelector('video') as HTMLVideoElement;
+      if (video && video.duration > 0) {
+        video.currentTime = video.duration / 2;
+      }
+    });
+    await page.waitForTimeout(500);
+
+    // Wait for HUD to become visible
+    await page.waitForFunction(
+      () => document.querySelector('#rep-counter') !== null,
+      { timeout: 5000 }
     );
 
     const repCountAfterExtraction = await page.evaluate(() => {
@@ -322,7 +324,11 @@ test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
       await page.waitForFunction(
         () => {
           const pageText = document.body.textContent || '';
-          return pageText.includes('Ready') && pageText.includes('reps detected');
+          // Check controls enabled and filmstrip has thumbnails
+        const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+        const filmstrip = document.querySelector('.filmstrip-container');
+        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        return playBtn && !playBtn.disabled && thumbnails > 0;
         },
         { timeout: 300000 } // 5 minutes for full video extraction
       );
@@ -378,7 +384,11 @@ test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
     await page.waitForFunction(
       () => {
         const pageText = document.body.textContent || '';
-        return pageText.includes('Ready') && pageText.includes('reps detected');
+        // Check controls enabled and filmstrip has thumbnails
+        const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+        const filmstrip = document.querySelector('.filmstrip-container');
+        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 60000 }
     );

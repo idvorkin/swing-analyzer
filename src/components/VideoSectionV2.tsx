@@ -198,19 +198,19 @@ const VideoSectionV2: React.FC = () => {
               <>
                 <div className="hud-overlay-top">
                   <div className="hud-overlay-reps">
-                    <span className="hud-overlay-reps-value">
-                      {appState.currentRepIndex + 1}/{repCount}
+                    <span id="rep-counter" className="hud-overlay-reps-value">
+                      {repCount}
                     </span>
                     <span className="hud-overlay-reps-label">REPS</span>
                   </div>
                   <div className="hud-overlay-angles">
                     <div className="hud-overlay-angle">
                       <span className="hud-overlay-angle-label">SPINE</span>
-                      <span className="hud-overlay-angle-value">{spineAngle}°</span>
+                      <span id="spine-angle" className="hud-overlay-angle-value">{spineAngle}°</span>
                     </div>
                     <div className="hud-overlay-angle">
                       <span className="hud-overlay-angle-label">ARM</span>
-                      <span className="hud-overlay-angle-value">{armToSpineAngle}°</span>
+                      <span id="arm-angle" className="hud-overlay-angle-value">{armToSpineAngle}°</span>
                     </div>
                   </div>
                 </div>
