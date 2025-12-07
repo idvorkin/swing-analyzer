@@ -128,69 +128,16 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   private wristHeightHistory: number[] = [];
   private readonly wristHeightWindowSize = 5;
 
-  // Dominant arm detection (set once during first hinged frames)
-  private dominantArm: 'left' | 'right' | null = null;
-  private dominantArmVotes = { left: 0, right: 0 };
-  private readonly votesNeededForLock = 5;
-
   constructor(thresholds: Partial<SwingThresholds> = {}) {
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
   }
 
   /**
-   * Detect the dominant (swinging) arm based on body facing direction.
-   * When hinged forward, the arm on the "front" side of the body is the swinging arm.
-   * Votes across multiple hinged frames to ensure stability.
-   */
-  private detectDominantArm(skeleton: Skeleton): void {
-    // Once locked, don't change (intentionally no logging - too noisy)
-    if (this.dominantArm !== null) return;
-
-    // Only detect during hinged position (spine > 30°)
-    const spine = skeleton.getSpineAngle();
-    if (spine <= 30) {
-      // Not hinged yet - skip detection (this is normal during TOP/RELEASE phases)
-      return;
-    }
-
-    // Need facing direction to determine front
-    const facing = skeleton.getFacingDirection();
-    if (!facing) {
-      console.debug('detectDominantArm: Cannot determine facing direction, skipping');
-      return;
-    }
-
-    // Compare wrist positions to determine front arm
-    const leftWristX = skeleton.getWristX('left');
-    const rightWristX = skeleton.getWristX('right');
-    if (leftWristX === null || rightWristX === null) {
-      console.debug('detectDominantArm: Missing wrist keypoints, skipping');
-      return;
-    }
-
-    // The swinging arm is on the "front" side (same direction as facing)
-    let frontArm: 'left' | 'right';
-    if (facing === 'right') {
-      // Facing right: front arm has wrist further right (higher X)
-      frontArm = rightWristX > leftWristX ? 'right' : 'left';
-    } else {
-      // Facing left: front arm has wrist further left (lower X)
-      frontArm = leftWristX < rightWristX ? 'left' : 'right';
-    }
-
-    // Vote for this arm
-    this.dominantArmVotes[frontArm]++;
-
-    // Lock in once we have enough votes
-    const totalVotes = this.dominantArmVotes.left + this.dominantArmVotes.right;
-    if (totalVotes >= this.votesNeededForLock) {
-      this.dominantArm = this.dominantArmVotes.right >= this.dominantArmVotes.left ? 'right' : 'left';
-      console.debug(`detectDominantArm: Locked in ${this.dominantArm} arm (votes: L=${this.dominantArmVotes.left}, R=${this.dominantArmVotes.right})`);
-    }
-  }
-
-  /**
-   * Process a skeleton frame through the state machine
+   * Process a skeleton frame through the state machine.
+   *
+   * Always uses the RIGHT arm for angle calculations. For left-handed users,
+   * mirror the input skeleton data so that their left arm becomes "right".
+   * This simplifies the algorithm and ensures consistent behavior.
    */
   processFrame(
     skeleton: Skeleton,
@@ -198,16 +145,12 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     videoTime?: number,
     frameImage?: ImageData
   ): FormAnalyzerResult {
-    // Detect dominant arm during first hinged frames
-    this.detectDominantArm(skeleton);
-
-    // Get all angles (pass dominant arm if detected)
-    const arm = skeleton.getArmToVerticalAngle(this.dominantArm ?? undefined);
+    // Always use right arm - for left-handed users, mirror the skeleton data
+    const arm = skeleton.getArmToVerticalAngle('right');
     const spine = skeleton.getSpineAngle();
     const hip = skeleton.getHipAngle();
     const knee = skeleton.getKneeAngle();
-    // Use dominant arm's wrist for height - critical for one-handed swings
-    const wristHeight = skeleton.getWristHeight(this.dominantArm ?? undefined);
+    const wristHeight = skeleton.getWristHeight('right');
     const angles = { arm, spine, hip, knee, wristHeight };
 
     // Track wrist height history for peak detection
@@ -640,8 +583,6 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     this.currentPhasePeak = null;
     this.currentRepPeaks = {};
     this.wristHeightHistory = [];
-    this.dominantArm = null;
-    this.dominantArmVotes = { left: 0, right: 0 };
     this.resetMetrics();
   }
 

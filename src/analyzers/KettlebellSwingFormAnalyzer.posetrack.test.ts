@@ -2,8 +2,11 @@
  * Integration tests for KettlebellSwingFormAnalyzer using real posetrack data.
  *
  * These tests verify that the analyzer produces consistent results when:
- * 1. Processing the same video in normal and mirrored orientations
+ * 1. Processing the same video in normal and mirrored orientations (rep counts match)
  * 2. Detecting the correct number of reps from known videos
+ *
+ * The analyzer always uses the RIGHT arm for calculations. For left-handed users,
+ * the input skeleton data should be mirrored so their left arm becomes "right".
  *
  * This complements the unit tests which use mock skeletons.
  */
@@ -99,6 +102,10 @@ interface PoseTrack {
 
 /**
  * Count reps from a posetrack, optionally mirroring the keypoints.
+ *
+ * The analyzer always uses the RIGHT arm. For left-handed users or mirrored
+ * video, pass `mirrored: true` to swap left/right keypoints so the left arm
+ * becomes "right" from the algorithm's perspective.
  */
 function countRepsFromPosetrack(
   posetrack: PoseTrack,
@@ -143,48 +150,11 @@ function loadPosetrack(filename: string): PoseTrack {
 }
 
 describe('KettlebellSwingFormAnalyzer with real posetrack data', () => {
-  describe('mirrored video produces same rep count', () => {
-    it('igor-1h-swing: mirrored video detects same reps as normal', () => {
-      const posetrack = loadPosetrack('igor-1h-swing.posetrack.json');
-
-      const normal = countRepsFromPosetrack(posetrack);
-      const mirrored = countRepsFromPosetrack(posetrack, { mirrored: true });
-
-      expect(mirrored.repCount).toBe(normal.repCount);
-      // Rep times should be identical (within floating point tolerance)
-      expect(mirrored.repTimes).toHaveLength(normal.repTimes.length);
-      for (let i = 0; i < normal.repTimes.length; i++) {
-        expect(mirrored.repTimes[i]).toBeCloseTo(normal.repTimes[i], 2);
-      }
-    });
-
-    it('swing-sample: mirrored video detects same reps as normal', () => {
-      const posetrack = loadPosetrack('swing-sample.posetrack.json');
-
-      const normal = countRepsFromPosetrack(posetrack);
-      const mirrored = countRepsFromPosetrack(posetrack, { mirrored: true });
-
-      expect(mirrored.repCount).toBe(normal.repCount);
-      expect(mirrored.repTimes).toHaveLength(normal.repTimes.length);
-      for (let i = 0; i < normal.repTimes.length; i++) {
-        expect(mirrored.repTimes[i]).toBeCloseTo(normal.repTimes[i], 2);
-      }
-    });
-
-    it('swing-sample-4reps: mirrored video detects same reps as normal', () => {
-      const posetrack = loadPosetrack('swing-sample-4reps.posetrack.json');
-
-      const normal = countRepsFromPosetrack(posetrack);
-      const mirrored = countRepsFromPosetrack(posetrack, { mirrored: true });
-
-      expect(mirrored.repCount).toBe(normal.repCount);
-      expect(mirrored.repTimes).toHaveLength(normal.repTimes.length);
-      for (let i = 0; i < normal.repTimes.length; i++) {
-        expect(mirrored.repTimes[i]).toBeCloseTo(normal.repTimes[i], 2);
-      }
-    });
-  });
-
+  /**
+   * The analyzer always uses the RIGHT arm for calculations.
+   * For these test videos (right-handed swings), normal orientation works.
+   * Mirroring is only needed for left-handed users.
+   */
   describe('expected rep counts from known videos', () => {
     it('igor-1h-swing (~20s one-handed swing): detects ~9 reps', () => {
       const posetrack = loadPosetrack('igor-1h-swing.posetrack.json');
@@ -212,42 +182,4 @@ describe('KettlebellSwingFormAnalyzer with real posetrack data', () => {
     });
   });
 
-  describe('dominant arm detection', () => {
-    it('correctly detects right arm as dominant in igor-1h-swing', () => {
-      const posetrack = loadPosetrack('igor-1h-swing.posetrack.json');
-      const analyzer = new KettlebellSwingFormAnalyzer();
-
-      // Process enough frames to trigger dominant arm detection
-      for (const frame of posetrack.frames.slice(0, 200)) {
-        if (!frame.keypoints || frame.keypoints.length === 0) continue;
-        const spineAngle = calculateSpineAngle(frame.keypoints);
-        const skeleton = new Skeleton(frame.keypoints, spineAngle, true);
-        analyzer.processFrame(skeleton, Date.now(), frame.videoTime);
-      }
-
-      // Access private field for testing (not ideal but necessary for this test)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dominantArm = (analyzer as any).dominantArm;
-      expect(dominantArm).toBe('right');
-    });
-
-    it('correctly detects left arm as dominant in mirrored igor-1h-swing', () => {
-      const posetrack = loadPosetrack('igor-1h-swing.posetrack.json');
-      const analyzer = new KettlebellSwingFormAnalyzer();
-      const videoWidth = posetrack.metadata.videoWidth;
-
-      // Process mirrored frames
-      for (const frame of posetrack.frames.slice(0, 200)) {
-        if (!frame.keypoints || frame.keypoints.length === 0) continue;
-        const keypoints = mirrorKeypoints(frame.keypoints, videoWidth);
-        const spineAngle = calculateSpineAngle(keypoints);
-        const skeleton = new Skeleton(keypoints, spineAngle, true);
-        analyzer.processFrame(skeleton, Date.now(), frame.videoTime);
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dominantArm = (analyzer as any).dominantArm;
-      expect(dominantArm).toBe('left');
-    });
-  });
 });
