@@ -19,7 +19,6 @@ import {
 import { InputSession, type InputSessionState } from '../pipeline/InputSession';
 import type { Skeleton } from '../models/Skeleton';
 import type { Pipeline, ThumbnailEvent } from '../pipeline/Pipeline';
-import { kettlebellSwingDefinition } from '../exercises';
 import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { ExtractionProgress } from '../pipeline/SkeletonSource';
@@ -381,42 +380,24 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setSpineAngle(Math.round(skeleton.getSpineAngle() || 0));
     setArmToSpineAngle(Math.round(skeleton.getArmToVerticalAngle() || 0));
 
-    // Update position from pipeline's form analyzer
-    const pipeline = pipelineRef.current;
-    if (pipeline) {
-      // Get a stateless position estimate based on current angles
-      const angles: Record<string, number> = {
-        spine: skeleton.getSpineAngle() || 0,
-        armToSpine: skeleton.getArmToSpineAngle() || 0,
-        hip: skeleton.getHipAngle() || 0,
-      };
-      // Use the exercise definition to find best matching position
-      const exercise = kettlebellSwingDefinition;
-      let bestPosition: string | null = null;
-      let bestScore = Number.POSITIVE_INFINITY;
+    // Estimate position from spine angle (stateless, for HUD display during seek)
+    // Position thresholds based on spine angle:
+    //   top: ~10° (upright), connect: ~45°, release: ~37°, bottom: ~75° (hinged)
+    const spine = skeleton.getSpineAngle() || 0;
+    let position: string | null = null;
 
-      for (const position of exercise.positions) {
-        let score = 0;
-        let angleCount = 0;
-        // angleTargets is Record<string, AngleTarget>
-        for (const [angleName, target] of Object.entries(position.angleTargets)) {
-          const actualAngle = angles[angleName] ?? 0;
-          const diff = Math.abs(actualAngle - target.ideal);
-          score += diff / (target.tolerance || 15);
-          angleCount++;
-        }
-        if (angleCount > 0) {
-          score /= angleCount;
-          if (score < 2.0 && score < bestScore) {
-            bestScore = score;
-            bestPosition = position.name;
-          }
-        }
-      }
+    if (spine < 25) {
+      position = 'Top';
+    } else if (spine >= 25 && spine < 41) {
+      position = 'Release'; // ~37° ideal
+    } else if (spine >= 41 && spine < 60) {
+      position = 'Connect'; // ~45° ideal
+    } else if (spine >= 60) {
+      position = 'Bottom'; // ~75° ideal
+    }
 
-      if (bestPosition) {
-        setStatus(bestPosition.charAt(0).toUpperCase() + bestPosition.slice(1));
-      }
+    if (position) {
+      setStatus(position);
     }
   }, []);
 
