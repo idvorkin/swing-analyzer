@@ -206,24 +206,42 @@ const VideoSectionV2: React.FC = () => {
         className={`video-container ${getVideoContainerClass()}`}
         onClick={handleVideoDoubleTap}
       >
-        {/* Mobile floating source buttons - hidden on desktop via CSS */}
-        <div className="mobile-source-controls">
-          <label htmlFor="video-upload" className="mobile-source-btn file-btn" title="Upload video">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-            </svg>
-          </label>
-          <button
-            type="button"
-            className="mobile-source-btn sample-btn"
-            onClick={loadHardcodedVideo}
-            title="Load sample video"
+        {/* Mobile: Empty state - big welcoming buttons */}
+        {!currentVideoFile && (
+          <div className="mobile-empty-state">
+            <div className="mobile-empty-buttons">
+              <label htmlFor="video-upload" className="mobile-empty-btn camera-roll-btn">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                </svg>
+                <span>Camera Roll</span>
+              </label>
+              <button
+                type="button"
+                className="mobile-empty-btn sample-btn"
+                onClick={loadHardcodedVideo}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z" />
+                </svg>
+                <span>Sample</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile: Video loaded - tiny swap button in corner */}
+        {currentVideoFile && (
+          <label
+            htmlFor="video-upload"
+            className="mobile-swap-btn"
+            title="Load different video"
           >
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z" />
+              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
             </svg>
-          </button>
-        </div>
+          </label>
+        )}
 
         {/* biome-ignore lint/a11y/useMediaCaption: This is a video analysis app, not media playback - no audio captions needed */}
         <video id="video" ref={videoRef} playsInline />

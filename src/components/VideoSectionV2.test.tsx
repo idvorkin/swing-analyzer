@@ -89,8 +89,11 @@ describe('VideoSectionV2', () => {
 
     it('renders File and Sample buttons', () => {
       render(<VideoSectionV2 />);
-      expect(screen.getByText('File')).toBeInTheDocument();
-      expect(screen.getByText('Sample')).toBeInTheDocument();
+      // Desktop shows "File", mobile shows "Camera Roll" - test for presence of either
+      const fileLabel = document.querySelector('.file-label') || document.querySelector('.mobile-empty-btn.camera-roll-btn');
+      expect(fileLabel).toBeInTheDocument();
+      // Sample button exists in both desktop top-controls and mobile empty state
+      expect(screen.getAllByText('Sample').length).toBeGreaterThan(0);
     });
 
     it('renders video control buttons', () => {
