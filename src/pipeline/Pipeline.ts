@@ -104,28 +104,32 @@ export class Pipeline {
             this.latestSkeleton = skeletonEvent.skeleton;
 
             // Process through form analyzer
-            const result = this.formAnalyzer.processFrame(
-              skeletonEvent.skeleton,
-              skeletonEvent.poseEvent.frameEvent.timestamp,
-              skeletonEvent.poseEvent.frameEvent.videoTime,
-              skeletonEvent.poseEvent.frameEvent.frameImage
-            );
+            try {
+              const result = this.formAnalyzer.processFrame(
+                skeletonEvent.skeleton,
+                skeletonEvent.poseEvent.frameEvent.timestamp,
+                skeletonEvent.poseEvent.frameEvent.videoTime,
+                skeletonEvent.poseEvent.frameEvent.frameImage
+              );
 
-            // Update rep count
-            this.repCount = result.repCount;
+              // Update rep count
+              this.repCount = result.repCount;
 
-            // Emit result
-            this.resultSubject.next({
-              skeleton: skeletonEvent.skeleton,
-              repCount: result.repCount,
-            });
-
-            // Emit thumbnail event when rep completes
-            if (result.repCompleted && result.repPositions) {
-              this.thumbnailSubject.next({
-                repNumber: result.repCount,
-                positions: result.repPositions,
+              // Emit result
+              this.resultSubject.next({
+                skeleton: skeletonEvent.skeleton,
+                repCount: result.repCount,
               });
+
+              // Emit thumbnail event when rep completes
+              if (result.repCompleted && result.repPositions) {
+                this.thumbnailSubject.next({
+                  repNumber: result.repCount,
+                  positions: result.repPositions,
+                });
+              }
+            } catch (error) {
+              console.error('Error in form analyzer processFrame:', error);
             }
           }
         }),
@@ -244,23 +248,28 @@ export class Pipeline {
     this.latestSkeleton = skeletonEvent.skeleton;
 
     // Process through form analyzer
-    const result = this.formAnalyzer.processFrame(
-      skeletonEvent.skeleton,
-      frameEvent.timestamp,
-      frameEvent.videoTime,
-      frameEvent.frameImage
-    );
+    try {
+      const result = this.formAnalyzer.processFrame(
+        skeletonEvent.skeleton,
+        frameEvent.timestamp,
+        frameEvent.videoTime,
+        frameEvent.frameImage
+      );
 
-    // Update rep count
-    this.repCount = result.repCount;
+      // Update rep count
+      this.repCount = result.repCount;
 
-    return {
-      skeleton: skeletonEvent.skeleton,
-      repCount: result.repCount,
-      position: result.phase,
-      angles: result.angles,
-      repCompleted: result.repCompleted,
-    };
+      return {
+        skeleton: skeletonEvent.skeleton,
+        repCount: result.repCount,
+        position: result.phase,
+        angles: result.angles,
+        repCompleted: result.repCompleted,
+      };
+    } catch (error) {
+      console.error('Error in form analyzer processFrame:', error);
+      return null;
+    }
   }
 
   /**
@@ -280,30 +289,34 @@ export class Pipeline {
       this.skeletonSubject.next(skeletonEvent);
 
       // Process through form analyzer
-      const result = this.formAnalyzer.processFrame(
-        skeletonEvent.skeleton,
-        skeletonEvent.poseEvent.frameEvent.timestamp,
-        skeletonEvent.poseEvent.frameEvent.videoTime,
-        skeletonEvent.poseEvent.frameEvent.frameImage
-      );
+      try {
+        const result = this.formAnalyzer.processFrame(
+          skeletonEvent.skeleton,
+          skeletonEvent.poseEvent.frameEvent.timestamp,
+          skeletonEvent.poseEvent.frameEvent.videoTime,
+          skeletonEvent.poseEvent.frameEvent.frameImage
+        );
 
-      // Update rep count
-      this.repCount = result.repCount;
+        // Update rep count
+        this.repCount = result.repCount;
 
-      // Emit thumbnail event when rep completes (with positions at each phase peak)
-      if (result.repCompleted && result.repPositions) {
-        this.thumbnailSubject.next({
-          repNumber: result.repCount,
-          positions: result.repPositions,
-        });
-      }
+        // Emit thumbnail event when rep completes (with positions at each phase peak)
+        if (result.repCompleted && result.repPositions) {
+          this.thumbnailSubject.next({
+            repNumber: result.repCount,
+            positions: result.repPositions,
+          });
+        }
 
-      // Emit result when rep completes
-      if (result.repCompleted) {
-        this.resultSubject.next({
-          skeleton: skeletonEvent.skeleton,
-          repCount: result.repCount,
-        });
+        // Emit result when rep completes
+        if (result.repCompleted) {
+          this.resultSubject.next({
+            skeleton: skeletonEvent.skeleton,
+            repCount: result.repCount,
+          });
+        }
+      } catch (error) {
+        console.error('Error in form analyzer processFrame:', error);
       }
     }
 

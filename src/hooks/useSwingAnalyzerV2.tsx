@@ -162,24 +162,29 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     // Subscribe to thumbnail events
     // Convert RepPosition[] to Map<string, PositionCandidate> for UI compatibility
-    pipeline.getThumbnailEvents().subscribe((event: ThumbnailEvent) => {
-      setRepThumbnails(prev => {
-        const updated = new Map(prev);
-        // Convert RepPosition[] to Map<string, PositionCandidate>
-        const positionMap = new Map<string, PositionCandidate>();
-        for (const pos of event.positions) {
-          positionMap.set(pos.name, {
-            position: pos.name,
-            timestamp: pos.timestamp,
-            videoTime: pos.videoTime,
-            angles: pos.angles,
-            score: pos.score,
-            frameImage: pos.frameImage,
-          });
-        }
-        updated.set(event.repNumber, positionMap);
-        return updated;
-      });
+    pipeline.getThumbnailEvents().subscribe({
+      next: (event: ThumbnailEvent) => {
+        setRepThumbnails(prev => {
+          const updated = new Map(prev);
+          // Convert RepPosition[] to Map<string, PositionCandidate>
+          const positionMap = new Map<string, PositionCandidate>();
+          for (const pos of event.positions) {
+            positionMap.set(pos.name, {
+              position: pos.name,
+              timestamp: pos.timestamp,
+              videoTime: pos.videoTime,
+              angles: pos.angles,
+              score: pos.score,
+              frameImage: pos.frameImage,
+            });
+          }
+          updated.set(event.repNumber, positionMap);
+          return updated;
+        });
+      },
+      error: (error) => {
+        console.error('Error in thumbnail subscription:', error);
+      },
     });
 
     return pipeline;
