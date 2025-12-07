@@ -143,9 +143,13 @@ const VideoSectionV2: React.FC = () => {
         position = 'right';
       } else {
         // Middle zone - play/pause
+        // Read video state directly to avoid stale closure on isPlaying
+        const video = videoRef.current;
+        const wasPlaying = video ? !video.paused : false;
         clearPositionLabel();
         togglePlayPause();
-        action = isPlaying ? 'pause' : 'play';
+        // Show the action that was taken: if video was playing, we paused it
+        action = wasPlaying ? 'pause' : 'play';
         position = 'center';
       }
 
@@ -159,7 +163,7 @@ const VideoSectionV2: React.FC = () => {
     } else {
       lastTapRef.current = { time: now, x: currentX };
     }
-  }, [isTouchDevice, clearPositionLabel, togglePlayPause, isPlaying, navigateToPreviousCheckpoint, navigateToNextCheckpoint]);
+  }, [isTouchDevice, clearPositionLabel, togglePlayPause, videoRef, navigateToPreviousCheckpoint, navigateToNextCheckpoint]);
 
   // Event delegation handler for filmstrip clicks (avoids individual event listeners)
   const handleFilmstripClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {

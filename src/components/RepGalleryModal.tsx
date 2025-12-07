@@ -343,7 +343,12 @@ function ThumbnailCanvas({
 
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.putImageData(position.frameImage, 0, 0);
+      try {
+        ctx.putImageData(position.frameImage, 0, 0);
+      } catch (error) {
+        console.error('Failed to render thumbnail:', error);
+        // Canvas will show empty - graceful degradation
+      }
     }
   }, [position.frameImage]);
 
