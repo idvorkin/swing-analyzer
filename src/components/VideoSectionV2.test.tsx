@@ -298,4 +298,83 @@ describe('VideoSectionV2', () => {
       expect(document.getElementById('crop-btn')).toBeInTheDocument();
     });
   });
+
+  describe('Mobile Source Picker', () => {
+    it('shows source picker when no video loaded', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        currentVideoFile: null,
+      }));
+      render(<VideoSectionV2 />);
+      expect(document.querySelector('.mobile-empty-state')).toBeInTheDocument();
+      expect(screen.getByText('Camera Roll')).toBeInTheDocument();
+      // Multiple "Sample" buttons exist (desktop + mobile), just check the mobile one is in the picker
+      const picker = document.querySelector('.mobile-empty-state');
+      expect(picker?.querySelector('.sample-btn')).toBeInTheDocument();
+    });
+
+    it('hides source picker when video is loaded', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        currentVideoFile: new File([], 'test.mp4'),
+      }));
+      render(<VideoSectionV2 />);
+      expect(document.querySelector('.mobile-empty-state')).not.toBeInTheDocument();
+    });
+
+    it('shows source picker when show-source-picker event is dispatched', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        currentVideoFile: new File([], 'test.mp4'),
+      }));
+      render(<VideoSectionV2 />);
+
+      // Initially hidden when video loaded
+      expect(document.querySelector('.mobile-empty-state')).not.toBeInTheDocument();
+
+      // Dispatch event to show picker
+      act(() => {
+        window.dispatchEvent(new CustomEvent('show-source-picker'));
+      });
+
+      // Now visible
+      expect(document.querySelector('.mobile-empty-state')).toBeInTheDocument();
+    });
+
+    it('hides source picker when clicking outside buttons', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        currentVideoFile: new File([], 'test.mp4'),
+      }));
+      render(<VideoSectionV2 />);
+
+      // Show the picker
+      act(() => {
+        window.dispatchEvent(new CustomEvent('show-source-picker'));
+      });
+      expect(document.querySelector('.mobile-empty-state')).toBeInTheDocument();
+
+      // Click on the overlay background (outside buttons)
+      const overlay = document.querySelector('.mobile-empty-state');
+      fireEvent.click(overlay!);
+
+      // Should be hidden
+      expect(document.querySelector('.mobile-empty-state')).not.toBeInTheDocument();
+    });
+
+    it('keeps source picker open when clicking on buttons container', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
+        currentVideoFile: new File([], 'test.mp4'),
+      }));
+      render(<VideoSectionV2 />);
+
+      // Show the picker
+      act(() => {
+        window.dispatchEvent(new CustomEvent('show-source-picker'));
+      });
+
+      // Click on the buttons container (not the overlay background)
+      const buttonsContainer = document.querySelector('.mobile-empty-buttons');
+      fireEvent.click(buttonsContainer!);
+
+      // Should still be visible (stopPropagation)
+      expect(document.querySelector('.mobile-empty-state')).toBeInTheDocument();
+    });
+  });
 });
