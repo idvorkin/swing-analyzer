@@ -214,6 +214,13 @@ This project uses [beads](https://github.com/steveyegge/beads) for issue trackin
 git branch --set-upstream-to=origin/beads-metadata beads-metadata
 ```
 
+**Beads across multiple clones**: All swing directories share the SAME beads database (synced via `beads-metadata` branch).
+
+- The same issue ID (e.g., `swing-b66`) appears in ALL clones - it's ONE issue, not duplicates
+- Run `bd sync` from ONE directory, not all simultaneously
+- Before claiming an issue, verify it's not already assigned: `bd show ISSUE_ID`
+- If you see the same open issue in multiple directories, that's expected - close it once and it closes everywhere after sync
+
 **AI-supervised workflow:**
 
 **Assignee naming**: When claiming tasks, use `claude-machinename-directoryname` format (e.g., `claude-orbstack-swing-2`). This identifies which agent instance is working on what, preventing conflicts when multiple agents run in parallel.
@@ -343,6 +350,29 @@ done | sort -r
 - Branches with open PRs
 - `main`, `beads-metadata`
 
+### Clone Health Check (Weekly)
+
+Multiple swing directories can accumulate stale state. Run this check weekly:
+
+```bash
+# Check all swing clones for issues
+for dir in ~/gits/swing-*; do
+  [ -d "$dir/.git" ] || continue
+  cd "$dir"
+  branch=$(git branch --show-current 2>/dev/null)
+  ahead=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo "?")
+  changes=$(git status --porcelain 2>/dev/null | wc -l)
+  if [ "$ahead" -gt 20 ] || [ "$changes" -gt 0 ]; then
+    echo "⚠️  $(basename $dir): $branch (+$ahead ahead) uncommitted:$changes"
+  fi
+done
+```
+
+**Action items:**
+- Branches 50+ commits ahead with no PR: either create PR or reset to main
+- Uncommitted changes: commit/push or discard
+- Stale feature branches: delete if work was merged elsewhere
+
 **⚠️ UPSTREAM MERGES (idvorkin repo)**: Only humans merge to upstream/main. Agents must NEVER merge PRs to upstream unless the user explicitly says "YES" (uppercase). Phrases like "get it to main" or "merge it" are NOT sufficient - you must ask for confirmation and receive "YES" before merging any PR to upstream.
 
 **✅ ORIGIN MERGES (idvorkin-ai-tools fork)**: Agents can merge directly to origin/main. This is the working repo for agents.
@@ -413,6 +443,21 @@ Use code review agent to check for:
 - Missing error handling
 - Race conditions, memory leaks
 - Type safety issues
+
+### Post-PR: Check CodeRabbit Comments
+
+After creating a PR to upstream, CodeRabbit will review it automatically. Check for critical issues:
+
+```bash
+# View CodeRabbit comments on a PR
+gh api repos/idvorkin/swing-analyzer/pulls/PR_NUMBER/comments \
+  --jq '.[] | "File: \(.path):\(.line // .original_line)\n\(.body[0:300])\n---"' | head -100
+```
+
+**Address all critical issues before merge.** Common CodeRabbit findings:
+- Phase detection bugs (e.g., matching wrong exercise type)
+- Stale DOM elements not updating on state change
+- Missing null checks or error handling
 
 ### Tracking PRs in Beads
 
