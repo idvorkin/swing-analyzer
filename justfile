@@ -36,31 +36,31 @@ download-test-videos:
 
     mkdir -p "$VIDEOS_DIR"
 
-    # Download swing-sample.webm (full video, ~26s)
+    # Download swing-sample.webm (full video, ~26s, ~7MB)
     if [ ! -f "$VIDEOS_DIR/swing-sample.webm" ]; then
-        echo "  Downloading swing-sample.webm..."
+        echo "  Downloading swing-sample.webm (~7MB)..."
         gh api "repos/$SAMPLES_REPO/contents/$SAMPLES_PATH/swing-sample.webm" \
-            --jq '.download_url' | xargs curl -sL -o "$VIDEOS_DIR/swing-sample.webm"
+            --jq '.download_url' | xargs curl -L --progress-bar -o "$VIDEOS_DIR/swing-sample.webm"
         echo "  ✓ swing-sample.webm"
     else
         echo "  ✓ swing-sample.webm (already exists)"
     fi
 
-    # Download swing-sample-4reps.webm (short video, ~5.5s for fast E2E tests)
+    # Download swing-sample-4reps.webm (short video, ~5.5s for fast E2E tests, ~2MB)
     if [ ! -f "$VIDEOS_DIR/swing-sample-4reps.webm" ]; then
-        echo "  Downloading swing-sample-4reps.webm..."
+        echo "  Downloading swing-sample-4reps.webm (~2MB)..."
         gh api "repos/$SAMPLES_REPO/contents/$SAMPLES_PATH/swing-sample-4reps.webm" \
-            --jq '.download_url' | xargs curl -sL -o "$VIDEOS_DIR/swing-sample-4reps.webm"
+            --jq '.download_url' | xargs curl -L --progress-bar -o "$VIDEOS_DIR/swing-sample-4reps.webm"
         echo "  ✓ swing-sample-4reps.webm"
     else
         echo "  ✓ swing-sample-4reps.webm (already exists)"
     fi
 
-    # Download pistol-squat-sample.webm
+    # Download pistol-squat-sample.webm (~9MB)
     if [ ! -f "$VIDEOS_DIR/pistol-squat-sample.webm" ]; then
-        echo "  Downloading pistol-squat-sample.webm..."
+        echo "  Downloading pistol-squat-sample.webm (~9MB)..."
         gh api "repos/$SAMPLES_REPO/contents/exercises/pistols/pistols.webm" \
-            --jq '.download_url' | xargs curl -sL -o "$VIDEOS_DIR/pistol-squat-sample.webm"
+            --jq '.download_url' | xargs curl -L --progress-bar -o "$VIDEOS_DIR/pistol-squat-sample.webm"
         echo "  ✓ pistol-squat-sample.webm"
     else
         echo "  ✓ pistol-squat-sample.webm (already exists)"

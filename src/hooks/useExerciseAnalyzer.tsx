@@ -54,6 +54,43 @@ const DEFAULT_PHASES = [...PHASE_ORDER];
 const formatPositionForDisplay = (position: string): string =>
   position.charAt(0).toUpperCase() + position.slice(1).toLowerCase();
 
+/**
+ * Fetch a video with download progress reporting.
+ * Returns the blob and reports progress via callback.
+ */
+async function fetchWithProgress(
+  url: string,
+  onProgress: (percent: number) => void
+): Promise<Blob> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch: ${response.status}`);
+  }
+
+  const contentLength = response.headers.get('content-length');
+  if (!contentLength || !response.body) {
+    // No content-length header or no body - fall back to regular blob()
+    return response.blob();
+  }
+
+  const total = parseInt(contentLength, 10);
+  let loaded = 0;
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    chunks.push(value);
+    loaded += value.length;
+    onProgress(Math.round((loaded / total) * 100));
+  }
+
+  return new Blob(chunks as BlobPart[], { type: response.headers.get('content-type') || 'video/webm' });
+}
+
 export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   // Core State
@@ -829,20 +866,22 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
       // Try remote URL first, fall back to local
       let videoURL = DEFAULT_SAMPLE_VIDEO;
-      let response = await fetch(videoURL);
+      let blob: Blob;
 
-      if (!response.ok) {
-        console.log('Remote sample failed, falling back to local:', response.status);
+      try {
+        blob = await fetchWithProgress(videoURL, (percent) => {
+          setStatus(`Downloading sample video... ${percent}%`);
+        });
+      } catch {
+        console.log('Remote sample failed, falling back to local');
         videoURL = LOCAL_SAMPLE_VIDEO;
-        response = await fetch(videoURL);
+        setStatus('Loading sample video (local)...');
+        const response = await fetch(videoURL);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch video: ${response.status}`);
+        }
+        blob = await response.blob();
       }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch video: ${response.status}`);
-      }
-
-      // Fetch the video as a File for pose extraction
-      const blob = await response.blob();
       const videoFile = new File([blob], 'swing-sample.webm', {
         type: 'video/webm',
       });
@@ -914,20 +953,22 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
       // Try remote URL first, fall back to local
       let videoURL = PISTOL_SQUAT_SAMPLE_VIDEO;
-      let response = await fetch(videoURL);
+      let blob: Blob;
 
-      if (!response.ok) {
-        console.log('Remote pistol squat sample failed, falling back to local:', response.status);
+      try {
+        blob = await fetchWithProgress(videoURL, (percent) => {
+          setStatus(`Downloading pistol squat sample... ${percent}%`);
+        });
+      } catch {
+        console.log('Remote pistol squat sample failed, falling back to local');
         videoURL = LOCAL_PISTOL_SQUAT_VIDEO;
-        response = await fetch(videoURL);
+        setStatus('Loading pistol squat sample (local)...');
+        const response = await fetch(videoURL);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch video: ${response.status}`);
+        }
+        blob = await response.blob();
       }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch video: ${response.status}`);
-      }
-
-      // Fetch the video as a File for pose extraction
-      const blob = await response.blob();
       const videoFile = new File([blob], 'pistol-squat-sample.webm', {
         type: 'video/webm',
       });
