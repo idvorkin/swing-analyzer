@@ -7,11 +7,15 @@ export const PHASE_ORDER = ['bottom', 'release', 'top', 'connect'] as const;
 
 /** Human-readable labels for each phase */
 export const PHASE_LABELS: Record<string, string> = {
+  // Kettlebell swing phases
   top: 'Top',
   connect: 'Connect',
   bottom: 'Bottom',
   release: 'Release',
-  // Add more as needed for other exercises
+  // Pistol squat phases
+  standing: 'Standing',
+  descending: 'Descending',
+  ascending: 'Ascending',
 };
 
 /** Sort phases by known order, falling back to alphabetical */

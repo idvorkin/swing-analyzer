@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 import { ExerciseDetectionBadge } from './ExerciseDetectionBadge';
 import { RepGalleryModal } from './RepGalleryModal';
-import { PHASE_ORDER, PHASE_LABELS } from './repGalleryConstants';
+import { PHASE_LABELS } from './repGalleryConstants';
 
 const VideoSectionV2: React.FC = () => {
   const {
@@ -54,6 +54,8 @@ const VideoSectionV2: React.FC = () => {
     detectionConfidence,
     isDetectionLocked,
     setExerciseType,
+    // Current phases for this exercise
+    currentPhases,
   } = useSwingAnalyzerContext();
 
   // Ref for the rep-gallery container
@@ -244,12 +246,15 @@ const VideoSectionV2: React.FC = () => {
       repSpacer.className = 'rep-gallery-header-rep';
       headerRow.appendChild(repSpacer);
 
-      for (const positionName of PHASE_ORDER) {
+      for (const positionName of currentPhases) {
         const phaseBtn = document.createElement('button');
         phaseBtn.type = 'button';
-        phaseBtn.className = 'rep-gallery-header-phase';
+        const isFocused = focusedPhase === positionName;
+        const isMinimized = focusedPhase && !isFocused;
+        phaseBtn.className = `rep-gallery-header-phase${isFocused ? ' rep-gallery-header-phase--focused' : ''}${isMinimized ? ' rep-gallery-header-phase--minimized' : ''}`;
         phaseBtn.textContent = PHASE_LABELS[positionName] || positionName;
         phaseBtn.dataset.phase = positionName;
+        phaseBtn.title = isFocused ? 'Click to show all phases' : `Click to focus on ${PHASE_LABELS[positionName] || positionName}`;
         headerRow.appendChild(phaseBtn);
       }
       container.insertBefore(headerRow, container.firstChild);
@@ -304,7 +309,7 @@ const VideoSectionV2: React.FC = () => {
         row.appendChild(repNumLabel);
 
         // Create cells for each position
-        for (const positionName of PHASE_ORDER) {
+        for (const positionName of currentPhases) {
           const cell = document.createElement('div');
           cell.className = 'rep-gallery-cell';
           cell.dataset.phase = positionName;
@@ -326,7 +331,7 @@ const VideoSectionV2: React.FC = () => {
       // Update cells
       const cells = row.querySelectorAll('.rep-gallery-cell');
       cells.forEach((cell, idx) => {
-        const positionName = PHASE_ORDER[idx];
+        const positionName = currentPhases[idx];
         const candidate = positions.get(positionName);
         const isFocused = focusedPhase === positionName;
         const isMinimized = focusedPhase && !isFocused;
@@ -396,7 +401,7 @@ const VideoSectionV2: React.FC = () => {
         }
       });
     }
-  }, [repCount, repThumbnails, appState.currentRepIndex, focusedPhase]);
+  }, [repCount, repThumbnails, appState.currentRepIndex, focusedPhase, currentPhases]);
 
   // Re-render rep-gallery when rep changes or thumbnails update
   useEffect(() => {

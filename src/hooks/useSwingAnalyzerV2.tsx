@@ -82,6 +82,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const [detectedExercise, setDetectedExercise] = useState<DetectedExercise>('unknown');
   const [detectionConfidence, setDetectionConfidence] = useState<number>(0);
   const [isDetectionLocked, setIsDetectionLocked] = useState<boolean>(false);
+  const [currentPhases, setCurrentPhases] = useState<string[]>(['top', 'connect', 'bottom', 'release']); // Default to swing phases
 
   // Track if we've recorded extraction start for current session (to avoid spam)
   const hasRecordedExtractionStartRef = useRef<boolean>(false);
@@ -499,6 +500,9 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setDetectedExercise(detection.exercise);
       setDetectionConfidence(detection.confidence);
       setIsDetectionLocked(pipeline.isExerciseDetectionLocked());
+      // Update phases when exercise type changes
+      const formAnalyzer = pipeline.getFormAnalyzer();
+      setCurrentPhases(formAnalyzer.getPhases());
     });
 
     // Mark as ready
@@ -1245,6 +1249,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     pipelineRef.current?.setExerciseType(exercise);
     setDetectedExercise(exercise);
     setIsDetectionLocked(true);
+    // Update phases when exercise type is manually changed
+    const formAnalyzer = pipelineRef.current?.getFormAnalyzer();
+    if (formAnalyzer) {
+      setCurrentPhases(formAnalyzer.getPhases());
+    }
   }, []);
 
   // ========================================
@@ -1332,5 +1341,8 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     detectionConfidence,
     isDetectionLocked,
     setExerciseType,
+
+    // Current phases for this exercise (for rep gallery)
+    currentPhases,
   };
 }
