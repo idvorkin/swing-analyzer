@@ -129,8 +129,22 @@ export class ExerciseDetector {
     const highAsymmetryRatio = highAsymmetryFrames / this.kneeAsymmetryHistory.length;
 
     // Decision logic
-    if (this.maxKneeAsymmetry > this.config.asymmetryThreshold && highAsymmetryRatio > 0.3) {
-      // High asymmetry detected consistently → Pistol Squat
+    // Key insight: Max asymmetry is the strongest signal
+    // - Kettlebell swing: max asymmetry stays below ~25° (both legs work together)
+    // - Pistol squat: max asymmetry spikes to 80-130° during the squat (one leg bent, one extended)
+
+    // Very high max asymmetry (80°+) is definitive proof of pistol squat
+    // No kettlebell swing would ever show 80°+ knee angle difference
+    if (this.maxKneeAsymmetry > 80) {
+      // Strong pistol squat signal - give high confidence
+      const confidence = Math.min(100, Math.round(70 + (this.maxKneeAsymmetry - 80) / 2));
+      return {
+        exercise: 'pistol-squat',
+        confidence,
+        reason: `Clear pistol squat (max asymmetry: ${this.maxKneeAsymmetry.toFixed(0)}°)`,
+      };
+    } else if (this.maxKneeAsymmetry > this.config.asymmetryThreshold && highAsymmetryRatio > 0.3) {
+      // Moderate asymmetry with consistent pattern → Pistol Squat
       const confidence = Math.min(100, Math.round(50 + highAsymmetryRatio * 50));
       return {
         exercise: 'pistol-squat',
