@@ -21,6 +21,7 @@
 
 import { expect, test } from '@playwright/test';
 import {
+  clickSwingSampleButton,
   generateTestId,
   setVideoTestId,
   setupMockPoseDetector,
@@ -55,7 +56,7 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Click Sample - triggers extraction
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to complete - controls enabled and rep gallery has thumbnails
@@ -119,7 +120,7 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     await setupMockPoseDetector(page, 'swing-sample-4reps', 5);
 
     // Click Sample - triggers extraction
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Track extraction progress
@@ -168,7 +169,7 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     // Use swing-sample-4reps to match useShortTestVideo()
     await setupMockPoseDetector(page, 'swing-sample-4reps', 50);
 
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to start (HUD shows EXTRACTING text)
@@ -206,7 +207,7 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     // Use swing-sample-4reps to match useShortTestVideo()
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to complete - controls enabled and rep gallery has thumbnails
@@ -306,7 +307,7 @@ test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
     await setupMockPoseDetector(page, 'igor-1h-swing', 0);
 
     // Click Sample - triggers extraction
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to start
@@ -378,7 +379,7 @@ test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
 
     await setupMockPoseDetector(page, 'igor-1h-swing', 0);
 
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to complete

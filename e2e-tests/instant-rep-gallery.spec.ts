@@ -19,7 +19,13 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { generateTestId, setVideoTestId, setupMockPoseDetector, useShortTestVideo } from './helpers';
+import {
+  clickSwingSampleButton,
+  generateTestId,
+  setVideoTestId,
+  setupMockPoseDetector,
+  useShortTestVideo,
+} from './helpers';
 
 // Rep gallery thumbnail tests - thumbnails appear during extraction
 // Tests must run serially - mock detector and IndexedDB have shared state
@@ -71,7 +77,7 @@ test.describe.serial('Instant Rep Gallery: Reps Appear During Extraction', () =>
     console.log(`[TEST] Mock detector factory available: ${mockAvailable}`);
 
     // Load video - this triggers extraction
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Verify video is NOT playing - rep gallery should appear during extraction
@@ -120,7 +126,7 @@ test.describe.serial('Instant Rep Gallery: Reps Appear During Extraction', () =>
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Load video
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to complete - rep gallery gets thumbnails
@@ -152,7 +158,7 @@ test.describe.serial('Instant Rep Gallery: Reps Appear During Extraction', () =>
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Load video and wait for extraction to complete
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for rep gallery to have thumbnails (extraction complete)
@@ -200,7 +206,7 @@ test.describe.serial('Instant Rep Gallery: Reps Appear During Extraction', () =>
     // Use swing-sample-4reps to match useShortTestVideo()
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for rep gallery to have thumbnails (extraction complete with at least one rep)
@@ -257,7 +263,7 @@ test.describe.serial('Playback Mode: No Duplicate Rep Counting', () => {
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Load video - triggers extraction
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to complete - controls become enabled and rep gallery has thumbnails
@@ -319,7 +325,7 @@ test.describe.serial('Playback Mode: No Duplicate Rep Counting', () => {
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
     // Load video and wait for extraction to complete
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to complete - controls become enabled and rep gallery has thumbnails
@@ -372,7 +378,7 @@ test.describe.serial('Rep Gallery Frame Capture During Extraction', () => {
     // Fast extraction with mock pose detector (use swing-sample-4reps to match useShortTestVideo)
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for rep gallery to have exactly 4 thumbnails (one rep with 4 positions)
@@ -440,7 +446,7 @@ test.describe.serial('Skeleton Rendering Performance', () => {
     // Fast extraction
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to complete - controls become enabled and rep gallery has thumbnails
@@ -498,7 +504,7 @@ test.describe.serial('Skeleton Rendering Performance', () => {
   test('canvas content changes during video playback', async ({ page }) => {
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to complete - controls become enabled and rep gallery has thumbnails
