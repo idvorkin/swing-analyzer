@@ -42,6 +42,9 @@ export interface PistolSquatThresholds {
   // Transition thresholds
   descendingKneeThreshold: number; // Start descending when knee drops below this
   ascendingKneeThreshold: number;  // Start ascending when knee rises above this
+
+  // Posture validation (reject horizontal/lying poses)
+  maxValidSpineAngle: number;   // Reject frames with spine angle above this (person lying down)
 }
 
 /**
@@ -54,6 +57,7 @@ const DEFAULT_THRESHOLDS: PistolSquatThresholds = {
   bottomHipMax: 100,           // ~100° = hip flexed in squat
   descendingKneeThreshold: 140, // Start descending when knee < 140°
   ascendingKneeThreshold: 90,   // Start ascending when knee > 90°
+  maxValidSpineAngle: 60,      // ~60° = reject horizontal/lying poses (>60° is not upright)
 };
 
 /**
@@ -215,6 +219,23 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
 
     // Get all angles
     const angles = this.getAngles(skeleton);
+
+    // Validate posture - reject horizontal/lying poses
+    // This filters out warmup sections where person is lying down
+    if (angles.spine > this.thresholds.maxValidSpineAngle) {
+      // Invalid posture - return current state without processing
+      return {
+        phase: this.phase,
+        repCompleted: false,
+        repCount: this.repCount,
+        angles: {
+          workingKnee: angles.workingKnee,
+          workingHip: angles.workingHip,
+          extendedKnee: angles.extendedKnee,
+          spine: angles.spine,
+        },
+      };
+    }
 
     // Apply smoothing to working knee angle for trough detection
     const smoothedWorkingKnee = this.smoothAngle(angles.workingKnee);
