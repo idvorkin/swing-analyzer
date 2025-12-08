@@ -38,8 +38,8 @@ const localStorageMock = {
 };
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
-// Mock the SwingAnalyzerContext for GeneralTab
-vi.mock('../../contexts/SwingAnalyzerContext', () => ({
+// Mock the ExerciseAnalyzerContext for GeneralTab
+vi.mock('../../contexts/ExerciseAnalyzerContext', () => ({
   useSwingAnalyzerContext: vi.fn(() => ({
     appState: { displayMode: 'both' },
     setDisplayMode: vi.fn(),

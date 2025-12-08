@@ -3,12 +3,12 @@
  *
  * This version removes the usePoseTrack hook and complex effect chains.
  * All extraction/caching is handled internally by InputSession via
- * the useSwingAnalyzerV2 hook.
+ * the useExerciseAnalyzer hook.
  */
 
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import { useSwingAnalyzerContext } from '../contexts/ExerciseAnalyzerContext';
 import { ExerciseDetectionBadge } from './ExerciseDetectionBadge';
 import { RepGalleryModal } from './RepGalleryModal';
 import { PHASE_LABELS } from './repGalleryConstants';

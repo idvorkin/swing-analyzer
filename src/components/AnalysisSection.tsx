@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import { useSwingAnalyzerContext } from '../contexts/ExerciseAnalyzerContext';
 import './AnalysisSection.css';
 
 const AnalysisSection: React.FC = () => {

@@ -1,13 +1,15 @@
 /**
- * useSwingAnalyzerV2 - Refactored swing analyzer hook using InputSession
+ * useExerciseAnalyzer - Main hook for exercise form analysis
  *
- * This is a rewrite of useSwingAnalyzer that uses the unified InputSession
- * state machine for managing video input. Key improvements:
+ * Supports multiple exercise types (kettlebell swings, pistol squats, etc.)
+ * using the unified InputSession state machine for managing video input.
  *
+ * Key features:
  * 1. Single source of truth for input state (InputSession)
  * 2. Cache lookup for frame stepping (no redundant ML inference)
  * 3. Streaming during extraction (reps update live)
  * 4. Cleaner state management (explicit state machine)
+ * 5. Auto-detection of exercise type from movement patterns
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -52,7 +54,7 @@ const DEFAULT_PHASES = [...PHASE_ORDER];
 const formatPositionForDisplay = (position: string): string =>
   position.charAt(0).toUpperCase() + position.slice(1).toLowerCase();
 
-export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
+export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   // Core State
   // ========================================

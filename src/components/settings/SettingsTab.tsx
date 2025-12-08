@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BlazePoseVariant } from '../../config/modelConfig';
-import { useSwingAnalyzerContext } from '../../contexts/SwingAnalyzerContext';
+import { useSwingAnalyzerContext } from '../../contexts/ExerciseAnalyzerContext';
 import {
   clearAllPoseTracks,
   getPoseTrackStorageMode,
