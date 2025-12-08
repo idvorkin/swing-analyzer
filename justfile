@@ -56,6 +56,16 @@ download-test-videos:
         echo "  ✓ swing-sample-4reps.webm (already exists)"
     fi
 
+    # Download pistol-squat-sample.webm
+    if [ ! -f "$VIDEOS_DIR/pistol-squat-sample.webm" ]; then
+        echo "  Downloading pistol-squat-sample.webm..."
+        gh api "repos/$SAMPLES_REPO/contents/exercises/pistols/pistols.webm" \
+            --jq '.download_url' | xargs curl -sL -o "$VIDEOS_DIR/pistol-squat-sample.webm"
+        echo "  ✓ pistol-squat-sample.webm"
+    else
+        echo "  ✓ pistol-squat-sample.webm (already exists)"
+    fi
+
     echo "✓ Test videos ready in $VIDEOS_DIR"
 
     # Update fixture hashes to match downloaded videos

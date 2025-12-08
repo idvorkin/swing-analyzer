@@ -109,10 +109,6 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   // Last completed rep quality
   private lastRepQuality: RepQuality | null = null;
 
-  // Peak tracking for current phase (kept for potential future use)
-  // @ts-expect-error - Kept for API compatibility, ear-based tracking uses different mechanism
-  private currentPhasePeak: PhasePeak | null = null;
-
   // Peaks from current rep (cleared after rep completes)
   private currentRepPeaks: {
     standing?: PhasePeak;
@@ -452,7 +448,10 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    * Capture the bottom checkpoint from the confirmed bottom candidate
    */
   private captureBottomCheckpoint(): void {
-    if (!this.bottomCandidate) return;
+    if (!this.bottomCandidate) {
+      console.debug('[PistolSquatFormAnalyzer] captureBottomCheckpoint: No bottom candidate available');
+      return;
+    }
 
     this.currentRepPeaks.bottom = {
       phase: 'bottom',
@@ -470,7 +469,14 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    * Capture the descending checkpoint at 50% of ear Y travel (on the way down)
    */
   private captureDescendingCheckpoint(): void {
-    if (!this.standingEarY || !this.bottomCandidate) return;
+    if (!this.standingEarY) {
+      console.debug('[PistolSquatFormAnalyzer] captureDescendingCheckpoint: No standing ear Y reference');
+      return;
+    }
+    if (!this.bottomCandidate) {
+      console.debug('[PistolSquatFormAnalyzer] captureDescendingCheckpoint: No bottom candidate');
+      return;
+    }
 
     const earTravel = this.bottomCandidate.earY - this.standingEarY;
     const target50EarY = this.standingEarY + earTravel * 0.5;
@@ -479,7 +485,10 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     const bottomTime = this.bottomCandidate.timestamp;
     const candidateFrames = this.frameHistory.filter(f => f.timestamp < bottomTime);
 
-    if (candidateFrames.length === 0) return;
+    if (candidateFrames.length === 0) {
+      console.debug(`[PistolSquatFormAnalyzer] captureDescendingCheckpoint: No frames in history before bottom (bottomTime=${bottomTime}, historySize=${this.frameHistory.length})`);
+      return;
+    }
 
     const closest = candidateFrames.reduce((best, f) =>
       Math.abs(f.earY - target50EarY) < Math.abs(best.earY - target50EarY) ? f : best
@@ -501,7 +510,14 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    * Capture the ascending checkpoint at 50% of ear Y travel (on the way up)
    */
   private captureAscendingCheckpoint(_currentEarY: number): void {
-    if (!this.standingEarY || !this.bottomCandidate) return;
+    if (!this.standingEarY) {
+      console.debug('[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No standing ear Y reference');
+      return;
+    }
+    if (!this.bottomCandidate) {
+      console.debug('[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No bottom candidate');
+      return;
+    }
 
     const earTravel = this.bottomCandidate.earY - this.standingEarY;
     const target50EarY = this.bottomCandidate.earY - earTravel * 0.5;
@@ -510,7 +526,10 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     const bottomTime = this.bottomCandidate.timestamp;
     const candidateFrames = this.frameHistory.filter(f => f.timestamp > bottomTime);
 
-    if (candidateFrames.length === 0) return;
+    if (candidateFrames.length === 0) {
+      console.debug(`[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No frames in history after bottom (bottomTime=${bottomTime}, historySize=${this.frameHistory.length})`);
+      return;
+    }
 
     const closest = candidateFrames.reduce((best, f) =>
       Math.abs(f.earY - target50EarY) < Math.abs(best.earY - target50EarY) ? f : best
@@ -678,7 +697,6 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     this.repCount = 0;
     this.framesInPhase = 0;
     this.lastRepQuality = null;
-    this.currentPhasePeak = null;
     this.currentRepPeaks = {};
     this.kneeAngleHistory = [];
     this.workingLeg = null;

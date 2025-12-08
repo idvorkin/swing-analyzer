@@ -100,8 +100,8 @@ describe('PistolSquatFormAnalyzer with real posetrack data', () => {
       console.log('  Frame ' + c.frame + ' (' + c.time.toFixed(2) + 's): ' + c.from + ' -> ' + c.to);
     });
 
-    // Based on the video, we should see some reps
-    // If no reps detected, this test will help debug why
-    expect(result.totalReps).toBeGreaterThanOrEqual(0); // Relaxed for debugging
+    // The pistol squat sample video should detect at least 1 rep
+    // This ensures the analyzer is working with real posetrack data
+    expect(result.totalReps).toBeGreaterThanOrEqual(1);
   });
 });

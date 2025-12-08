@@ -521,6 +521,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       },
       error: (error) => {
         console.error('Error in exercise detection subscription:', error);
+        // Provide user feedback and set a sensible default
+        setStatus('Detection error - defaulting to kettlebell swing');
+        setDetectedExercise('kettlebell-swing');
+        setIsDetectionLocked(true);
+        setCurrentPhases(['top', 'connect', 'bottom', 'release']);
       },
     });
 
