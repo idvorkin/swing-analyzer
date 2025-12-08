@@ -165,13 +165,18 @@ const VideoSectionV2: React.FC = () => {
     const target = e.target as HTMLElement;
     if (target.tagName === 'CANVAS' && target.dataset.seekTime) {
       const seekTime = parseFloat(target.dataset.seekTime);
+      const repNum = target.dataset.repNum ? parseInt(target.dataset.repNum, 10) : null;
       if (!isNaN(seekTime) && videoRef.current) {
         videoRef.current.currentTime = seekTime;
+        // Also set the current rep index when clicking a thumbnail
+        if (repNum !== null && !isNaN(repNum)) {
+          setCurrentRepIndex(repNum - 1); // Convert to 0-indexed
+        }
       }
     }
-  }, [videoRef]);
+  }, [videoRef, setCurrentRepIndex]);
 
-  // Render the filmstrip with actual thumbnails
+  // Render the multi-rep filmstrip with all reps as scrollable rows
   const renderFilmstrip = useCallback(() => {
     const container = filmstripRef.current;
     if (!container) return;
@@ -184,50 +189,97 @@ const VideoSectionV2: React.FC = () => {
       return;
     }
 
-    // Get the current rep's thumbnails (using appState.currentRepIndex + 1 since repNumber is 1-indexed)
+    // Get sorted rep numbers
+    const repNumbers = Array.from(repThumbnails.keys()).sort((a, b) => a - b);
     const currentRepNum = appState.currentRepIndex + 1;
-    const positions = repThumbnails.get(currentRepNum);
 
-    if (!positions || positions.size === 0) {
-      container.innerHTML = `<div class="filmstrip-empty">Rep ${currentRepNum} - no thumbnails</div>`;
-      return;
-    }
+    // Create header row with phase labels
+    const headerRow = document.createElement('div');
+    headerRow.className = 'filmstrip-header';
 
-    // Render thumbnails for each position in order
+    const repLabel = document.createElement('div');
+    repLabel.className = 'filmstrip-header-rep';
+    repLabel.textContent = 'Rep';
+    headerRow.appendChild(repLabel);
+
     for (const positionName of POSITION_ORDER) {
-      const candidate = positions.get(positionName);
-      if (!candidate?.frameImage) continue;
-
-      const wrapper = document.createElement('div');
-      wrapper.className = 'filmstrip-thumbnail';
-      wrapper.title = `${POSITION_LABELS[positionName] || positionName} at ${candidate.videoTime?.toFixed(2)}s`;
-
-      // Create canvas and draw the thumbnail
-      const canvas = document.createElement('canvas');
-      canvas.width = candidate.frameImage.width;
-      canvas.height = candidate.frameImage.height;
-      canvas.className = 'filmstrip-canvas';
-
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.putImageData(candidate.frameImage, 0, 0);
-      }
-
-      // Store seek time as data attribute (click handled by event delegation)
-      if (candidate.videoTime !== undefined) {
-        canvas.style.cursor = 'pointer';
-        canvas.dataset.seekTime = candidate.videoTime.toString();
-      }
-
-      // Add position label
-      const label = document.createElement('span');
-      label.className = 'filmstrip-label';
-      label.textContent = POSITION_LABELS[positionName] || positionName;
-
-      wrapper.appendChild(canvas);
-      wrapper.appendChild(label);
-      container.appendChild(wrapper);
+      const phaseLabel = document.createElement('div');
+      phaseLabel.className = 'filmstrip-header-phase';
+      phaseLabel.textContent = POSITION_LABELS[positionName] || positionName;
+      headerRow.appendChild(phaseLabel);
     }
+    container.appendChild(headerRow);
+
+    // Create scrollable rows container
+    const rowsContainer = document.createElement('div');
+    rowsContainer.className = 'filmstrip-rows';
+
+    // Render each rep as a row
+    for (const repNum of repNumbers) {
+      const positions = repThumbnails.get(repNum);
+      if (!positions || positions.size === 0) continue;
+
+      const row = document.createElement('div');
+      row.className = 'filmstrip-row';
+      row.dataset.repNum = repNum.toString();
+      if (repNum === currentRepNum) {
+        row.classList.add('filmstrip-row--current');
+      }
+
+      // Rep number label
+      const repNumLabel = document.createElement('div');
+      repNumLabel.className = 'filmstrip-row-rep';
+      repNumLabel.textContent = repNum.toString();
+      row.appendChild(repNumLabel);
+
+      // Render thumbnails for each position
+      for (const positionName of POSITION_ORDER) {
+        const candidate = positions.get(positionName);
+        const cell = document.createElement('div');
+        cell.className = 'filmstrip-cell';
+
+        if (candidate?.frameImage) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'filmstrip-thumbnail';
+          wrapper.title = `${POSITION_LABELS[positionName] || positionName} at ${candidate.videoTime?.toFixed(2)}s`;
+
+          const canvas = document.createElement('canvas');
+          canvas.width = candidate.frameImage.width;
+          canvas.height = candidate.frameImage.height;
+          canvas.className = 'filmstrip-canvas';
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.putImageData(candidate.frameImage, 0, 0);
+          }
+
+          if (candidate.videoTime !== undefined) {
+            canvas.style.cursor = 'pointer';
+            canvas.dataset.seekTime = candidate.videoTime.toString();
+            canvas.dataset.repNum = repNum.toString();
+          }
+
+          wrapper.appendChild(canvas);
+          cell.appendChild(wrapper);
+        } else {
+          cell.innerHTML = '<span class="filmstrip-cell-empty">—</span>';
+        }
+
+        row.appendChild(cell);
+      }
+
+      rowsContainer.appendChild(row);
+    }
+
+    container.appendChild(rowsContainer);
+
+    // Auto-scroll to current rep
+    requestAnimationFrame(() => {
+      const currentRow = rowsContainer.querySelector('.filmstrip-row--current');
+      if (currentRow) {
+        currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
   }, [repCount, repThumbnails, appState.currentRepIndex]);
 
   // Re-render filmstrip when rep changes or thumbnails update
