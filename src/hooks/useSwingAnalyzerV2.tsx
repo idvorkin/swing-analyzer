@@ -500,13 +500,18 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     });
 
     // Subscribe to exercise detection events
-    const detectionSubscription = pipeline.getExerciseDetectionEvents().subscribe((detection) => {
-      setDetectedExercise(detection.exercise);
-      setDetectionConfidence(detection.confidence);
-      setIsDetectionLocked(pipeline.isExerciseDetectionLocked());
-      // Update phases when exercise type changes
-      const formAnalyzer = pipeline.getFormAnalyzer();
-      setCurrentPhases(formAnalyzer.getPhases());
+    const detectionSubscription = pipeline.getExerciseDetectionEvents().subscribe({
+      next: (detection) => {
+        setDetectedExercise(detection.exercise);
+        setDetectionConfidence(detection.confidence);
+        setIsDetectionLocked(pipeline.isExerciseDetectionLocked());
+        // Update phases when exercise type changes
+        const formAnalyzer = pipeline.getFormAnalyzer();
+        setCurrentPhases(formAnalyzer.getPhases());
+      },
+      error: (error) => {
+        console.error('Error in exercise detection subscription:', error);
+      },
     });
 
     // Mark as ready
