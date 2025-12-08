@@ -355,14 +355,27 @@ export class Pipeline {
     if (exercise === this.detectedExercise) return;
     if (exercise === 'unknown') return;
 
+    // Check if we're already using the correct analyzer type
+    // (e.g., KettlebellSwingFormAnalyzer for kettlebell-swing)
+    // This prevents resetting rep count when detection locks in
+    const currentAnalyzerName = this.formAnalyzer.getExerciseName();
+    const targetAnalyzerName = exercise === 'pistol-squat' ? 'Pistol Squat' : 'Kettlebell Swing';
+
+    if (currentAnalyzerName === targetAnalyzerName) {
+      // Already using the right analyzer type, just update detected exercise
+      this.detectedExercise = exercise;
+      console.log(`[Pipeline] Detection locked: ${exercise} (keeping existing analyzer)`);
+      return;
+    }
+
     this.detectedExercise = exercise;
 
-    // Create the appropriate analyzer
+    // Create the appropriate analyzer (only when actually switching types)
     const newAnalyzer = exercise === 'pistol-squat'
       ? new PistolSquatFormAnalyzer()
       : new KettlebellSwingFormAnalyzer();
 
-    // Swap in the new analyzer (keeps any rep count from old analyzer)
+    // Swap in the new analyzer
     this.formAnalyzer = newAnalyzer;
 
     console.log(`[Pipeline] Switched to ${exercise} analyzer`);
