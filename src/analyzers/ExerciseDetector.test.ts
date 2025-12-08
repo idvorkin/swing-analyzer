@@ -13,6 +13,10 @@ function createMockSkeleton(leftKnee: number, rightKnee: number): Skeleton {
       return 180;
     }),
     getSpineAngle: vi.fn().mockReturnValue(10),
+    // New side-specific method used by ExerciseDetector
+    getKneeAngleForSide: vi.fn().mockImplementation((side: 'left' | 'right') => {
+      return side === 'left' ? leftKnee : rightKnee;
+    }),
   } as unknown as Skeleton;
 }
 

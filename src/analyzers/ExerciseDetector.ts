@@ -65,16 +65,6 @@ export class ExerciseDetector {
   }
 
   /**
-   * Get knee angle for a specific side
-   */
-  private getKneeAngle(skeleton: Skeleton, side: 'left' | 'right'): number {
-    const hip = side === 'left' ? 'leftHip' : 'rightHip';
-    const knee = side === 'left' ? 'leftKnee' : 'rightKnee';
-    const ankle = side === 'left' ? 'leftAnkle' : 'rightAnkle';
-    return skeleton.getAngle(hip, knee, ankle) ?? 180;
-  }
-
-  /**
    * Process a skeleton frame and update detection
    */
   processFrame(skeleton: Skeleton): DetectionResult {
@@ -85,9 +75,9 @@ export class ExerciseDetector {
 
     this.frameCount++;
 
-    // Calculate knee asymmetry
-    const leftKnee = this.getKneeAngle(skeleton, 'left');
-    const rightKnee = this.getKneeAngle(skeleton, 'right');
+    // Calculate knee asymmetry using Skeleton's side-specific methods
+    const leftKnee = skeleton.getKneeAngleForSide('left');
+    const rightKnee = skeleton.getKneeAngleForSide('right');
     const asymmetry = Math.abs(leftKnee - rightKnee);
 
     this.kneeAsymmetryHistory.push(asymmetry);

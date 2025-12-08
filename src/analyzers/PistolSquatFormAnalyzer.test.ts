@@ -4,7 +4,7 @@ import type { Skeleton } from '../models/Skeleton';
 
 /**
  * Creates a mock Skeleton that returns specific angle values.
- * For pistol squats, we need per-leg angles via getAngle().
+ * For pistol squats, we need per-leg angles via getKneeAngleForSide/getHipAngleForSide.
  */
 function createMockSkeleton(angles: {
   leftKnee: number;
@@ -26,6 +26,13 @@ function createMockSkeleton(angles: {
       return 180;
     }),
     getSpineAngle: vi.fn().mockReturnValue(angles.spine),
+    // New side-specific methods used by PistolSquatFormAnalyzer
+    getKneeAngleForSide: vi.fn().mockImplementation((side: 'left' | 'right') => {
+      return side === 'left' ? angles.leftKnee : angles.rightKnee;
+    }),
+    getHipAngleForSide: vi.fn().mockImplementation((side: 'left' | 'right') => {
+      return side === 'left' ? angles.leftHip : angles.rightHip;
+    }),
   } as unknown as Skeleton;
 }
 

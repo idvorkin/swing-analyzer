@@ -118,26 +118,6 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   }
 
   /**
-   * Get knee angle for a specific side
-   */
-  private getKneeAngleForSide(skeleton: Skeleton, side: 'left' | 'right'): number {
-    const hip = side === 'left' ? 'leftHip' : 'rightHip';
-    const knee = side === 'left' ? 'leftKnee' : 'rightKnee';
-    const ankle = side === 'left' ? 'leftAnkle' : 'rightAnkle';
-    return skeleton.getAngle(hip, knee, ankle) ?? 180;
-  }
-
-  /**
-   * Get hip angle for a specific side
-   */
-  private getHipAngleForSide(skeleton: Skeleton, side: 'left' | 'right'): number {
-    const knee = side === 'left' ? 'leftKnee' : 'rightKnee';
-    const hip = side === 'left' ? 'leftHip' : 'rightHip';
-    const shoulder = side === 'left' ? 'leftShoulder' : 'rightShoulder';
-    return skeleton.getAngle(knee, hip, shoulder) ?? 180;
-  }
-
-  /**
    * Detect which leg is the working (squatting) leg.
    * The working leg has more knee bend variance during the movement.
    */
@@ -145,8 +125,8 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     // Once locked, don't change
     if (this.workingLeg !== null) return;
 
-    const leftKnee = this.getKneeAngleForSide(skeleton, 'left');
-    const rightKnee = this.getKneeAngleForSide(skeleton, 'right');
+    const leftKnee = skeleton.getKneeAngleForSide('left');
+    const rightKnee = skeleton.getKneeAngleForSide('right');
 
     // The working leg is the one with the more bent knee
     // (during a pistol squat, one leg is bent, one is extended)
@@ -179,10 +159,10 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     const extended = working === 'left' ? 'right' : 'left';
 
     return {
-      workingKnee: this.getKneeAngleForSide(skeleton, working),
-      workingHip: this.getHipAngleForSide(skeleton, working),
-      extendedKnee: this.getKneeAngleForSide(skeleton, extended),
-      extendedHip: this.getHipAngleForSide(skeleton, extended),
+      workingKnee: skeleton.getKneeAngleForSide(working),
+      workingHip: skeleton.getHipAngleForSide(working),
+      extendedKnee: skeleton.getKneeAngleForSide(extended),
+      extendedHip: skeleton.getHipAngleForSide(extended),
       spine: skeleton.getSpineAngle(),
     };
   }
