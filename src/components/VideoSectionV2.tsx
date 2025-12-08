@@ -57,8 +57,8 @@ const VideoSectionV2: React.FC = () => {
     setCurrentRepIndex,
   } = useSwingAnalyzerContext();
 
-  // Ref for the filmstrip container
-  const filmstripRef = useRef<HTMLDivElement>(null);
+  // Ref for the rep-gallery container
+  const repGalleryRef = useRef<HTMLDivElement>(null);
 
   // Mobile source picker state - show when no video OR when user taps header camera button
   const [showSourcePicker, setShowSourcePicker] = useState(false);
@@ -168,8 +168,8 @@ const VideoSectionV2: React.FC = () => {
     setFocusedPhase((prev) => (prev === phase ? null : phase));
   }, []);
 
-  // Event delegation handler for filmstrip clicks (avoids individual event listeners)
-  const handleFilmstripClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  // Event delegation handler for rep-gallery clicks (avoids individual event listeners)
+  const handleRepGalleryClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
 
     // Handle phase header button clicks for dynamic zoom
@@ -192,20 +192,20 @@ const VideoSectionV2: React.FC = () => {
     }
   }, [videoRef, setCurrentRepIndex, handlePhaseClick]);
 
-  // Double-click handler for filmstrip - toggles phase focus
-  const handleFilmstripDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  // Double-click handler for rep-gallery - toggles phase focus
+  const handleRepGalleryDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
 
     // Find the phase from the canvas or its parent cell
     let phase: string | undefined;
     if (target.tagName === 'CANVAS') {
       // Look for phase in parent cell
-      const cell = target.closest('.filmstrip-cell');
+      const cell = target.closest('.rep-gallery-cell');
       phase = (cell as HTMLElement)?.dataset.phase;
-    } else if (target.classList.contains('filmstrip-cell')) {
+    } else if (target.classList.contains('rep-gallery-cell')) {
       phase = target.dataset.phase;
-    } else if (target.classList.contains('filmstrip-thumbnail')) {
-      const cell = target.closest('.filmstrip-cell');
+    } else if (target.classList.contains('rep-gallery-thumbnail')) {
+      const cell = target.closest('.rep-gallery-cell');
       phase = (cell as HTMLElement)?.dataset.phase;
     }
 
@@ -214,16 +214,16 @@ const VideoSectionV2: React.FC = () => {
     }
   }, [handlePhaseClick]);
 
-  // Render the multi-rep filmstrip with all reps as scrollable rows
-  const renderFilmstrip = useCallback(() => {
-    const container = filmstripRef.current;
+  // Render the multi-rep rep-gallery with all reps as scrollable rows
+  const renderRepGallery = useCallback(() => {
+    const container = repGalleryRef.current;
     if (!container) return;
 
     container.innerHTML = '';
 
     if (repCount === 0 || repThumbnails.size === 0) {
       container.innerHTML =
-        '<div class="filmstrip-empty">Complete a rep to see checkpoints</div>';
+        '<div class="rep-gallery-empty">Complete a rep to see checkpoints</div>';
       return;
     }
 
@@ -233,10 +233,10 @@ const VideoSectionV2: React.FC = () => {
 
     // Create header row with phase labels (as clickable buttons)
     const headerRow = document.createElement('div');
-    headerRow.className = `filmstrip-header${focusedPhase ? ' filmstrip-header--focused' : ''}`;
+    headerRow.className = `rep-gallery-header${focusedPhase ? ' rep-gallery-header--focused' : ''}`;
 
     const repLabel = document.createElement('div');
-    repLabel.className = 'filmstrip-header-rep';
+    repLabel.className = 'rep-gallery-header-rep';
     repLabel.textContent = 'Rep';
     headerRow.appendChild(repLabel);
 
@@ -245,7 +245,7 @@ const VideoSectionV2: React.FC = () => {
       phaseBtn.type = 'button';
       const isFocused = focusedPhase === positionName;
       const isMinimized = focusedPhase && !isFocused;
-      phaseBtn.className = `filmstrip-header-phase${isFocused ? ' filmstrip-header-phase--focused' : ''}${isMinimized ? ' filmstrip-header-phase--minimized' : ''}`;
+      phaseBtn.className = `rep-gallery-header-phase${isFocused ? ' rep-gallery-header-phase--focused' : ''}${isMinimized ? ' rep-gallery-header-phase--minimized' : ''}`;
       phaseBtn.textContent = POSITION_LABELS[positionName] || positionName;
       phaseBtn.dataset.phase = positionName;
       phaseBtn.title = isFocused ? 'Click to show all phases' : `Click to focus on ${POSITION_LABELS[positionName] || positionName}`;
@@ -255,7 +255,7 @@ const VideoSectionV2: React.FC = () => {
 
     // Create scrollable rows container
     const rowsContainer = document.createElement('div');
-    rowsContainer.className = 'filmstrip-rows';
+    rowsContainer.className = 'rep-gallery-rows';
 
     // Render each rep as a row
     for (const repNum of repNumbers) {
@@ -263,15 +263,15 @@ const VideoSectionV2: React.FC = () => {
       if (!positions || positions.size === 0) continue;
 
       const row = document.createElement('div');
-      row.className = `filmstrip-row${focusedPhase ? ' filmstrip-row--has-focus' : ''}`;
+      row.className = `rep-gallery-row${focusedPhase ? ' rep-gallery-row--has-focus' : ''}`;
       row.dataset.repNum = repNum.toString();
       if (repNum === currentRepNum) {
-        row.classList.add('filmstrip-row--current');
+        row.classList.add('rep-gallery-row--current');
       }
 
       // Rep number label
       const repNumLabel = document.createElement('div');
-      repNumLabel.className = 'filmstrip-row-rep';
+      repNumLabel.className = 'rep-gallery-row-rep';
       repNumLabel.textContent = repNum.toString();
       row.appendChild(repNumLabel);
 
@@ -281,18 +281,18 @@ const VideoSectionV2: React.FC = () => {
         const isFocused = focusedPhase === positionName;
         const isMinimized = focusedPhase && !isFocused;
         const cell = document.createElement('div');
-        cell.className = `filmstrip-cell${isFocused ? ' filmstrip-cell--focused' : ''}${isMinimized ? ' filmstrip-cell--minimized' : ''}`;
+        cell.className = `rep-gallery-cell${isFocused ? ' rep-gallery-cell--focused' : ''}${isMinimized ? ' rep-gallery-cell--minimized' : ''}`;
         cell.dataset.phase = positionName;
 
         if (candidate?.frameImage) {
           const wrapper = document.createElement('div');
-          wrapper.className = `filmstrip-thumbnail${isFocused ? ' filmstrip-thumbnail--focused' : ''}${isMinimized ? ' filmstrip-thumbnail--minimized' : ''}`;
+          wrapper.className = `rep-gallery-thumbnail${isFocused ? ' rep-gallery-thumbnail--focused' : ''}${isMinimized ? ' rep-gallery-thumbnail--minimized' : ''}`;
           wrapper.title = `${POSITION_LABELS[positionName] || positionName} at ${candidate.videoTime?.toFixed(2)}s`;
 
           const canvas = document.createElement('canvas');
           canvas.width = candidate.frameImage.width;
           canvas.height = candidate.frameImage.height;
-          canvas.className = 'filmstrip-canvas';
+          canvas.className = 'rep-gallery-canvas';
 
           const ctx = canvas.getContext('2d');
           if (ctx) {
@@ -308,7 +308,7 @@ const VideoSectionV2: React.FC = () => {
           wrapper.appendChild(canvas);
           cell.appendChild(wrapper);
         } else {
-          cell.innerHTML = '<span class="filmstrip-cell-empty">—</span>';
+          cell.innerHTML = '<span class="rep-gallery-cell-empty">—</span>';
         }
 
         row.appendChild(cell);
@@ -321,17 +321,17 @@ const VideoSectionV2: React.FC = () => {
 
     // Auto-scroll to current rep
     requestAnimationFrame(() => {
-      const currentRow = rowsContainer.querySelector('.filmstrip-row--current');
+      const currentRow = rowsContainer.querySelector('.rep-gallery-row--current');
       if (currentRow) {
         currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     });
   }, [repCount, repThumbnails, appState.currentRepIndex, focusedPhase]);
 
-  // Re-render filmstrip when rep changes or thumbnails update
+  // Re-render rep-gallery when rep changes or thumbnails update
   useEffect(() => {
-    renderFilmstrip();
-  }, [renderFilmstrip]);
+    renderRepGallery();
+  }, [renderRepGallery]);
 
   return (
     <section className="video-section">
@@ -593,14 +593,14 @@ const VideoSectionV2: React.FC = () => {
         </div>
       </div>
 
-      {/* Checkpoint Filmstrip - thumbnails only, no nav (nav is in strip above) */}
-      <div className="filmstrip-section">
-        <div className="filmstrip-container" ref={filmstripRef} onClick={handleFilmstripClick} onDoubleClick={handleFilmstripDoubleClick} />
+      {/* Rep Gallery Widget - inline multi-rep viewer with dynamic zoom */}
+      <div className="rep-gallery-section">
+        <div className="rep-gallery-container" ref={repGalleryRef} onClick={handleRepGalleryClick} onDoubleClick={handleRepGalleryDoubleClick} />
         {/* Gallery button - show when there are reps */}
         {repCount > 0 && repThumbnails.size > 0 && (
           <button
             type="button"
-            className="filmstrip-gallery-btn"
+            className="rep-gallery-gallery-btn"
             onClick={() => setShowGallery(true)}
             aria-label="View all reps"
             title="View all reps"
