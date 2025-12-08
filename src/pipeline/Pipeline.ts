@@ -4,10 +4,11 @@ import {
   type FormAnalyzer,
   type RepPosition,
   KettlebellSwingFormAnalyzer,
-  PistolSquatFormAnalyzer,
   ExerciseDetector,
   type DetectionResult,
   type DetectedExercise,
+  createAnalyzerForExercise,
+  getExerciseDisplayName,
 } from '../analyzers';
 import type { Skeleton } from '../models/Skeleton';
 import type { CropRegion } from '../types/posetrack';
@@ -362,7 +363,7 @@ export class Pipeline {
     // (e.g., KettlebellSwingFormAnalyzer for kettlebell-swing)
     // This prevents resetting rep count when detection locks in
     const currentAnalyzerName = this.formAnalyzer.getExerciseName();
-    const targetAnalyzerName = exercise === 'pistol-squat' ? 'Pistol Squat' : 'Kettlebell Swing';
+    const targetAnalyzerName = getExerciseDisplayName(exercise);
 
     if (currentAnalyzerName === targetAnalyzerName) {
       // Already using the right analyzer type, just update detected exercise
@@ -373,10 +374,8 @@ export class Pipeline {
 
     this.detectedExercise = exercise;
 
-    // Create the appropriate analyzer (only when actually switching types)
-    const newAnalyzer = exercise === 'pistol-squat'
-      ? new PistolSquatFormAnalyzer()
-      : new KettlebellSwingFormAnalyzer();
+    // Create the appropriate analyzer from the registry
+    const newAnalyzer = createAnalyzerForExercise(exercise);
 
     // Swap in the new analyzer
     this.formAnalyzer = newAnalyzer;

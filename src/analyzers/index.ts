@@ -30,3 +30,16 @@ export {
   type DetectionResult,
   type ExerciseDetectorConfig,
 } from './ExerciseDetector';
+
+export {
+  EXERCISE_REGISTRY,
+  createAnalyzerForExercise,
+  getExerciseDefinition,
+  getExerciseDisplayName,
+  getExerciseIcon,
+  getAvailableExercises,
+  getDefaultSampleVideo,
+  getSampleVideos,
+  type ExerciseDefinition,
+  type SampleVideo,
+} from './ExerciseRegistry';

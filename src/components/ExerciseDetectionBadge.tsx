@@ -6,6 +6,12 @@
  */
 
 import type { DetectedExercise } from '../analyzers';
+import {
+  getExerciseDisplayName,
+  getExerciseIcon,
+  getAvailableExercises,
+  EXERCISE_REGISTRY,
+} from '../analyzers';
 
 interface ExerciseDetectionBadgeProps {
   detectedExercise: DetectedExercise;
@@ -13,18 +19,6 @@ interface ExerciseDetectionBadgeProps {
   isLocked: boolean;
   onOverride: (exercise: DetectedExercise) => void;
 }
-
-const EXERCISE_LABELS: Record<DetectedExercise, string> = {
-  'kettlebell-swing': 'Kettlebell Swing',
-  'pistol-squat': 'Pistol Squat',
-  'unknown': 'Detecting...',
-};
-
-const EXERCISE_ICONS: Record<DetectedExercise, string> = {
-  'kettlebell-swing': '\u{1F3CB}', // weight lifter
-  'pistol-squat': '\u{1F9CE}', // kneeling person
-  'unknown': '\u{1F50D}', // magnifying glass
-};
 
 export function ExerciseDetectionBadge({
   detectedExercise,
@@ -37,8 +31,8 @@ export function ExerciseDetectionBadge({
     return null;
   }
 
-  const label = EXERCISE_LABELS[detectedExercise];
-  const icon = EXERCISE_ICONS[detectedExercise];
+  const label = getExerciseDisplayName(detectedExercise);
+  const icon = getExerciseIcon(detectedExercise);
 
   // Determine badge color based on confidence
   const getConfidenceColor = () => {
@@ -100,42 +94,33 @@ export function ExerciseDetectionBadge({
             paddingLeft: '8px',
           }}
         >
-          <button
-            type="button"
-            onClick={(e) => handleOverride(e, 'kettlebell-swing')}
-            disabled={detectedExercise === 'kettlebell-swing'}
-            style={{
-              padding: '2px 8px',
-              background: detectedExercise === 'kettlebell-swing' ? '#3b82f6' : 'rgba(255,255,255,0.1)',
-              border: 'none',
-              borderRadius: '4px',
-              color: '#fff',
-              fontSize: '11px',
-              cursor: detectedExercise === 'kettlebell-swing' ? 'default' : 'pointer',
-              opacity: detectedExercise === 'kettlebell-swing' ? 1 : 0.7,
-            }}
-            title="Switch to Kettlebell Swing"
-          >
-            Swing
-          </button>
-          <button
-            type="button"
-            onClick={(e) => handleOverride(e, 'pistol-squat')}
-            disabled={detectedExercise === 'pistol-squat'}
-            style={{
-              padding: '2px 8px',
-              background: detectedExercise === 'pistol-squat' ? '#3b82f6' : 'rgba(255,255,255,0.1)',
-              border: 'none',
-              borderRadius: '4px',
-              color: '#fff',
-              fontSize: '11px',
-              cursor: detectedExercise === 'pistol-squat' ? 'default' : 'pointer',
-              opacity: detectedExercise === 'pistol-squat' ? 1 : 0.7,
-            }}
-            title="Switch to Pistol Squat"
-          >
-            Pistol
-          </button>
+          {getAvailableExercises().map((exerciseId) => {
+            const exercise = EXERCISE_REGISTRY[exerciseId];
+            const isActive = detectedExercise === exerciseId;
+            // Create short label from display name (first word or abbreviation)
+            const shortLabel = exercise.displayName.split(' ')[0];
+            return (
+              <button
+                key={exerciseId}
+                type="button"
+                onClick={(e) => handleOverride(e, exerciseId)}
+                disabled={isActive}
+                style={{
+                  padding: '2px 8px',
+                  background: isActive ? '#3b82f6' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '11px',
+                  cursor: isActive ? 'default' : 'pointer',
+                  opacity: isActive ? 1 : 0.7,
+                }}
+                title={`Switch to ${exercise.displayName}`}
+              >
+                {shortLabel}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
