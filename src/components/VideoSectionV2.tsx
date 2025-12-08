@@ -505,28 +505,24 @@ const VideoSectionV2: React.FC = () => {
                 </svg>
                 <span>Camera Roll</span>
               </label>
-              <button
-                type="button"
-                id="load-hardcoded-btn"
-                className="source-picker-btn sample-btn"
-                onClick={loadHardcodedVideo}
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z" />
-                </svg>
-                <span>Swing</span>
-              </button>
-              <button
-                type="button"
-                id="load-pistol-btn"
-                className="source-picker-btn sample-btn"
-                onClick={loadPistolSquatSample}
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                </svg>
-                <span>Pistol</span>
-              </button>
+              <div className="source-picker-samples">
+                <button
+                  type="button"
+                  id="load-hardcoded-btn"
+                  className="source-picker-btn sample-btn"
+                  onClick={loadHardcodedVideo}
+                >
+                  <span>Swing</span>
+                </button>
+                <button
+                  type="button"
+                  id="load-pistol-btn"
+                  className="source-picker-btn sample-btn"
+                  onClick={loadPistolSquatSample}
+                >
+                  <span>Pistol</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -609,15 +605,6 @@ const VideoSectionV2: React.FC = () => {
                 </div>
               </div>
             )}
-            {/* Exercise detection badge - bottom left */}
-            <div className="hud-overlay-bottom-left">
-              <ExerciseDetectionBadge
-                detectedExercise={detectedExercise}
-                confidence={detectionConfidence}
-                isLocked={isDetectionLocked}
-                onOverride={setExerciseType}
-              />
-            </div>
           </div>
         )}
 
@@ -708,6 +695,16 @@ const VideoSectionV2: React.FC = () => {
             </svg>
           </button>
         )}
+      </div>
+
+      {/* Exercise detection badge - below rep gallery */}
+      <div className="exercise-detection-section">
+        <ExerciseDetectionBadge
+          detectedExercise={detectedExercise}
+          confidence={detectionConfidence}
+          isLocked={isDetectionLocked}
+          onOverride={setExerciseType}
+        />
       </div>
 
       {/* Rep Gallery Modal */}

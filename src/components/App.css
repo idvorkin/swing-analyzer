@@ -258,10 +258,18 @@ main {
   box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
 }
 
+.source-picker-samples {
+  display: flex;
+  gap: 12px;
+}
+
 .source-picker-btn.sample-btn {
   background: linear-gradient(135deg, #34c759, #28a745);
   color: white;
   box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+  min-width: auto;
+  padding: 12px 24px;
+  font-size: 15px;
 }
 
 .source-picker-btn:hover {
@@ -1233,6 +1241,16 @@ main {
   .rep-gallery-row-rep {
     font-size: 0.75rem;
   }
+}
+
+/* ============================================
+   Exercise Detection Section
+   ============================================ */
+
+.exercise-detection-section {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem 0;
 }
 
 /* Analysis Section - Styles moved to AnalysisSection.css */
