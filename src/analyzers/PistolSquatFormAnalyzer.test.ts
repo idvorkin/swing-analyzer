@@ -63,20 +63,42 @@ const PHASE_ANGLES = {
     rightHip: 170,   // Extended hip
     spine: 20,       // Slight forward lean
   },
+  // Mid-descent - for gradual transition
+  descendingDeep: {
+    leftKnee: 90,    // Deeper into descent
+    rightKnee: 175,
+    leftHip: 110,
+    rightHip: 170,
+    spine: 28,
+  },
   bottom: {
-    leftKnee: 60,    // Working leg deep squat
+    leftKnee: 60,    // Working leg deep squat (the trough)
     rightKnee: 170,  // Extended leg straight
     leftHip: 80,     // Working hip deeply flexed
     rightHip: 160,   // Extended hip
     spine: 35,       // Forward lean for balance
   },
-  // Transitional frame - knee just starting to rise from bottom
-  bottomRising: {
-    leftKnee: 70,    // Knee starting to rise
+  // Transitional frames - knee rising to CONFIRM trough detection
+  bottomRising1: {
+    leftKnee: 65,    // Rising +5°
+    rightKnee: 170,
+    leftHip: 82,
+    rightHip: 160,
+    spine: 34,
+  },
+  bottomRising2: {
+    leftKnee: 72,    // Rising +7° more
     rightKnee: 170,
     leftHip: 85,
     rightHip: 160,
     spine: 33,
+  },
+  bottomRising3: {
+    leftKnee: 80,    // Rising +8° more (confirms trough)
+    rightKnee: 170,
+    leftHip: 88,
+    rightHip: 160,
+    spine: 32,
   },
   ascending: {
     leftKnee: 100,   // Working leg rising
@@ -131,37 +153,44 @@ describe('PistolSquatFormAnalyzer', () => {
       expect(analyzer.getPhase()).toBe('descending');
     });
 
-    it('transitions from DESCENDING to BOTTOM at deep squat', () => {
+    it('transitions from DESCENDING to BOTTOM at deep squat (trough detection)', () => {
+      // Get to descending with gradual descent
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), 0);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), 10);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 20);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 30);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descendingDeep), 40);
+      expect(analyzer.getPhase()).toBe('descending');
+
+      // Hit the bottom (trough point)
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 50);
+      expect(analyzer.getPhase()).toBe('descending'); // Still descending until trough confirmed
+
+      // Angle starts rising - confirms the trough was the bottom
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising1), 60);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising2), 70);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising3), 80);
+      expect(analyzer.getPhase()).toBe('bottom'); // Trough confirmed!
+    });
+
+    it('transitions from BOTTOM to ASCENDING when knee starts extending', () => {
       // Get to descending
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), 0);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), 10);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 20);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 30);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 40);
-      expect(analyzer.getPhase()).toBe('descending');
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descendingDeep), 40);
 
-      // Move to bottom
+      // Hit bottom (trough) and confirm with rising frames
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 50);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 60);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 70);
-      expect(analyzer.getPhase()).toBe('bottom');
-    });
-
-    it('transitions from BOTTOM to ASCENDING when knee starts extending', () => {
-      // Get to bottom
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), 0);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), 10);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 20);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 30);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 40);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 50);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 60);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising1), 60);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising2), 70);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising3), 80);
       expect(analyzer.getPhase()).toBe('bottom');
 
-      // Transition: knee starts rising from bottom position
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising), 70);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.ascending), 80);
+      // Continue ascending - knee above ascending threshold (90°)
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.ascending), 90);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.ascending), 100);
       expect(analyzer.getPhase()).toBe('ascending');
     });
 
@@ -172,20 +201,20 @@ describe('PistolSquatFormAnalyzer', () => {
       expect(analyzer.getPhase()).toBe('standing');
       expect(analyzer.getRepCount()).toBe(0);
 
-      // Phase 2: Descending
+      // Phase 2: Descending (gradual descent)
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 20);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 30);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 40);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descendingDeep), 40);
       expect(analyzer.getPhase()).toBe('descending');
 
-      // Phase 3: Bottom
+      // Phase 3: Bottom (trough) - hit lowest point then rise to confirm
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 50);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 60);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 70);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising1), 60);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising2), 70);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising3), 80);
       expect(analyzer.getPhase()).toBe('bottom');
 
-      // Phase 4: Ascending (need transitional frame for direction detection)
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising), 80);
+      // Phase 4: Ascending (knee above ascending threshold)
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.ascending), 90);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.ascending), 100);
       expect(analyzer.getPhase()).toBe('ascending');
@@ -202,18 +231,19 @@ describe('PistolSquatFormAnalyzer', () => {
 
   describe('rep counting', () => {
     it('counts multiple reps correctly', () => {
-      // Helper to run through one full rep
+      // Helper to run through one full rep with trough detection
       const doOneRep = (startTime: number) => {
         analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), startTime);
         analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), startTime + 10);
         analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), startTime + 20);
         analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), startTime + 30);
-        analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), startTime + 40);
+        analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descendingDeep), startTime + 40);
+        // Hit bottom (trough) and confirm with rising frames
         analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), startTime + 50);
-        analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), startTime + 60);
-        analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), startTime + 70);
-        // Transitional frame for direction detection
-        analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising), startTime + 80);
+        analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising1), startTime + 60);
+        analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising2), startTime + 70);
+        analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising3), startTime + 80);
+        // Continue ascending
         analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.ascending), startTime + 90);
         analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.ascending), startTime + 100);
         analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), startTime + 110);
@@ -235,17 +265,18 @@ describe('PistolSquatFormAnalyzer', () => {
 
   describe('quality scoring', () => {
     it('provides quality feedback after rep completion', () => {
-      // Do one rep
+      // Do one full rep with trough detection
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), 0);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), 10);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 20);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 30);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descending), 40);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.descendingDeep), 40);
+      // Hit bottom (trough) and confirm with rising frames
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 50);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 60);
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottom), 70);
-      // Transitional frame for direction detection
-      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising), 80);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising1), 60);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising2), 70);
+      analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.bottomRising3), 80);
+      // Continue ascending
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.ascending), 90);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.ascending), 100);
       analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.standing), 110);

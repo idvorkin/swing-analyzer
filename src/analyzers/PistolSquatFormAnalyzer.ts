@@ -113,6 +113,22 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   private kneeAngleHistory: number[] = [];
   private readonly historySize = 5;
 
+  // Smoothing for noise reduction
+  private smoothedKneeAngle: number | null = null;
+  private readonly emaAlpha = 0.3; // Exponential moving average factor
+  private readonly minRealisticAngle = 30; // Clamp below this (unrealistic for human anatomy)
+
+  // Trough detection for bottom position
+  private troughCandidate: {
+    angle: number;
+    skeleton: Skeleton;
+    timestamp: number;
+    videoTime?: number;
+    frameImage?: ImageData;
+  } | null = null;
+  private framesAscendingAfterTrough = 0;
+  private readonly framesNeededToConfirmTrough = 3;
+
   constructor(thresholds: Partial<PistolSquatThresholds> = {}) {
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
   }
@@ -168,6 +184,24 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   }
 
   /**
+   * Smooth knee angle using exponential moving average with clamping.
+   * Filters out noise and unrealistic readings.
+   */
+  private smoothAngle(rawAngle: number): number {
+    // Clamp to realistic human range (knee can't bend below ~30°)
+    const clamped = Math.max(this.minRealisticAngle, rawAngle);
+
+    if (this.smoothedKneeAngle === null) {
+      this.smoothedKneeAngle = clamped;
+    } else {
+      // EMA: new = α * current + (1-α) * previous
+      this.smoothedKneeAngle =
+        this.emaAlpha * clamped + (1 - this.emaAlpha) * this.smoothedKneeAngle;
+    }
+    return this.smoothedKneeAngle;
+  }
+
+  /**
    * Process a skeleton frame through the state machine
    */
   processFrame(
@@ -182,8 +216,11 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     // Get all angles
     const angles = this.getAngles(skeleton);
 
-    // Track knee angle history for direction detection
-    this.kneeAngleHistory.push(angles.workingKnee);
+    // Apply smoothing to working knee angle for trough detection
+    const smoothedWorkingKnee = this.smoothAngle(angles.workingKnee);
+
+    // Track smoothed knee angle history for direction detection
+    this.kneeAngleHistory.push(smoothedWorkingKnee);
     if (this.kneeAngleHistory.length > this.historySize * 2) {
       this.kneeAngleHistory = this.kneeAngleHistory.slice(-this.historySize * 2);
     }
@@ -207,12 +244,26 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
           this.finalizePhasePeak('standing');
           this.phase = 'descending';
           this.framesInPhase = 0;
+          // Reset trough tracking for new descent
+          this.troughCandidate = null;
+          this.framesAscendingAfterTrough = 0;
         }
         break;
 
       case 'descending':
-        if (this.shouldTransitionToBottom(angles)) {
+        // Track trough candidate during descent (use raw angle for responsiveness)
+        this.updateTroughCandidate(
+          angles.workingKnee, // Raw angle for direction detection
+          skeleton,
+          timestamp,
+          videoTime,
+          frameImage
+        );
+
+        if (this.shouldTransitionToBottom()) {
+          // Trough confirmed! Capture the bottom position from the candidate
           this.finalizePhasePeak('descending');
+          this.captureTroughAsBottom();
           this.phase = 'bottom';
           this.framesInPhase = 0;
         }
@@ -381,16 +432,92 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   }
 
   /**
-   * Check if we should transition from DESCENDING to BOTTOM
+   * Update the trough candidate during descent.
+   * Uses RAW angles for direction detection (more responsive),
+   * but stores the actual skeleton at the lowest point.
    */
-  private shouldTransitionToBottom(angles: { workingKnee: number; workingHip: number }): boolean {
-    if (this.framesInPhase < this.minFramesInPhase) return false;
+  private updateTroughCandidate(
+    rawAngle: number,
+    skeleton: Skeleton,
+    timestamp: number,
+    videoTime?: number,
+    frameImage?: ImageData
+  ): void {
+    // Clamp raw angle to realistic range for trough tracking
+    const clampedAngle = Math.max(this.minRealisticAngle, rawAngle);
 
-    // Deep squat position: knee very bent, hip flexed
-    return (
-      angles.workingKnee < this.thresholds.bottomKneeMax &&
-      angles.workingHip < this.thresholds.bottomHipMax
-    );
+    // Check direction using raw (clamped) angles - more responsive than smoothed
+    if (this.kneeAngleHistory.length >= 2) {
+      // Compare current raw to previous raw (both clamped)
+      const currRaw = clampedAngle;
+      const prevRaw = this.troughCandidate?.angle ?? currRaw;
+
+      if (currRaw > prevRaw + 2) {
+        // Raw angle increasing by >2° - we've passed the trough
+        this.framesAscendingAfterTrough++;
+      } else if (currRaw <= prevRaw) {
+        // Still at or below previous - might still be descending
+        this.framesAscendingAfterTrough = 0;
+      }
+      // Small increases (0-2°) could be noise, don't change count
+    }
+
+    // Update trough candidate if this is the lowest angle so far
+    if (
+      !this.troughCandidate ||
+      clampedAngle < this.troughCandidate.angle
+    ) {
+      this.troughCandidate = {
+        angle: clampedAngle,
+        skeleton,
+        timestamp,
+        videoTime,
+        frameImage,
+      };
+      // Reset ascending counter since we found a new low
+      this.framesAscendingAfterTrough = 0;
+    }
+  }
+
+  /**
+   * Check if we should transition from DESCENDING to BOTTOM.
+   * Uses trough detection: confirmed when angle has been increasing for N frames.
+   */
+  private shouldTransitionToBottom(): boolean {
+    if (this.framesInPhase < this.minFramesInPhase) return false;
+    if (!this.troughCandidate) return false;
+
+    // Trough is confirmed when we've been ascending for enough frames
+    return this.framesAscendingAfterTrough >= this.framesNeededToConfirmTrough;
+  }
+
+  /**
+   * Capture the confirmed trough as the bottom position peak.
+   */
+  private captureTroughAsBottom(): void {
+    if (!this.troughCandidate) return;
+
+    const angles = this.getAngles(this.troughCandidate.skeleton);
+
+    // Store as the bottom peak
+    this.currentRepPeaks.bottom = {
+      phase: 'bottom',
+      skeleton: this.troughCandidate.skeleton,
+      timestamp: this.troughCandidate.timestamp,
+      videoTime: this.troughCandidate.videoTime,
+      score: 180 - this.troughCandidate.angle, // Lower angle = higher score
+      angles: {
+        workingKnee: angles.workingKnee,
+        workingHip: angles.workingHip,
+        extendedKnee: angles.extendedKnee,
+        spine: angles.spine,
+      },
+      frameImage: this.troughCandidate.frameImage,
+    };
+
+    // Clear the candidate
+    this.troughCandidate = null;
+    this.framesAscendingAfterTrough = 0;
   }
 
   /**
@@ -525,6 +652,10 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     this.kneeAngleHistory = [];
     this.workingLeg = null;
     this.legDetectionVotes = { left: 0, right: 0 };
+    // Reset smoothing and trough detection
+    this.smoothedKneeAngle = null;
+    this.troughCandidate = null;
+    this.framesAscendingAfterTrough = 0;
     this.resetMetrics();
   }
 
