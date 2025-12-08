@@ -18,6 +18,7 @@
  */
 
 import type { Skeleton } from '../models/Skeleton';
+import { MediaPipeBodyParts } from '../types';
 import type {
   FormAnalyzer,
   FormAnalyzerResult,
@@ -207,9 +208,8 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    */
   private getEarY(skeleton: Skeleton): number {
     const keypoints = skeleton.getKeypoints();
-    // MediaPipe indices: LEFT_EAR = 7, RIGHT_EAR = 8
-    const leftEar = keypoints[7];
-    const rightEar = keypoints[8];
+    const leftEar = keypoints[MediaPipeBodyParts.LEFT_EAR];
+    const rightEar = keypoints[MediaPipeBodyParts.RIGHT_EAR];
 
     if (leftEar && rightEar) {
       return (leftEar.y + rightEar.y) / 2;
@@ -219,7 +219,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       return rightEar.y;
     }
     // Fallback: use nose if ears not available
-    const nose = keypoints[0];
+    const nose = keypoints[MediaPipeBodyParts.NOSE];
     return nose?.y ?? 0;
   }
 
@@ -327,7 +327,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
         // Track bottom candidate using ear Y (highest Y = lowest position)
         this.updateBottomCandidate(frameRecord);
 
-        if (this.shouldTransitionToBottom(earY)) {
+        if (this.shouldTransitionToBottom()) {
           // Bottom confirmed! Capture checkpoints
           this.captureBottomCheckpoint();
           this.captureDescendingCheckpoint();
@@ -346,7 +346,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       case 'ascending':
         if (this.shouldTransitionToStanding(angles)) {
           // Capture ascending checkpoint at 50% ear Y travel
-          this.captureAscendingCheckpoint(earY);
+          this.captureAscendingCheckpoint();
           this.phase = 'standing';
           this.framesInPhase = 0;
           repCompleted = true;
@@ -509,7 +509,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   /**
    * Capture the ascending checkpoint at 50% of ear Y travel (on the way up)
    */
-  private captureAscendingCheckpoint(_currentEarY: number): void {
+  private captureAscendingCheckpoint(): void {
     if (!this.standingEarY) {
       console.debug('[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No standing ear Y reference');
       return;
@@ -562,7 +562,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    * Uses ear-based trough detection: confirmed when ear Y has been decreasing
    * (person ascending) for N frames after reaching the lowest point.
    */
-  private shouldTransitionToBottom(_currentEarY: number): boolean {
+  private shouldTransitionToBottom(): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
     if (!this.bottomCandidate) return false;
 
