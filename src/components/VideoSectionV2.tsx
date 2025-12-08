@@ -10,15 +10,7 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
 import { RepGalleryModal } from './RepGalleryModal';
-
-// Position display order for swing positions
-const POSITION_ORDER = ['bottom', 'release', 'top', 'connect'] as const;
-const POSITION_LABELS: Record<string, string> = {
-  top: 'Top',
-  connect: 'Connect',
-  bottom: 'Bottom',
-  release: 'Release',
-};
+import { PHASE_ORDER, PHASE_LABELS } from './repGalleryConstants';
 
 const VideoSectionV2: React.FC = () => {
   const {
@@ -240,15 +232,15 @@ const VideoSectionV2: React.FC = () => {
     repLabel.textContent = 'Rep';
     headerRow.appendChild(repLabel);
 
-    for (const positionName of POSITION_ORDER) {
+    for (const positionName of PHASE_ORDER) {
       const phaseBtn = document.createElement('button');
       phaseBtn.type = 'button';
       const isFocused = focusedPhase === positionName;
       const isMinimized = focusedPhase && !isFocused;
       phaseBtn.className = `rep-gallery-header-phase${isFocused ? ' rep-gallery-header-phase--focused' : ''}${isMinimized ? ' rep-gallery-header-phase--minimized' : ''}`;
-      phaseBtn.textContent = POSITION_LABELS[positionName] || positionName;
+      phaseBtn.textContent = PHASE_LABELS[positionName] || positionName;
       phaseBtn.dataset.phase = positionName;
-      phaseBtn.title = isFocused ? 'Click to show all phases' : `Click to focus on ${POSITION_LABELS[positionName] || positionName}`;
+      phaseBtn.title = isFocused ? 'Click to show all phases' : `Click to focus on ${PHASE_LABELS[positionName] || positionName}`;
       headerRow.appendChild(phaseBtn);
     }
     container.appendChild(headerRow);
@@ -276,7 +268,7 @@ const VideoSectionV2: React.FC = () => {
       row.appendChild(repNumLabel);
 
       // Render thumbnails for each position
-      for (const positionName of POSITION_ORDER) {
+      for (const positionName of PHASE_ORDER) {
         const candidate = positions.get(positionName);
         const isFocused = focusedPhase === positionName;
         const isMinimized = focusedPhase && !isFocused;
@@ -287,7 +279,7 @@ const VideoSectionV2: React.FC = () => {
         if (candidate?.frameImage) {
           const wrapper = document.createElement('div');
           wrapper.className = `rep-gallery-thumbnail${isFocused ? ' rep-gallery-thumbnail--focused' : ''}${isMinimized ? ' rep-gallery-thumbnail--minimized' : ''}`;
-          wrapper.title = `${POSITION_LABELS[positionName] || positionName} at ${candidate.videoTime?.toFixed(2)}s`;
+          wrapper.title = `${PHASE_LABELS[positionName] || positionName} at ${candidate.videoTime?.toFixed(2)}s`;
 
           const canvas = document.createElement('canvas');
           canvas.width = candidate.frameImage.width;
@@ -381,7 +373,7 @@ const VideoSectionV2: React.FC = () => {
             <span className="rep-nav-label">Rep {appState.currentRepIndex + 1}/{repCount}</span>
             <span className="rep-nav-dot">•</span>
             <span className="rep-nav-position">
-              {currentPosition ? (POSITION_LABELS[currentPosition] || currentPosition) : '—'}
+              {currentPosition ? (PHASE_LABELS[currentPosition] || currentPosition) : '—'}
             </span>
           </span>
 
@@ -516,7 +508,7 @@ const VideoSectionV2: React.FC = () => {
                     <div className="hud-overlay-angle hud-overlay-position">
                       <span className="hud-overlay-angle-label">POS</span>
                       <span className="hud-overlay-angle-value">
-                        {POSITION_LABELS[currentPosition] || currentPosition}
+                        {PHASE_LABELS[currentPosition] || currentPosition}
                       </span>
                     </div>
                   )}

@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PositionCandidate } from '../types/exercise';
+import { PHASE_LABELS, getPhaseNames, getSortedRepNumbers } from './repGalleryConstants';
 import './RepGalleryModal.css';
-
-/** Labels for phase names (exercise-agnostic, can be extended) */
-const PHASE_LABELS: Record<string, string> = {
-  top: 'Top',
-  connect: 'Connect',
-  bottom: 'Bottom',
-  release: 'Release',
-  // Add more as needed for other exercises
-};
 
 interface RepGalleryModalProps {
   isOpen: boolean;
@@ -36,29 +28,10 @@ export function RepGalleryModal({
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Get phase names dynamically from the data (exercise-agnostic)
-  const phaseNames = useMemo(() => {
-    const phases = new Set<string>();
-    for (const positions of repThumbnails.values()) {
-      for (const posName of positions.keys()) {
-        phases.add(posName);
-      }
-    }
-    // Sort by known order if possible, otherwise alphabetical
-    const knownOrder = ['bottom', 'release', 'top', 'connect'];
-    return Array.from(phases).sort((a, b) => {
-      const aIdx = knownOrder.indexOf(a);
-      const bIdx = knownOrder.indexOf(b);
-      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
-      if (aIdx !== -1) return -1;
-      if (bIdx !== -1) return 1;
-      return a.localeCompare(b);
-    });
-  }, [repThumbnails]);
+  const phaseNames = useMemo(() => getPhaseNames(repThumbnails), [repThumbnails]);
 
   // Get sorted rep numbers
-  const repNumbers = useMemo(() => {
-    return Array.from(repThumbnails.keys()).sort((a, b) => a - b);
-  }, [repThumbnails]);
+  const repNumbers = useMemo(() => getSortedRepNumbers(repThumbnails), [repThumbnails]);
 
   // Reset selection when closing
   useEffect(() => {
