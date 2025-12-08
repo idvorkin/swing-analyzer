@@ -237,11 +237,26 @@ const VideoSectionV2: React.FC = () => {
     const repNumbers = Array.from(repThumbnails.keys()).sort((a, b) => a - b);
     const currentRepNum = appState.currentRepIndex + 1;
 
-    // Get or create header
+    // Check if phases changed - if so, clear the gallery and rebuild
+    const phasesKey = currentPhases.join(',');
     let headerRow = container.querySelector('.rep-gallery-header') as HTMLElement;
+    const existingPhasesKey = headerRow?.dataset.phasesKey;
+
+    if (headerRow && existingPhasesKey !== phasesKey) {
+      // Phases changed - clear the entire gallery to rebuild with new phases
+      const rowsContainer = container.querySelector('.rep-gallery-rows');
+      if (rowsContainer) {
+        rowsContainer.innerHTML = '';
+      }
+      headerRow.remove();
+      headerRow = null as unknown as HTMLElement;
+    }
+
+    // Get or create header
     if (!headerRow) {
       headerRow = document.createElement('div');
       headerRow.className = 'rep-gallery-header';
+      headerRow.dataset.phasesKey = phasesKey; // Track which phases this header was created for
 
       // Empty spacer to align with row rep numbers
       const repSpacer = document.createElement('div');

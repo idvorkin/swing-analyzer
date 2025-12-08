@@ -29,12 +29,15 @@ export const PHASE_LABELS: Record<string, string> = {
 
 /** Sort phases by known order, falling back to alphabetical */
 export function sortPhases(phases: string[]): string[] {
-  // Find which exercise's phase order matches
+  // Find which exercise's phase order has the highest overlap with input phases
   let knownOrder: readonly string[] | undefined;
+  let maxOverlap = 0;
+
   for (const order of Object.values(PHASE_ORDERS)) {
-    if (phases.some(p => order.includes(p))) {
+    const overlap = phases.filter(p => order.includes(p)).length;
+    if (overlap > maxOverlap) {
+      maxOverlap = overlap;
       knownOrder = order;
-      break;
     }
   }
 
