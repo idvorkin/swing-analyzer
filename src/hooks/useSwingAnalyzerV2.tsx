@@ -39,9 +39,13 @@ import type { CropRegion } from '../types/posetrack';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import type { DetectedExercise } from '../analyzers';
+import { PHASE_ORDER } from '../components/repGalleryConstants';
 
 // Throttle interval for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
 const REP_SYNC_INTERVAL_MS = 1000; // 1 second
+
+// Default phases (swing) - used when resetting before exercise detection runs
+const DEFAULT_PHASES = [...PHASE_ORDER];
 
 // Helper for consistent position display (e.g., "top" → "Top")
 const formatPositionForDisplay = (position: string): string =>
@@ -82,7 +86,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const [detectedExercise, setDetectedExercise] = useState<DetectedExercise>('unknown');
   const [detectionConfidence, setDetectionConfidence] = useState<number>(0);
   const [isDetectionLocked, setIsDetectionLocked] = useState<boolean>(false);
-  const [currentPhases, setCurrentPhases] = useState<string[]>(['top', 'connect', 'bottom', 'release']); // Default to swing phases
+  const [currentPhases, setCurrentPhases] = useState<string[]>(DEFAULT_PHASES);
 
   // Track if we've recorded extraction start for current session (to avoid spam)
   const hasRecordedExtractionStartRef = useRef<boolean>(false);
@@ -733,7 +737,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setDetectedExercise('unknown');
     setDetectionConfidence(0);
     setIsDetectionLocked(false);
-    setCurrentPhases(['top', 'connect', 'bottom', 'release']); // Default to swing phases
+    setCurrentPhases(DEFAULT_PHASES);
 
     // Load video safely (handles cleanup, pausing, and race conditions)
     const url = URL.createObjectURL(file);
@@ -799,7 +803,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setDetectedExercise('unknown');
       setDetectionConfidence(0);
       setIsDetectionLocked(false);
-      setCurrentPhases(['top', 'connect', 'bottom', 'release']); // Default to swing phases
+      setCurrentPhases(DEFAULT_PHASES);
 
       // Try remote URL first, fall back to local
       let videoURL = DEFAULT_SAMPLE_VIDEO;
@@ -883,7 +887,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setDetectedExercise('unknown');
       setDetectionConfidence(0);
       setIsDetectionLocked(false);
-      setCurrentPhases(['top', 'connect', 'bottom', 'release']); // Default to swing phases
+      setCurrentPhases(DEFAULT_PHASES);
 
       // Try remote URL first, fall back to local
       let videoURL = PISTOL_SQUAT_SAMPLE_VIDEO;
@@ -1249,7 +1253,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setDetectedExercise('unknown');
     setDetectionConfidence(0);
     setIsDetectionLocked(false);
-    setCurrentPhases(['top', 'connect', 'bottom', 'release']); // Default to swing phases
+    setCurrentPhases(DEFAULT_PHASES);
     setAppState(prev => ({
       ...prev,
       currentRepIndex: 0,

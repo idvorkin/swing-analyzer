@@ -591,6 +591,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   }
 
   getPhases(): string[] {
-    return ['top', 'connect', 'bottom', 'release'];
+    // Display order: bottom first (the start of a rep cycle visually)
+    return ['bottom', 'release', 'top', 'connect'];
   }
 }
