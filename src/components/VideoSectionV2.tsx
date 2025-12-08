@@ -10,6 +10,7 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/ExerciseAnalyzerContext';
 import { ExerciseDetectionBadge } from './ExerciseDetectionBadge';
+import { MediaSelectorDialog } from './MediaSelectorDialog';
 import { RepGalleryModal } from './RepGalleryModal';
 import { PHASE_LABELS } from './repGalleryConstants';
 
@@ -60,6 +61,10 @@ const VideoSectionV2: React.FC = () => {
     workingLeg,
     // Cache processing state
     isCacheProcessing,
+    // Media dialog loading state
+    isVideoLoading,
+    videoLoadProgress,
+    videoLoadMessage,
   } = useSwingAnalyzerContext();
 
   // Ref for the rep-gallery container
@@ -439,16 +444,6 @@ const VideoSectionV2: React.FC = () => {
 
   return (
     <section className="video-section">
-      {/* Hidden file input - triggered by labels elsewhere */}
-      <input
-        type="file"
-        id="video-upload"
-        accept="video/*"
-        ref={fileInputRef}
-        onChange={handleVideoUpload}
-        className="sr-only"
-      />
-
       {/* Rep navigation strip - shown when reps are detected */}
       {repCount > 0 && currentVideoFile && (
         <div className="rep-nav-strip">
@@ -524,37 +519,6 @@ const VideoSectionV2: React.FC = () => {
         className={`video-container ${getVideoContainerClass()}`}
         onClick={handleVideoDoubleTap}
       >
-        {/* Source picker overlay - shown when no video OR when user taps header camera button */}
-        {(!currentVideoFile || showSourcePicker) && (
-          <div className="source-picker-overlay" onClick={() => setShowSourcePicker(false)}>
-            <div className="source-picker-buttons" onClick={(e) => e.stopPropagation()}>
-              <label htmlFor="video-upload" className="source-picker-btn camera-roll-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                </svg>
-                <span>Camera Roll</span>
-              </label>
-              <div className="source-picker-samples">
-                <button
-                  type="button"
-                  id="load-hardcoded-btn"
-                  className="source-picker-btn sample-btn"
-                  onClick={loadHardcodedVideo}
-                >
-                  <span>Swing</span>
-                </button>
-                <button
-                  type="button"
-                  id="load-pistol-btn"
-                  className="source-picker-btn sample-btn"
-                  onClick={loadPistolSquatSample}
-                >
-                  <span>Pistol</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* biome-ignore lint/a11y/useMediaCaption: This is a video analysis app, not media playback - no audio captions needed */}
         <video id="video" ref={videoRef} playsInline />
@@ -753,6 +717,19 @@ const VideoSectionV2: React.FC = () => {
         currentRepIndex={appState.currentRepIndex}
         onSeek={handleGallerySeek}
         onRepSelect={setCurrentRepIndex}
+      />
+
+      {/* Media Selector Dialog */}
+      <MediaSelectorDialog
+        isOpen={showSourcePicker || (!currentVideoFile && !isVideoLoading)}
+        onClose={() => setShowSourcePicker(false)}
+        onUpload={handleVideoUpload}
+        onLoadSwingSample={loadHardcodedVideo}
+        onLoadPistolSample={loadPistolSquatSample}
+        isLoading={isVideoLoading}
+        loadingProgress={videoLoadProgress}
+        loadingMessage={videoLoadMessage}
+        fileInputRef={fileInputRef}
       />
     </section>
   );
