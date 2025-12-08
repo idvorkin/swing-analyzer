@@ -729,6 +729,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setRepThumbnails(new Map());
     pipelineRef.current?.reset();
     hasRecordedExtractionStartRef.current = false; // Reset for new video
+    // Reset exercise detection state for new video
+    setDetectedExercise('unknown');
+    setDetectionConfidence(0);
+    setIsDetectionLocked(false);
+    setCurrentPhases(['top', 'connect', 'bottom', 'release']); // Default to swing phases
 
     // Load video safely (handles cleanup, pausing, and race conditions)
     const url = URL.createObjectURL(file);
@@ -790,6 +795,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setRepThumbnails(new Map());
       pipelineRef.current?.reset();
       hasRecordedExtractionStartRef.current = false; // Reset for new video
+      // Reset exercise detection state for new video
+      setDetectedExercise('unknown');
+      setDetectionConfidence(0);
+      setIsDetectionLocked(false);
+      setCurrentPhases(['top', 'connect', 'bottom', 'release']); // Default to swing phases
 
       // Try remote URL first, fall back to local
       let videoURL = DEFAULT_SAMPLE_VIDEO;
@@ -869,6 +879,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setRepThumbnails(new Map());
       pipelineRef.current?.reset();
       hasRecordedExtractionStartRef.current = false;
+      // Reset exercise detection state for new video
+      setDetectedExercise('unknown');
+      setDetectionConfidence(0);
+      setIsDetectionLocked(false);
+      setCurrentPhases(['top', 'connect', 'bottom', 'release']); // Default to swing phases
 
       // Try remote URL first, fall back to local
       let videoURL = PISTOL_SQUAT_SAMPLE_VIDEO;
@@ -1230,6 +1245,11 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setSpineAngle(0);
     setArmToSpineAngle(0);
     setRepThumbnails(new Map());
+    // Reset exercise detection state
+    setDetectedExercise('unknown');
+    setDetectionConfidence(0);
+    setIsDetectionLocked(false);
+    setCurrentPhases(['top', 'connect', 'bottom', 'release']); // Default to swing phases
     setAppState(prev => ({
       ...prev,
       currentRepIndex: 0,
