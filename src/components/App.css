@@ -944,8 +944,7 @@ main {
 
 /* Sticky header row with phase labels */
 .filmstrip-header {
-  display: grid;
-  grid-template-columns: 40px repeat(4, 1fr);
+  display: flex;
   gap: 0.5rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--filmstrip-border);
@@ -956,6 +955,7 @@ main {
 }
 
 .filmstrip-header-rep {
+  flex: 0 0 40px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
   font-weight: 600;
@@ -966,7 +966,18 @@ main {
   padding: 0.25rem;
 }
 
+/* When a phase is focused, expand it and shrink others */
+.filmstrip-header--focused .filmstrip-header-phase--focused {
+  flex: 3;
+}
+
+.filmstrip-header--focused .filmstrip-header-phase--minimized {
+  flex: 0 0 30px;
+}
+
 .filmstrip-header-phase {
+  flex: 1;
+  min-width: 0;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
   font-weight: 600;
@@ -975,6 +986,27 @@ main {
   letter-spacing: 0.1em;
   text-align: center;
   padding: 0.25rem;
+  /* Button reset for clickable phase headers */
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filmstrip-header-phase:hover {
+  background: rgba(0, 212, 170, 0.1);
+  border-color: rgba(0, 212, 170, 0.3);
+}
+
+.filmstrip-header-phase--focused {
+  background: rgba(0, 212, 170, 0.2);
+  border-color: var(--filmstrip-accent);
+  color: #fff;
+}
+
+.filmstrip-header-phase--minimized {
+  opacity: 0.5;
 }
 
 /* Scrollable rows container - shows ~2.5 rows */
@@ -1001,8 +1033,7 @@ main {
 
 /* Each rep row */
 .filmstrip-row {
-  display: grid;
-  grid-template-columns: 40px repeat(4, 1fr);
+  display: flex;
   gap: 0.5rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--filmstrip-border);
@@ -1023,6 +1054,7 @@ main {
 
 /* Rep number in row */
 .filmstrip-row-rep {
+  flex: 0 0 40px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.85rem;
   font-weight: 700;
@@ -1039,9 +1071,21 @@ main {
 
 /* Cell containing thumbnail */
 .filmstrip-cell {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: flex 0.3s ease;
+}
+
+/* Dynamic zoom - focused column expands, others shrink */
+.filmstrip-row--has-focus .filmstrip-cell--focused {
+  flex: 3;
+}
+
+.filmstrip-row--has-focus .filmstrip-cell--minimized {
+  flex: 0 0 30px;
 }
 
 .filmstrip-cell-empty {
@@ -1059,7 +1103,7 @@ main {
   overflow: hidden;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--filmstrip-border);
-  transition: all 0.15s ease;
+  transition: all 0.3s ease;
 }
 
 .filmstrip-thumbnail:hover {
@@ -1068,6 +1112,22 @@ main {
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.4),
     0 0 0 1px var(--filmstrip-accent);
+}
+
+/* Focused thumbnail expands */
+.filmstrip-thumbnail--focused {
+  max-width: 140px;
+  border-color: var(--filmstrip-accent);
+}
+
+/* Minimized thumbnail shrinks */
+.filmstrip-thumbnail--minimized {
+  max-width: 40px;
+  opacity: 0.6;
+}
+
+.filmstrip-thumbnail--minimized:hover {
+  opacity: 1;
 }
 
 /* Canvas inside thumbnail */
@@ -1120,14 +1180,14 @@ main {
 
 /* Mobile filmstrip */
 @media (max-width: 480px) {
-  .filmstrip-header {
-    grid-template-columns: 32px repeat(4, 1fr);
+  .filmstrip-header,
+  .filmstrip-row {
     gap: 0.25rem;
   }
 
-  .filmstrip-row {
-    grid-template-columns: 32px repeat(4, 1fr);
-    gap: 0.25rem;
+  .filmstrip-header-rep,
+  .filmstrip-row-rep {
+    flex: 0 0 32px;
   }
 
   .filmstrip-rows {
@@ -1136,6 +1196,20 @@ main {
 
   .filmstrip-thumbnail {
     max-width: 55px;
+  }
+
+  /* Adjust focused/minimized sizes for mobile */
+  .filmstrip-thumbnail--focused {
+    max-width: 100px;
+  }
+
+  .filmstrip-thumbnail--minimized {
+    max-width: 30px;
+  }
+
+  .filmstrip-header--focused .filmstrip-header-phase--minimized,
+  .filmstrip-row--has-focus .filmstrip-cell--minimized {
+    flex: 0 0 24px;
   }
 
   .filmstrip-header-phase {
