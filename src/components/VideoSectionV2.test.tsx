@@ -26,6 +26,7 @@ const createMockContext = (overrides = {}): any => ({
   repCount: 0,
   handleVideoUpload: mockHandleVideoUpload,
   loadHardcodedVideo: mockLoadHardcodedVideo,
+  loadPistolSquatSample: vi.fn(),
   togglePlayPause: mockTogglePlayPause,
   nextFrame: mockNextFrame,
   previousFrame: mockPreviousFrame,
@@ -46,6 +47,14 @@ const createMockContext = (overrides = {}): any => ({
   armToSpineAngle: 0,
   hasPosesForCurrentFrame: false,
   currentPosition: null,
+  setCurrentRepIndex: vi.fn(),
+  // Exercise detection
+  detectedExercise: 'unknown',
+  detectionConfidence: 0,
+  isDetectionLocked: false,
+  setExerciseType: vi.fn(),
+  // Phases for rep gallery
+  currentPhases: ['bottom', 'release', 'top', 'connect'],
   ...overrides,
 });
 

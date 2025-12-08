@@ -309,6 +309,9 @@ export class Pipeline {
         // Auto-switch analyzer when detection is confident
         if (this.autoSwitchAnalyzer && detection.confidence >= 70) {
           this.switchToExercise(detection.exercise);
+          // Emit detection event again after switch so UI can update phases
+          // from the new analyzer
+          this.exerciseDetectionSubject.next(detection);
         }
       }
 
