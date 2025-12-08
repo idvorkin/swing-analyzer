@@ -1253,6 +1253,84 @@ main {
   padding: 0.75rem 0;
 }
 
+/* Exercise Detection Badge */
+.exercise-detection-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 20px;
+  font-size: 13px;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.exercise-detection-badge__icon {
+  font-size: 16px;
+}
+
+.exercise-detection-badge__label {
+  font-weight: 500;
+}
+
+.exercise-detection-badge__side {
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.exercise-detection-badge__confidence {
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.exercise-detection-badge__confidence--high {
+  background: #22c55e;
+}
+
+.exercise-detection-badge__confidence--medium {
+  background: #eab308;
+}
+
+.exercise-detection-badge__confidence--low {
+  background: #f97316;
+}
+
+.exercise-detection-badge__overrides {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  padding-left: 8px;
+}
+
+.exercise-detection-badge__override-btn {
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.exercise-detection-badge__override-btn:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.exercise-detection-badge__override-btn--active {
+  background: #3b82f6;
+  opacity: 1;
+  cursor: default;
+}
+
 /* Analysis Section - Styles moved to AnalysisSection.css */
 
 /* Form Checkpoints */

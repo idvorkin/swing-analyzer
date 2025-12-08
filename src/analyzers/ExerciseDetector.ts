@@ -85,7 +85,7 @@ export class ExerciseDetector {
 
     // Cap history to prevent unbounded memory growth (only last 200 frames matter)
     if (this.kneeAsymmetryHistory.length > 200) {
-      this.kneeAsymmetryHistory = this.kneeAsymmetryHistory.slice(-200);
+      this.kneeAsymmetryHistory.shift(); // Remove oldest element efficiently
     }
 
     // Not enough frames yet
@@ -187,6 +187,18 @@ export class ExerciseDetector {
    */
   isLocked(): boolean {
     return this.locked;
+  }
+
+  /**
+   * Manually lock the detector with a specific exercise (user override)
+   */
+  lock(exercise: DetectedExercise): void {
+    this.locked = true;
+    this.lockedResult = {
+      exercise,
+      confidence: 100,
+      reason: 'User override',
+    };
   }
 
   /**

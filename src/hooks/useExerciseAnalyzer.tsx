@@ -506,18 +506,18 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     // Subscribe to exercise detection events
     const detectionSubscription = pipeline.getExerciseDetectionEvents().subscribe({
       next: (detection) => {
+        // Batch related state updates to prevent multiple re-renders
+        const formAnalyzer = pipeline.getFormAnalyzer();
+        const newPhases = formAnalyzer.getPhases();
+        const newWorkingLeg = formAnalyzer.getWorkingLeg?.() ?? null;
+        const newIsLocked = pipeline.isExerciseDetectionLocked();
+
+        // Update all detection-related state together
         setDetectedExercise(detection.exercise);
         setDetectionConfidence(detection.confidence);
-        setIsDetectionLocked(pipeline.isExerciseDetectionLocked());
-        // Update phases when exercise type changes
-        const formAnalyzer = pipeline.getFormAnalyzer();
-        setCurrentPhases(formAnalyzer.getPhases());
-        // Capture working leg for exercises that support it (duck typing)
-        if ('getWorkingLeg' in formAnalyzer && typeof formAnalyzer.getWorkingLeg === 'function') {
-          setWorkingLeg((formAnalyzer as { getWorkingLeg(): 'left' | 'right' | null }).getWorkingLeg());
-        } else {
-          setWorkingLeg(null);
-        }
+        setIsDetectionLocked(newIsLocked);
+        setCurrentPhases(newPhases);
+        setWorkingLeg(newWorkingLeg);
       },
       error: (error) => {
         console.error('Error in exercise detection subscription:', error);

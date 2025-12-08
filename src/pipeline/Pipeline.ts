@@ -414,6 +414,7 @@ export class Pipeline {
    */
   setExerciseType(exercise: DetectedExercise): void {
     this.autoSwitchAnalyzer = false; // Disable auto-switch since user chose
+    this.exerciseDetector.lock(exercise); // Lock detector to prevent further detection
     this.switchToExercise(exercise);
   }
 
