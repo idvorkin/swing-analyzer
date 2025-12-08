@@ -123,7 +123,7 @@ describe('ExerciseRegistry', () => {
     it('returns URL for pistol-squat', () => {
       const url = getDefaultSampleVideo('pistol-squat');
       expect(url).toBeDefined();
-      expect(url).toContain('pistol-squat');
+      expect(url).toContain('pistols'); // URL uses 'pistols' folder name
     });
 
     it('returns undefined for unknown', () => {

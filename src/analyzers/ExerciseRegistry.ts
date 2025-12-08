@@ -78,7 +78,7 @@ export const EXERCISE_REGISTRY: Record<Exclude<DetectedExercise, 'unknown'>, Exe
     sampleVideos: [
       {
         name: 'Sample',
-        url: `${SAMPLES_BASE_URL}/exercises/pistol-squat/pistol-squat-sample.webm`,
+        url: `${SAMPLES_BASE_URL}/exercises/pistols/pistols.webm`,
         localFallback: '/videos/pistol-squat-sample.webm',
       },
     ],
@@ -101,7 +101,6 @@ export function getExerciseDefinition(exercise: DetectedExercise): ExerciseDefin
 export function createAnalyzerForExercise(exercise: DetectedExercise): FormAnalyzer {
   const definition = getExerciseDefinition(exercise);
   if (!definition) {
-    // Default to kettlebell swing for unknown exercises
     console.warn(
       `[ExerciseRegistry] Unknown exercise "${exercise}", defaulting to kettlebell swing. User should override manually.`
     );

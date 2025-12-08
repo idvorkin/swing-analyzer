@@ -56,6 +56,6 @@ export const SAMPLE_VIDEOS = {
     igor1h: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/igor-1h-swing.webm`,
   },
   pistolSquat: {
-    sample: `${SAMPLES_BASE_URL}/exercises/pistol-squat/pistol-squat-sample.webm`,
+    sample: `${SAMPLES_BASE_URL}/exercises/pistols/pistols.webm`,
   },
 } as const;

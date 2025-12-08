@@ -304,15 +304,20 @@ export class Pipeline {
 
       // Run exercise detection (only until locked)
       if (!this.exerciseDetector.isLocked()) {
-        const detection = this.exerciseDetector.processFrame(skeletonEvent.skeleton);
-        this.exerciseDetectionSubject.next(detection);
-
-        // Auto-switch analyzer when detection is confident
-        if (this.autoSwitchAnalyzer && detection.confidence >= 70) {
-          this.switchToExercise(detection.exercise);
-          // Emit detection event again after switch so UI can update phases
-          // from the new analyzer
+        try {
+          const detection = this.exerciseDetector.processFrame(skeletonEvent.skeleton);
           this.exerciseDetectionSubject.next(detection);
+
+          // Auto-switch analyzer when detection is confident
+          if (this.autoSwitchAnalyzer && detection.confidence >= 70) {
+            this.switchToExercise(detection.exercise);
+            // Emit detection event again after switch so UI can update phases
+            // from the new analyzer
+            this.exerciseDetectionSubject.next(detection);
+          }
+        } catch (error) {
+          console.error('[Pipeline] Exercise detection error, continuing with current analyzer:', error);
+          // Don't block form analysis if detection fails
         }
       }
 
