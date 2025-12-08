@@ -102,6 +102,9 @@ export function createAnalyzerForExercise(exercise: DetectedExercise): FormAnaly
   const definition = getExerciseDefinition(exercise);
   if (!definition) {
     // Default to kettlebell swing for unknown exercises
+    console.warn(
+      `[ExerciseRegistry] Unknown exercise "${exercise}", defaulting to kettlebell swing. User should override manually.`
+    );
     return new KettlebellSwingFormAnalyzer();
   }
   return definition.createAnalyzer();

@@ -607,6 +607,9 @@ export class Skeleton {
       }
 
       // Fallback: return 180 (straight leg) if keypoints missing
+      console.debug(
+        `[Skeleton] Missing keypoints for ${side} knee angle (hip/knee/ankle). Using fallback 180°.`
+      );
       this._kneeAngleBySide.set(side, 180);
       return 180;
     } catch (e) {
@@ -644,6 +647,9 @@ export class Skeleton {
       }
 
       // Fallback: return 180 (standing) if keypoints missing
+      console.debug(
+        `[Skeleton] Missing keypoints for ${side} hip angle (knee/hip/shoulder). Using fallback 180°.`
+      );
       this._hipAngleBySide.set(side, 180);
       return 180;
     } catch (e) {

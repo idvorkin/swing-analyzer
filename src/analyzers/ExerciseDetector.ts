@@ -83,6 +83,11 @@ export class ExerciseDetector {
     this.kneeAsymmetryHistory.push(asymmetry);
     this.maxKneeAsymmetry = Math.max(this.maxKneeAsymmetry, asymmetry);
 
+    // Cap history to prevent unbounded memory growth (only last 200 frames matter)
+    if (this.kneeAsymmetryHistory.length > 200) {
+      this.kneeAsymmetryHistory = this.kneeAsymmetryHistory.slice(-200);
+    }
+
     // Not enough frames yet
     if (this.frameCount < this.config.minFrames) {
       return {

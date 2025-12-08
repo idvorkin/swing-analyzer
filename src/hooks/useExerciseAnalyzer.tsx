@@ -939,11 +939,27 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
       setStatus('Video loaded. Press Play to start.');
     } catch (error) {
+      // AbortError means user switched videos - silently ignore
       if (error instanceof DOMException && error.name === 'AbortError') {
         return;
       }
       console.error('Error loading pistol squat sample:', error);
-      setStatus('Error: Could not load sample video');
+      // Apply same detailed error handling as handleVideoUpload
+      let userMessage = 'Could not load sample video';
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        userMessage = 'Storage full. Clear browser data and try again.';
+      } else if (error instanceof Error) {
+        if (error.message.includes('Timeout')) {
+          userMessage = 'Video load timed out. Check your network and try again.';
+        } else if (error.message.includes('fetch') || error.message.includes('Network')) {
+          userMessage = 'Network error loading video. Check your connection.';
+        } else if (error.message.includes('model')) {
+          userMessage = 'Failed to load pose detection. Check network and refresh.';
+        } else if (error.message.includes('format') || error.message.includes('supported')) {
+          userMessage = 'Video format not supported by your browser.';
+        }
+      }
+      setStatus(`Error: ${userMessage}`);
     }
   }, [loadVideoSafely]);
 

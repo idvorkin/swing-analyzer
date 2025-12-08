@@ -55,6 +55,7 @@ export function ExerciseDetectionBadge({
 
   return (
     <div
+      data-testid="exercise-detection-badge"
       style={{
         display: 'flex',
         alignItems: 'center',
