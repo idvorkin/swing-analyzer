@@ -2,15 +2,24 @@
  * Shared constants for Rep Gallery Widget and Modal
  */
 
-/** Display order for swing position phases */
+/** Display order for swing position phases (default, used for reset) */
 export const PHASE_ORDER = ['bottom', 'release', 'top', 'connect'] as const;
+
+/** Display order for pistol squat phases */
+export const PISTOL_SQUAT_PHASE_ORDER = ['standing', 'descending', 'bottom', 'ascending'] as const;
+
+/** All known phase orders by exercise type */
+const PHASE_ORDERS: Record<string, readonly string[]> = {
+  'kettlebell-swing': PHASE_ORDER,
+  'pistol-squat': PISTOL_SQUAT_PHASE_ORDER,
+};
 
 /** Human-readable labels for each phase */
 export const PHASE_LABELS: Record<string, string> = {
   // Kettlebell swing phases
   top: 'Top',
   connect: 'Connect',
-  bottom: 'Bottom',
+  bottom: 'Bottom',  // Shared with pistol squat
   release: 'Release',
   // Pistol squat phases
   standing: 'Standing',
@@ -20,12 +29,23 @@ export const PHASE_LABELS: Record<string, string> = {
 
 /** Sort phases by known order, falling back to alphabetical */
 export function sortPhases(phases: string[]): string[] {
+  // Find which exercise's phase order matches
+  let knownOrder: readonly string[] | undefined;
+  for (const order of Object.values(PHASE_ORDERS)) {
+    if (phases.some(p => order.includes(p))) {
+      knownOrder = order;
+      break;
+    }
+  }
+
   return phases.sort((a, b) => {
-    const aIdx = PHASE_ORDER.indexOf(a as typeof PHASE_ORDER[number]);
-    const bIdx = PHASE_ORDER.indexOf(b as typeof PHASE_ORDER[number]);
-    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
-    if (aIdx !== -1) return -1;
-    if (bIdx !== -1) return 1;
+    if (knownOrder) {
+      const aIdx = knownOrder.indexOf(a);
+      const bIdx = knownOrder.indexOf(b);
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+    }
     return a.localeCompare(b);
   });
 }
