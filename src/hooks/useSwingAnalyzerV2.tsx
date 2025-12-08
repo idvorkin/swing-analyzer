@@ -894,7 +894,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   }, [frameStep]);
 
   // ========================================
-  // Rep Navigation - seeks to first checkpoint of target rep and pauses
+  // Rep Navigation - seeks to same phase in target rep (or first available) and pauses
   // ========================================
   const navigateToPreviousRep = useCallback(() => {
     const video = videoRef.current;
@@ -903,17 +903,19 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const newRepIndex = Math.max(0, appState.currentRepIndex - 1);
     if (newRepIndex === appState.currentRepIndex) return; // Already at first rep
 
-    // Find first checkpoint of the target rep - track actual position found
+    // Find checkpoint in target rep - prefer same phase as current, fallback to first available
     const targetRepNum = newRepIndex + 1; // repNum is 1-indexed
     const positions = repThumbnails.get(targetRepNum);
-    const topCheckpoint = positions?.get('top');
-    const firstCheckpoint = topCheckpoint || positions?.values().next().value;
-    // Determine actual position name - 'top' if found, otherwise first available
-    const actualPosition = topCheckpoint ? 'top' : (positions?.keys().next().value ?? null);
+
+    // Try to preserve current phase (convert "Top" -> "top" for lookup)
+    const currentPhaseKey = currentPosition?.toLowerCase() ?? null;
+    const samePhaseCheckpoint = currentPhaseKey ? positions?.get(currentPhaseKey) : null;
+    const targetCheckpoint = samePhaseCheckpoint || positions?.values().next().value;
+    const actualPosition = samePhaseCheckpoint ? currentPhaseKey : (positions?.keys().next().value ?? null);
 
     video.pause(); // Pause when seeking to rep
-    if (firstCheckpoint?.videoTime !== undefined) {
-      video.currentTime = firstCheckpoint.videoTime;
+    if (targetCheckpoint?.videoTime !== undefined) {
+      video.currentTime = targetCheckpoint.videoTime;
       if (actualPosition) {
         setCurrentPosition(formatPositionForDisplay(actualPosition));
       }
@@ -922,7 +924,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       ...prev,
       currentRepIndex: newRepIndex,
     }));
-  }, [appState.currentRepIndex, repThumbnails]);
+  }, [appState.currentRepIndex, repThumbnails, currentPosition]);
 
   const navigateToNextRep = useCallback(() => {
     const video = videoRef.current;
@@ -931,17 +933,19 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const newRepIndex = Math.min(repCount - 1, appState.currentRepIndex + 1);
     if (newRepIndex === appState.currentRepIndex) return; // Already at last rep
 
-    // Find first checkpoint of the target rep - track actual position found
+    // Find checkpoint in target rep - prefer same phase as current, fallback to first available
     const targetRepNum = newRepIndex + 1; // repNum is 1-indexed
     const positions = repThumbnails.get(targetRepNum);
-    const topCheckpoint = positions?.get('top');
-    const firstCheckpoint = topCheckpoint || positions?.values().next().value;
-    // Determine actual position name - 'top' if found, otherwise first available
-    const actualPosition = topCheckpoint ? 'top' : (positions?.keys().next().value ?? null);
+
+    // Try to preserve current phase (convert "Top" -> "top" for lookup)
+    const currentPhaseKey = currentPosition?.toLowerCase() ?? null;
+    const samePhaseCheckpoint = currentPhaseKey ? positions?.get(currentPhaseKey) : null;
+    const targetCheckpoint = samePhaseCheckpoint || positions?.values().next().value;
+    const actualPosition = samePhaseCheckpoint ? currentPhaseKey : (positions?.keys().next().value ?? null);
 
     video.pause(); // Pause when seeking to rep
-    if (firstCheckpoint?.videoTime !== undefined) {
-      video.currentTime = firstCheckpoint.videoTime;
+    if (targetCheckpoint?.videoTime !== undefined) {
+      video.currentTime = targetCheckpoint.videoTime;
       if (actualPosition) {
         setCurrentPosition(formatPositionForDisplay(actualPosition));
       }
@@ -950,7 +954,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       ...prev,
       currentRepIndex: newRepIndex,
     }));
-  }, [repCount, appState.currentRepIndex, repThumbnails]);
+  }, [repCount, appState.currentRepIndex, repThumbnails, currentPosition]);
 
   // Set current rep index directly (used by gallery modal)
   const setCurrentRepIndex = useCallback((index: number) => {
