@@ -26,6 +26,7 @@ const createMockContext = (overrides = {}): any => ({
   repCount: 0,
   handleVideoUpload: mockHandleVideoUpload,
   loadHardcodedVideo: mockLoadHardcodedVideo,
+  loadPistolSquatSample: vi.fn(),
   togglePlayPause: mockTogglePlayPause,
   nextFrame: mockNextFrame,
   previousFrame: mockPreviousFrame,
@@ -46,16 +47,29 @@ const createMockContext = (overrides = {}): any => ({
   armToSpineAngle: 0,
   hasPosesForCurrentFrame: false,
   currentPosition: null,
+  setCurrentRepIndex: vi.fn(),
+  // Exercise detection
+  detectedExercise: 'unknown',
+  detectionConfidence: 0,
+  isDetectionLocked: false,
+  setExerciseType: vi.fn(),
+  // Phases for rep gallery
+  currentPhases: ['bottom', 'release', 'top', 'connect'],
+  // Working leg (for pistol squats)
+  workingLeg: null,
   ...overrides,
 });
 
-vi.mock('../contexts/SwingAnalyzerContext', () => ({
+vi.mock('../contexts/ExerciseAnalyzerContext', () => ({
   useSwingAnalyzerContext: vi.fn(() => createMockContext()),
 }));
 
 // Import the mock to access it
-import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import { useSwingAnalyzerContext } from '../contexts/ExerciseAnalyzerContext';
 const mockUseSwingAnalyzerContext = vi.mocked(useSwingAnalyzerContext);
+
+// Mock scrollIntoView which isn't implemented in jsdom
+Element.prototype.scrollIntoView = vi.fn();
 
 describe('VideoSectionV2', () => {
   beforeEach(() => {

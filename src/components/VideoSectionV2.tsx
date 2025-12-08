@@ -3,22 +3,15 @@
  *
  * This version removes the usePoseTrack hook and complex effect chains.
  * All extraction/caching is handled internally by InputSession via
- * the useSwingAnalyzerV2 hook.
+ * the useExerciseAnalyzer hook.
  */
 
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSwingAnalyzerContext } from '../contexts/SwingAnalyzerContext';
+import { useSwingAnalyzerContext } from '../contexts/ExerciseAnalyzerContext';
+import { ExerciseDetectionBadge } from './ExerciseDetectionBadge';
 import { RepGalleryModal } from './RepGalleryModal';
-
-// Position display order for swing positions
-const POSITION_ORDER = ['bottom', 'release', 'top', 'connect'] as const;
-const POSITION_LABELS: Record<string, string> = {
-  top: 'Top',
-  connect: 'Connect',
-  bottom: 'Bottom',
-  release: 'Release',
-};
+import { PHASE_LABELS } from './repGalleryConstants';
 
 const VideoSectionV2: React.FC = () => {
   const {
@@ -30,6 +23,7 @@ const VideoSectionV2: React.FC = () => {
     repCount,
     handleVideoUpload,
     loadHardcodedVideo,
+    loadPistolSquatSample,
     togglePlayPause,
     nextFrame,
     previousFrame,
@@ -55,16 +49,31 @@ const VideoSectionV2: React.FC = () => {
     currentPosition,
     // Rep gallery
     setCurrentRepIndex,
+    // Exercise detection
+    detectedExercise,
+    detectionConfidence,
+    isDetectionLocked,
+    setExerciseType,
+    // Current phases for this exercise
+    currentPhases,
+    // Working side (for exercises that support it)
+    workingLeg,
   } = useSwingAnalyzerContext();
 
-  // Ref for the filmstrip container
-  const filmstripRef = useRef<HTMLDivElement>(null);
+  // Ref for the rep-gallery container
+  const repGalleryRef = useRef<HTMLDivElement>(null);
 
   // Mobile source picker state - show when no video OR when user taps header camera button
   const [showSourcePicker, setShowSourcePicker] = useState(false);
 
   // Rep gallery modal state
   const [showGallery, setShowGallery] = useState(false);
+
+  // Focused phase state for dynamic zoom
+  const [focusedPhase, setFocusedPhase] = useState<string | null>(null);
+
+  // Track previous rep index to only scroll when it actually changes
+  const prevRepIndexRef = useRef<number>(-1);
 
   const handleGallerySeek = useCallback((time: number) => {
     if (videoRef.current) {
@@ -160,80 +169,261 @@ const VideoSectionV2: React.FC = () => {
     }
   }, [clearPositionLabel, togglePlayPause, videoRef, navigateToPreviousCheckpoint, navigateToNextCheckpoint]);
 
-  // Event delegation handler for filmstrip clicks (avoids individual event listeners)
-  const handleFilmstripClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  // Handle phase header click for dynamic zoom (toggle focus on a phase column)
+  const handlePhaseClick = useCallback((phase: string) => {
+    setFocusedPhase((prev) => (prev === phase ? null : phase));
+  }, []);
+
+  // Event delegation handler for rep-gallery clicks (avoids individual event listeners)
+  const handleRepGalleryClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
+
+    // Handle phase header button clicks for dynamic zoom
+    if (target.tagName === 'BUTTON' && target.dataset.phase) {
+      handlePhaseClick(target.dataset.phase);
+      return;
+    }
+
+    // Handle thumbnail canvas clicks for seeking
     if (target.tagName === 'CANVAS' && target.dataset.seekTime) {
       const seekTime = parseFloat(target.dataset.seekTime);
+      const repNum = target.dataset.repNum ? parseInt(target.dataset.repNum, 10) : null;
       if (!isNaN(seekTime) && videoRef.current) {
         videoRef.current.currentTime = seekTime;
+        // Also set the current rep index when clicking a thumbnail
+        if (repNum !== null && !isNaN(repNum)) {
+          setCurrentRepIndex(repNum - 1); // Convert to 0-indexed
+        }
       }
     }
-  }, [videoRef]);
+  }, [videoRef, setCurrentRepIndex, handlePhaseClick]);
 
-  // Render the filmstrip with actual thumbnails
-  const renderFilmstrip = useCallback(() => {
-    const container = filmstripRef.current;
+  // Double-click handler for rep-gallery - toggles phase focus
+  const handleRepGalleryDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+
+    // Find the phase from the canvas or its parent cell
+    let phase: string | undefined;
+    if (target.tagName === 'CANVAS') {
+      // Look for phase in parent cell
+      const cell = target.closest('.rep-gallery-cell');
+      phase = (cell as HTMLElement)?.dataset.phase;
+    } else if (target.classList.contains('rep-gallery-cell')) {
+      phase = target.dataset.phase;
+    } else if (target.classList.contains('rep-gallery-thumbnail')) {
+      const cell = target.closest('.rep-gallery-cell');
+      phase = (cell as HTMLElement)?.dataset.phase;
+    }
+
+    if (phase) {
+      handlePhaseClick(phase);
+    }
+  }, [handlePhaseClick]);
+
+  // Render the multi-rep rep-gallery with all reps as scrollable rows
+  // Uses in-place DOM updates to preserve scroll position
+  const renderRepGallery = useCallback(() => {
+    const container = repGalleryRef.current;
     if (!container) return;
 
-    container.innerHTML = '';
-
+    // Handle empty state
     if (repCount === 0 || repThumbnails.size === 0) {
       container.innerHTML =
-        '<div class="filmstrip-empty">Complete a rep to see checkpoints</div>';
+        '<div class="rep-gallery-empty">Complete a rep to see checkpoints</div>';
       return;
     }
 
-    // Get the current rep's thumbnails (using appState.currentRepIndex + 1 since repNumber is 1-indexed)
+    // Get sorted rep numbers
+    const repNumbers = Array.from(repThumbnails.keys()).sort((a, b) => a - b);
     const currentRepNum = appState.currentRepIndex + 1;
-    const positions = repThumbnails.get(currentRepNum);
 
-    if (!positions || positions.size === 0) {
-      container.innerHTML = `<div class="filmstrip-empty">Rep ${currentRepNum} - no thumbnails</div>`;
-      return;
+    // Check if phases changed - if so, clear the gallery and rebuild
+    const phasesKey = currentPhases.join(',');
+    let headerRow = container.querySelector('.rep-gallery-header') as HTMLElement;
+    const existingPhasesKey = headerRow?.dataset.phasesKey;
+
+    if (headerRow && existingPhasesKey !== phasesKey) {
+      // Phases changed - clear the entire gallery to rebuild with new phases
+      const rowsContainer = container.querySelector('.rep-gallery-rows');
+      if (rowsContainer) {
+        rowsContainer.innerHTML = '';
+      }
+      headerRow.remove();
+      headerRow = null as unknown as HTMLElement;
     }
 
-    // Render thumbnails for each position in order
-    for (const positionName of POSITION_ORDER) {
-      const candidate = positions.get(positionName);
-      if (!candidate?.frameImage) continue;
+    // Get or create header
+    if (!headerRow) {
+      headerRow = document.createElement('div');
+      headerRow.className = 'rep-gallery-header';
+      headerRow.dataset.phasesKey = phasesKey; // Track which phases this header was created for
 
-      const wrapper = document.createElement('div');
-      wrapper.className = 'filmstrip-thumbnail';
-      wrapper.title = `${POSITION_LABELS[positionName] || positionName} at ${candidate.videoTime?.toFixed(2)}s`;
+      // Empty spacer to align with row rep numbers
+      const repSpacer = document.createElement('div');
+      repSpacer.className = 'rep-gallery-header-rep';
+      headerRow.appendChild(repSpacer);
 
-      // Create canvas and draw the thumbnail
-      const canvas = document.createElement('canvas');
-      canvas.width = candidate.frameImage.width;
-      canvas.height = candidate.frameImage.height;
-      canvas.className = 'filmstrip-canvas';
-
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.putImageData(candidate.frameImage, 0, 0);
+      for (const positionName of currentPhases) {
+        const phaseBtn = document.createElement('button');
+        phaseBtn.type = 'button';
+        const isFocused = focusedPhase === positionName;
+        const isMinimized = focusedPhase && !isFocused;
+        phaseBtn.className = `rep-gallery-header-phase${isFocused ? ' rep-gallery-header-phase--focused' : ''}${isMinimized ? ' rep-gallery-header-phase--minimized' : ''}`;
+        phaseBtn.textContent = PHASE_LABELS[positionName] || positionName;
+        phaseBtn.dataset.phase = positionName;
+        phaseBtn.title = isFocused ? 'Click to show all phases' : `Click to focus on ${PHASE_LABELS[positionName] || positionName}`;
+        headerRow.appendChild(phaseBtn);
       }
-
-      // Store seek time as data attribute (click handled by event delegation)
-      if (candidate.videoTime !== undefined) {
-        canvas.style.cursor = 'pointer';
-        canvas.dataset.seekTime = candidate.videoTime.toString();
-      }
-
-      // Add position label
-      const label = document.createElement('span');
-      label.className = 'filmstrip-label';
-      label.textContent = POSITION_LABELS[positionName] || positionName;
-
-      wrapper.appendChild(canvas);
-      wrapper.appendChild(label);
-      container.appendChild(wrapper);
+      container.insertBefore(headerRow, container.firstChild);
     }
-  }, [repCount, repThumbnails, appState.currentRepIndex]);
 
-  // Re-render filmstrip when rep changes or thumbnails update
+    // Update header classes for focus state
+    headerRow.className = `rep-gallery-header${focusedPhase ? ' rep-gallery-header--focused' : ''}`;
+    const headerPhases = headerRow.querySelectorAll('.rep-gallery-header-phase');
+    headerPhases.forEach((btn) => {
+      const phase = (btn as HTMLElement).dataset.phase;
+      const isFocused = focusedPhase === phase;
+      const isMinimized = focusedPhase && !isFocused;
+      btn.className = `rep-gallery-header-phase${isFocused ? ' rep-gallery-header-phase--focused' : ''}${isMinimized ? ' rep-gallery-header-phase--minimized' : ''}`;
+      (btn as HTMLElement).title = isFocused ? 'Click to show all phases' : `Click to focus on ${PHASE_LABELS[phase || ''] || phase}`;
+    });
+
+    // Get or create rows container
+    let rowsContainer = container.querySelector('.rep-gallery-rows') as HTMLElement;
+    if (!rowsContainer) {
+      rowsContainer = document.createElement('div');
+      rowsContainer.className = 'rep-gallery-rows';
+      container.appendChild(rowsContainer);
+    }
+
+    // Track existing rows by rep number
+    const existingRows = new Map<number, HTMLElement>();
+    rowsContainer.querySelectorAll('.rep-gallery-row').forEach((row) => {
+      const repNum = parseInt((row as HTMLElement).dataset.repNum || '0', 10);
+      if (repNum > 0) {
+        existingRows.set(repNum, row as HTMLElement);
+      }
+    });
+
+    // Update or create rows for each rep
+    let lastRow: HTMLElement | null = null;
+    for (const repNum of repNumbers) {
+      const positions = repThumbnails.get(repNum);
+      if (!positions || positions.size === 0) continue;
+
+      let row: HTMLElement = existingRows.get(repNum) || document.createElement('div');
+      const isNewRow = !existingRows.has(repNum);
+
+      if (isNewRow) {
+        // Initialize new row
+        row.className = 'rep-gallery-row';
+        row.dataset.repNum = repNum.toString();
+
+        // Rep number label
+        const repNumLabel = document.createElement('div');
+        repNumLabel.className = 'rep-gallery-row-rep';
+        repNumLabel.textContent = repNum.toString();
+        row.appendChild(repNumLabel);
+
+        // Create cells for each position
+        for (const positionName of currentPhases) {
+          const cell = document.createElement('div');
+          cell.className = 'rep-gallery-cell';
+          cell.dataset.phase = positionName;
+          cell.innerHTML = '<span class="rep-gallery-cell-empty">—</span>';
+          row.appendChild(cell);
+        }
+
+        // Insert in correct position (after last row or at start)
+        if (lastRow) {
+          lastRow.after(row);
+        } else {
+          rowsContainer.insertBefore(row, rowsContainer.firstChild);
+        }
+      }
+
+      // Update row classes
+      row.className = `rep-gallery-row${focusedPhase ? ' rep-gallery-row--has-focus' : ''}${repNum === currentRepNum ? ' rep-gallery-row--current' : ''}`;
+
+      // Update cells
+      const cells = row.querySelectorAll('.rep-gallery-cell');
+      cells.forEach((cell, idx) => {
+        const positionName = currentPhases[idx];
+        const candidate = positions.get(positionName);
+        const isFocused = focusedPhase === positionName;
+        const isMinimized = focusedPhase && !isFocused;
+
+        // Update cell classes
+        cell.className = `rep-gallery-cell${isFocused ? ' rep-gallery-cell--focused' : ''}${isMinimized ? ' rep-gallery-cell--minimized' : ''}`;
+
+        if (candidate?.frameImage) {
+          // Check if we need to update the canvas
+          let wrapper = cell.querySelector('.rep-gallery-thumbnail') as HTMLElement;
+          let canvas = cell.querySelector('.rep-gallery-canvas') as HTMLCanvasElement;
+
+          if (!wrapper) {
+            // Create wrapper and canvas
+            cell.innerHTML = '';
+            wrapper = document.createElement('div');
+            wrapper.className = 'rep-gallery-thumbnail';
+            canvas = document.createElement('canvas');
+            canvas.className = 'rep-gallery-canvas';
+            wrapper.appendChild(canvas);
+            cell.appendChild(wrapper);
+          }
+
+          // Update wrapper classes
+          wrapper.className = `rep-gallery-thumbnail${isFocused ? ' rep-gallery-thumbnail--focused' : ''}${isMinimized ? ' rep-gallery-thumbnail--minimized' : ''}`;
+          wrapper.title = `${PHASE_LABELS[positionName] || positionName} at ${candidate.videoTime?.toFixed(2)}s`;
+
+          // Update canvas if dimensions changed or first render
+          if (canvas.width !== candidate.frameImage.width || canvas.height !== candidate.frameImage.height) {
+            canvas.width = candidate.frameImage.width;
+            canvas.height = candidate.frameImage.height;
+          }
+
+          // Always update the image data (thumbnails can improve during extraction)
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.putImageData(candidate.frameImage, 0, 0);
+          }
+
+          // Update data attributes
+          if (candidate.videoTime !== undefined) {
+            canvas.style.cursor = 'pointer';
+            canvas.dataset.seekTime = candidate.videoTime.toString();
+            canvas.dataset.repNum = repNum.toString();
+          }
+        } else if (!cell.querySelector('.rep-gallery-cell-empty')) {
+          // Show empty placeholder if no thumbnail
+          cell.innerHTML = '<span class="rep-gallery-cell-empty">—</span>';
+        }
+      });
+
+      lastRow = row;
+      existingRows.delete(repNum); // Mark as processed
+    }
+
+    // Remove rows that no longer exist
+    existingRows.forEach((row) => row.remove());
+
+    // Only auto-scroll when the current rep index actually changes
+    const currentRepIndex = appState.currentRepIndex;
+    if (prevRepIndexRef.current !== currentRepIndex) {
+      prevRepIndexRef.current = currentRepIndex;
+      requestAnimationFrame(() => {
+        const currentRow = rowsContainer.querySelector('.rep-gallery-row--current');
+        if (currentRow) {
+          currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }
+  }, [repCount, repThumbnails, appState.currentRepIndex, focusedPhase, currentPhases]);
+
+  // Re-render rep-gallery when rep changes or thumbnails update
   useEffect(() => {
-    renderFilmstrip();
-  }, [renderFilmstrip]);
+    renderRepGallery();
+  }, [renderRepGallery]);
 
   return (
     <section className="video-section">
@@ -283,7 +473,7 @@ const VideoSectionV2: React.FC = () => {
             <span className="rep-nav-label">Rep {appState.currentRepIndex + 1}/{repCount}</span>
             <span className="rep-nav-dot">•</span>
             <span className="rep-nav-position">
-              {currentPosition ? (POSITION_LABELS[currentPosition] || currentPosition) : '—'}
+              {currentPosition ? (PHASE_LABELS[currentPosition] || currentPosition) : '—'}
             </span>
           </span>
 
@@ -332,17 +522,24 @@ const VideoSectionV2: React.FC = () => {
                 </svg>
                 <span>Camera Roll</span>
               </label>
-              <button
-                type="button"
-                id="load-hardcoded-btn"
-                className="source-picker-btn sample-btn"
-                onClick={loadHardcodedVideo}
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z" />
-                </svg>
-                <span>Sample</span>
-              </button>
+              <div className="source-picker-samples">
+                <button
+                  type="button"
+                  id="load-hardcoded-btn"
+                  className="source-picker-btn sample-btn"
+                  onClick={loadHardcodedVideo}
+                >
+                  <span>Swing</span>
+                </button>
+                <button
+                  type="button"
+                  id="load-pistol-btn"
+                  className="source-picker-btn sample-btn"
+                  onClick={loadPistolSquatSample}
+                >
+                  <span>Pistol</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -418,7 +615,7 @@ const VideoSectionV2: React.FC = () => {
                     <div className="hud-overlay-angle hud-overlay-position">
                       <span className="hud-overlay-angle-label">POS</span>
                       <span className="hud-overlay-angle-value">
-                        {POSITION_LABELS[currentPosition] || currentPosition}
+                        {PHASE_LABELS[currentPosition] || currentPosition}
                       </span>
                     </div>
                   )}
@@ -495,14 +692,14 @@ const VideoSectionV2: React.FC = () => {
         </div>
       </div>
 
-      {/* Checkpoint Filmstrip - thumbnails only, no nav (nav is in strip above) */}
-      <div className="filmstrip-section">
-        <div className="filmstrip-container" ref={filmstripRef} onClick={handleFilmstripClick} />
+      {/* Rep Gallery Widget - inline multi-rep viewer with dynamic zoom */}
+      <div className="rep-gallery-section">
+        <div className="rep-gallery-container" ref={repGalleryRef} onClick={handleRepGalleryClick} onDoubleClick={handleRepGalleryDoubleClick} />
         {/* Gallery button - show when there are reps */}
         {repCount > 0 && repThumbnails.size > 0 && (
           <button
             type="button"
-            className="filmstrip-gallery-btn"
+            className="rep-gallery-gallery-btn"
             onClick={() => setShowGallery(true)}
             aria-label="View all reps"
             title="View all reps"
@@ -515,6 +712,17 @@ const VideoSectionV2: React.FC = () => {
             </svg>
           </button>
         )}
+      </div>
+
+      {/* Exercise detection badge - below rep gallery */}
+      <div className="exercise-detection-section">
+        <ExerciseDetectionBadge
+          detectedExercise={detectedExercise}
+          confidence={detectionConfidence}
+          isLocked={isDetectionLocked}
+          onOverride={setExerciseType}
+          workingSide={workingLeg}
+        />
       </div>
 
       {/* Rep Gallery Modal */}

@@ -2,7 +2,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Route, Routes } from 'react-router-dom';
-import { SwingAnalyzerProvider } from '../contexts/SwingAnalyzerContext';
+import { SwingAnalyzerProvider } from '../contexts/ExerciseAnalyzerContext';
 import { GIT_BRANCH } from '../generated_version';
 import VideoSectionV2 from './VideoSectionV2';
 import './App.css';

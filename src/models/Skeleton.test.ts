@@ -620,4 +620,152 @@ describe('Skeleton', () => {
       expect(angle).toBeCloseTo(0, 0); // Should use left arm (straight down)
     });
   });
+
+  describe('getKneeAngleForSide', () => {
+    it('calculates left knee angle correctly (straight leg)', () => {
+      const skeleton = createCocoSkeleton({
+        leftHip: kp(100, 200),
+        leftKnee: kp(100, 300),
+        leftAnkle: kp(100, 400),
+      });
+
+      const angle = skeleton.getKneeAngleForSide('left');
+      expect(angle).toBeCloseTo(180, 0); // Straight leg
+    });
+
+    it('calculates right knee angle correctly (straight leg)', () => {
+      const skeleton = createCocoSkeleton({
+        rightHip: kp(100, 200),
+        rightKnee: kp(100, 300),
+        rightAnkle: kp(100, 400),
+      });
+
+      const angle = skeleton.getKneeAngleForSide('right');
+      expect(angle).toBeCloseTo(180, 0); // Straight leg
+    });
+
+    it('calculates bent knee angle (90 degrees)', () => {
+      const skeleton = createCocoSkeleton({
+        leftHip: kp(100, 200),
+        leftKnee: kp(100, 300),
+        leftAnkle: kp(200, 300), // Ankle at 90° to hip-knee line
+      });
+
+      const angle = skeleton.getKneeAngleForSide('left');
+      expect(angle).toBeCloseTo(90, 0);
+    });
+
+    it('returns 180 (fallback) when keypoints are missing', () => {
+      const skeleton = createCocoSkeleton({
+        leftHip: kp(100, 200),
+        // Missing knee and ankle
+      });
+
+      const angle = skeleton.getKneeAngleForSide('left');
+      expect(angle).toBe(180);
+    });
+
+    it('caches the result on subsequent calls', () => {
+      const skeleton = createCocoSkeleton({
+        leftHip: kp(100, 200),
+        leftKnee: kp(100, 300),
+        leftAnkle: kp(100, 400),
+      });
+
+      const angle1 = skeleton.getKneeAngleForSide('left');
+      const angle2 = skeleton.getKneeAngleForSide('left');
+      expect(angle1).toBe(angle2);
+    });
+
+    it('calculates different angles for left and right sides', () => {
+      const skeleton = createCocoSkeleton({
+        leftHip: kp(100, 200),
+        leftKnee: kp(100, 300),
+        leftAnkle: kp(100, 400), // Straight leg
+        rightHip: kp(200, 200),
+        rightKnee: kp(200, 300),
+        rightAnkle: kp(300, 300), // Bent at 90°
+      });
+
+      const leftAngle = skeleton.getKneeAngleForSide('left');
+      const rightAngle = skeleton.getKneeAngleForSide('right');
+
+      expect(leftAngle).toBeCloseTo(180, 0);
+      expect(rightAngle).toBeCloseTo(90, 0);
+    });
+  });
+
+  describe('getHipAngleForSide', () => {
+    it('calculates left hip angle correctly (standing upright)', () => {
+      const skeleton = createCocoSkeleton({
+        leftKnee: kp(100, 400),
+        leftHip: kp(100, 300),
+        leftShoulder: kp(100, 100),
+      });
+
+      const angle = skeleton.getHipAngleForSide('left');
+      expect(angle).toBeCloseTo(180, 0); // Standing upright
+    });
+
+    it('calculates right hip angle correctly (standing upright)', () => {
+      const skeleton = createCocoSkeleton({
+        rightKnee: kp(100, 400),
+        rightHip: kp(100, 300),
+        rightShoulder: kp(100, 100),
+      });
+
+      const angle = skeleton.getHipAngleForSide('right');
+      expect(angle).toBeCloseTo(180, 0); // Standing upright
+    });
+
+    it('calculates bent hip angle (90 degrees)', () => {
+      const skeleton = createCocoSkeleton({
+        leftKnee: kp(100, 400),
+        leftHip: kp(100, 300),
+        leftShoulder: kp(200, 300), // Shoulder at 90° to knee-hip line
+      });
+
+      const angle = skeleton.getHipAngleForSide('left');
+      expect(angle).toBeCloseTo(90, 0);
+    });
+
+    it('returns 180 (fallback) when keypoints are missing', () => {
+      const skeleton = createCocoSkeleton({
+        leftHip: kp(100, 300),
+        // Missing knee and shoulder
+      });
+
+      const angle = skeleton.getHipAngleForSide('left');
+      expect(angle).toBe(180);
+    });
+
+    it('caches the result on subsequent calls', () => {
+      const skeleton = createCocoSkeleton({
+        leftKnee: kp(100, 400),
+        leftHip: kp(100, 300),
+        leftShoulder: kp(100, 100),
+      });
+
+      const angle1 = skeleton.getHipAngleForSide('left');
+      const angle2 = skeleton.getHipAngleForSide('left');
+      expect(angle1).toBe(angle2);
+    });
+
+    it('calculates different angles for left and right sides', () => {
+      const skeleton = createCocoSkeleton({
+        leftKnee: kp(100, 400),
+        leftHip: kp(100, 300),
+        leftShoulder: kp(100, 100), // Standing upright
+        rightKnee: kp(200, 400),
+        rightHip: kp(200, 300),
+        rightShoulder: kp(300, 300), // Bent at 90°
+      });
+
+      const leftAngle = skeleton.getHipAngleForSide('left');
+      const rightAngle = skeleton.getHipAngleForSide('right');
+
+      expect(leftAngle).toBeCloseTo(180, 0);
+      expect(rightAngle).toBeCloseTo(90, 0);
+    });
+  });
 });

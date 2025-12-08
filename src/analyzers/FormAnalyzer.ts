@@ -107,4 +107,7 @@ export interface FormAnalyzer {
 
   /** Get all valid phases for this exercise */
   getPhases(): string[];
+
+  /** Get the working side for exercises that support it (e.g., pistol squat left/right leg) */
+  getWorkingLeg?(): 'left' | 'right' | null;
 }

@@ -258,10 +258,18 @@ main {
   box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
 }
 
+.source-picker-samples {
+  display: flex;
+  gap: 12px;
+}
+
 .source-picker-btn.sample-btn {
   background: linear-gradient(135deg, #34c759, #28a745);
   color: white;
   box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+  min-width: auto;
+  padding: 12px 24px;
+  font-size: 15px;
 }
 
 .source-picker-btn:hover {
@@ -702,6 +710,12 @@ main {
   right: 12px;
 }
 
+.hud-overlay-bottom-left {
+  position: absolute;
+  bottom: 70px; /* Above video controls */
+  left: 12px;
+}
+
 .hud-overlay-status {
   display: flex;
   align-items: center;
@@ -777,6 +791,11 @@ main {
   .hud-overlay-bottom {
     bottom: 60px;
     right: 8px;
+  }
+
+  .hud-overlay-bottom-left {
+    bottom: 60px;
+    left: 8px;
   }
 
   .hud-overlay-status {
@@ -920,51 +939,220 @@ main {
    FILMSTRIP - Matches HUD aesthetic
    ============================================ */
 
-.filmstrip-section {
-  --filmstrip-bg: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0d1117 100%);
-  --filmstrip-accent: #00d4aa;
-  --filmstrip-text: rgba(255, 255, 255, 0.7);
-  --filmstrip-border: rgba(255, 255, 255, 0.08);
+.rep-gallery-section {
+  --rep-gallery-bg: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0d1117 100%);
+  --rep-gallery-accent: #00d4aa;
+  --rep-gallery-text: rgba(255, 255, 255, 0.7);
+  --rep-gallery-border: rgba(255, 255, 255, 0.08);
 
   position: relative;
-  background: var(--filmstrip-bg);
+  background: var(--rep-gallery-bg);
   border-radius: 12px;
   padding: 1rem;
   margin-top: 1rem;
   box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.4),
-    0 0 0 1px var(--filmstrip-border);
+    0 0 0 1px var(--rep-gallery-border);
 }
 
-.filmstrip-container {
+/* Multi-Rep Filmstrip Container */
+.rep-gallery-container {
   display: flex;
-  gap: 0.75rem;
-  justify-content: center;
-  flex-wrap: wrap;
+  flex-direction: column;
 }
 
-/* Thumbnail wrapper - uses .filmstrip-thumbnail from JS */
-.filmstrip-thumbnail {
+/* Sticky header row with phase labels */
+.rep-gallery-header {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--rep-gallery-border);
+  background: var(--rep-gallery-bg);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.rep-gallery-header-rep {
+  /* Spacer to align with row rep numbers - no visible content */
+  flex: 0 0 28px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--rep-gallery-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  padding: 0.25rem;
+}
+
+/* When a phase is focused, expand it and shrink others */
+.rep-gallery-header--focused .rep-gallery-header-phase--focused {
+  flex: 3;
+}
+
+.rep-gallery-header--focused .rep-gallery-header-phase--minimized {
+  flex: 0 0 30px;
+}
+
+.rep-gallery-header-phase {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px; /* Touch-friendly target */
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--rep-gallery-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  padding: 0.5rem 0.25rem;
+  /* Button reset for clickable phase headers */
+  background: rgba(0, 212, 170, 0.05);
+  border: 1px solid rgba(0, 212, 170, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rep-gallery-header-phase:hover {
+  background: rgba(0, 212, 170, 0.1);
+  border-color: rgba(0, 212, 170, 0.3);
+}
+
+.rep-gallery-header-phase--focused {
+  background: rgba(0, 212, 170, 0.2);
+  border-color: var(--rep-gallery-accent);
+  color: #fff;
+}
+
+.rep-gallery-header-phase--minimized {
+  opacity: 0.5;
+}
+
+/* Scrollable rows container - shows ~2.5 rows */
+.rep-gallery-rows {
+  max-height: 220px;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rep-gallery-accent) transparent;
+}
+
+.rep-gallery-rows::-webkit-scrollbar {
+  width: 4px;
+}
+
+.rep-gallery-rows::-webkit-scrollbar-thumb {
+  background: var(--rep-gallery-accent);
+  border-radius: 2px;
+}
+
+.rep-gallery-rows::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Each rep row */
+.rep-gallery-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--rep-gallery-border);
+  scroll-snap-align: start;
+  transition: background 0.2s ease;
+}
+
+.rep-gallery-row:last-child {
+  border-bottom: none;
+}
+
+.rep-gallery-row--current {
+  background: rgba(0, 212, 170, 0.1);
+  border-left: 3px solid var(--rep-gallery-accent);
+  margin-left: -3px;
+  padding-left: 3px;
+}
+
+/* Rep number in row */
+.rep-gallery-row-rep {
+  flex: 0 0 28px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rep-gallery-row--current .rep-gallery-row-rep {
+  color: var(--rep-gallery-accent);
+}
+
+/* Cell containing thumbnail */
+.rep-gallery-cell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: flex 0.3s ease;
+}
+
+/* Dynamic zoom - focused column expands, others shrink */
+.rep-gallery-row--has-focus .rep-gallery-cell--focused {
+  flex: 3;
+}
+
+.rep-gallery-row--has-focus .rep-gallery-cell--minimized {
+  flex: 0 0 30px;
+}
+
+.rep-gallery-cell-empty {
+  color: var(--rep-gallery-text);
+  opacity: 0.4;
+  font-size: 0.75rem;
+}
+
+/* Thumbnail wrapper */
+.rep-gallery-thumbnail {
   position: relative;
-  flex: 0 0 auto;
-  width: 90px;
-  border-radius: 8px;
+  width: 100%;
+  max-width: 70px;
+  border-radius: 6px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--filmstrip-border);
-  transition: all 0.2s ease;
+  border: 1px solid var(--rep-gallery-border);
+  transition: all 0.3s ease;
 }
 
-.filmstrip-thumbnail:hover {
-  transform: translateY(-3px) scale(1.02);
-  border-color: var(--filmstrip-accent);
+.rep-gallery-thumbnail:hover {
+  transform: scale(1.05);
+  border-color: var(--rep-gallery-accent);
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.4),
-    0 0 0 1px var(--filmstrip-accent);
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--rep-gallery-accent);
 }
 
-/* Canvas inside thumbnail - portrait aspect ratio matching capture */
-.filmstrip-canvas {
+/* Focused thumbnail expands */
+.rep-gallery-thumbnail--focused {
+  max-width: 140px;
+  border-color: var(--rep-gallery-accent);
+}
+
+/* Minimized thumbnail shrinks */
+.rep-gallery-thumbnail--minimized {
+  max-width: 40px;
+  opacity: 0.6;
+}
+
+.rep-gallery-thumbnail--minimized:hover {
+  opacity: 1;
+}
+
+/* Canvas inside thumbnail */
+.rep-gallery-canvas {
   width: 100%;
   height: auto;
   display: block;
@@ -972,32 +1160,18 @@ main {
   object-fit: cover;
 }
 
-/* Position label */
-.filmstrip-label {
-  display: block;
-  background: rgba(0, 0, 0, 0.6);
-  color: var(--filmstrip-accent);
-  padding: 0.375rem 0.5rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  font-weight: 600;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
 /* Empty state */
-.filmstrip-empty {
+.rep-gallery-empty {
   text-align: center;
-  color: var(--filmstrip-text);
-  padding: 1.5rem;
+  color: var(--rep-gallery-text);
+  padding: 2rem 1rem;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
 }
 
-/* Gallery button */
-.filmstrip-gallery-btn {
+/* Gallery button - keep for compare mode */
+.rep-gallery-gallery-btn {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
@@ -1005,86 +1179,156 @@ main {
   height: 2rem;
   border-radius: 0.5rem;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--filmstrip-border);
-  color: var(--filmstrip-text);
+  border: 1px solid var(--rep-gallery-border);
+  color: var(--rep-gallery-text);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
+  z-index: 10; /* Above header phase buttons */
 }
 
-.filmstrip-gallery-btn:hover {
+.rep-gallery-gallery-btn:hover {
   background: rgba(255, 255, 255, 0.15);
-  color: var(--filmstrip-accent);
-  border-color: var(--filmstrip-accent);
+  color: var(--rep-gallery-accent);
+  border-color: var(--rep-gallery-accent);
 }
 
-.filmstrip-gallery-btn:focus-visible {
-  outline: 2px solid var(--filmstrip-accent);
+.rep-gallery-gallery-btn:focus-visible {
+  outline: 2px solid var(--rep-gallery-accent);
   outline-offset: 2px;
-}
-
-/* Navigation controls */
-.filmstrip-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--filmstrip-border);
-}
-
-.filmstrip-nav-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--filmstrip-border);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.filmstrip-nav-btn:hover:not(:disabled) {
-  background: rgba(0, 212, 170, 0.15);
-  border-color: var(--filmstrip-accent);
-  color: var(--filmstrip-accent);
-}
-
-.filmstrip-nav-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.filmstrip-rep-indicator {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.75rem;
-  min-width: 80px;
-  text-align: center;
-  letter-spacing: 0.05em;
 }
 
 /* Mobile filmstrip */
 @media (max-width: 480px) {
-  .filmstrip-container {
-    gap: 0.5rem;
+  .rep-gallery-header,
+  .rep-gallery-row {
+    gap: 0.25rem;
   }
 
-  .filmstrip-thumbnail {
-    width: 70px;
+  .rep-gallery-header-rep,
+  .rep-gallery-row-rep {
+    flex: 0 0 24px;
   }
 
-  .filmstrip-label {
+  .rep-gallery-rows {
+    max-height: 180px;
+  }
+
+  .rep-gallery-thumbnail {
+    max-width: 55px;
+  }
+
+  /* Adjust focused/minimized sizes for mobile */
+  .rep-gallery-thumbnail--focused {
+    max-width: 100px;
+  }
+
+  .rep-gallery-thumbnail--minimized {
+    max-width: 30px;
+  }
+
+  .rep-gallery-header--focused .rep-gallery-header-phase--minimized,
+  .rep-gallery-row--has-focus .rep-gallery-cell--minimized {
+    flex: 0 0 24px;
+  }
+
+  .rep-gallery-header-phase {
     font-size: 0.5rem;
-    padding: 0.25rem;
   }
+
+  .rep-gallery-row-rep {
+    font-size: 0.75rem;
+  }
+}
+
+/* ============================================
+   Exercise Detection Section
+   ============================================ */
+
+.exercise-detection-section {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem 0;
+}
+
+/* Exercise Detection Badge */
+.exercise-detection-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 20px;
+  font-size: 13px;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.exercise-detection-badge__icon {
+  font-size: 16px;
+}
+
+.exercise-detection-badge__label {
+  font-weight: 500;
+}
+
+.exercise-detection-badge__side {
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.exercise-detection-badge__confidence {
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.exercise-detection-badge__confidence--high {
+  background: #22c55e;
+}
+
+.exercise-detection-badge__confidence--medium {
+  background: #eab308;
+}
+
+.exercise-detection-badge__confidence--low {
+  background: #f97316;
+}
+
+.exercise-detection-badge__overrides {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  padding-left: 8px;
+}
+
+.exercise-detection-badge__override-btn {
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.exercise-detection-badge__override-btn:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.exercise-detection-badge__override-btn--active {
+  background: #3b82f6;
+  opacity: 1;
+  cursor: default;
 }
 
 /* Analysis Section - Styles moved to AnalysisSection.css */

@@ -58,13 +58,13 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete - controls enabled and filmstrip has thumbnails
+    // Wait for extraction to complete - controls enabled and rep gallery has thumbnails
     // Note: With 0ms mock delay, extraction is instant, so we skip waiting for "Extracting" status
     await page.waitForFunction(
       () => {
         const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 30000 }
@@ -129,10 +129,10 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     try {
       await page.waitForFunction(
         () => {
-          // Check controls enabled and filmstrip has thumbnails
+          // Check controls enabled and rep gallery has thumbnails
           const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-          const filmstrip = document.querySelector('.filmstrip-container');
-          const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+          const repGallery = document.querySelector('.rep-gallery-container');
+          const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
           return playBtn && !playBtn.disabled && thumbnails > 0;
         },
         { timeout: 120000 } // 2 minutes - video seeking is ~500ms/frame in headless Chrome
@@ -209,12 +209,12 @@ test.describe.serial('Extraction Flow: Mock Detector + Real Pipeline', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete - controls enabled and filmstrip has thumbnails
+    // Wait for extraction to complete - controls enabled and rep gallery has thumbnails
     await page.waitForFunction(
       () => {
         const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 30000 }
@@ -324,10 +324,10 @@ test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
     try {
       await page.waitForFunction(
         () => {
-          // Check controls enabled and filmstrip has thumbnails
+          // Check controls enabled and rep gallery has thumbnails
           const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-          const filmstrip = document.querySelector('.filmstrip-container');
-          const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+          const repGallery = document.querySelector('.rep-gallery-container');
+          const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
           return playBtn && !playBtn.disabled && thumbnails > 0;
         },
         { timeout: 300000 } // 5 minutes for full video extraction
@@ -384,10 +384,10 @@ test.describe.skip('Igor 1H Swing: Real Sample Video (slow)', () => {
     // Wait for extraction to complete
     await page.waitForFunction(
       () => {
-        // Check controls enabled and filmstrip has thumbnails
+        // Check controls enabled and rep gallery has thumbnails
         const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 60000 }

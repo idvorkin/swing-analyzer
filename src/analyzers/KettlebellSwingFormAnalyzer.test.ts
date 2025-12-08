@@ -86,8 +86,9 @@ describe('KettlebellSwingFormAnalyzer', () => {
       expect(analyzer.getExerciseName()).toBe('Kettlebell Swing');
     });
 
-    it('returns all phases', () => {
-      expect(analyzer.getPhases()).toEqual(['top', 'connect', 'bottom', 'release']);
+    it('returns all phases in display order', () => {
+      // Display order: bottom first (start of rep cycle visually)
+      expect(analyzer.getPhases()).toEqual(['bottom', 'release', 'top', 'connect']);
     });
   });
 

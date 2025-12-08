@@ -141,11 +141,7 @@ export function validatePoseTrack(data: unknown): data is PoseTrackFile {
     return false;
   }
 
-  if (
-    !['movenet-lightning', 'movenet-thunder', 'blazepose'].includes(
-      metadata.model as string
-    )
-  ) {
+  if (metadata.model !== 'blazepose') {
     return false;
   }
 

@@ -34,6 +34,10 @@ export class Skeleton {
   // Knee angle cache (hip-knee-ankle angle)
   private _kneeAngle: number | null = null;
 
+  // Side-specific angle caches
+  private _kneeAngleBySide: Map<string, number> = new Map();
+  private _hipAngleBySide: Map<string, number> = new Map();
+
   // Elbow angle cache (shoulder-elbow-wrist angle)
   private _elbowAngle: number | null = null;
 
@@ -573,6 +577,112 @@ export class Skeleton {
       this._kneeAngle = 0;
       return 0;
     }
+  }
+
+  /**
+   * Get the knee angle for a specific side (hip-knee-ankle angle)
+   *
+   * @param side - Which leg to measure ('left' or 'right')
+   * @returns Angle in degrees, where ~180° = straight leg, ~90° = deep squat
+   */
+  getKneeAngleForSide(side: 'left' | 'right'): number {
+    const cached = this._kneeAngleBySide.get(side);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    try {
+      const hipName = side === 'left' ? 'leftHip' : 'rightHip';
+      const kneeName = side === 'left' ? 'leftKnee' : 'rightKnee';
+      const ankleName = side === 'left' ? 'leftAnkle' : 'rightAnkle';
+
+      const hip = this.getKeypointByName(hipName);
+      const knee = this.getKeypointByName(kneeName);
+      const ankle = this.getKeypointByName(ankleName);
+
+      if (hip && knee && ankle) {
+        const angle = this.calculateAngleBetweenPoints(hip, knee, ankle);
+        this._kneeAngleBySide.set(side, angle);
+        return angle;
+      }
+
+      // Fallback: return 180 (straight leg) if keypoints missing
+      console.debug(
+        `[Skeleton] Missing keypoints for ${side} knee angle (hip/knee/ankle). Using fallback 180°.`
+      );
+      this._kneeAngleBySide.set(side, 180);
+      return 180;
+    } catch (e) {
+      console.error(`Error calculating knee angle for ${side} side:`, e);
+      this._kneeAngleBySide.set(side, 180);
+      return 180;
+    }
+  }
+
+  /**
+   * Get the hip angle for a specific side (knee-hip-shoulder angle)
+   *
+   * @param side - Which leg to measure ('left' or 'right')
+   * @returns Angle in degrees, where ~180° = standing upright, ~90° = deep hinge
+   */
+  getHipAngleForSide(side: 'left' | 'right'): number {
+    const cached = this._hipAngleBySide.get(side);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    try {
+      const kneeName = side === 'left' ? 'leftKnee' : 'rightKnee';
+      const hipName = side === 'left' ? 'leftHip' : 'rightHip';
+      const shoulderName = side === 'left' ? 'leftShoulder' : 'rightShoulder';
+
+      const knee = this.getKeypointByName(kneeName);
+      const hip = this.getKeypointByName(hipName);
+      const shoulder = this.getKeypointByName(shoulderName);
+
+      if (knee && hip && shoulder) {
+        const angle = this.calculateAngleBetweenPoints(knee, hip, shoulder);
+        this._hipAngleBySide.set(side, angle);
+        return angle;
+      }
+
+      // Fallback: return 180 (standing) if keypoints missing
+      console.debug(
+        `[Skeleton] Missing keypoints for ${side} hip angle (knee/hip/shoulder). Using fallback 180°.`
+      );
+      this._hipAngleBySide.set(side, 180);
+      return 180;
+    } catch (e) {
+      console.error(`Error calculating hip angle for ${side} side:`, e);
+      this._hipAngleBySide.set(side, 180);
+      return 180;
+    }
+  }
+
+  /**
+   * Get the preferred side based on keypoint visibility/confidence.
+   *
+   * This is useful for exercises like pistol squats where one leg is the
+   * "working" leg. Returns the side with better keypoint detection.
+   *
+   * @returns 'left' or 'right' based on which side has higher confidence scores
+   */
+  getPreferredSide(): 'left' | 'right' {
+    // Sum confidence scores for each side's lower body keypoints
+    const getConfidence = (kp: PoseKeypoint | undefined) =>
+      kp?.score ?? kp?.visibility ?? 0;
+
+    const leftScore =
+      getConfidence(this.getKeypointByName('leftHip')) +
+      getConfidence(this.getKeypointByName('leftKnee')) +
+      getConfidence(this.getKeypointByName('leftAnkle'));
+
+    const rightScore =
+      getConfidence(this.getKeypointByName('rightHip')) +
+      getConfidence(this.getKeypointByName('rightKnee')) +
+      getConfidence(this.getKeypointByName('rightAnkle'));
+
+    return rightScore >= leftScore ? 'right' : 'left';
   }
 
   /**
