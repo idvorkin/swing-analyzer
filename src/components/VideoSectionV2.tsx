@@ -192,6 +192,28 @@ const VideoSectionV2: React.FC = () => {
     }
   }, [videoRef, setCurrentRepIndex, handlePhaseClick]);
 
+  // Double-click handler for filmstrip - toggles phase focus
+  const handleFilmstripDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+
+    // Find the phase from the canvas or its parent cell
+    let phase: string | undefined;
+    if (target.tagName === 'CANVAS') {
+      // Look for phase in parent cell
+      const cell = target.closest('.filmstrip-cell');
+      phase = (cell as HTMLElement)?.dataset.phase;
+    } else if (target.classList.contains('filmstrip-cell')) {
+      phase = target.dataset.phase;
+    } else if (target.classList.contains('filmstrip-thumbnail')) {
+      const cell = target.closest('.filmstrip-cell');
+      phase = (cell as HTMLElement)?.dataset.phase;
+    }
+
+    if (phase) {
+      handlePhaseClick(phase);
+    }
+  }, [handlePhaseClick]);
+
   // Render the multi-rep filmstrip with all reps as scrollable rows
   const renderFilmstrip = useCallback(() => {
     const container = filmstripRef.current;
@@ -573,7 +595,7 @@ const VideoSectionV2: React.FC = () => {
 
       {/* Checkpoint Filmstrip - thumbnails only, no nav (nav is in strip above) */}
       <div className="filmstrip-section">
-        <div className="filmstrip-container" ref={filmstripRef} onClick={handleFilmstripClick} />
+        <div className="filmstrip-container" ref={filmstripRef} onClick={handleFilmstripClick} onDoubleClick={handleFilmstripDoubleClick} />
         {/* Gallery button - show when there are reps */}
         {repCount > 0 && repThumbnails.size > 0 && (
           <button
