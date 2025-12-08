@@ -16,11 +16,19 @@ function createMockSkeleton(leftKnee: number, rightKnee: number): Skeleton {
   } as unknown as Skeleton;
 }
 
+// Fast config for unit tests - production uses minFrames: 60, maxFrames: 120
+const TEST_CONFIG = {
+  minFrames: 10,
+  maxFrames: 30,
+  asymmetryThreshold: 35,
+  confidenceThreshold: 70,
+};
+
 describe('ExerciseDetector', () => {
   let detector: ExerciseDetector;
 
   beforeEach(() => {
-    detector = new ExerciseDetector();
+    detector = new ExerciseDetector(TEST_CONFIG);
   });
 
   describe('initial state', () => {

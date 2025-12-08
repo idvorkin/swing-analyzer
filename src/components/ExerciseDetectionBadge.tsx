@@ -48,8 +48,10 @@ export function ExerciseDetectionBadge({
     return '#f97316'; // orange
   };
 
-  const handleOverride = (exercise: DetectedExercise) => {
+  const handleOverride = (e: React.MouseEvent, exercise: DetectedExercise) => {
+    e.stopPropagation(); // Prevent video container from capturing the click
     if (exercise !== detectedExercise) {
+      console.log(`[ExerciseDetectionBadge] Switching from ${detectedExercise} to ${exercise}`);
       onOverride(exercise);
     }
   };
@@ -99,7 +101,8 @@ export function ExerciseDetectionBadge({
           }}
         >
           <button
-            onClick={() => handleOverride('kettlebell-swing')}
+            type="button"
+            onClick={(e) => handleOverride(e, 'kettlebell-swing')}
             disabled={detectedExercise === 'kettlebell-swing'}
             style={{
               padding: '2px 8px',
@@ -116,7 +119,8 @@ export function ExerciseDetectionBadge({
             Swing
           </button>
           <button
-            onClick={() => handleOverride('pistol-squat')}
+            type="button"
+            onClick={(e) => handleOverride(e, 'pistol-squat')}
             disabled={detectedExercise === 'pistol-squat'}
             style={{
               padding: '2px 8px',

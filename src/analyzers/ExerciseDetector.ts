@@ -31,8 +31,8 @@ export interface ExerciseDetectorConfig {
 }
 
 const DEFAULT_CONFIG: ExerciseDetectorConfig = {
-  minFrames: 10,
-  maxFrames: 60,
+  minFrames: 60,  // ~2 seconds at 30fps - need to see actual movement, not just standing
+  maxFrames: 120, // ~4 seconds - see at least one full rep before deciding
   asymmetryThreshold: 35,
   confidenceThreshold: 70,
 };
