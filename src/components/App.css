@@ -955,7 +955,8 @@ main {
 }
 
 .rep-gallery-header-rep {
-  flex: 0 0 40px;
+  /* Spacer to align with row rep numbers - no visible content */
+  flex: 0 0 28px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
   font-weight: 600;
@@ -978,20 +979,21 @@ main {
 .rep-gallery-header-phase {
   flex: 1;
   min-width: 0;
+  min-height: 36px; /* Touch-friendly target */
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: var(--rep-gallery-accent);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   text-align: center;
-  padding: 0.25rem;
+  padding: 0.5rem 0.25rem;
   /* Button reset for clickable phase headers */
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
+  background: rgba(0, 212, 170, 0.05);
+  border: 1px solid rgba(0, 212, 170, 0.2);
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.15s ease;
 }
 
 .rep-gallery-header-phase:hover {
@@ -1054,11 +1056,11 @@ main {
 
 /* Rep number in row */
 .rep-gallery-row-rep {
-  flex: 0 0 40px;
+  flex: 0 0 28px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.7);
   text-align: center;
   display: flex;
   align-items: center;
@@ -1188,7 +1190,7 @@ main {
 
   .rep-gallery-header-rep,
   .rep-gallery-row-rep {
-    flex: 0 0 32px;
+    flex: 0 0 24px;
   }
 
   .rep-gallery-rows {
