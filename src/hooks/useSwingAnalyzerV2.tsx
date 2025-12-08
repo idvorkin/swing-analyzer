@@ -88,6 +88,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   const [detectionConfidence, setDetectionConfidence] = useState<number>(0);
   const [isDetectionLocked, setIsDetectionLocked] = useState<boolean>(false);
   const [currentPhases, setCurrentPhases] = useState<string[]>(DEFAULT_PHASES);
+  const [workingLeg, setWorkingLeg] = useState<'left' | 'right' | null>(null);
 
   // Track if we've recorded extraction start for current session (to avoid spam)
   const hasRecordedExtractionStartRef = useRef<boolean>(false);
@@ -509,6 +510,12 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
         // Update phases when exercise type changes
         const formAnalyzer = pipeline.getFormAnalyzer();
         setCurrentPhases(formAnalyzer.getPhases());
+        // Capture working leg for exercises that support it (duck typing)
+        if ('getWorkingLeg' in formAnalyzer && typeof formAnalyzer.getWorkingLeg === 'function') {
+          setWorkingLeg((formAnalyzer as { getWorkingLeg(): 'left' | 'right' | null }).getWorkingLeg());
+        } else {
+          setWorkingLeg(null);
+        }
       },
       error: (error) => {
         console.error('Error in exercise detection subscription:', error);
@@ -744,6 +751,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setDetectionConfidence(0);
     setIsDetectionLocked(false);
     setCurrentPhases(DEFAULT_PHASES);
+    setWorkingLeg(null);
 
     // Load video safely (handles cleanup, pausing, and race conditions)
     const url = URL.createObjectURL(file);
@@ -810,6 +818,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setDetectionConfidence(0);
       setIsDetectionLocked(false);
       setCurrentPhases(DEFAULT_PHASES);
+      setWorkingLeg(null);
 
       // Try remote URL first, fall back to local
       let videoURL = DEFAULT_SAMPLE_VIDEO;
@@ -894,6 +903,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
       setDetectionConfidence(0);
       setIsDetectionLocked(false);
       setCurrentPhases(DEFAULT_PHASES);
+      setWorkingLeg(null);
 
       // Try remote URL first, fall back to local
       let videoURL = PISTOL_SQUAT_SAMPLE_VIDEO;
@@ -1236,6 +1246,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     setDetectionConfidence(0);
     setIsDetectionLocked(false);
     setCurrentPhases(DEFAULT_PHASES);
+    setWorkingLeg(null);
     setAppState(prev => ({
       ...prev,
       currentRepIndex: 0,
@@ -1350,5 +1361,8 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
 
     // Current phases for this exercise (for rep gallery)
     currentPhases,
+
+    // Working leg (for exercises that support it, e.g., pistol squat)
+    workingLeg,
   };
 }

@@ -307,4 +307,66 @@ describe('PistolSquatFormAnalyzer', () => {
       expect(analyzer.getLastRepQuality()).toBeNull();
     });
   });
+
+  describe('working leg detection', () => {
+    it('starts with null working leg', () => {
+      expect(analyzer.getWorkingLeg()).toBeNull();
+    });
+
+    it('detects left leg as working when left knee is more bent', () => {
+      // Process frames where left knee is consistently more bent (lower angle)
+      for (let i = 0; i < 10; i++) {
+        analyzer.processFrame(createMockSkeleton({
+          leftKnee: 100,   // Working leg - bent
+          rightKnee: 170,  // Extended leg - straight
+          leftHip: 120,
+          rightHip: 170,
+          spine: 20,
+        }), i * 10);
+      }
+
+      expect(analyzer.getWorkingLeg()).toBe('left');
+    });
+
+    it('detects right leg as working when right knee is more bent', () => {
+      // Process frames where right knee is consistently more bent
+      for (let i = 0; i < 10; i++) {
+        analyzer.processFrame(createMockSkeleton({
+          leftKnee: 170,   // Extended leg - straight
+          rightKnee: 100,  // Working leg - bent
+          leftHip: 170,
+          rightHip: 120,
+          spine: 20,
+        }), i * 10);
+      }
+
+      expect(analyzer.getWorkingLeg()).toBe('right');
+    });
+
+    it('allows manual override of working leg', () => {
+      // Auto-detect left
+      for (let i = 0; i < 10; i++) {
+        analyzer.processFrame(createMockSkeleton({
+          leftKnee: 100,
+          rightKnee: 170,
+          leftHip: 120,
+          rightHip: 170,
+          spine: 20,
+        }), i * 10);
+      }
+      expect(analyzer.getWorkingLeg()).toBe('left');
+
+      // Manual override to right
+      analyzer.setWorkingLeg('right');
+      expect(analyzer.getWorkingLeg()).toBe('right');
+    });
+
+    it('resets working leg on reset()', () => {
+      analyzer.setWorkingLeg('left');
+      expect(analyzer.getWorkingLeg()).toBe('left');
+
+      analyzer.reset();
+      expect(analyzer.getWorkingLeg()).toBeNull();
+    });
+  });
 });

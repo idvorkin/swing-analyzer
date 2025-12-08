@@ -666,4 +666,22 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   getPhases(): string[] {
     return ['standing', 'descending', 'bottom', 'ascending'];
   }
+
+  /**
+   * Get the detected working leg (the leg doing the squat).
+   * Returns null if not yet detected (needs a few frames of movement).
+   */
+  getWorkingLeg(): 'left' | 'right' | null {
+    return this.workingLeg;
+  }
+
+  /**
+   * Manually set the working leg (override auto-detection).
+   * Useful when user knows which leg they're training.
+   */
+  setWorkingLeg(leg: 'left' | 'right'): void {
+    this.workingLeg = leg;
+    // Clear votes since we're manually overriding
+    this.legDetectionVotes = { left: 0, right: 0 };
+  }
 }

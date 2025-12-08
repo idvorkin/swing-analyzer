@@ -18,6 +18,8 @@ interface ExerciseDetectionBadgeProps {
   confidence: number;
   isLocked: boolean;
   onOverride: (exercise: DetectedExercise) => void;
+  /** For exercises that support side detection (e.g., pistol squat working leg) */
+  workingSide?: 'left' | 'right' | null;
 }
 
 export function ExerciseDetectionBadge({
@@ -25,6 +27,7 @@ export function ExerciseDetectionBadge({
   confidence,
   isLocked,
   onOverride,
+  workingSide,
 }: ExerciseDetectionBadgeProps) {
   // Don't show anything until we have some detection progress
   if (detectedExercise === 'unknown' && confidence === 0) {
@@ -67,6 +70,21 @@ export function ExerciseDetectionBadge({
       {/* Icon and label */}
       <span style={{ fontSize: '16px' }}>{icon}</span>
       <span style={{ fontWeight: 500 }}>{label}</span>
+
+      {/* Working side indicator (e.g., "Left leg" for pistol squats) */}
+      {workingSide && (
+        <span
+          style={{
+            padding: '2px 6px',
+            background: 'rgba(255, 255, 255, 0.15)',
+            borderRadius: '10px',
+            fontSize: '11px',
+            textTransform: 'capitalize',
+          }}
+        >
+          {workingSide} leg
+        </span>
+      )}
 
       {/* Confidence indicator */}
       {detectedExercise !== 'unknown' && (

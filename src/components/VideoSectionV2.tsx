@@ -56,6 +56,8 @@ const VideoSectionV2: React.FC = () => {
     setExerciseType,
     // Current phases for this exercise
     currentPhases,
+    // Working side (for exercises that support it)
+    workingLeg,
   } = useSwingAnalyzerContext();
 
   // Ref for the rep-gallery container
@@ -704,6 +706,7 @@ const VideoSectionV2: React.FC = () => {
           confidence={detectionConfidence}
           isLocked={isDetectionLocked}
           onOverride={setExerciseType}
+          workingSide={workingLeg}
         />
       </div>
 
