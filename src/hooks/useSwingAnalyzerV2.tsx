@@ -40,6 +40,7 @@ import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import type { DetectedExercise } from '../analyzers';
 import { PHASE_ORDER } from '../components/repGalleryConstants';
+import { buildCheckpointList, findNextCheckpoint, findPreviousCheckpoint } from '../utils/checkpointUtils';
 
 // Throttle interval for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
 const REP_SYNC_INTERVAL_MS = 1000; // 1 second
@@ -1075,29 +1076,12 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
   // ========================================
   // Checkpoint Navigation
   // ========================================
-  const POSITION_ORDER = ['bottom', 'release', 'top', 'connect'] as const;
 
   // Build flat list of all checkpoints sorted by time
+  // Uses currentPhases to support both swing and pistol squat exercises
   const getAllCheckpoints = useCallback(() => {
-    const checkpoints: Array<{ repNum: number; position: string; videoTime: number }> = [];
-
-    for (const [repNum, positions] of repThumbnails.entries()) {
-      for (const posName of POSITION_ORDER) {
-        const candidate = positions.get(posName);
-        if (candidate?.videoTime !== undefined) {
-          checkpoints.push({
-            repNum,
-            position: posName,
-            videoTime: candidate.videoTime,
-          });
-        }
-      }
-    }
-
-    // Sort by video time
-    checkpoints.sort((a, b) => a.videoTime - b.videoTime);
-    return checkpoints;
-  }, [repThumbnails]);
+    return buildCheckpointList(repThumbnails, currentPhases);
+  }, [repThumbnails, currentPhases]);
 
   // ========================================
   // Auto-Sync Rep & Position During Playback
@@ -1149,10 +1133,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const checkpoints = getAllCheckpoints();
     if (checkpoints.length === 0) return;
 
-    const currentTime = video.currentTime;
-
-    // Find the next checkpoint after current time
-    const nextCheckpoint = checkpoints.find(cp => cp.videoTime > currentTime + 0.01);
+    const nextCheckpoint = findNextCheckpoint(checkpoints, video.currentTime);
 
     if (nextCheckpoint) {
       video.pause(); // Pause when seeking to checkpoint
@@ -1174,11 +1155,7 @@ export function useSwingAnalyzerV2(initialState?: Partial<AppState>) {
     const checkpoints = getAllCheckpoints();
     if (checkpoints.length === 0) return;
 
-    const currentTime = video.currentTime;
-
-    // Find the previous checkpoint before current time
-    const prevCheckpoints = checkpoints.filter(cp => cp.videoTime < currentTime - 0.01);
-    const prevCheckpoint = prevCheckpoints[prevCheckpoints.length - 1];
+    const prevCheckpoint = findPreviousCheckpoint(checkpoints, video.currentTime);
 
     if (prevCheckpoint) {
       video.pause(); // Pause when seeking to checkpoint
