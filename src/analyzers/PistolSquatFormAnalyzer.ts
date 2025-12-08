@@ -1,17 +1,20 @@
 /**
  * Pistol Squat Form Analyzer
  *
- * Peak-based state machine for analyzing pistol squat (single-leg squat) form.
+ * Ear-based state machine for analyzing pistol squat (single-leg squat) form.
  * Tracks phases: STANDING → DESCENDING → BOTTOM → ASCENDING → STANDING (rep complete)
  *
- * Key insight: Working leg is detected by comparing knee angle variance between
- * left and right legs. The working leg has the leg that bends more.
+ * Key insight: Uses ear Y position (head height) for checkpoint detection instead of
+ * noisy knee angles. The ear position is much more stable and directly measures
+ * "how low did they go" which is what we actually care about.
  *
- * Phase meanings:
- * - STANDING: Both legs relatively straight, upright posture
- * - DESCENDING: Working knee angle decreasing, moving down
- * - BOTTOM: Deepest squat position, working knee maximally flexed
- * - ASCENDING: Working knee angle increasing, moving up
+ * Checkpoint detection:
+ * - STANDING: Captured when rep starts (lowest ear Y = highest physical position)
+ * - DESCENDING: Captured at 50% of ear Y travel on the way down
+ * - BOTTOM: Captured at highest ear Y (lowest physical position = deepest squat)
+ * - ASCENDING: Captured at 50% of ear Y travel on the way up
+ *
+ * Working leg is detected by comparing knee angle variance between left and right legs.
  */
 
 import type { Skeleton } from '../models/Skeleton';
@@ -70,6 +73,19 @@ interface PhasePeak {
   videoTime?: number;
   score: number;
   angles: { workingKnee: number; workingHip: number; spine: number; extendedKnee: number };
+  earY: number;
+  frameImage?: ImageData;
+}
+
+/**
+ * Frame record for ear-based tracking
+ */
+interface EarFrameRecord {
+  skeleton: Skeleton;
+  timestamp: number;
+  videoTime?: number;
+  earY: number;
+  angles: { workingKnee: number; workingHip: number; spine: number; extendedKnee: number };
   frameImage?: ImageData;
 }
 
@@ -93,7 +109,8 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   // Last completed rep quality
   private lastRepQuality: RepQuality | null = null;
 
-  // Peak tracking for current phase
+  // Peak tracking for current phase (kept for potential future use)
+  // @ts-expect-error - Kept for API compatibility, ear-based tracking uses different mechanism
   private currentPhasePeak: PhasePeak | null = null;
 
   // Peaks from current rep (cleared after rep completes)
@@ -113,7 +130,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   private legDetectionVotes = { left: 0, right: 0 };
   private readonly votesNeededForLock = 5;
 
-  // Knee angle history for detecting direction changes
+  // Knee angle history for detecting direction changes (still used for phase transitions)
   private kneeAngleHistory: number[] = [];
   private readonly historySize = 5;
 
@@ -122,16 +139,17 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   private readonly emaAlpha = 0.3; // Exponential moving average factor
   private readonly minRealisticAngle = 30; // Clamp below this (unrealistic for human anatomy)
 
-  // Trough detection for bottom position
-  private troughCandidate: {
-    angle: number;
-    skeleton: Skeleton;
-    timestamp: number;
-    videoTime?: number;
-    frameImage?: ImageData;
-  } | null = null;
-  private framesAscendingAfterTrough = 0;
-  private readonly framesNeededToConfirmTrough = 3;
+  // Ear-based trough detection for bottom position
+  // Uses ear Y position (head height) which is more stable than knee angles
+  private standingEarY: number | null = null; // Ear Y at rep start (lowest Y = highest position)
+  private bottomCandidate: EarFrameRecord | null = null; // Frame with highest ear Y (lowest position)
+  private framesAscendingAfterBottom = 0; // Frames where ear Y has been decreasing (person rising)
+  private readonly framesNeededToConfirmBottom = 3;
+  private readonly earYThresholdForAscent = 5; // Min ear Y decrease to count as ascending
+
+  // Frame history for capturing 50% checkpoints retroactively
+  private frameHistory: EarFrameRecord[] = [];
+  private readonly maxFrameHistory = 120; // ~4 seconds at 30fps
 
   constructor(thresholds: Partial<PistolSquatThresholds> = {}) {
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
@@ -188,6 +206,28 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   }
 
   /**
+   * Get the average ear Y position from a skeleton.
+   * Higher Y = lower physical position (image coordinates).
+   */
+  private getEarY(skeleton: Skeleton): number {
+    const keypoints = skeleton.getKeypoints();
+    // MediaPipe indices: LEFT_EAR = 7, RIGHT_EAR = 8
+    const leftEar = keypoints[7];
+    const rightEar = keypoints[8];
+
+    if (leftEar && rightEar) {
+      return (leftEar.y + rightEar.y) / 2;
+    } else if (leftEar) {
+      return leftEar.y;
+    } else if (rightEar) {
+      return rightEar.y;
+    }
+    // Fallback: use nose if ears not available
+    const nose = keypoints[0];
+    return nose?.y ?? 0;
+  }
+
+  /**
    * Smooth knee angle using exponential moving average with clamping.
    * Filters out noise and unrealistic readings.
    */
@@ -217,8 +257,9 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     // Detect working leg during early frames
     this.detectWorkingLeg(skeleton);
 
-    // Get all angles
+    // Get all angles and ear position
     const angles = this.getAngles(skeleton);
+    const earY = this.getEarY(skeleton);
 
     // Validate posture - reject horizontal/lying poses
     // This filters out warmup sections where person is lying down
@@ -237,7 +278,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       };
     }
 
-    // Apply smoothing to working knee angle for trough detection
+    // Apply smoothing to working knee angle (still used for phase transitions)
     const smoothedWorkingKnee = this.smoothAngle(angles.workingKnee);
 
     // Track smoothed knee angle history for direction detection
@@ -246,11 +287,24 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       this.kneeAngleHistory = this.kneeAngleHistory.slice(-this.historySize * 2);
     }
 
+    // Create frame record for history
+    const frameRecord: EarFrameRecord = {
+      skeleton,
+      timestamp,
+      videoTime,
+      earY,
+      angles: { ...angles },
+      frameImage,
+    };
+
+    // Add to frame history (for capturing 50% checkpoints retroactively)
+    this.frameHistory.push(frameRecord);
+    if (this.frameHistory.length > this.maxFrameHistory) {
+      this.frameHistory.shift();
+    }
+
     // Track metrics for quality scoring
     this.updateMetrics(angles);
-
-    // Update peak tracking for current phase
-    this.updatePhasePeak(skeleton, timestamp, videoTime, angles, frameImage);
 
     // Increment frames in current phase
     this.framesInPhase++;
@@ -262,29 +316,25 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     switch (this.phase) {
       case 'standing':
         if (this.shouldTransitionToDescending(angles)) {
-          this.finalizePhasePeak('standing');
+          // Capture standing checkpoint and ear Y baseline
+          this.captureStandingCheckpoint(frameRecord);
+          this.standingEarY = earY;
           this.phase = 'descending';
           this.framesInPhase = 0;
-          // Reset trough tracking for new descent
-          this.troughCandidate = null;
-          this.framesAscendingAfterTrough = 0;
+          // Reset bottom tracking for new descent
+          this.bottomCandidate = null;
+          this.framesAscendingAfterBottom = 0;
         }
         break;
 
       case 'descending':
-        // Track trough candidate during descent (use raw angle for responsiveness)
-        this.updateTroughCandidate(
-          angles.workingKnee, // Raw angle for direction detection
-          skeleton,
-          timestamp,
-          videoTime,
-          frameImage
-        );
+        // Track bottom candidate using ear Y (highest Y = lowest position)
+        this.updateBottomCandidate(frameRecord);
 
-        if (this.shouldTransitionToBottom()) {
-          // Trough confirmed! Capture the bottom position from the candidate
-          this.finalizePhasePeak('descending');
-          this.captureTroughAsBottom();
+        if (this.shouldTransitionToBottom(earY)) {
+          // Bottom confirmed! Capture checkpoints
+          this.captureBottomCheckpoint();
+          this.captureDescendingCheckpoint();
           this.phase = 'bottom';
           this.framesInPhase = 0;
         }
@@ -292,7 +342,6 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
 
       case 'bottom':
         if (this.shouldTransitionToAscending(angles)) {
-          this.finalizePhasePeak('bottom');
           this.phase = 'ascending';
           this.framesInPhase = 0;
         }
@@ -300,7 +349,8 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
 
       case 'ascending':
         if (this.shouldTransitionToStanding(angles)) {
-          this.finalizePhasePeak('ascending');
+          // Capture ascending checkpoint at 50% ear Y travel
+          this.captureAscendingCheckpoint(earY);
           this.phase = 'standing';
           this.framesInPhase = 0;
           repCompleted = true;
@@ -359,87 +409,123 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     return positions;
   }
 
+  // ============================================
+  // Ear-based checkpoint capture methods
+  // ============================================
+
   /**
-   * Update peak tracking for current phase
+   * Capture the standing checkpoint when rep starts
    */
-  private updatePhasePeak(
-    skeleton: Skeleton,
-    timestamp: number,
-    videoTime: number | undefined,
-    angles: { workingKnee: number; workingHip: number; extendedKnee: number; spine: number },
-    frameImage?: ImageData
-  ): void {
-    const score = this.calculatePeakScore(this.phase, angles);
+  private captureStandingCheckpoint(frame: EarFrameRecord): void {
+    this.currentRepPeaks.standing = {
+      phase: 'standing',
+      skeleton: frame.skeleton,
+      timestamp: frame.timestamp,
+      videoTime: frame.videoTime,
+      score: frame.angles.workingKnee, // Higher = more upright
+      angles: { ...frame.angles },
+      earY: frame.earY,
+      frameImage: frame.frameImage,
+    };
+  }
 
-    // For BOTTOM, we want the LOWEST knee angle (deepest squat)
-    // For STANDING, we want the HIGHEST knee angle (most upright)
-    // For DESCENDING/ASCENDING, we want the first qualifying frame (timing)
-    const isTimingPhase = this.phase === 'descending' || this.phase === 'ascending';
+  /**
+   * Update the bottom candidate during descent.
+   * Tracks the frame with highest ear Y (lowest physical position).
+   */
+  private updateBottomCandidate(frame: EarFrameRecord): void {
+    // Check if ear is now descending (person ascending physically)
+    if (this.bottomCandidate && frame.earY < this.bottomCandidate.earY - this.earYThresholdForAscent) {
+      this.framesAscendingAfterBottom++;
+    } else if (!this.bottomCandidate || frame.earY >= this.bottomCandidate.earY) {
+      this.framesAscendingAfterBottom = 0;
+    }
 
-    if (isTimingPhase) {
-      if (!this.currentPhasePeak) {
-        this.currentPhasePeak = {
-          phase: this.phase,
-          timestamp,
-          videoTime,
-          skeleton,
-          score,
-          angles: { ...angles },
-          frameImage,
-        };
-      }
-    } else {
-      // For STANDING and BOTTOM, track the best frame
-      if (!this.currentPhasePeak || score > this.currentPhasePeak.score) {
-        this.currentPhasePeak = {
-          phase: this.phase,
-          timestamp,
-          videoTime,
-          skeleton,
-          score,
-          angles: { ...angles },
-          frameImage,
-        };
-      }
+    // Update bottom candidate if this is the highest ear Y (lowest position)
+    if (!this.bottomCandidate || frame.earY > this.bottomCandidate.earY) {
+      this.bottomCandidate = { ...frame };
+      this.framesAscendingAfterBottom = 0;
     }
   }
 
   /**
-   * Calculate how "peak" this frame is for the given phase
+   * Capture the bottom checkpoint from the confirmed bottom candidate
    */
-  private calculatePeakScore(
-    phase: PistolSquatPhase,
-    angles: { workingKnee: number; workingHip: number; spine: number }
-  ): number {
-    switch (phase) {
-      case 'standing':
-        return angles.workingKnee; // Higher knee angle = more upright = better
-      case 'descending':
-        return 180 - angles.workingKnee; // Lower = better (going down)
-      case 'bottom':
-        return 180 - angles.workingKnee; // Lowest knee angle = deepest squat = best
-      case 'ascending':
-        return angles.workingKnee; // Higher = better (going up)
-      default: {
-        const _exhaustiveCheck: never = phase;
-        console.error(`calculatePeakScore: Unhandled phase "${_exhaustiveCheck}"`);
-        return 0;
-      }
-    }
+  private captureBottomCheckpoint(): void {
+    if (!this.bottomCandidate) return;
+
+    this.currentRepPeaks.bottom = {
+      phase: 'bottom',
+      skeleton: this.bottomCandidate.skeleton,
+      timestamp: this.bottomCandidate.timestamp,
+      videoTime: this.bottomCandidate.videoTime,
+      score: this.bottomCandidate.earY, // Higher ear Y = deeper squat = better
+      angles: { ...this.bottomCandidate.angles },
+      earY: this.bottomCandidate.earY,
+      frameImage: this.bottomCandidate.frameImage,
+    };
   }
 
   /**
-   * Finalize the current phase peak and store it
+   * Capture the descending checkpoint at 50% of ear Y travel (on the way down)
    */
-  private finalizePhasePeak(phase: PistolSquatPhase): void {
-    const peak = this.currentPhasePeak;
-    this.currentPhasePeak = null;
+  private captureDescendingCheckpoint(): void {
+    if (!this.standingEarY || !this.bottomCandidate) return;
 
-    if (peak) {
-      this.currentRepPeaks[phase] = peak;
-    } else {
-      console.debug(`finalizePhasePeak: No peak captured for "${phase}" phase`);
-    }
+    const earTravel = this.bottomCandidate.earY - this.standingEarY;
+    const target50EarY = this.standingEarY + earTravel * 0.5;
+
+    // Find frame closest to 50% ear Y in history (before bottom)
+    const bottomTime = this.bottomCandidate.timestamp;
+    const candidateFrames = this.frameHistory.filter(f => f.timestamp < bottomTime);
+
+    if (candidateFrames.length === 0) return;
+
+    const closest = candidateFrames.reduce((best, f) =>
+      Math.abs(f.earY - target50EarY) < Math.abs(best.earY - target50EarY) ? f : best
+    );
+
+    this.currentRepPeaks.descending = {
+      phase: 'descending',
+      skeleton: closest.skeleton,
+      timestamp: closest.timestamp,
+      videoTime: closest.videoTime,
+      score: closest.earY,
+      angles: { ...closest.angles },
+      earY: closest.earY,
+      frameImage: closest.frameImage,
+    };
+  }
+
+  /**
+   * Capture the ascending checkpoint at 50% of ear Y travel (on the way up)
+   */
+  private captureAscendingCheckpoint(_currentEarY: number): void {
+    if (!this.standingEarY || !this.bottomCandidate) return;
+
+    const earTravel = this.bottomCandidate.earY - this.standingEarY;
+    const target50EarY = this.bottomCandidate.earY - earTravel * 0.5;
+
+    // Find frame closest to 50% ear Y in history (after bottom)
+    const bottomTime = this.bottomCandidate.timestamp;
+    const candidateFrames = this.frameHistory.filter(f => f.timestamp > bottomTime);
+
+    if (candidateFrames.length === 0) return;
+
+    const closest = candidateFrames.reduce((best, f) =>
+      Math.abs(f.earY - target50EarY) < Math.abs(best.earY - target50EarY) ? f : best
+    );
+
+    this.currentRepPeaks.ascending = {
+      phase: 'ascending',
+      skeleton: closest.skeleton,
+      timestamp: closest.timestamp,
+      videoTime: closest.videoTime,
+      score: 180 - closest.angles.workingKnee, // Higher knee = further up
+      angles: { ...closest.angles },
+      earY: closest.earY,
+      frameImage: closest.frameImage,
+    };
   }
 
   /**
@@ -453,92 +539,16 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   }
 
   /**
-   * Update the trough candidate during descent.
-   * Uses RAW angles for direction detection (more responsive),
-   * but stores the actual skeleton at the lowest point.
-   */
-  private updateTroughCandidate(
-    rawAngle: number,
-    skeleton: Skeleton,
-    timestamp: number,
-    videoTime?: number,
-    frameImage?: ImageData
-  ): void {
-    // Clamp raw angle to realistic range for trough tracking
-    const clampedAngle = Math.max(this.minRealisticAngle, rawAngle);
-
-    // Check direction using raw (clamped) angles - more responsive than smoothed
-    if (this.kneeAngleHistory.length >= 2) {
-      // Compare current raw to previous raw (both clamped)
-      const currRaw = clampedAngle;
-      const prevRaw = this.troughCandidate?.angle ?? currRaw;
-
-      if (currRaw > prevRaw + 2) {
-        // Raw angle increasing by >2° - we've passed the trough
-        this.framesAscendingAfterTrough++;
-      } else if (currRaw <= prevRaw) {
-        // Still at or below previous - might still be descending
-        this.framesAscendingAfterTrough = 0;
-      }
-      // Small increases (0-2°) could be noise, don't change count
-    }
-
-    // Update trough candidate if this is the lowest angle so far
-    if (
-      !this.troughCandidate ||
-      clampedAngle < this.troughCandidate.angle
-    ) {
-      this.troughCandidate = {
-        angle: clampedAngle,
-        skeleton,
-        timestamp,
-        videoTime,
-        frameImage,
-      };
-      // Reset ascending counter since we found a new low
-      this.framesAscendingAfterTrough = 0;
-    }
-  }
-
-  /**
    * Check if we should transition from DESCENDING to BOTTOM.
-   * Uses trough detection: confirmed when angle has been increasing for N frames.
+   * Uses ear-based trough detection: confirmed when ear Y has been decreasing
+   * (person ascending) for N frames after reaching the lowest point.
    */
-  private shouldTransitionToBottom(): boolean {
+  private shouldTransitionToBottom(_currentEarY: number): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
-    if (!this.troughCandidate) return false;
+    if (!this.bottomCandidate) return false;
 
-    // Trough is confirmed when we've been ascending for enough frames
-    return this.framesAscendingAfterTrough >= this.framesNeededToConfirmTrough;
-  }
-
-  /**
-   * Capture the confirmed trough as the bottom position peak.
-   */
-  private captureTroughAsBottom(): void {
-    if (!this.troughCandidate) return;
-
-    const angles = this.getAngles(this.troughCandidate.skeleton);
-
-    // Store as the bottom peak
-    this.currentRepPeaks.bottom = {
-      phase: 'bottom',
-      skeleton: this.troughCandidate.skeleton,
-      timestamp: this.troughCandidate.timestamp,
-      videoTime: this.troughCandidate.videoTime,
-      score: 180 - this.troughCandidate.angle, // Lower angle = higher score
-      angles: {
-        workingKnee: angles.workingKnee,
-        workingHip: angles.workingHip,
-        extendedKnee: angles.extendedKnee,
-        spine: angles.spine,
-      },
-      frameImage: this.troughCandidate.frameImage,
-    };
-
-    // Clear the candidate
-    this.troughCandidate = null;
-    this.framesAscendingAfterTrough = 0;
+    // Bottom is confirmed when ear has been descending (person rising) for enough frames
+    return this.framesAscendingAfterBottom >= this.framesNeededToConfirmBottom;
   }
 
   /**
@@ -673,10 +683,13 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     this.kneeAngleHistory = [];
     this.workingLeg = null;
     this.legDetectionVotes = { left: 0, right: 0 };
-    // Reset smoothing and trough detection
+    // Reset smoothing
     this.smoothedKneeAngle = null;
-    this.troughCandidate = null;
-    this.framesAscendingAfterTrough = 0;
+    // Reset ear-based bottom detection
+    this.standingEarY = null;
+    this.bottomCandidate = null;
+    this.framesAscendingAfterBottom = 0;
+    this.frameHistory = [];
     this.resetMetrics();
   }
 
