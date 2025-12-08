@@ -1,29 +1,29 @@
 /**
- * Instant Filmstrip E2E Tests
+ * Instant Rep Gallery E2E Tests
  *
- * Tests the user journey where filmstrip thumbnails appear during extraction,
+ * Tests the user journey where rep gallery thumbnails appear during extraction,
  * without the user needing to press play.
  *
  * User Journey:
  * 1. User loads video
  * 2. Extraction starts (poses are detected frame by frame)
- * 3. As reps are detected during extraction, filmstrip thumbnails appear
+ * 3. As reps are detected during extraction, rep gallery thumbnails appear
  * 4. User sees thumbnails progressively without pressing play
- * 5. When extraction completes, all reps are visible in filmstrip
+ * 5. When extraction completes, all reps are visible in rep gallery
  *
  * Architecture:
  * - MockPoseDetector replaces real ML model during extraction
  * - frameDelayMs simulates realistic extraction timing (~15 FPS)
  * - Extracted frames stream through FormProcessor → RepProcessor
- * - Filmstrip captures frames as reps are detected
+ * - Rep gallery captures frames as reps are detected
  */
 
 import { expect, test } from '@playwright/test';
 import { generateTestId, setVideoTestId, setupMockPoseDetector, useShortTestVideo } from './helpers';
 
-// Filmstrip thumbnail tests - thumbnails appear during extraction
+// Rep gallery thumbnail tests - thumbnails appear during extraction
 // Tests must run serially - mock detector and IndexedDB have shared state
-test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
+test.describe.serial('Instant Rep Gallery: Reps Appear During Extraction', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept GitHub video URL and serve short local video for faster tests
     await useShortTestVideo(page);
@@ -39,7 +39,7 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     await setVideoTestId(page, generateTestId());
   });
 
-  test('filmstrip shows rep thumbnails during extraction without pressing play', async ({
+  test('rep gallery shows thumbnails during extraction without pressing play', async ({
     page,
   }) => {
     // Capture console logs to debug mock detector and pipeline
@@ -74,7 +74,7 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Verify video is NOT playing - filmstrip should appear during extraction
+    // Verify video is NOT playing - rep gallery should appear during extraction
     const videoPaused = await page.evaluate(() => {
       const video = document.querySelector('video');
       return video?.paused;
@@ -82,12 +82,12 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     expect(videoPaused).toBe(true);
 
     // Wait for extraction to complete - with 0ms delay, extraction is instant
-    // We check for filmstrip thumbnails as the completion indicator
+    // We check for rep gallery thumbnails as the completion indicator
     await page.waitForFunction(
       () => {
         const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 30000 }
@@ -100,10 +100,10 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     });
     expect(stillPaused).toBe(true);
 
-    // Verify filmstrip has at least one thumbnail canvas
+    // Verify rep gallery has at least one thumbnail canvas
     const thumbnailCount = await page.evaluate(() => {
-      const filmstrip = document.querySelector('.filmstrip-container');
-      return filmstrip?.querySelectorAll('canvas').length || 0;
+      const repGallery = document.querySelector('.rep-gallery-container');
+      return repGallery?.querySelectorAll('canvas').length || 0;
     });
     expect(thumbnailCount).toBeGreaterThanOrEqual(1);
 
@@ -112,7 +112,7 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     );
   });
 
-  test('filmstrip thumbnails appear during extraction', async ({
+  test('rep gallery thumbnails appear during extraction', async ({
     page,
   }) => {
     // Use fast delay for testing - 0ms per frame
@@ -123,28 +123,28 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete - filmstrip gets thumbnails
+    // Wait for extraction to complete - rep gallery gets thumbnails
     await page.waitForFunction(
       () => {
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         // Wait for at least 4 thumbnails (one rep with 4 positions)
         return thumbnails >= 4;
       },
       { timeout: 30000 }
     );
 
-    // Verify filmstrip has thumbnails
+    // Verify rep gallery has thumbnails
     const thumbnailCount = await page.evaluate(() => {
-      const filmstrip = document.querySelector('.filmstrip-container');
-      return filmstrip?.querySelectorAll('canvas').length || 0;
+      const repGallery = document.querySelector('.rep-gallery-container');
+      return repGallery?.querySelectorAll('canvas').length || 0;
     });
 
-    console.log(`Filmstrip has ${thumbnailCount} thumbnails after extraction`);
+    console.log(`Rep gallery has ${thumbnailCount} thumbnails after extraction`);
     expect(thumbnailCount).toBeGreaterThanOrEqual(4);
   });
 
-  test('filmstrip thumbnails are clickable after extraction', async ({
+  test('rep gallery thumbnails are clickable after extraction', async ({
     page,
   }) => {
     // Fast extraction for this test
@@ -155,11 +155,11 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for filmstrip to have thumbnails (extraction complete)
+    // Wait for rep gallery to have thumbnails (extraction complete)
     await page.waitForFunction(
       () => {
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return thumbnails >= 1;
       },
       { timeout: 30000 }
@@ -171,8 +171,8 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
       return video?.currentTime || 0;
     });
 
-    // Click first filmstrip thumbnail
-    const thumbnail = page.locator('.filmstrip-container canvas').first();
+    // Click first rep gallery thumbnail
+    const thumbnail = page.locator('.rep-gallery-container canvas').first();
     if (await thumbnail.isVisible()) {
       await thumbnail.click();
 
@@ -192,7 +192,7 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
   });
 
   // Retry - can be flaky with parallel IndexedDB access
-  test('extraction with mock detector produces filmstrip with multiple reps', async ({
+  test('extraction with mock detector produces rep gallery with multiple reps', async ({
     page,
   }) => {
     test.info().annotations.push({ type: 'retry', description: 'Flaky with parallel IndexedDB access' });
@@ -203,21 +203,21 @@ test.describe.serial('Instant Filmstrip: Reps Appear During Extraction', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for filmstrip to have thumbnails (extraction complete with at least one rep)
+    // Wait for rep gallery to have thumbnails (extraction complete with at least one rep)
     await page.waitForFunction(
       () => {
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return thumbnails >= 4; // 4 thumbnails = 1 rep
       },
       { timeout: 30000 }
     );
 
-    // Get filmstrip info
+    // Get rep gallery info
     const info = await page.evaluate(() => {
-      const filmstrip = document.querySelector('.filmstrip-container');
-      const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
-      const repNav = document.querySelector('.filmstrip-rep-indicator');
+      const repGallery = document.querySelector('.rep-gallery-container');
+      const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
+      const repNav = document.querySelector('.rep-gallery-rep-indicator');
       return {
         thumbnails,
         repInfo: repNav?.textContent || '',
@@ -260,12 +260,12 @@ test.describe.serial('Playback Mode: No Duplicate Rep Counting', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete - controls become enabled and filmstrip has thumbnails
+    // Wait for extraction to complete - controls become enabled and rep gallery has thumbnails
     await page.waitForFunction(
       () => {
         const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 30000 }
@@ -322,12 +322,12 @@ test.describe.serial('Playback Mode: No Duplicate Rep Counting', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete - controls become enabled and filmstrip has thumbnails
+    // Wait for extraction to complete - controls become enabled and rep gallery has thumbnails
     await page.waitForFunction(
       () => {
         const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 30000 }
@@ -350,7 +350,7 @@ test.describe.serial('Playback Mode: No Duplicate Rep Counting', () => {
   });
 });
 
-test.describe.serial('Filmstrip Frame Capture During Extraction', () => {
+test.describe.serial('Rep Gallery Frame Capture During Extraction', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept GitHub video URL and serve short local video for faster tests
     await useShortTestVideo(page);
@@ -375,22 +375,22 @@ test.describe.serial('Filmstrip Frame Capture During Extraction', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for filmstrip to have exactly 4 thumbnails (one rep with 4 positions)
-    // Note: We check filmstrip directly instead of HUD rep counter since HUD
+    // Wait for rep gallery to have exactly 4 thumbnails (one rep with 4 positions)
+    // Note: We check rep gallery directly instead of HUD rep counter since HUD
     // only shows when there's a pose at the current video time
     await page.waitForFunction(
       () => {
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return thumbnails === 4;
       },
       { timeout: 30000 }
     );
 
-    // Verify filmstrip has exactly 4 thumbnails for the first rep
+    // Verify rep gallery has exactly 4 thumbnails for the first rep
     const thumbnailCount = await page.evaluate(() => {
-      const filmstrip = document.querySelector('.filmstrip-container');
-      return filmstrip?.querySelectorAll('canvas').length || 0;
+      const repGallery = document.querySelector('.rep-gallery-container');
+      return repGallery?.querySelectorAll('canvas').length || 0;
     });
 
     // Should have exactly 4 checkpoints per rep (Top, Connect, Bottom, Release)
@@ -443,12 +443,12 @@ test.describe.serial('Skeleton Rendering Performance', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete - controls become enabled and filmstrip has thumbnails
+    // Wait for extraction to complete - controls become enabled and rep gallery has thumbnails
     await page.waitForFunction(
       () => {
         const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 30000 }
@@ -501,12 +501,12 @@ test.describe.serial('Skeleton Rendering Performance', () => {
     await page.click('#load-hardcoded-btn');
     await page.waitForSelector('video', { timeout: 10000 });
 
-    // Wait for extraction to complete - controls become enabled and filmstrip has thumbnails
+    // Wait for extraction to complete - controls become enabled and rep gallery has thumbnails
     await page.waitForFunction(
       () => {
         const playBtn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
-        const filmstrip = document.querySelector('.filmstrip-container');
-        const thumbnails = filmstrip?.querySelectorAll('canvas').length || 0;
+        const repGallery = document.querySelector('.rep-gallery-container');
+        const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return playBtn && !playBtn.disabled && thumbnails > 0;
       },
       { timeout: 30000 }

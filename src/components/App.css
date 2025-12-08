@@ -1165,6 +1165,7 @@ main {
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
+  z-index: 10; /* Above header phase buttons */
 }
 
 .rep-gallery-gallery-btn:hover {

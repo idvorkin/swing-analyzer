@@ -106,7 +106,7 @@ e2e-fast:
 
 # Run extraction E2E tests (mock detector, longer tests)
 e2e-extraction:
-    npx playwright test extraction-flow.spec.ts instant-filmstrip.spec.ts
+    npx playwright test extraction-flow.spec.ts instant-rep-gallery.spec.ts
 
 # Run E2E tests (desktop chromium only - same as 'e2e' until mobile is enabled)
 e2e-desktop:
