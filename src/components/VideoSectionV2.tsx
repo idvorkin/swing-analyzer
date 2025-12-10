@@ -58,6 +58,8 @@ const VideoSectionV2: React.FC = () => {
     currentPhases,
     // Working side (for exercises that support it)
     workingLeg,
+    // Cache processing state
+    isCacheProcessing,
   } = useSwingAnalyzerContext();
 
   // Ref for the rep-gallery container
@@ -226,10 +228,20 @@ const VideoSectionV2: React.FC = () => {
     const container = repGalleryRef.current;
     if (!container) return;
 
-    // Handle empty state
-    if (repCount === 0 || repThumbnails.size === 0) {
+    // Handle empty state - show message only when no reps detected
+    // Note: When loading from cache, repCount > 0 but repThumbnails may still be empty
+    // because cached data doesn't include frameImage. We still show rows with position
+    // data (for seeking) using "—" placeholders where thumbnails would normally appear.
+    if (repCount === 0) {
       container.innerHTML =
         '<div class="rep-gallery-empty">Complete a rep to see checkpoints</div>';
+      return;
+    }
+
+    // If we have reps but no thumbnail data yet, show a different message
+    if (repThumbnails.size === 0) {
+      container.innerHTML =
+        '<div class="rep-gallery-empty">Loading rep data...</div>';
       return;
     }
 
@@ -573,6 +585,14 @@ const VideoSectionV2: React.FC = () => {
                 </svg>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Cache processing overlay - blocks interaction while loading from cache */}
+        {isCacheProcessing && (
+          <div className="cache-loading-overlay" data-testid="cache-loading-overlay">
+            <div className="cache-loading-spinner" />
+            <span className="cache-loading-text">Loading cached data...</span>
           </div>
         )}
 
