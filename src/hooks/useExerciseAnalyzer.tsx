@@ -525,6 +525,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         }
       } else if (state.type === 'error') {
         setStatus(`Error: ${state.message}`);
+        setIsCacheProcessing(false); // Clear loading state on error
       } else {
         setStatus('Ready');
       }
