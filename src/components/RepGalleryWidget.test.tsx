@@ -223,7 +223,7 @@ describe('RepGalleryWidget', () => {
         />
       );
 
-      const canvas = container.querySelector('canvas.rep-gallery-canvas');
+      const canvas = container.querySelector('canvas.thumbnail-canvas__canvas');
       expect(canvas).toBeInTheDocument();
     });
 
@@ -258,7 +258,7 @@ describe('RepGalleryWidget', () => {
         />
       );
 
-      const canvas = container.querySelector('canvas.rep-gallery-canvas');
+      const canvas = container.querySelector('canvas.thumbnail-canvas__canvas');
       expect(canvas).toBeInTheDocument();
       fireEvent.click(canvas!);
 
@@ -281,7 +281,7 @@ describe('RepGalleryWidget', () => {
         />
       );
 
-      const canvas = container.querySelector('canvas.rep-gallery-canvas');
+      const canvas = container.querySelector('canvas.thumbnail-canvas__canvas');
       expect(canvas).toBeInTheDocument();
 
       // Simulate double-tap by clicking twice quickly
