@@ -50,6 +50,53 @@ const REP_SYNC_INTERVAL_MS = 1000; // 1 second
 // Default phases (swing) - used when resetting before exercise detection runs
 const DEFAULT_PHASES = [...PHASE_ORDER];
 
+// Sample video configuration for DRY loading
+interface SampleVideoConfig {
+  name: string;           // Display name for UI (e.g., "Kettlebell Swing")
+  fileName: string;       // File name for the File object (e.g., "swing-sample.webm")
+  remoteUrl: string;      // Primary remote URL
+  localFallback: string;  // Local fallback URL
+}
+
+const SAMPLE_VIDEOS: Record<string, SampleVideoConfig> = {
+  swing: {
+    name: 'Kettlebell Swing',
+    fileName: 'swing-sample.webm',
+    remoteUrl: DEFAULT_SAMPLE_VIDEO,
+    localFallback: LOCAL_SAMPLE_VIDEO,
+  },
+  pistol: {
+    name: 'Pistol Squat',
+    fileName: 'pistol-squat-sample.webm',
+    remoteUrl: PISTOL_SQUAT_SAMPLE_VIDEO,
+    localFallback: LOCAL_PISTOL_SQUAT_VIDEO,
+  },
+};
+
+/**
+ * Convert error to user-friendly message for video loading failures.
+ */
+function getVideoLoadErrorMessage(error: unknown, context: string): string {
+  if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+    return 'Storage full. Clear browser data and try again.';
+  }
+  if (error instanceof Error) {
+    if (error.message.includes('Timeout')) {
+      return 'Video load timed out. Check your network and try again.';
+    }
+    if (error.message.includes('fetch') || error.message.includes('Network')) {
+      return 'Network error loading video. Check your connection.';
+    }
+    if (error.message.includes('model')) {
+      return 'Failed to load pose detection. Check network and refresh.';
+    }
+    if (error.message.includes('format') || error.message.includes('supported')) {
+      return 'Video format not supported by your browser.';
+    }
+  }
+  return `Could not load ${context}`;
+}
+
 // Helper for consistent position display (e.g., "top" → "Top")
 const formatPositionForDisplay = (position: string): string =>
   position.charAt(0).toUpperCase() + position.slice(1).toLowerCase();
@@ -781,273 +828,156 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   // Video File Controls
   // ========================================
-  const handleVideoUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
 
-    const session = inputSessionRef.current;
-    const video = videoRef.current;
-    if (!session || !video) {
-      console.error('handleVideoUpload: session or video element not initialized', {
-        hasSession: !!session,
-        hasVideo: !!video,
-      });
-      setStatus('Error: App not initialized. Please refresh.');
-      return;
-    }
-
-    // Abort any in-progress video load
-    videoLoadAbortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    videoLoadAbortControllerRef.current = abortController;
-
-    // Reset state
+  // Helper: Reset all video-related state for a new video
+  const resetVideoState = useCallback(() => {
     setRepCount(0);
     setRepThumbnails(new Map());
     pipelineRef.current?.reset();
-    hasRecordedExtractionStartRef.current = false; // Reset for new video
-    // Reset exercise detection state for new video
+    hasRecordedExtractionStartRef.current = false;
     setDetectedExercise('unknown');
     setDetectionConfidence(0);
     setIsDetectionLocked(false);
     setCurrentPhases(DEFAULT_PHASES);
     setWorkingLeg(null);
+  }, []);
 
-    // Load video safely (handles cleanup, pausing, and race conditions)
+  // Helper: Clear loading UI state (used on abort or completion)
+  const clearLoadingState = useCallback(() => {
+    setIsVideoLoading(false);
+    setVideoLoadProgress(undefined);
+    setVideoLoadMessage('');
+  }, []);
+
+  // Helper: Prepare for video loading (abort previous, create new controller)
+  const prepareVideoLoad = useCallback(() => {
+    videoLoadAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    videoLoadAbortControllerRef.current = abortController;
+    return abortController;
+  }, []);
+
+  // Core video loading function - handles both user uploads and sample videos
+  const loadVideo = useCallback(async (
+    videoFile: File,
+    blobUrl: string,
+    abortController: AbortController,
+    context: string // For error messages (e.g., "video" or "sample video")
+  ) => {
+    const session = inputSessionRef.current;
+    const video = videoRef.current;
+    if (!session || !video) {
+      console.error(`loadVideo: session or video element not initialized`);
+      setStatus('Error: App not initialized. Please refresh.');
+      return false;
+    }
+
+    try {
+      // Load video into DOM
+      await loadVideoSafely(video, blobUrl, abortController.signal);
+      setCurrentVideoFile(videoFile);
+      recordVideoLoad({ source: context === 'video' ? 'upload' : 'hardcoded', fileName: videoFile.name });
+
+      // Start extraction/cache lookup
+      setVideoLoadMessage('Processing video...');
+      await session.startVideoFile(videoFile);
+
+      setStatus('Video loaded. Press Play to start.');
+      clearLoadingState();
+      return true;
+    } catch (error) {
+      // AbortError means user switched videos - silently reset
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        clearLoadingState();
+        return false;
+      }
+      console.error(`Error loading ${context}:`, error);
+      setStatus(`Error: ${getVideoLoadErrorMessage(error, context)}`);
+      clearLoadingState();
+      return false;
+    }
+  }, [loadVideoSafely, clearLoadingState]);
+
+  // Handle user-uploaded video files
+  const handleVideoUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!inputSessionRef.current || !videoRef.current) {
+      console.error('handleVideoUpload: session or video element not initialized');
+      setStatus('Error: App not initialized. Please refresh.');
+      return;
+    }
+
+    const abortController = prepareVideoLoad();
+    setIsVideoLoading(true);
+    setVideoLoadProgress(undefined);
+    setVideoLoadMessage(`Loading ${file.name}...`);
+    resetVideoState();
+
     const url = URL.createObjectURL(file);
-    try {
-      await loadVideoSafely(video, url, abortController.signal);
-    } catch (error) {
-      // AbortError means user switched videos - silently ignore
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        return;
-      }
-      console.error('Failed to load video:', error);
-      setStatus(`Error: ${error instanceof Error ? error.message : 'Failed to load video'}`);
+    await loadVideo(file, url, abortController, 'video');
+  }, [prepareVideoLoad, resetVideoState, loadVideo]);
+
+  // Load a sample video by key (shared implementation for all samples)
+  const loadSampleVideo = useCallback(async (sampleKey: keyof typeof SAMPLE_VIDEOS) => {
+    const config = SAMPLE_VIDEOS[sampleKey];
+    if (!config) {
+      console.error(`Unknown sample video: ${sampleKey}`);
       return;
     }
 
-    setCurrentVideoFile(file);
-
-    // Start extraction/cache lookup
-    try {
-      await session.startVideoFile(file);
-    } catch (error) {
-      console.error('Failed to process video:', error);
-      let userMessage = 'Could not process video';
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        userMessage = 'Storage full. Clear browser data and try again.';
-      } else if (error instanceof Error) {
-        if (error.message.includes('model')) {
-          userMessage = 'Failed to load pose detection. Check network and refresh.';
-        } else if (error.message.includes('format')) {
-          userMessage = 'Invalid video format. Try a different file.';
-        }
-      }
-      setStatus(`Error: ${userMessage}`);
-    }
-  }, [loadVideoSafely]);
-
-  const loadHardcodedVideo = useCallback(async () => {
-    const session = inputSessionRef.current;
-    const video = videoRef.current;
-    if (!session || !video) {
-      console.error('loadHardcodedVideo: session or video element not initialized', {
-        hasSession: !!session,
-        hasVideo: !!video,
-      });
+    if (!inputSessionRef.current || !videoRef.current) {
+      console.error(`loadSampleVideo: session or video element not initialized`);
       setStatus('Error: App not initialized. Please refresh.');
       return;
     }
 
-    // Abort any in-progress video load
-    videoLoadAbortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    videoLoadAbortControllerRef.current = abortController;
-
-    setStatus('Loading sample video...');
+    const abortController = prepareVideoLoad();
+    setStatus(`Loading ${config.name.toLowerCase()} sample...`);
     setIsVideoLoading(true);
     setVideoLoadProgress(undefined);
-    setVideoLoadMessage('Downloading Kettlebell Swing...');
+    setVideoLoadMessage(`Downloading ${config.name}...`);
+    resetVideoState();
 
     try {
-      // Reset state
-      setRepCount(0);
-      setRepThumbnails(new Map());
-      pipelineRef.current?.reset();
-      hasRecordedExtractionStartRef.current = false; // Reset for new video
-      // Reset exercise detection state for new video
-      setDetectedExercise('unknown');
-      setDetectionConfidence(0);
-      setIsDetectionLocked(false);
-      setCurrentPhases(DEFAULT_PHASES);
-      setWorkingLeg(null);
-
       // Try remote URL first, fall back to local
-      let videoURL = DEFAULT_SAMPLE_VIDEO;
       let blob: Blob;
-
       try {
-        blob = await fetchWithProgress(videoURL, (percent) => {
-          setStatus(`Downloading sample video... ${percent}%`);
+        blob = await fetchWithProgress(config.remoteUrl, (percent) => {
+          setStatus(`Downloading ${config.name.toLowerCase()}... ${percent}%`);
           setVideoLoadProgress(percent);
         });
       } catch {
-        console.log('Remote sample failed, falling back to local');
-        videoURL = LOCAL_SAMPLE_VIDEO;
-        setStatus('Loading sample video (local)...');
+        console.log(`Remote ${config.name} failed, falling back to local`);
+        setStatus(`Loading ${config.name.toLowerCase()} (local)...`);
         setVideoLoadMessage('Loading from local cache...');
         setVideoLoadProgress(undefined);
-        const response = await fetch(videoURL);
+        const response = await fetch(config.localFallback);
         if (!response.ok) {
           throw new Error(`Failed to fetch video: ${response.status}`);
         }
         blob = await response.blob();
       }
-      const videoFile = new File([blob], 'swing-sample.webm', {
-        type: 'video/webm',
-      });
 
-      // Load video safely (handles cleanup, pausing, and race conditions)
+      const videoFile = new File([blob], config.fileName, { type: 'video/webm' });
       const blobUrl = URL.createObjectURL(blob);
-      await loadVideoSafely(video, blobUrl, abortController.signal);
-
-      setCurrentVideoFile(videoFile);
-      recordVideoLoad({ source: 'hardcoded', fileName: 'swing-sample.webm' });
-
-      // Start extraction/cache lookup
-      setVideoLoadMessage('Processing video...');
-      await session.startVideoFile(videoFile);
-
-      setStatus('Video loaded. Press Play to start.');
-      setIsVideoLoading(false);
+      await loadVideo(videoFile, blobUrl, abortController, 'sample video');
     } catch (error) {
-      // AbortError means user switched videos - reset loading state and return
+      // AbortError means user switched videos - silently reset
       if (error instanceof DOMException && error.name === 'AbortError') {
-        setIsVideoLoading(false);
-        setVideoLoadProgress(undefined);
-        setVideoLoadMessage('');
+        clearLoadingState();
         return;
       }
-      console.error('Error loading hardcoded video:', error);
-      // Apply same detailed error handling as handleVideoUpload
-      let userMessage = 'Could not load sample video';
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        userMessage = 'Storage full. Clear browser data and try again.';
-      } else if (error instanceof Error) {
-        if (error.message.includes('Timeout')) {
-          userMessage = 'Video load timed out. Check your network and try again.';
-        } else if (error.message.includes('fetch') || error.message.includes('Network')) {
-          userMessage = 'Network error loading video. Check your connection.';
-        } else if (error.message.includes('model')) {
-          userMessage = 'Failed to load pose detection. Check network and refresh.';
-        } else if (error.message.includes('format') || error.message.includes('supported')) {
-          userMessage = 'Video format not supported by your browser.';
-        }
-      }
-      setStatus(`Error: ${userMessage}`);
-      setIsVideoLoading(false);
+      console.error(`Error loading ${config.name}:`, error);
+      setStatus(`Error: ${getVideoLoadErrorMessage(error, 'sample video')}`);
+      clearLoadingState();
     }
-  }, [loadVideoSafely]);
+  }, [prepareVideoLoad, resetVideoState, loadVideo, clearLoadingState]);
 
-  const loadPistolSquatSample = useCallback(async () => {
-    const session = inputSessionRef.current;
-    const video = videoRef.current;
-    if (!session || !video) {
-      console.error('loadPistolSquatSample: session or video element not initialized');
-      setStatus('Error: App not initialized. Please refresh.');
-      return;
-    }
-
-    // Abort any in-progress video load
-    videoLoadAbortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    videoLoadAbortControllerRef.current = abortController;
-
-    setStatus('Loading pistol squat sample...');
-    setIsVideoLoading(true);
-    setVideoLoadProgress(undefined);
-    setVideoLoadMessage('Downloading Pistol Squat...');
-
-    try {
-      // Reset state
-      setRepCount(0);
-      setRepThumbnails(new Map());
-      pipelineRef.current?.reset();
-      hasRecordedExtractionStartRef.current = false;
-      // Reset exercise detection state for new video
-      setDetectedExercise('unknown');
-      setDetectionConfidence(0);
-      setIsDetectionLocked(false);
-      setCurrentPhases(DEFAULT_PHASES);
-      setWorkingLeg(null);
-
-      // Try remote URL first, fall back to local
-      let videoURL = PISTOL_SQUAT_SAMPLE_VIDEO;
-      let blob: Blob;
-
-      try {
-        blob = await fetchWithProgress(videoURL, (percent) => {
-          setStatus(`Downloading pistol squat sample... ${percent}%`);
-          setVideoLoadProgress(percent);
-        });
-      } catch {
-        console.log('Remote pistol squat sample failed, falling back to local');
-        videoURL = LOCAL_PISTOL_SQUAT_VIDEO;
-        setStatus('Loading pistol squat sample (local)...');
-        setVideoLoadMessage('Loading from local cache...');
-        setVideoLoadProgress(undefined);
-        const response = await fetch(videoURL);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch video: ${response.status}`);
-        }
-        blob = await response.blob();
-      }
-      const videoFile = new File([blob], 'pistol-squat-sample.webm', {
-        type: 'video/webm',
-      });
-
-      // Load video safely
-      const blobUrl = URL.createObjectURL(blob);
-      await loadVideoSafely(video, blobUrl, abortController.signal);
-
-      setCurrentVideoFile(videoFile);
-      recordVideoLoad({ source: 'hardcoded', fileName: 'pistol-squat-sample.webm' });
-
-      // Start extraction/cache lookup
-      setVideoLoadMessage('Processing video...');
-      await session.startVideoFile(videoFile);
-
-      setStatus('Video loaded. Press Play to start.');
-      setIsVideoLoading(false);
-    } catch (error) {
-      // AbortError means user switched videos - reset loading state and return
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        setIsVideoLoading(false);
-        setVideoLoadProgress(undefined);
-        setVideoLoadMessage('');
-        return;
-      }
-      console.error('Error loading pistol squat sample:', error);
-      // Apply same detailed error handling as handleVideoUpload
-      let userMessage = 'Could not load sample video';
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        userMessage = 'Storage full. Clear browser data and try again.';
-      } else if (error instanceof Error) {
-        if (error.message.includes('Timeout')) {
-          userMessage = 'Video load timed out. Check your network and try again.';
-        } else if (error.message.includes('fetch') || error.message.includes('Network')) {
-          userMessage = 'Network error loading video. Check your connection.';
-        } else if (error.message.includes('model')) {
-          userMessage = 'Failed to load pose detection. Check network and refresh.';
-        } else if (error.message.includes('format') || error.message.includes('supported')) {
-          userMessage = 'Video format not supported by your browser.';
-        }
-      }
-      setStatus(`Error: ${userMessage}`);
-      setIsVideoLoading(false);
-    }
-  }, [loadVideoSafely]);
+  // Convenience wrappers for specific samples (maintain existing API)
+  const loadHardcodedVideo = useCallback(() => loadSampleVideo('swing'), [loadSampleVideo]);
+  const loadPistolSquatSample = useCallback(() => loadSampleVideo('pistol'), [loadSampleVideo]);
 
   // ========================================
   // Playback Controls

@@ -153,15 +153,9 @@ const VideoSectionV2: React.FC = () => {
         action = 'next';
         position = 'right';
       } else {
-        // Middle zone - play/pause
-        // Read video state directly to avoid stale closure on isPlaying
-        const video = videoRef.current;
-        const wasPlaying = video ? !video.paused : false;
-        clearPositionLabel();
-        togglePlayPause();
-        // Show the action that was taken: if video was playing, we paused it
-        action = wasPlaying ? 'pause' : 'play';
-        position = 'center';
+        // Middle zone - no action (play/pause removed)
+        lastTapRef.current = { time: 0, x: 0 };
+        return;
       }
 
       // Show visual feedback
@@ -174,7 +168,7 @@ const VideoSectionV2: React.FC = () => {
     } else {
       lastTapRef.current = { time: now, x: currentX };
     }
-  }, [clearPositionLabel, togglePlayPause, videoRef, navigateToPreviousCheckpoint, navigateToNextCheckpoint]);
+  }, [navigateToPreviousCheckpoint, navigateToNextCheckpoint]);
 
   // Handle phase header click for dynamic zoom (toggle focus on a phase column)
   const handlePhaseClick = useCallback((phase: string) => {

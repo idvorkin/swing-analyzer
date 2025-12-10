@@ -3,7 +3,7 @@
  *
  * Tests the double-tap (touch) and double-click (desktop) zones for video control:
  * - Left zone (25%): Previous checkpoint
- * - Center zone (50%): Play/pause
+ * - Center zone (50%): No action (disabled)
  * - Right zone (25%): Next checkpoint
  *
  * Also tests the help modal that explains touch controls.
@@ -89,18 +89,15 @@ test.describe('Touch Double-Tap Zones', () => {
       await expect(page.locator('#help-title')).toHaveText('Touch Controls');
     });
 
-    test('help modal shows three zones with correct labels', async ({ page }) => {
+    test('help modal shows two zones with correct labels', async ({ page }) => {
       await page.click('.header-help-btn');
 
-      // Should show 3 zones
+      // Should show 2 zones (left and right only, center zone removed)
       const zones = page.locator('.help-zone');
-      await expect(zones).toHaveCount(3);
+      await expect(zones).toHaveCount(2);
 
       // Left zone - Previous
       await expect(page.locator('.help-zone--left .help-zone-label')).toContainText('Previous');
-
-      // Center zone - Play/Pause
-      await expect(page.locator('.help-zone--center .help-zone-label')).toContainText('Play');
 
       // Right zone - Next
       await expect(page.locator('.help-zone--right .help-zone-label')).toContainText('Next');
@@ -141,15 +138,15 @@ test.describe('Touch Double-Tap Zones', () => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
     });
 
-    test('double-tap center zone shows play/pause overlay', async ({ page }) => {
+    test('double-tap center zone does nothing', async ({ page }) => {
       await enableTouchDevice(page);
       await loadVideoAndWait(page);
 
       // Double-tap center (50%)
       await doubleTapAtPosition(page, 0.5);
 
-      // Should show overlay in center
-      await expect(page.locator('.video-tap-overlay--center')).toBeVisible({ timeout: 1000 });
+      // Should NOT show any overlay (center zone disabled)
+      await expect(page.locator('.video-tap-overlay')).not.toBeVisible({ timeout: 500 });
     });
 
     test('double-tap left zone shows prev overlay', async ({ page }) => {
@@ -182,8 +179,8 @@ test.describe('Touch Double-Tap Zones', () => {
       await enableTouchDevice(page);
       await loadVideoAndWait(page);
 
-      // Double-tap center
-      await doubleTapAtPosition(page, 0.5);
+      // Double-tap right zone (center zone no longer triggers overlay)
+      await doubleTapAtPosition(page, 0.875);
 
       // Overlay should be visible briefly
       await expect(page.locator('.video-tap-overlay')).toBeVisible({ timeout: 1000 });
@@ -194,7 +191,7 @@ test.describe('Touch Double-Tap Zones', () => {
   });
 
   test.describe('Desktop (Double-Click)', () => {
-    test('double-click center zone toggles play/pause', async ({ page }) => {
+    test('double-click center zone does not toggle play/pause', async ({ page }) => {
       await loadVideoAndWait(page);
 
       const isPlayingBefore = await page.evaluate(() => {
@@ -205,15 +202,15 @@ test.describe('Touch Double-Tap Zones', () => {
       // Double-click center (simulated with two clicks)
       await doubleTapAtPosition(page, 0.5);
 
-      // Should show overlay in center
-      await expect(page.locator('.video-tap-overlay--center')).toBeVisible({ timeout: 1000 });
+      // Should NOT show any overlay (center zone disabled)
+      await expect(page.locator('.video-tap-overlay')).not.toBeVisible({ timeout: 500 });
 
-      // Play state should toggle
+      // Play state should remain unchanged
       const isPlayingAfter = await page.evaluate(() => {
         const video = document.querySelector('video');
         return !video?.paused;
       });
-      expect(isPlayingBefore).not.toBe(isPlayingAfter);
+      expect(isPlayingBefore).toBe(isPlayingAfter);
     });
 
     test('double-click left zone navigates to previous checkpoint', async ({ page }) => {

@@ -74,15 +74,6 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               <div className="help-zone-label">Previous<br />Checkpoint</div>
             </div>
 
-            <div className="help-zone help-zone--center">
-              <div className="help-zone-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-              <div className="help-zone-label">Play / Pause</div>
-            </div>
-
             <div className="help-zone help-zone--right">
               <div className="help-zone-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
