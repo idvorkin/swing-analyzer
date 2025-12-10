@@ -24,10 +24,13 @@ export {
 // Video helpers
 export {
   clearVideoTestId,
+  clickPistolSampleButton,
+  clickSwingSampleButton,
   generateTestId,
   getVideoState,
   loadHardcodedVideo,
   loadHardcodedVideoAndPlay,
+  openMediaSelectorDialog,
   pauseVideo,
   playVideo,
   playVideoToEnd,

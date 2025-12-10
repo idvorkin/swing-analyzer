@@ -3,7 +3,7 @@
  * This reproduces what the browser does when you clear cache and reload.
  */
 import { test, expect } from '@playwright/test';
-import { clearPoseTrackDB } from './helpers';
+import { clearPoseTrackDB, clickSwingSampleButton } from './helpers';
 
 test.describe('Fresh Extraction Analysis', () => {
   // Give extraction plenty of time
@@ -21,7 +21,7 @@ test.describe('Fresh Extraction Analysis', () => {
     await page.waitForLoadState('networkidle');
 
     // Click sample button to load the remote video
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
 
     // Wait for extraction to complete (look for skeleton_processing_complete or extraction_complete)
     console.log('Waiting for extraction to complete...');

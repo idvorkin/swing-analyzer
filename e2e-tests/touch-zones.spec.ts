@@ -12,6 +12,7 @@
 import { expect, test } from '@playwright/test';
 import {
   clearPoseTrackDB,
+  clickSwingSampleButton,
   seedPoseTrackFixture,
   useShortTestVideo,
 } from './helpers';
@@ -28,7 +29,7 @@ test.describe('Touch Double-Tap Zones', () => {
    * Helper to load video and wait for controls
    */
   async function loadVideoAndWait(page: import('@playwright/test').Page) {
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for controls to be enabled (cached poses loaded)

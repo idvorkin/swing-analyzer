@@ -10,7 +10,12 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { seedPoseTrackFixture, clearPoseTrackDB, useShortTestVideo } from './helpers';
+import {
+  clickSwingSampleButton,
+  clearPoseTrackDB,
+  seedPoseTrackFixture,
+  useShortTestVideo,
+} from './helpers';
 
 test.describe('Settings Modal', () => {
   test.beforeEach(async ({ page }) => {
@@ -195,7 +200,7 @@ test.describe('Settings Modal', () => {
       await page.waitForLoadState('networkidle');
 
       // Load the video
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
 
       // Wait for video to load
       await page.waitForFunction(
@@ -234,7 +239,7 @@ test.describe('Settings Modal', () => {
       await page.waitForLoadState('networkidle');
 
       // Load the video
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
 
       // Wait for video to load
       await page.waitForFunction(

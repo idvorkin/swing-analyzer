@@ -42,18 +42,80 @@ export async function clearVideoTestId(page: Page): Promise<void> {
 }
 
 /**
- * Load the hardcoded sample video
+ * Load the hardcoded sample video (kettlebell swing)
+ *
+ * The MediaSelectorDialog opens automatically when no video is loaded.
+ * This function clicks on the "Kettlebell Swing" sample video card.
  *
  * @param page - Playwright page instance
  */
 export async function loadHardcodedVideo(page: Page): Promise<void> {
-  await page.click('#load-hardcoded-btn');
-  await page.waitForSelector(
-    '.status-indicator:has-text("Video loaded")',
-    {
-      timeout: 15000,
-    }
+  await clickSwingSampleButton(page);
+}
+
+/**
+ * Click the Kettlebell Swing sample video button in the MediaSelectorDialog.
+ * Waits for the dialog to be visible if needed, then clicks the button.
+ *
+ * @param page - Playwright page instance
+ */
+export async function clickSwingSampleButton(page: Page): Promise<void> {
+  // Wait for the media selector dialog to be visible
+  await page.waitForSelector('.media-dialog', { timeout: 5000 });
+
+  // Click on the Kettlebell Swing sample video card
+  await page.click('button:has-text("Kettlebell Swing")');
+
+  // Wait for video to load (dialog closes and video appears)
+  // Use #video to be specific (there may be multiple video elements)
+  await page.waitForSelector('#video', { timeout: 15000 });
+
+  // Wait for video src to be populated
+  await page.waitForFunction(
+    () => {
+      const video = document.querySelector('#video') as HTMLVideoElement;
+      return video && video.src && video.src.startsWith('blob:');
+    },
+    { timeout: 15000 }
   );
+}
+
+/**
+ * Click the Pistol Squat sample video button in the MediaSelectorDialog.
+ * Waits for the dialog to be visible if needed, then clicks the button.
+ *
+ * @param page - Playwright page instance
+ */
+export async function clickPistolSampleButton(page: Page): Promise<void> {
+  // Wait for the media selector dialog to be visible
+  await page.waitForSelector('.media-dialog', { timeout: 5000 });
+
+  // Click on the Pistol Squat sample video card
+  await page.click('button:has-text("Pistol Squat")');
+
+  // Wait for video to load (dialog closes and video appears)
+  // Use #video to be specific (there may be multiple video elements)
+  await page.waitForSelector('#video', { timeout: 15000 });
+
+  // Wait for video src to be populated
+  await page.waitForFunction(
+    () => {
+      const video = document.querySelector('#video') as HTMLVideoElement;
+      return video && video.src && video.src.startsWith('blob:');
+    },
+    { timeout: 15000 }
+  );
+}
+
+/**
+ * Open the MediaSelectorDialog (via the header button)
+ * Used when a video is already loaded and you want to switch.
+ *
+ * @param page - Playwright page instance
+ */
+export async function openMediaSelectorDialog(page: Page): Promise<void> {
+  await page.click('button[aria-label="Load different video"]');
+  await page.waitForSelector('.media-dialog', { timeout: 5000 });
 }
 
 /**

@@ -18,7 +18,9 @@ import { expect, test } from '@playwright/test';
 import { SWING_SAMPLE_4REPS_VIDEO_HASH } from './fixtures';
 import {
   clearPoseTrackDB,
+  clickSwingSampleButton,
   getPoseTrackFromDB,
+  openMediaSelectorDialog,
   seedPoseTrackFixture,
   seekToTime,
   setPoseTrackStorageMode,
@@ -43,11 +45,18 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     });
 
     test('video controls are visible', async ({ page }) => {
-      // File input (hidden but label visible)
-      await expect(page.locator('label[for="video-upload"]')).toBeVisible();
+      // MediaSelectorDialog should be visible with sample video options
+      await expect(page.locator('.media-dialog')).toBeVisible();
 
-      // Sample button
-      await expect(page.locator('#load-hardcoded-btn')).toBeVisible();
+      // Upload option should be visible (uses label element)
+      await expect(
+        page.locator('.media-dialog-upload-btn')
+      ).toBeVisible();
+
+      // Sample video button should be visible
+      await expect(
+        page.locator('button:has-text("Kettlebell Swing")')
+      ).toBeVisible();
     });
 
     test('HUD is hidden before poses exist', async ({ page }) => {
@@ -61,7 +70,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
   test.describe('Step 2: Load Sample Video', () => {
     test('clicking Sample button loads video', async ({ page }) => {
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
 
       // Video element should appear
       await page.waitForSelector('video', { timeout: 10000 });
@@ -69,7 +78,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     });
 
     test('video source is loaded as blob URL', async ({ page }) => {
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       // Wait for video src to be populated (video is fetched and converted to blob URL)
@@ -93,7 +102,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     }) => {
       // Seed pose data first so cached path is used
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
 
       // Wait for video element to appear
       await page.waitForSelector('video', { timeout: 10000 });
@@ -123,7 +132,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     }) => {
       // Seed pose data first so cached path is used
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
 
       await page.waitForFunction(
         () => {
@@ -144,7 +153,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   test.describe('Step 3: Video Playback Controls', () => {
     test('play button starts video playback', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       await page.waitForFunction(
@@ -177,7 +186,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
     test('pause button stops video playback', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       await page.waitForFunction(
@@ -226,7 +235,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   test.describe('Step 4-5: Rep Counting', () => {
     test('rep counter displays correctly', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       // Wait for pipeline to fully initialize (controls become enabled)
@@ -247,7 +256,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
     test('angle displays update during playback', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       // Wait for controls to be enabled
@@ -277,7 +286,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       page,
     }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       // Wait for controls to be enabled
@@ -318,7 +327,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   test.describe('Step 6: Frame-by-Frame Navigation', () => {
     test('next frame button advances video', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       await page.waitForFunction(
@@ -358,7 +367,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
     test('prev frame button goes back in video', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       await page.waitForFunction(
@@ -433,7 +442,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Load video
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
 
       // Wait for video to load
       await page.waitForSelector('video', { timeout: 10000 });
@@ -464,7 +473,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(storedTrack).not.toBeNull();
 
       // Load video
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       // Wait for controls to be enabled (cached poses should enable controls)
@@ -532,7 +541,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Load video
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       // Wait for controls enabled
@@ -582,15 +591,26 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   test.describe('Video Switching', () => {
     // Helper to click the reload button (header button when video loaded, or direct button when not)
     async function clickLoadSampleButton(page: import('@playwright/test').Page) {
-      // Check if video is loaded (header reload button visible)
-      const headerBtn = page.locator('button[title="Load different video"]');
-      if (await headerBtn.isVisible()) {
-        // Click header button to show source picker
-        await headerBtn.click();
-        // Then click the Sample button in the source picker
-        await page.waitForSelector('#load-hardcoded-btn', { timeout: 5000 });
+      // Check if dialog is already visible (no video loaded yet)
+      const dialog = page.locator('.media-dialog');
+      if (await dialog.isVisible()) {
+        // Dialog already visible, just click the swing button
+        await page.click('button:has-text("Kettlebell Swing")');
+      } else {
+        // Click header button to show MediaSelectorDialog
+        await page.click('button[aria-label="Load different video"]');
+        await page.waitForSelector('.media-dialog', { timeout: 5000 });
+        await page.click('button:has-text("Kettlebell Swing")');
       }
-      await page.click('#load-hardcoded-btn');
+      // Wait for video to load
+      await page.waitForSelector('video', { timeout: 15000 });
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video');
+          return video && video.src && video.src.startsWith('blob:');
+        },
+        { timeout: 15000 }
+      );
     }
 
     test('reloading sample video works correctly', async ({ page }) => {
@@ -598,7 +618,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Load video first time
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       // Wait for video to be fully loaded (blob URL assigned)
@@ -662,7 +682,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Load and start playing video
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       await page.waitForFunction(
@@ -722,7 +742,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Load video first time
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       // Wait for first video to fully load

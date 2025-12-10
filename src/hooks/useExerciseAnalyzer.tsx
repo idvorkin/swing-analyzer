@@ -147,6 +147,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // Track current video's object URL for cleanup on video switch
   const currentVideoUrlRef = useRef<string | null>(null);
+
+  // Media dialog loading state
+  const [isVideoLoading, setIsVideoLoading] = useState<boolean>(false);
+  const [videoLoadProgress, setVideoLoadProgress] = useState<number | undefined>(undefined);
+  const [videoLoadMessage, setVideoLoadMessage] = useState<string>('');
   // Track if we're in the middle of loading a video (to abort on switch)
   const videoLoadAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -860,6 +865,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     videoLoadAbortControllerRef.current = abortController;
 
     setStatus('Loading sample video...');
+    setIsVideoLoading(true);
+    setVideoLoadProgress(undefined);
+    setVideoLoadMessage('Downloading Kettlebell Swing...');
 
     try {
       // Reset state
@@ -881,11 +889,14 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       try {
         blob = await fetchWithProgress(videoURL, (percent) => {
           setStatus(`Downloading sample video... ${percent}%`);
+          setVideoLoadProgress(percent);
         });
       } catch {
         console.log('Remote sample failed, falling back to local');
         videoURL = LOCAL_SAMPLE_VIDEO;
         setStatus('Loading sample video (local)...');
+        setVideoLoadMessage('Loading from local cache...');
+        setVideoLoadProgress(undefined);
         const response = await fetch(videoURL);
         if (!response.ok) {
           throw new Error(`Failed to fetch video: ${response.status}`);
@@ -904,12 +915,17 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       recordVideoLoad({ source: 'hardcoded', fileName: 'swing-sample.webm' });
 
       // Start extraction/cache lookup
+      setVideoLoadMessage('Processing video...');
       await session.startVideoFile(videoFile);
 
       setStatus('Video loaded. Press Play to start.');
+      setIsVideoLoading(false);
     } catch (error) {
-      // AbortError means user switched videos - silently ignore
+      // AbortError means user switched videos - reset loading state and return
       if (error instanceof DOMException && error.name === 'AbortError') {
+        setIsVideoLoading(false);
+        setVideoLoadProgress(undefined);
+        setVideoLoadMessage('');
         return;
       }
       console.error('Error loading hardcoded video:', error);
@@ -929,6 +945,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         }
       }
       setStatus(`Error: ${userMessage}`);
+      setIsVideoLoading(false);
     }
   }, [loadVideoSafely]);
 
@@ -947,6 +964,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     videoLoadAbortControllerRef.current = abortController;
 
     setStatus('Loading pistol squat sample...');
+    setIsVideoLoading(true);
+    setVideoLoadProgress(undefined);
+    setVideoLoadMessage('Downloading Pistol Squat...');
 
     try {
       // Reset state
@@ -968,11 +988,14 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       try {
         blob = await fetchWithProgress(videoURL, (percent) => {
           setStatus(`Downloading pistol squat sample... ${percent}%`);
+          setVideoLoadProgress(percent);
         });
       } catch {
         console.log('Remote pistol squat sample failed, falling back to local');
         videoURL = LOCAL_PISTOL_SQUAT_VIDEO;
         setStatus('Loading pistol squat sample (local)...');
+        setVideoLoadMessage('Loading from local cache...');
+        setVideoLoadProgress(undefined);
         const response = await fetch(videoURL);
         if (!response.ok) {
           throw new Error(`Failed to fetch video: ${response.status}`);
@@ -991,12 +1014,17 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       recordVideoLoad({ source: 'hardcoded', fileName: 'pistol-squat-sample.webm' });
 
       // Start extraction/cache lookup
+      setVideoLoadMessage('Processing video...');
       await session.startVideoFile(videoFile);
 
       setStatus('Video loaded. Press Play to start.');
+      setIsVideoLoading(false);
     } catch (error) {
-      // AbortError means user switched videos - silently ignore
+      // AbortError means user switched videos - reset loading state and return
       if (error instanceof DOMException && error.name === 'AbortError') {
+        setIsVideoLoading(false);
+        setVideoLoadProgress(undefined);
+        setVideoLoadMessage('');
         return;
       }
       console.error('Error loading pistol squat sample:', error);
@@ -1016,6 +1044,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         }
       }
       setStatus(`Error: ${userMessage}`);
+      setIsVideoLoading(false);
     }
   }, [loadVideoSafely]);
 
@@ -1441,5 +1470,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
     // Cache processing state (true while loading from cache)
     isCacheProcessing,
+
+    // Media dialog loading state
+    isVideoLoading,
+    videoLoadProgress,
+    videoLoadMessage,
   };
 }
