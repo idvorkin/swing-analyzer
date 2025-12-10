@@ -715,7 +715,7 @@ const VideoSectionV2: React.FC = () => {
 
       {/* Media Selector Dialog */}
       <MediaSelectorDialog
-        isOpen={showSourcePicker || (!currentVideoFile && !isVideoLoading)}
+        isOpen={showSourcePicker || !currentVideoFile}
         onClose={() => setShowSourcePicker(false)}
         onUpload={handleVideoUpload}
         onLoadSwingSample={loadHardcodedVideo}

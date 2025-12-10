@@ -1857,6 +1857,12 @@ main {
   animation: media-dialog-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* When loading, prevent scroll and ensure fixed height for loading overlay */
+.media-dialog:has(.media-dialog-loading) {
+  overflow: hidden;
+  min-height: 320px;
+}
+
 @keyframes media-dialog-slide-up {
   from {
     opacity: 0;
@@ -1878,9 +1884,11 @@ main {
   align-items: center;
   justify-content: center;
   gap: 20px;
-  background: rgba(13, 17, 23, 0.95);
+  background: rgba(13, 17, 23, 0.98);
   border-radius: 20px;
   backdrop-filter: blur(4px);
+  /* Ensure minimum comfortable height - fallback for browsers without max() */
+  min-height: 280px;
 }
 
 .media-dialog-spinner {
@@ -2216,28 +2224,108 @@ main {
 /* Mobile adjustments */
 @media (max-width: 480px) {
   .media-dialog {
-    width: 95%;
-    max-height: 90vh;
-    border-radius: 16px;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .media-dialog-backdrop {
+    align-items: flex-end; /* Slide up from bottom on mobile */
+  }
+
+  /* Ensure all children respect box-sizing */
+  .media-dialog * {
+    box-sizing: border-box;
+  }
+
+  /* Smaller min-height for loading state on mobile */
+  .media-dialog:has(.media-dialog-loading) {
+    min-height: 280px;
+  }
+
+  /* Tighter header padding on mobile */
+  .media-dialog-header {
+    padding: 16px 20px 12px;
+  }
+
+  .media-dialog-title {
+    font-size: 18px;
+  }
+
+  /* Tighter upload section on mobile - use 16px horizontal to prevent overflow */
+  .media-dialog-upload {
+    padding: 12px 16px;
+  }
+
+  .media-dialog-upload-btn {
+    width: 100%;
+    max-width: 100%;
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .media-dialog-upload-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .media-dialog-upload-title {
+    font-size: 15px;
+  }
+
+  .media-dialog-upload-subtitle {
+    font-size: 12px;
+  }
+
+  /* Tighter divider on mobile */
+  .media-dialog-divider {
+    margin: 0;
+    padding: 0 20px;
   }
 
   .media-dialog-samples {
     gap: 10px;
-    padding: 16px 20px;
-  }
-
-  .media-dialog-header,
-  .media-dialog-upload,
-  .media-dialog-hint {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding: 12px 20px;
   }
 
   .media-dialog-card-info {
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 
   .media-dialog-card-title {
     font-size: 13px;
+  }
+
+  .media-dialog-card-subtitle {
+    font-size: 11px;
+  }
+
+  /* Tighter footer hint on mobile */
+  .media-dialog-hint {
+    padding: 12px 20px 16px;
+    font-size: 11px;
+  }
+
+  /* Smaller loading spinner on mobile */
+  .media-dialog-spinner {
+    width: 80px;
+    height: 80px;
+  }
+
+  .media-dialog-spinner-text {
+    font-size: 16px;
+  }
+
+  .media-dialog-loading-message {
+    font-size: 14px;
+    padding: 0 16px;
+  }
+
+  .media-dialog-loading {
+    gap: 16px;
   }
 }
