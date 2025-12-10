@@ -12,7 +12,18 @@
  */
 
 import { BehaviorSubject, type Observable, Subject } from 'rxjs';
-import type { PoseModel, PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
+import { extractPosesFromVideo } from '../services/PoseExtractor';
+import {
+  loadPoseTrackFromStorage,
+  savePoseTrackToStorage,
+} from '../services/PoseTrackService';
+import { recordCacheLoad } from '../services/SessionRecorder';
+import type {
+  PoseModel,
+  PoseTrackFile,
+  PoseTrackFrame,
+} from '../types/posetrack';
+import { computeQuickVideoHash } from '../utils/videoHash';
 import { LivePoseCache } from './LivePoseCache';
 import { buildSkeletonEventFromFrame } from './PipelineFactory';
 import type { SkeletonEvent } from './PipelineInterfaces';
@@ -21,15 +32,6 @@ import type {
   SkeletonSourceState,
   VideoFileSourceConfig,
 } from './SkeletonSource';
-import {
-  extractPosesFromVideo,
-} from '../services/PoseExtractor';
-import {
-  loadPoseTrackFromStorage,
-  savePoseTrackToStorage,
-} from '../services/PoseTrackService';
-import { recordCacheLoad } from '../services/SessionRecorder';
-import { computeQuickVideoHash } from '../utils/videoHash';
 
 /**
  * Skeleton source for video files with caching support
@@ -128,10 +130,18 @@ export class VideoFileSkeletonSource implements SkeletonSource {
         // Emit all cached skeletons for initial pipeline processing
         // This allows the pipeline to count reps from cached data
         // Use setTimeout(0) to ensure all subscribers are set up before we emit
-        console.log('[VideoFileSkeletonSource] Scheduling emission of', cached.frames.length, 'cached skeleton events');
+        console.log(
+          '[VideoFileSkeletonSource] Scheduling emission of',
+          cached.frames.length,
+          'cached skeleton events'
+        );
         setTimeout(() => {
           const startTime = performance.now();
-          console.log('[VideoFileSkeletonSource] Emitting', cached.frames.length, 'cached skeleton events');
+          console.log(
+            '[VideoFileSkeletonSource] Emitting',
+            cached.frames.length,
+            'cached skeleton events'
+          );
           let emitCount = 0;
           for (const frame of cached.frames) {
             const skeletonEvent = buildSkeletonEventFromFrame(frame);
@@ -139,11 +149,22 @@ export class VideoFileSkeletonSource implements SkeletonSource {
             emitCount++;
           }
           const processingTime = performance.now() - startTime;
-          console.log('[VideoFileSkeletonSource] Done emitting', emitCount, 'cached skeleton events in', processingTime.toFixed(0), 'ms');
+          console.log(
+            '[VideoFileSkeletonSource] Done emitting',
+            emitCount,
+            'cached skeleton events in',
+            processingTime.toFixed(0),
+            'ms'
+          );
 
           // Emit completion event after all skeletons processed
           // This is a signal that batch processing is done
-          this.stateSubject.next({ type: 'active', batchComplete: true, framesProcessed: emitCount, processingTimeMs: processingTime } as SkeletonSourceState);
+          this.stateSubject.next({
+            type: 'active',
+            batchComplete: true,
+            framesProcessed: emitCount,
+            processingTimeMs: processingTime,
+          } as SkeletonSourceState);
         }, 0);
 
         return;

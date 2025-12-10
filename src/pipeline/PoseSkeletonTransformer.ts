@@ -1,14 +1,15 @@
-import * as poseDetection from '@tensorflow-models/pose-detection';
+import type * as poseDetection from '@tensorflow-models/pose-detection';
 import '@tensorflow/tfjs-backend-webgl';
 import * as tf from '@tensorflow/tfjs-core';
-import { type Observable, from, of } from 'rxjs';
+import { from, type Observable, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
-import {
-  DEFAULT_MODEL_CONFIG,
-  type ModelConfig,
-} from '../config/modelConfig';
+import { DEFAULT_MODEL_CONFIG, type ModelConfig } from '../config/modelConfig';
 import { Skeleton } from '../models/Skeleton';
-import { MediaPipeBodyParts, type PoseKeypoint, type PoseResult } from '../types';
+import {
+  MediaPipeBodyParts,
+  type PoseKeypoint,
+  type PoseResult,
+} from '../types';
 import type {
   FrameEvent,
   SkeletonEvent,
@@ -106,10 +107,14 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
       this.detector = result.detector;
       this.modelName = result.modelName;
 
-      console.log(`Pose detector initialized: ${this.modelName} (MediaPipe 33-keypoint format)`);
+      console.log(
+        `Pose detector initialized: ${this.modelName} (MediaPipe 33-keypoint format)`
+      );
     } catch (error) {
       console.error('Failed to initialize pose detection model:', error);
-      throw new Error('Could not initialize pose detection model. Check WebGL support and browser compatibility.');
+      throw new Error(
+        'Could not initialize pose detection model. Check WebGL support and browser compatibility.'
+      );
     }
   }
 
@@ -129,7 +134,9 @@ export class PoseSkeletonTransformer implements SkeletonTransformer {
    * Transform a frame event directly into a skeleton (Promise version)
    * Use this for video-event-driven processing without RxJS subscriptions.
    */
-  async transformToSkeletonAsync(frameEvent: FrameEvent): Promise<SkeletonEvent> {
+  async transformToSkeletonAsync(
+    frameEvent: FrameEvent
+  ): Promise<SkeletonEvent> {
     const poseEvent = await this.detectPoseAsync(frameEvent);
     return this.buildSkeletonSync(poseEvent);
   }

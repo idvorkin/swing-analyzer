@@ -185,19 +185,16 @@ export class SkeletonRenderer {
     ctx.strokeStyle = this.connectionColor;
     ctx.lineWidth = 2;
 
-    let connectionsDrawn = 0;
+    let _connectionsDrawn = 0;
     // Draw all connections
     for (const [i, j] of connections) {
       const pointA = keypoints[i];
       const pointB = keypoints[j];
 
-      if (
-        this.isPointVisible(pointA) &&
-        this.isPointVisible(pointB)
-      ) {
+      if (this.isPointVisible(pointA) && this.isPointVisible(pointB)) {
         ctx.moveTo(pointA.x, pointA.y);
         ctx.lineTo(pointB.x, pointB.y);
-        connectionsDrawn++;
+        _connectionsDrawn++;
       }
     }
 
@@ -272,7 +269,11 @@ export class SkeletonRenderer {
     ctx.fillText(`Spine Angle: ${spineAngle}°`, 10, 20);
 
     // Draw arm-to-vertical angle (using cached value)
-    ctx.fillText(`Arm-Vertical Angle: ${armToVerticalAngle.toFixed(1)}°`, 10, 40);
+    ctx.fillText(
+      `Arm-Vertical Angle: ${armToVerticalAngle.toFixed(1)}°`,
+      10,
+      40
+    );
 
     // Draw grid in debug mode
     this.drawDebugGrid(ctx);
@@ -289,8 +290,12 @@ export class SkeletonRenderer {
     armToVerticalAngle: number
   ): void {
     // Get required keypoints
-    const shoulder = skeleton.getKeypointByName('rightShoulder') || skeleton.getKeypointByName('leftShoulder');
-    const elbow = skeleton.getKeypointByName('rightElbow') || skeleton.getKeypointByName('leftElbow');
+    const shoulder =
+      skeleton.getKeypointByName('rightShoulder') ||
+      skeleton.getKeypointByName('leftShoulder');
+    const elbow =
+      skeleton.getKeypointByName('rightElbow') ||
+      skeleton.getKeypointByName('leftElbow');
 
     if (!shoulder || !elbow) {
       // Silent return - don't draw error text in hot path
@@ -340,7 +345,11 @@ export class SkeletonRenderer {
 
     // Draw the angle value (using cached calculation)
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`${armToVerticalAngle.toFixed(1)}°`, shoulder.x - 20, shoulder.y - 10);
+    ctx.fillText(
+      `${armToVerticalAngle.toFixed(1)}°`,
+      shoulder.x - 20,
+      shoulder.y - 10
+    );
   }
 
   /**
@@ -416,27 +425,27 @@ export class SkeletonRenderer {
   private drawDebugGrid(context: CanvasRenderingContext2D): void {
     const height = context.canvas.height;
     const width = context.canvas.width;
-    
+
     // Draw horizontal lines
     context.beginPath();
     context.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     context.lineWidth = 1;
-    
+
     // Draw grid lines
     const gridSize = 50;
-    
+
     // Horizontal lines
     for (let y = 0; y < height; y += gridSize) {
       context.moveTo(0, y);
       context.lineTo(width, y);
     }
-    
+
     // Vertical lines
     for (let x = 0; x < width; x += gridSize) {
       context.moveTo(x, 0);
       context.lineTo(x, height);
     }
-    
+
     context.stroke();
   }
 }

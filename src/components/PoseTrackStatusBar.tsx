@@ -63,7 +63,8 @@ export function PoseTrackStatusBar({
               />
             </div>
             <span className="progress-text">
-              {status.progress.percentage}% • {status.progress.currentFrame}/{status.progress.totalFrames} frames
+              {status.progress.percentage}% • {status.progress.currentFrame}/
+              {status.progress.totalFrames} frames
               {status.progress.elapsedTime != null && (
                 <> • {status.progress.elapsedTime.toFixed(1)}s</>
               )}

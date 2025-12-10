@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
-import { existsSync } from 'fs';
 
 // Check if Tailscale is running (matches vite.config.ts logic)
 function isTailscaleRunning(): boolean {
@@ -21,15 +21,20 @@ function getProcessCwd(pid: string): string | null {
   try {
     if (process.platform === 'darwin') {
       // macOS: use lsof to get cwd
-      const output = execSync(`lsof -p ${pid} 2>/dev/null | grep cwd | awk '{print $NF}'`, {
-        encoding: 'utf-8',
-      }).trim();
+      const output = execSync(
+        `lsof -p ${pid} 2>/dev/null | grep cwd | awk '{print $NF}'`,
+        {
+          encoding: 'utf-8',
+        }
+      ).trim();
       return output || null;
     } else {
       // Linux: use /proc filesystem
-      return execSync(`readlink -f /proc/${pid}/cwd 2>/dev/null`, {
-        encoding: 'utf-8',
-      }).trim() || null;
+      return (
+        execSync(`readlink -f /proc/${pid}/cwd 2>/dev/null`, {
+          encoding: 'utf-8',
+        }).trim() || null
+      );
     }
   } catch {
     return null;
@@ -41,14 +46,18 @@ function getProcessCmd(pid: string): string | null {
   try {
     if (process.platform === 'darwin') {
       // macOS: use ps
-      return execSync(`ps -p ${pid} -o command= 2>/dev/null`, {
-        encoding: 'utf-8',
-      }).trim() || null;
+      return (
+        execSync(`ps -p ${pid} -o command= 2>/dev/null`, {
+          encoding: 'utf-8',
+        }).trim() || null
+      );
     } else {
       // Linux: use /proc filesystem
-      return execSync(`cat /proc/${pid}/cmdline 2>/dev/null | tr '\\0' ' '`, {
-        encoding: 'utf-8',
-      }).trim() || null;
+      return (
+        execSync(`cat /proc/${pid}/cmdline 2>/dev/null | tr '\\0' ' '`, {
+          encoding: 'utf-8',
+        }).trim() || null
+      );
     }
   } catch {
     return null;
@@ -60,10 +69,13 @@ function findRunningViteServer(): { port: number; https: boolean } | null {
   try {
     const cwd = process.cwd();
     // Use lsof to find listening ports and their PIDs, then check if the process cwd matches
-    const lsofOutput = execSync('lsof -i -P -n 2>/dev/null | grep LISTEN || true', {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const lsofOutput = execSync(
+      'lsof -i -P -n 2>/dev/null | grep LISTEN || true',
+      {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }
+    );
 
     for (const line of lsofOutput.split('\n')) {
       const parts = line.split(/\s+/);
@@ -83,7 +95,8 @@ function findRunningViteServer(): { port: number; https: boolean } | null {
 
         if (processCwd === cwd && cmdline?.includes('vite')) {
           // Check if it's HTTPS (timeout command differs on macOS)
-          const timeoutCmd = process.platform === 'darwin' ? 'gtimeout' : 'timeout';
+          const timeoutCmd =
+            process.platform === 'darwin' ? 'gtimeout' : 'timeout';
           const isHttps =
             execSync(
               `${timeoutCmd} 1 bash -c "echo | openssl s_client -connect localhost:${port} 2>/dev/null | grep -q 'CONNECTED' && echo yes" 2>/dev/null || true`,

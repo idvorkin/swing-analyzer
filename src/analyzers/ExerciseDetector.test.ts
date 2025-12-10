@@ -1,22 +1,28 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { ExerciseDetector } from './ExerciseDetector';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Skeleton } from '../models/Skeleton';
+import { ExerciseDetector } from './ExerciseDetector';
 
 /**
  * Creates a mock Skeleton with specific knee angles
  */
 function createMockSkeleton(leftKnee: number, rightKnee: number): Skeleton {
   return {
-    getAngle: vi.fn().mockImplementation((_point1: string, vertex: string, _point2: string) => {
-      if (vertex === 'leftKnee') return leftKnee;
-      if (vertex === 'rightKnee') return rightKnee;
-      return 180;
-    }),
+    getAngle: vi
+      .fn()
+      .mockImplementation(
+        (_point1: string, vertex: string, _point2: string) => {
+          if (vertex === 'leftKnee') return leftKnee;
+          if (vertex === 'rightKnee') return rightKnee;
+          return 180;
+        }
+      ),
     getSpineAngle: vi.fn().mockReturnValue(10),
     // New side-specific method used by ExerciseDetector
-    getKneeAngleForSide: vi.fn().mockImplementation((side: 'left' | 'right') => {
-      return side === 'left' ? leftKnee : rightKnee;
-    }),
+    getKneeAngleForSide: vi
+      .fn()
+      .mockImplementation((side: 'left' | 'right') => {
+        return side === 'left' ? leftKnee : rightKnee;
+      }),
   } as unknown as Skeleton;
 }
 
@@ -65,13 +71,15 @@ describe('ExerciseDetector', () => {
         { left: 165, right: 167 }, // Top
       ];
 
-      let result;
+      let result: ReturnType<typeof detector.processFrame> | undefined;
       for (const frame of swingFrames) {
-        result = detector.processFrame(createMockSkeleton(frame.left, frame.right));
+        result = detector.processFrame(
+          createMockSkeleton(frame.left, frame.right)
+        );
       }
 
-      expect(result!.exercise).toBe('kettlebell-swing');
-      expect(result!.confidence).toBeGreaterThan(50);
+      expect(result?.exercise).toBe('kettlebell-swing');
+      expect(result?.confidence).toBeGreaterThan(50);
     });
 
     it('has high confidence for consistent symmetric movement', () => {
@@ -94,9 +102,9 @@ describe('ExerciseDetector', () => {
         { left: 170, right: 175 }, // Standing
         { left: 150, right: 175 }, // Starting descent (working leg: left)
         { left: 120, right: 175 }, // Mid descent
-        { left: 90, right: 175 },  // Deep squat
-        { left: 60, right: 172 },  // Bottom
-        { left: 70, right: 173 },  // Starting ascent
+        { left: 90, right: 175 }, // Deep squat
+        { left: 60, right: 172 }, // Bottom
+        { left: 70, right: 173 }, // Starting ascent
         { left: 100, right: 174 }, // Mid ascent
         { left: 130, right: 175 }, // Rising
         { left: 160, right: 175 }, // Near top
@@ -105,13 +113,15 @@ describe('ExerciseDetector', () => {
         { left: 100, right: 174 }, // Descending
       ];
 
-      let result;
+      let result: ReturnType<typeof detector.processFrame> | undefined;
       for (const frame of pistolFrames) {
-        result = detector.processFrame(createMockSkeleton(frame.left, frame.right));
+        result = detector.processFrame(
+          createMockSkeleton(frame.left, frame.right)
+        );
       }
 
-      expect(result!.exercise).toBe('pistol-squat');
-      expect(result!.confidence).toBeGreaterThan(50);
+      expect(result?.exercise).toBe('pistol-squat');
+      expect(result?.confidence).toBeGreaterThan(50);
     });
 
     it('detects right-leg pistol squat', () => {
@@ -120,22 +130,24 @@ describe('ExerciseDetector', () => {
         { left: 175, right: 170 }, // Standing
         { left: 175, right: 140 }, // Starting descent
         { left: 173, right: 100 }, // Mid descent
-        { left: 172, right: 60 },  // Bottom
-        { left: 173, right: 80 },  // Ascending
+        { left: 172, right: 60 }, // Bottom
+        { left: 173, right: 80 }, // Ascending
         { left: 174, right: 120 }, // Rising
         { left: 175, right: 160 }, // Near top
         { left: 175, right: 170 }, // Standing
         { left: 174, right: 130 }, // Second rep
-        { left: 173, right: 80 },  // Bottom again
+        { left: 173, right: 80 }, // Bottom again
       ];
 
-      let result;
+      let result: ReturnType<typeof detector.processFrame> | undefined;
       for (const frame of pistolFrames) {
-        result = detector.processFrame(createMockSkeleton(frame.left, frame.right));
+        result = detector.processFrame(
+          createMockSkeleton(frame.left, frame.right)
+        );
       }
 
-      expect(result!.exercise).toBe('pistol-squat');
-      expect(result!.confidence).toBeGreaterThan(50);
+      expect(result?.exercise).toBe('pistol-squat');
+      expect(result?.confidence).toBeGreaterThan(50);
     });
 
     it('has high confidence for deep single-leg squat', () => {

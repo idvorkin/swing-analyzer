@@ -20,7 +20,9 @@ function kp(x: number, y: number, score = 0.9): PoseKeypoint {
  * Helper to create a full 33-keypoint MediaPipe skeleton with specific positions
  * Non-specified keypoints are set to undefined (sparse array)
  */
-function createMediaPipeSkeleton(overrides: Partial<Record<string, PoseKeypoint>>): Skeleton {
+function createMediaPipeSkeleton(
+  overrides: Partial<Record<string, PoseKeypoint>>
+): Skeleton {
   // Create sparse array - undefined keypoints won't be found
   const keypoints: (PoseKeypoint | undefined)[] = new Array(33);
 
@@ -73,14 +75,14 @@ describe('Skeleton', () => {
       const bbox = skeleton.getBoundingBox(0.2, 0); // No padding for easier math
 
       expect(bbox).not.toBeNull();
-      expect(bbox!.minX).toBe(100);
-      expect(bbox!.maxX).toBe(200);
-      expect(bbox!.minY).toBe(50);
-      expect(bbox!.maxY).toBe(150);
-      expect(bbox!.width).toBe(100);
-      expect(bbox!.height).toBe(100);
-      expect(bbox!.centerX).toBe(150);
-      expect(bbox!.centerY).toBe(100);
+      expect(bbox?.minX).toBe(100);
+      expect(bbox?.maxX).toBe(200);
+      expect(bbox?.minY).toBe(50);
+      expect(bbox?.maxY).toBe(150);
+      expect(bbox?.width).toBe(100);
+      expect(bbox?.height).toBe(100);
+      expect(bbox?.centerX).toBe(150);
+      expect(bbox?.centerY).toBe(100);
     });
 
     it('applies padding correctly', () => {
@@ -97,12 +99,12 @@ describe('Skeleton', () => {
 
       expect(bbox).not.toBeNull();
       // minX = 100 - (100 * 0.2) = 80
-      expect(bbox!.minX).toBe(80);
+      expect(bbox?.minX).toBe(80);
       // maxX = 200 + (100 * 0.2) = 220
-      expect(bbox!.maxX).toBe(220);
+      expect(bbox?.maxX).toBe(220);
       // Width with padding = 220 - 80 = 140
-      expect(bbox!.width).toBe(140);
-      expect(bbox!.height).toBe(140);
+      expect(bbox?.width).toBe(140);
+      expect(bbox?.height).toBe(140);
     });
 
     it('returns null when fewer than 3 keypoints are visible', () => {
@@ -127,8 +129,8 @@ describe('Skeleton', () => {
 
       expect(bbox).not.toBeNull();
       // Should not include the (500, 500) point
-      expect(bbox!.maxX).toBe(200);
-      expect(bbox!.maxY).toBe(200);
+      expect(bbox?.maxX).toBe(200);
+      expect(bbox?.maxY).toBe(200);
     });
 
     it('returns null when all keypoints are below confidence threshold', () => {
@@ -157,8 +159,8 @@ describe('Skeleton', () => {
 
       expect(bbox).not.toBeNull();
       // Should not include (0, 0)
-      expect(bbox!.minX).toBe(100);
-      expect(bbox!.minY).toBe(100);
+      expect(bbox?.minX).toBe(100);
+      expect(bbox?.minY).toBe(100);
     });
 
     it('handles visibility property instead of score', () => {
@@ -172,7 +174,7 @@ describe('Skeleton', () => {
       const bbox = skeleton.getBoundingBox(0.2, 0);
 
       expect(bbox).not.toBeNull();
-      expect(bbox!.centerX).toBe(150);
+      expect(bbox?.centerX).toBe(150);
     });
 
     it('calculates center correctly for asymmetric bounding box', () => {
@@ -189,8 +191,8 @@ describe('Skeleton', () => {
       expect(bbox).not.toBeNull();
       // X: min=50, max=150, center=100
       // Y: min=100, max=300, center=200
-      expect(bbox!.centerX).toBe(100);
-      expect(bbox!.centerY).toBe(200);
+      expect(bbox?.centerX).toBe(100);
+      expect(bbox?.centerY).toBe(200);
     });
   });
 
@@ -274,7 +276,11 @@ describe('Skeleton', () => {
         rightWrist: kp(100, 300),
       });
 
-      const angle = skeleton.getAngle('rightShoulder', 'rightElbow', 'rightWrist');
+      const angle = skeleton.getAngle(
+        'rightShoulder',
+        'rightElbow',
+        'rightWrist'
+      );
       expect(angle).toBeCloseTo(180, 0);
     });
 
@@ -286,7 +292,11 @@ describe('Skeleton', () => {
         rightShoulder: kp(100, 100),
       });
 
-      const genericAngle = skeleton.getAngle('rightKnee', 'rightHip', 'rightShoulder');
+      const genericAngle = skeleton.getAngle(
+        'rightKnee',
+        'rightHip',
+        'rightShoulder'
+      );
       const hipAngle = skeleton.getHipAngle();
 
       expect(genericAngle).toBeCloseTo(hipAngle, 1);
@@ -300,7 +310,11 @@ describe('Skeleton', () => {
         rightAnkle: kp(100, 400),
       });
 
-      const genericAngle = skeleton.getAngle('rightHip', 'rightKnee', 'rightAnkle');
+      const genericAngle = skeleton.getAngle(
+        'rightHip',
+        'rightKnee',
+        'rightAnkle'
+      );
       const kneeAngle = skeleton.getKneeAngle();
 
       expect(genericAngle).toBeCloseTo(kneeAngle, 1);
@@ -311,7 +325,11 @@ describe('Skeleton', () => {
         rightShoulder: kp(100, 100),
       });
 
-      const angle = skeleton.getAngle('rightShoulder', 'rightElbow', 'rightWrist');
+      const angle = skeleton.getAngle(
+        'rightShoulder',
+        'rightElbow',
+        'rightWrist'
+      );
       expect(angle).toBeNull();
     });
 
@@ -322,7 +340,11 @@ describe('Skeleton', () => {
         rightWrist: kp(100, 300),
       });
 
-      const angle = skeleton.getAngle('invalidPoint', 'rightElbow', 'rightWrist');
+      const angle = skeleton.getAngle(
+        'invalidPoint',
+        'rightElbow',
+        'rightWrist'
+      );
       expect(angle).toBeNull();
     });
 

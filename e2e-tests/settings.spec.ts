@@ -11,8 +11,8 @@
 
 import { expect, test } from '@playwright/test';
 import {
-  clickSwingSampleButton,
   clearPoseTrackDB,
+  clickSwingSampleButton,
   seedPoseTrackFixture,
   useShortTestVideo,
 } from './helpers';
@@ -95,18 +95,30 @@ test.describe('Settings Modal', () => {
       await page.click('button[aria-label="Open settings"]');
 
       // Segmented control with Both, Video, Skeleton options
-      await expect(page.locator('.segmented-control-option', { hasText: 'Both' })).toBeVisible();
-      await expect(page.locator('.segmented-control-option', { hasText: 'Video' })).toBeVisible();
-      await expect(page.locator('.segmented-control-option', { hasText: 'Skeleton' })).toBeVisible();
+      await expect(
+        page.locator('.segmented-control-option', { hasText: 'Both' })
+      ).toBeVisible();
+      await expect(
+        page.locator('.segmented-control-option', { hasText: 'Video' })
+      ).toBeVisible();
+      await expect(
+        page.locator('.segmented-control-option', { hasText: 'Skeleton' })
+      ).toBeVisible();
     });
 
     test('should show BlazePose variant options', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
 
       // Segmented control with Lite, Full, Heavy options
-      await expect(page.locator('.segmented-control-option', { hasText: 'Lite' })).toBeVisible();
-      await expect(page.locator('.segmented-control-option', { hasText: 'Full' })).toBeVisible();
-      await expect(page.locator('.segmented-control-option', { hasText: 'Heavy' })).toBeVisible();
+      await expect(
+        page.locator('.segmented-control-option', { hasText: 'Lite' })
+      ).toBeVisible();
+      await expect(
+        page.locator('.segmented-control-option', { hasText: 'Full' })
+      ).toBeVisible();
+      await expect(
+        page.locator('.segmented-control-option', { hasText: 'Heavy' })
+      ).toBeVisible();
     });
 
     test('should persist display mode selection', async ({ page }) => {
@@ -114,7 +126,9 @@ test.describe('Settings Modal', () => {
       await expect(page.locator('.settings-modal')).toBeVisible();
 
       // Click Video option in segmented control
-      await page.locator('.segmented-control-option', { hasText: 'Video' }).click();
+      await page
+        .locator('.segmented-control-option', { hasText: 'Video' })
+        .click();
 
       await page.click('button[aria-label="Close settings"]');
       await expect(page.locator('.settings-modal')).not.toBeVisible();
@@ -123,7 +137,9 @@ test.describe('Settings Modal', () => {
       await expect(page.locator('.settings-modal')).toBeVisible();
 
       // Video button should be active
-      await expect(page.locator('.segmented-control-option', { hasText: 'Video' })).toHaveClass(/segmented-control-option--active/);
+      await expect(
+        page.locator('.segmented-control-option', { hasText: 'Video' })
+      ).toHaveClass(/segmented-control-option--active/);
     });
 
     test('should show reload banner when changing BlazePose variant', async ({
@@ -132,10 +148,16 @@ test.describe('Settings Modal', () => {
       await page.click('button[aria-label="Open settings"]');
 
       // Check if Lite is active, click Full; otherwise click Lite
-      const liteBtn = page.locator('.segmented-control-option', { hasText: 'Lite' });
-      const fullBtn = page.locator('.segmented-control-option', { hasText: 'Full' });
+      const liteBtn = page.locator('.segmented-control-option', {
+        hasText: 'Lite',
+      });
+      const fullBtn = page.locator('.segmented-control-option', {
+        hasText: 'Full',
+      });
 
-      const isLiteActive = await liteBtn.evaluate(el => el.classList.contains('segmented-control-option--active'));
+      const isLiteActive = await liteBtn.evaluate((el) =>
+        el.classList.contains('segmented-control-option--active')
+      );
 
       if (isLiteActive) {
         await fullBtn.click();
@@ -159,7 +181,9 @@ test.describe('Settings Modal', () => {
       await expect(page.locator('.settings-tab').nth(1)).toHaveClass(
         /settings-tab--active/
       );
-      await expect(page.locator('.settings-action-btn', { hasText: 'Download Log' })).toBeVisible();
+      await expect(
+        page.locator('.settings-action-btn', { hasText: 'Download Log' })
+      ).toBeVisible();
     });
 
     test('should show session stats', async ({ page }) => {
@@ -175,20 +199,31 @@ test.describe('Settings Modal', () => {
       await page.click('button[aria-label="Open settings"]');
       await page.locator('.settings-tab').nth(1).click();
 
-      await expect(page.locator('.settings-action-btn', { hasText: 'Download Poses' })).toBeVisible();
+      await expect(
+        page.locator('.settings-action-btn', { hasText: 'Download Poses' })
+      ).toBeVisible();
     });
 
-    test('Download Poses button should be disabled when no video loaded', async ({ page }) => {
+    test('Download Poses button should be disabled when no video loaded', async ({
+      page,
+    }) => {
       await page.click('button[aria-label="Open settings"]');
       await page.locator('.settings-tab').nth(1).click();
 
-      const downloadPosesBtn = page.locator('.settings-action-btn', { hasText: 'Download Poses' });
+      const downloadPosesBtn = page.locator('.settings-action-btn', {
+        hasText: 'Download Poses',
+      });
       await expect(downloadPosesBtn).toBeVisible();
       await expect(downloadPosesBtn).toBeDisabled();
-      await expect(downloadPosesBtn).toHaveAttribute('title', 'Load a video first');
+      await expect(downloadPosesBtn).toHaveAttribute(
+        'title',
+        'Load a video first'
+      );
     });
 
-    test('Download Poses button should be enabled after loading video with poses', async ({ page }) => {
+    test('Download Poses button should be enabled after loading video with poses', async ({
+      page,
+    }) => {
       // Intercept GitHub video and serve local short video
       await useShortTestVideo(page);
 
@@ -206,25 +241,33 @@ test.describe('Settings Modal', () => {
       await page.waitForFunction(
         () => {
           const video = document.querySelector('video') as HTMLVideoElement;
-          return video && video.src && video.src.startsWith('blob:');
+          return video?.src?.startsWith('blob:');
         },
         { timeout: 15000 }
       );
 
       // Wait for pose track to be available (cache lookup)
-      await page.waitForFunction(() => {
-        const debug = (window as any).swingDebug;
-        return debug?.getPoseTrack() !== null;
-      }, { timeout: 15000 });
+      await page.waitForFunction(
+        () => {
+          const debug = (window as any).swingDebug;
+          return debug?.getPoseTrack() !== null;
+        },
+        { timeout: 15000 }
+      );
 
       // Open settings
       await page.click('button[aria-label="Open settings"]');
       await page.locator('.settings-tab').nth(1).click();
 
-      const downloadPosesBtn = page.locator('.settings-action-btn', { hasText: 'Download Poses' });
+      const downloadPosesBtn = page.locator('.settings-action-btn', {
+        hasText: 'Download Poses',
+      });
       await expect(downloadPosesBtn).toBeVisible();
       await expect(downloadPosesBtn).toBeEnabled();
-      await expect(downloadPosesBtn).toHaveAttribute('title', 'Download extracted pose data');
+      await expect(downloadPosesBtn).toHaveAttribute(
+        'title',
+        'Download extracted pose data'
+      );
     });
 
     test('Download Poses should download valid JSON file', async ({ page }) => {
@@ -245,16 +288,19 @@ test.describe('Settings Modal', () => {
       await page.waitForFunction(
         () => {
           const video = document.querySelector('video') as HTMLVideoElement;
-          return video && video.src && video.src.startsWith('blob:');
+          return video?.src?.startsWith('blob:');
         },
         { timeout: 15000 }
       );
 
       // Wait for pose track to be available (cache lookup)
-      await page.waitForFunction(() => {
-        const debug = (window as any).swingDebug;
-        return debug?.getPoseTrack() !== null;
-      }, { timeout: 15000 });
+      await page.waitForFunction(
+        () => {
+          const debug = (window as any).swingDebug;
+          return debug?.getPoseTrack() !== null;
+        },
+        { timeout: 15000 }
+      );
 
       // Get pose track via swingDebug API
       const poseTrack = await page.evaluate(() => {
@@ -275,7 +321,9 @@ test.describe('Settings Modal', () => {
       expect(filename).toMatch(/\.posetrack\.json\.gz$/);
     });
 
-    test('swingDebug.downloadPoseTrack should return null when no video loaded', async ({ page }) => {
+    test('swingDebug.downloadPoseTrack should return null when no video loaded', async ({
+      page,
+    }) => {
       const result = await page.evaluate(async () => {
         return await (window as any).swingDebug.downloadPoseTrack();
       });

@@ -75,7 +75,9 @@ export class CachedPoseSkeletonTransformer implements SkeletonTransformer {
    * Transform a frame event into a skeleton using cached pose data (Promise version).
    * Use this for video-event-driven processing without RxJS subscriptions.
    */
-  async transformToSkeletonAsync(frameEvent: FrameEvent): Promise<SkeletonEvent> {
+  async transformToSkeletonAsync(
+    frameEvent: FrameEvent
+  ): Promise<SkeletonEvent> {
     // Cached lookup is synchronous, so just wrap in Promise
     return this.transformToSkeletonSync(frameEvent);
   }

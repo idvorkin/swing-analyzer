@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
 import { KettlebellSwingFormAnalyzer } from './src/analyzers/KettlebellSwingFormAnalyzer.js';
 import { Skeleton } from './src/models/Skeleton.js';
 import { MediaPipeBodyParts, type PoseKeypoint } from './src/types.js';
@@ -18,7 +18,9 @@ function calculateSpineAngle(keypoints: PoseKeypoint[]): number {
   return Math.abs((Math.atan2(deltaX, deltaY) * 180) / Math.PI);
 }
 
-const posetrack = JSON.parse(readFileSync('e2e-tests/fixtures/poses/igor-1h-swing.posetrack.json', 'utf-8'));
+const posetrack = JSON.parse(
+  readFileSync('e2e-tests/fixtures/poses/igor-1h-swing.posetrack.json', 'utf-8')
+);
 
 const analyzer = new KettlebellSwingFormAnalyzer();
 let lastRepCount = 0;
@@ -29,7 +31,8 @@ console.log('='.repeat(80));
 for (const frame of posetrack.frames) {
   if (!frame.keypoints || frame.keypoints.length === 0) continue;
 
-  const spineAngle = frame.angles?.spineAngle ?? calculateSpineAngle(frame.keypoints);
+  const spineAngle =
+    frame.angles?.spineAngle ?? calculateSpineAngle(frame.keypoints);
   const skeleton = new Skeleton(frame.keypoints, spineAngle, true);
   const result = analyzer.processFrame(skeleton, Date.now(), frame.videoTime);
 
@@ -42,7 +45,16 @@ for (const frame of posetrack.frames) {
     if (result.repCount > lastRepCount || Math.abs(armToVert) > 55) {
       const t = frame.videoTime.toFixed(2);
       const arm = armToVert.toFixed(1).padStart(6);
-      console.log('t=' + t + 's phase=' + phase.padEnd(8) + ' armToVert=' + arm + ' rep=' + result.repCount);
+      console.log(
+        't=' +
+          t +
+          's phase=' +
+          phase.padEnd(8) +
+          ' armToVert=' +
+          arm +
+          ' rep=' +
+          result.repCount
+      );
     }
   }
 

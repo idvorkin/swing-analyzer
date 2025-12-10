@@ -24,7 +24,8 @@ export const DEFAULT_SAMPLE_VIDEO: string =
  * Local fallback path (for development/offline use).
  */
 export const LOCAL_SAMPLE_VIDEO: string =
-  EXERCISE_REGISTRY['kettlebell-swing'].sampleVideos[0]?.localFallback ?? '/videos/swing-sample.webm';
+  EXERCISE_REGISTRY['kettlebell-swing'].sampleVideos[0]?.localFallback ??
+  '/videos/swing-sample.webm';
 
 /**
  * Pistol squat sample video URL.
@@ -37,7 +38,8 @@ export const PISTOL_SQUAT_SAMPLE_VIDEO: string =
  * Local fallback for pistol squat (for development/offline use).
  */
 export const LOCAL_PISTOL_SQUAT_VIDEO: string =
-  EXERCISE_REGISTRY['pistol-squat'].sampleVideos[0]?.localFallback ?? '/videos/pistol-squat-sample.webm';
+  EXERCISE_REGISTRY['pistol-squat'].sampleVideos[0]?.localFallback ??
+  '/videos/pistol-squat-sample.webm';
 
 /**
  * Short test video for E2E tests (4 reps, ~5.5 seconds).

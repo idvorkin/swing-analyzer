@@ -14,7 +14,10 @@
  */
 function getTestId(): string | null {
   if (typeof window !== 'undefined') {
-    return (window as unknown as { __VIDEO_TEST_ID__?: string }).__VIDEO_TEST_ID__ ?? null;
+    return (
+      (window as unknown as { __VIDEO_TEST_ID__?: string }).__VIDEO_TEST_ID__ ??
+      null
+    );
   }
   return null;
 }
@@ -83,7 +86,9 @@ export async function computeQuickVideoHash(
 
   // Check for test ID (E2E test isolation)
   const testId = getTestId();
-  const testIdBytes = testId ? new TextEncoder().encode(testId) : new Uint8Array(0);
+  const testIdBytes = testId
+    ? new TextEncoder().encode(testId)
+    : new Uint8Array(0);
 
   // Concatenate all buffers (including test ID if present)
   const combined = new Uint8Array(
@@ -96,7 +101,10 @@ export async function computeQuickVideoHash(
     firstBuffer.byteLength + lastBuffer.byteLength
   );
   if (testIdBytes.byteLength > 0) {
-    combined.set(testIdBytes, firstBuffer.byteLength + lastBuffer.byteLength + 8);
+    combined.set(
+      testIdBytes,
+      firstBuffer.byteLength + lastBuffer.byteLength + 8
+    );
   }
 
   // Hash the combined data

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PositionCandidate } from '../types/exercise';
-import { PHASE_LABELS, getPhaseNames, getSortedRepNumbers } from './repGalleryConstants';
+import {
+  getPhaseNames,
+  getSortedRepNumbers,
+  PHASE_LABELS,
+} from './repGalleryConstants';
 import './RepGalleryModal.css';
 
 interface RepGalleryModalProps {
@@ -28,10 +32,16 @@ export function RepGalleryModal({
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Get phase names dynamically from the data (exercise-agnostic)
-  const phaseNames = useMemo(() => getPhaseNames(repThumbnails), [repThumbnails]);
+  const phaseNames = useMemo(
+    () => getPhaseNames(repThumbnails),
+    [repThumbnails]
+  );
 
   // Get sorted rep numbers
-  const repNumbers = useMemo(() => getSortedRepNumbers(repThumbnails), [repThumbnails]);
+  const repNumbers = useMemo(
+    () => getSortedRepNumbers(repThumbnails),
+    [repThumbnails]
+  );
 
   // Reset selection when closing
   useEffect(() => {
@@ -157,7 +167,10 @@ export function RepGalleryModal({
               No reps recorded yet. Complete some reps to see them here.
             </div>
           ) : viewMode === 'grid' ? (
-            <div className={`gallery-grid ${focusedPhase ? 'gallery-grid--focused' : ''}`} ref={gridRef}>
+            <div
+              className={`gallery-grid ${focusedPhase ? 'gallery-grid--focused' : ''}`}
+              ref={gridRef}
+            >
               {/* Header row with phase names */}
               <div className="gallery-grid-header">
                 <div className="gallery-grid-cell gallery-grid-cell--header gallery-grid-cell--rep">
@@ -169,7 +182,11 @@ export function RepGalleryModal({
                     key={phase}
                     className={`gallery-grid-cell gallery-grid-cell--header gallery-phase-btn ${focusedPhase === phase ? 'gallery-phase-btn--active' : ''}`}
                     onClick={() => handlePhaseClick(phase)}
-                    title={focusedPhase === phase ? 'Click to show all phases' : `Focus on ${PHASE_LABELS[phase] || phase}`}
+                    title={
+                      focusedPhase === phase
+                        ? 'Click to show all phases'
+                        : `Focus on ${PHASE_LABELS[phase] || phase}`
+                    }
                   >
                     {PHASE_LABELS[phase] || phase}
                   </button>
@@ -217,10 +234,20 @@ export function RepGalleryModal({
                                 handleThumbnailClick(repNum, position)
                               }
                               onDoubleTap={() => handlePhaseClick(phase)}
-                              size={isFocused ? 'large' : isMinimized ? 'mini' : 'small'}
+                              size={
+                                isFocused
+                                  ? 'large'
+                                  : isMinimized
+                                    ? 'mini'
+                                    : 'small'
+                              }
                             />
                           ) : (
-                            <div className={`gallery-thumbnail-empty ${isMinimized ? 'gallery-thumbnail-empty--mini' : ''}`}>—</div>
+                            <div
+                              className={`gallery-thumbnail-empty ${isMinimized ? 'gallery-thumbnail-empty--mini' : ''}`}
+                            >
+                              —
+                            </div>
                           )}
                         </div>
                       );
@@ -279,12 +306,11 @@ export function RepGalleryModal({
         <div className="gallery-footer">
           {viewMode === 'grid' ? (
             <span className="gallery-hint">
-              Double-tap thumbnail to focus phase. Tap to seek. Select reps to compare.
+              Double-tap thumbnail to focus phase. Tap to seek. Select reps to
+              compare.
             </span>
           ) : (
-            <span className="gallery-hint">
-              Tap thumbnails to seek video.
-            </span>
+            <span className="gallery-hint">Tap thumbnails to seek video.</span>
           )}
         </div>
       </div>

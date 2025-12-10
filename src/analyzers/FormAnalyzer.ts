@@ -88,7 +88,12 @@ export interface FormAnalyzer {
    * @param frameImage - Optional frame thumbnail for filmstrip capture
    * @returns Analysis result with phase, rep count, and positions
    */
-  processFrame(skeleton: Skeleton, timestamp: number, videoTime?: number, frameImage?: ImageData): FormAnalyzerResult;
+  processFrame(
+    skeleton: Skeleton,
+    timestamp: number,
+    videoTime?: number,
+    frameImage?: ImageData
+  ): FormAnalyzerResult;
 
   /** Get the current phase */
   getPhase(): string;

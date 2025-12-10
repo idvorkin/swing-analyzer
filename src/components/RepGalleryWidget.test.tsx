@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { RepGalleryWidget } from './RepGalleryWidget';
 import type { PositionCandidate } from '../types/exercise';
+import { RepGalleryWidget } from './RepGalleryWidget';
 
 // Mock ImageData for jsdom (not available in jsdom environment)
 class MockImageData {
@@ -48,7 +48,11 @@ function createMockCandidate(
     angles: { spine: 45, arm: 30 },
     score: 0.9,
     frameImage: hasFrameImage
-      ? new MockImageData(new Uint8ClampedArray(4 * 10 * 10), 10, 10) as unknown as ImageData
+      ? (new MockImageData(
+          new Uint8ClampedArray(4 * 10 * 10),
+          10,
+          10
+        ) as unknown as ImageData)
       : undefined,
   };
 }
@@ -91,7 +95,9 @@ describe('RepGalleryWidget', () => {
           onThumbnailClick={vi.fn()}
         />
       );
-      expect(screen.getByText('Complete a rep to see checkpoints')).toBeInTheDocument();
+      expect(
+        screen.getByText('Complete a rep to see checkpoints')
+      ).toBeInTheDocument();
     });
 
     it('shows "Loading rep data" message when repCount > 0 but no thumbnails', () => {
@@ -205,7 +211,9 @@ describe('RepGalleryWidget', () => {
       const currentRow = container.querySelector('.rep-gallery-row--current');
       expect(currentRow).toBeInTheDocument();
       // Rep 2 (index 1) should be current
-      expect(currentRow?.querySelector('.rep-gallery-row-rep')?.textContent).toBe('2');
+      expect(
+        currentRow?.querySelector('.rep-gallery-row-rep')?.textContent
+      ).toBe('2');
     });
   });
 
@@ -240,7 +248,9 @@ describe('RepGalleryWidget', () => {
         />
       );
 
-      expect(container.querySelector('.rep-gallery-cell-empty')).toBeInTheDocument();
+      expect(
+        container.querySelector('.rep-gallery-cell-empty')
+      ).toBeInTheDocument();
       expect(screen.getByText('—')).toBeInTheDocument();
     });
 
@@ -328,7 +338,9 @@ describe('RepGalleryWidget', () => {
         />
       );
 
-      const focusedButton = container.querySelector('.rep-gallery-header-phase--focused');
+      const focusedButton = container.querySelector(
+        '.rep-gallery-header-phase--focused'
+      );
       expect(focusedButton).toBeInTheDocument();
       expect(focusedButton?.textContent).toBe('Top');
     });
@@ -346,7 +358,9 @@ describe('RepGalleryWidget', () => {
         />
       );
 
-      const minimizedButtons = container.querySelectorAll('.rep-gallery-header-phase--minimized');
+      const minimizedButtons = container.querySelectorAll(
+        '.rep-gallery-header-phase--minimized'
+      );
       expect(minimizedButtons.length).toBe(3); // connect, bottom, release are minimized
     });
 
@@ -380,7 +394,9 @@ describe('RepGalleryWidget', () => {
         />
       );
 
-      const minimizedCells = container.querySelectorAll('.rep-gallery-cell--minimized');
+      const minimizedCells = container.querySelectorAll(
+        '.rep-gallery-cell--minimized'
+      );
       expect(minimizedCells.length).toBe(3); // connect, bottom, release are minimized
     });
   });
@@ -420,7 +436,9 @@ describe('RepGalleryWidget', () => {
       );
 
       const currentRow = container.querySelector('.rep-gallery-row--current');
-      expect(currentRow?.querySelector('.rep-gallery-row-rep')?.textContent).toBe('3');
+      expect(
+        currentRow?.querySelector('.rep-gallery-row-rep')?.textContent
+      ).toBe('3');
     });
   });
 });

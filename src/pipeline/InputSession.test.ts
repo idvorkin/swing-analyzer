@@ -5,7 +5,7 @@
  * These are pure unit tests - no React, no actual video.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InputSession, type InputSessionState } from './InputSession';
 
 vi.mock('./VideoFileSkeletonSource', () => ({

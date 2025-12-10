@@ -3,12 +3,15 @@
 ## Hero Section
 
 ### Headline
+
 **Perfect Your Kettlebell Swing. No Coach Required.**
 
 ### Subheadline
+
 AI-powered form analysis that runs entirely in your browser. Get real-time feedback on every rep—see exactly what you're doing right (and wrong).
 
 ### CTA
+
 **Try It Free** | Upload a video or use your camera
 
 ---
@@ -74,13 +77,13 @@ The kettlebell swing is a **hip hinge**, not a squat. But most people—includin
 
 Here's what happens when you squat a swing:
 
-| Squat Pattern (Dangerous) | Hinge Pattern (Safe) |
-|---------------------------|----------------------|
-| Knees bend forward | Hips push backward |
-| Weight shifts to toes | Weight stays in heels |
-| Spine rounds under load | Spine stays neutral |
-| Lower back absorbs force | Glutes and hamstrings absorb force |
-| Compression on spinal discs | Hips act as the hinge point |
+| Squat Pattern (Dangerous)   | Hinge Pattern (Safe)               |
+| --------------------------- | ---------------------------------- |
+| Knees bend forward          | Hips push backward                 |
+| Weight shifts to toes       | Weight stays in heels              |
+| Spine rounds under load     | Spine stays neutral                |
+| Lower back absorbs force    | Glutes and hamstrings absorb force |
+| Compression on spinal discs | Hips act as the hinge point        |
 
 When you squat the swing, every rep sends compressive force through your lumbar spine. Do 100 swings? That's 100 micro-traumas to your lower back. Over weeks and months, that adds up to chronic pain—or worse, a disc injury.
 
@@ -91,11 +94,13 @@ When you squat the swing, every rep sends compressive force through your lumbar 
 Most fitness content shows the swing as two movements: up and down. This creates a mental model that's fundamentally wrong.
 
 When you think "up/down," you naturally:
+
 - Focus on the top position (arms up)
 - Rush through the bottom (just get back up)
 - Miss the hip hinge entirely
 
 When you think "four counts," you naturally:
+
 - Pause mentally at each phase
 - Feel the hip hinge at Bottom
 - Generate power from the Release
@@ -127,15 +132,19 @@ Click any checkpoint to jump to that exact moment. Step through frame by frame t
 ## How It Works
 
 ### 1. Record or Upload
+
 Use your phone's camera for live analysis, or upload a video you've already recorded. Works with any angle.
 
 ### 2. AI Analyzes Your Form
+
 MediaPipe pose detection identifies 17 body points and calculates your spine angle, hip angle, and arm position in real time.
 
 ### 3. Get Instant Feedback
+
 See your rep count, form quality score, and a filmstrip of checkpoints for each swing phase (Top → Connect → Bottom → Release).
 
 ### 4. Review & Improve
+
 Click any checkpoint to rewatch that moment. Compare your angles to ideal form. Train smarter.
 
 ---
@@ -143,16 +152,21 @@ Click any checkpoint to rewatch that moment. Compare your angles to ideal form. 
 ## Key Features
 
 ### Real-Time Skeleton Overlay
+
 See your body as the AI sees it. A clean, unobtrusive skeleton draws over your video so you can visualize your movement patterns.
 
 ### Hinge vs. Squat Detection
+
 The most common swing fault is squatting instead of hinging. Swing Analyzer detects this pattern and gives you a hinge score:
+
 - **Great hip drive!** — You're nailing the hinge
 - **Push hips back more** — Trending toward a squat
 - **You're squatting, not hinging** — Time to reset your form
 
 ### Four-Phase Position Tracking
+
 Every kettlebell swing has four key positions:
+
 - **Top** — Arms overhead, full lockout
 - **Connect** — Arms reconnect with body on downswing
 - **Bottom** — Maximum hip hinge, power loaded
@@ -161,40 +175,47 @@ Every kettlebell swing has four key positions:
 The app captures a checkpoint image at each phase so you can review your technique.
 
 ### Rep Counter & Navigation
+
 Automatic rep counting. Browse through your reps with arrow buttons. Click any rep to jump to its checkpoints.
 
 ### Frame-by-Frame Playback
+
 Step forward or backward one frame at a time. Perfect for analyzing the exact moment your form breaks down.
 
 ### Works Offline
+
 After initial load, everything runs in your browser. No internet required. Your videos never leave your device.
 
 ---
 
 ## Why Swing Analyzer?
 
-| Traditional Approach | Swing Analyzer |
-|---------------------|----------------|
-| Hire a coach ($50-150/session) | Free, unlimited analysis |
-| Watch yourself in a mirror | AI tracks angles you can't see |
-| Record and manually scrub video | Automatic checkpoints and rep detection |
-| Guess at form problems | Quantified feedback (spine: 45°, hip: 120°) |
-| Upload videos to cloud services | 100% private, browser-based |
+| Traditional Approach            | Swing Analyzer                              |
+| ------------------------------- | ------------------------------------------- |
+| Hire a coach ($50-150/session)  | Free, unlimited analysis                    |
+| Watch yourself in a mirror      | AI tracks angles you can't see              |
+| Record and manually scrub video | Automatic checkpoints and rep detection     |
+| Guess at form problems          | Quantified feedback (spine: 45°, hip: 120°) |
+| Upload videos to cloud services | 100% private, browser-based                 |
 
 ---
 
 ## Who It's For
 
 ### Home Athletes
+
 Train at home without a coach. Get feedback that helps you improve every session.
 
 ### CrossFit Athletes
+
 Perfect your swing for WODs. Catch form breakdown before it leads to injury.
 
 ### Kettlebell Beginners
+
 Learn proper hip hinge mechanics from day one. Build good habits early.
 
 ### Personal Trainers
+
 Analyze client form remotely. Use as a teaching tool to visualize technique.
 
 ---
@@ -202,15 +223,19 @@ Analyze client form remotely. Use as a teaching tool to visualize technique.
 ## Technical Excellence
 
 ### Powered by AI
+
 Built on MediaPipe and TensorFlow.js—the same technology used by Google's fitness apps.
 
 ### Privacy First
+
 All processing happens on your device. Videos are never uploaded. No accounts required.
 
 ### Works Everywhere
+
 Browser-based means it works on iPhone, Android, Mac, Windows, or Linux. No app store, no installation.
 
 ### Mobile Optimized
+
 Designed for phones first. Touch-friendly controls, responsive layout, works with front or back camera.
 
 ---
@@ -218,13 +243,13 @@ Designed for phones first. Touch-friendly controls, responsive layout, works wit
 ## Testimonials (Template)
 
 > "I've been doing kettlebell swings for years and thought my form was fine. Swing Analyzer showed me I was squatting, not hinging. Two weeks of focused practice and my back pain is gone."
-> — *[Name], CrossFit Athlete*
+> — _[Name], CrossFit Athlete_
 
 > "As a trainer, this is a game-changer for remote clients. I can see exactly what they're doing wrong without being there."
-> — *[Name], Personal Trainer*
+> — _[Name], Personal Trainer_
 
 > "Finally, feedback I can actually use. The skeleton overlay makes it so obvious where I'm breaking form."
-> — *[Name], Kettlebell Enthusiast*
+> — _[Name], Kettlebell Enthusiast_
 
 ---
 
@@ -351,6 +376,7 @@ Try it free: [link]
 # Email Campaign
 
 ## Subject Lines
+
 1. I did kettlebell swings wrong for years (here's what I learned)
 2. The kettlebell swing is 4 counts, not 2
 3. Why your back hurts after kettlebell swings
@@ -385,6 +411,7 @@ Once I understood, I tried to fix my form. But you can't watch yourself while sw
 **That's why I built Swing Analyzer.**
 
 It uses AI to track all 4 phases of your swing in real time:
+
 - Measures your spine angle, hip angle, arm position
 - Tells you whether you're hinging or squatting
 - Captures checkpoint images at each phase
@@ -404,9 +431,11 @@ P.S. The swing that saved my back: hips back, not knees forward. Swing Analyzer 
 # Product Hunt Launch
 
 ## Tagline
+
 I hurt my back doing swings wrong. Built an AI so you don't have to.
 
 ## Description
+
 I did kettlebell swings wrong for years. Thought it was 2 counts: up and down. Turns out it's 4 phases—and missing the hip hinge at the bottom was destroying my back.
 
 Swing Analyzer uses AI to track all 4 phases of your kettlebell swing:
@@ -421,6 +450,7 @@ It tells you whether you're hinging (safe) or squatting (back injury waiting to 
 • 100% browser-based, private, free
 
 ## First Comment
+
 Hey Product Hunt!
 
 I built Swing Analyzer after months of lower back pain from kettlebell swings.
@@ -440,6 +470,7 @@ I was squatting instead of hinging. Every rep was compressing my spine.
 **The solution:** AI that tracks the angles I couldn't see.
 
 Tech stack:
+
 - MediaPipe Pose (Google's pose detection)
 - TensorFlow.js (runs in browser, no server)
 - RxJS (real-time streaming pipeline)
@@ -448,5 +479,6 @@ Tech stack:
 If your back hurts after kettlebell swings, you might be making my mistake.
 
 Would love feedback on:
+
 - What form cues would help you most?
 - What other exercises should I add? (Pull-ups and squats are on the roadmap)

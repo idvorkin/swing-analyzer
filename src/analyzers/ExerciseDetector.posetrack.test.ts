@@ -1,12 +1,13 @@
 /**
  * Integration tests for ExerciseDetector using real posetrack data.
  */
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-import { ExerciseDetector } from './ExerciseDetector';
 import { Skeleton } from '../models/Skeleton';
 import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
+import { ExerciseDetector } from './ExerciseDetector';
 
 interface PoseTrackFrame {
   keypoints: PoseKeypoint[];
@@ -57,11 +58,19 @@ function detectExercise(posetrack: PoseTrack) {
     detector.processFrame(skeleton);
 
     if (detector.isLocked()) {
-      return { result: detector.getResult(), stats: detector.getStats(), lockedAtFrame: i };
+      return {
+        result: detector.getResult(),
+        stats: detector.getStats(),
+        lockedAtFrame: i,
+      };
     }
   }
 
-  return { result: detector.getResult(), stats: detector.getStats(), lockedAtFrame: null };
+  return {
+    result: detector.getResult(),
+    stats: detector.getStats(),
+    lockedAtFrame: null,
+  };
 }
 
 describe('ExerciseDetector with real posetrack data', () => {

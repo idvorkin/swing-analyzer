@@ -165,7 +165,13 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     this.updateMetrics(arm, spine, hip, knee);
 
     // Update peak tracking for current phase
-    this.updatePhasePeak(skeleton, timestamp, videoTime, { arm, spine, hip, knee }, frameImage);
+    this.updatePhasePeak(
+      skeleton,
+      timestamp,
+      videoTime,
+      { arm, spine, hip, knee },
+      frameImage
+    );
 
     // Increment frames in current phase
     this.framesInPhase++;
@@ -222,7 +228,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
       repCompleted,
       repCount: this.repCount,
       repPositions,
-      repQuality: repCompleted ? this.lastRepQuality ?? undefined : undefined,
+      repQuality: repCompleted ? (this.lastRepQuality ?? undefined) : undefined,
       angles,
     };
   }
@@ -317,7 +323,9 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
       default: {
         // Exhaustive check - TypeScript will error if a SwingPhase is unhandled
         const _exhaustiveCheck: never = phase;
-        console.error(`calculatePeakScore: Unhandled phase "${_exhaustiveCheck}"`);
+        console.error(
+          `calculatePeakScore: Unhandled phase "${_exhaustiveCheck}"`
+        );
         return 0;
       }
     }
@@ -407,7 +415,10 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     if (this.framesInPhase < this.minFramesInPhase) return false;
 
     // Check posture requirements (must be standing upright)
-    if (spine > this.thresholds.topSpineMax || hip < this.thresholds.topHipMin) {
+    if (
+      spine > this.thresholds.topSpineMax ||
+      hip < this.thresholds.topHipMin
+    ) {
       return false;
     }
 
@@ -522,7 +533,8 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     const feedback: string[] = [];
     let score = 100;
 
-    const { maxSpineAngle, maxArmAngle, maxKneeFlexion } = this.currentRepMetrics;
+    const { maxSpineAngle, maxArmAngle, maxKneeFlexion } =
+      this.currentRepMetrics;
 
     // Hinge depth scoring
     if (maxSpineAngle < 40) {

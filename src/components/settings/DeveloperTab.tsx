@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { sessionRecorder } from '../../services/SessionRecorder';
 import { DownloadIcon } from './Icons';
 
 export function DeveloperTab() {
-  const [recordingStats, setRecordingStats] = useState(sessionRecorder.getStats());
+  const [recordingStats, setRecordingStats] = useState(
+    sessionRecorder.getStats()
+  );
   const [hasPoseTrack, setHasPoseTrack] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -25,7 +27,11 @@ export function DeveloperTab() {
 
   const handleDownloadPoseTrack = useCallback(async () => {
     // Use swingDebug to download (it has the download logic)
-    const swingDebug = (window as unknown as { swingDebug?: { downloadPoseTrack: () => Promise<string | null> } }).swingDebug;
+    const swingDebug = (
+      window as unknown as {
+        swingDebug?: { downloadPoseTrack: () => Promise<string | null> };
+      }
+    ).swingDebug;
     if (swingDebug?.downloadPoseTrack) {
       setIsDownloading(true);
       try {
@@ -52,7 +58,9 @@ export function DeveloperTab() {
           className="settings-action-btn settings-action-btn--blue"
           onClick={handleDownloadPoseTrack}
           disabled={!hasPoseTrack || isDownloading}
-          title={hasPoseTrack ? 'Download extracted pose data' : 'Load a video first'}
+          title={
+            hasPoseTrack ? 'Download extracted pose data' : 'Load a video first'
+          }
         >
           <DownloadIcon /> {isDownloading ? 'Compressing...' : 'Download Poses'}
         </button>
@@ -60,11 +68,17 @@ export function DeveloperTab() {
 
       {/* Session stats inline */}
       <div className="settings-stats-row">
-        <span className="settings-stat">{formatDuration(recordingStats.duration)}</span>
-        <span className="settings-stat">{recordingStats.interactions} clicks</span>
+        <span className="settings-stat">
+          {formatDuration(recordingStats.duration)}
+        </span>
+        <span className="settings-stat">
+          {recordingStats.interactions} clicks
+        </span>
         <span className="settings-stat">{recordingStats.snapshots} snaps</span>
         {recordingStats.errors > 0 && (
-          <span className="settings-stat settings-stat--error">{recordingStats.errors} errors</span>
+          <span className="settings-stat settings-stat--error">
+            {recordingStats.errors} errors
+          </span>
         )}
       </div>
     </div>

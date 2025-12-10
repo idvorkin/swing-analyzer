@@ -88,6 +88,7 @@ The built files will be available in the `dist` directory.
 This project is configured for automatic deployment to Surge:
 
 1. When you push to the `main` branch, a GitHub Actions workflow will automatically:
+
    - Build the application
    - Deploy it to [swing-analyzer.surge.sh](https://swing-analyzer.surge.sh)
 

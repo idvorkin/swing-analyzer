@@ -4,10 +4,10 @@
  * Intercepts remote video requests and serves local files for faster tests.
  */
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
 import { seedPoseTrackFixture } from './indexeddb';
 
 const __filename = fileURLToPath(import.meta.url);

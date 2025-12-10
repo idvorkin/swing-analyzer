@@ -4,16 +4,16 @@
  * Exports all pose track fixtures for E2E tests.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { PoseTrackFile } from '../../src/types/posetrack';
 import {
   createPoorDetectionPoseTrack,
   createPoseTrackWithReps,
   createSinglePhasePoseTrack,
-  SWING_SAMPLE_VIDEO_HASH,
   SWING_SAMPLE_4REPS_VIDEO_HASH,
+  SWING_SAMPLE_VIDEO_HASH,
   SwingPhase,
 } from './pose-factory';
 

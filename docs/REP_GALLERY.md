@@ -28,20 +28,21 @@ An inline, scrollable multi-rep viewer displayed below the video.
 
 ### Features
 
-| Feature | Interaction | Result |
-|---------|-------------|--------|
-| **Scroll** | Vertical scroll | View more reps, snaps to rows |
-| **Seek** | Click thumbnail | Video seeks to that timestamp |
-| **Select rep** | Click thumbnail | Sets current rep index |
-| **Dynamic zoom** | Click phase header | Focused column expands, others shrink |
-| **Dynamic zoom** | Double-click thumbnail | Same as clicking phase header |
-| **Auto-scroll** | Navigate reps | Current rep scrolls into view |
+| Feature          | Interaction            | Result                                |
+| ---------------- | ---------------------- | ------------------------------------- |
+| **Scroll**       | Vertical scroll        | View more reps, snaps to rows         |
+| **Seek**         | Click thumbnail        | Video seeks to that timestamp         |
+| **Select rep**   | Click thumbnail        | Sets current rep index                |
+| **Dynamic zoom** | Click phase header     | Focused column expands, others shrink |
+| **Dynamic zoom** | Double-click thumbnail | Same as clicking phase header         |
+| **Auto-scroll**  | Navigate reps          | Current rep scrolls into view         |
 
 ### Dynamic Zoom (Wheel of Fortune Style)
 
 Click any phase header (Bottom, Release, Top, Connect) to focus on that column:
 
 **Before focus:**
+
 ```
 Rep  Bottom  Release  Top  Connect
  1   [====]  [====]  [====] [====]
@@ -49,6 +50,7 @@ Rep  Bottom  Release  Top  Connect
 ```
 
 **After clicking "Top":**
+
 ```
 Rep  Btm  Rel  [  Top  ]  Cnt
  1   [=]  [=]  [======]   [=]
@@ -59,18 +61,18 @@ Click again to unfocus and return to normal view.
 
 ### CSS Classes
 
-| Class | Purpose |
-|-------|---------|
-| `.rep-gallery-section` | Outer container |
-| `.rep-gallery-container` | Scrollable area |
-| `.rep-gallery-header` | Sticky header row |
-| `.rep-gallery-rows` | Scrollable rows container |
-| `.rep-gallery-row` | Single rep row |
-| `.rep-gallery-row--current` | Highlighted current rep |
-| `.rep-gallery-cell` | Cell containing thumbnail |
-| `.rep-gallery-cell--focused` | Expanded column |
-| `.rep-gallery-cell--minimized` | Shrunk column |
-| `.rep-gallery-thumbnail` | Thumbnail wrapper |
+| Class                          | Purpose                   |
+| ------------------------------ | ------------------------- |
+| `.rep-gallery-section`         | Outer container           |
+| `.rep-gallery-container`       | Scrollable area           |
+| `.rep-gallery-header`          | Sticky header row         |
+| `.rep-gallery-rows`            | Scrollable rows container |
+| `.rep-gallery-row`             | Single rep row            |
+| `.rep-gallery-row--current`    | Highlighted current rep   |
+| `.rep-gallery-cell`            | Cell containing thumbnail |
+| `.rep-gallery-cell--focused`   | Expanded column           |
+| `.rep-gallery-cell--minimized` | Shrunk column             |
+| `.rep-gallery-thumbnail`       | Thumbnail wrapper         |
 
 ## Rep Gallery Modal
 
@@ -78,14 +80,14 @@ Full-screen modal accessed via the gallery button (grid icon).
 
 ### Features
 
-| Feature | Interaction | Result |
-|---------|-------------|--------|
-| **Grid view** | Default | All reps × phases in a grid |
-| **Seek** | Click thumbnail | Video seeks, modal stays open |
-| **Select reps** | Click checkbox | Select up to 4 reps for compare |
-| **Compare mode** | Click "Compare (N)" | Side-by-side comparison view |
-| **Dynamic zoom** | Click phase header | Focus on single phase column |
-| **Close** | Click X or press Escape | Returns to video view |
+| Feature          | Interaction             | Result                          |
+| ---------------- | ----------------------- | ------------------------------- |
+| **Grid view**    | Default                 | All reps × phases in a grid     |
+| **Seek**         | Click thumbnail         | Video seeks, modal stays open   |
+| **Select reps**  | Click checkbox          | Select up to 4 reps for compare |
+| **Compare mode** | Click "Compare (N)"     | Side-by-side comparison view    |
+| **Dynamic zoom** | Click phase header      | Focus on single phase column    |
+| **Close**        | Click X or press Escape | Returns to video view           |
 
 ### Compare Mode
 
@@ -112,13 +114,13 @@ SwingAnalyzer → repThumbnails Map → Widget / Modal
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `src/components/VideoSectionV2.tsx` | Widget implementation (inline) |
-| `src/components/RepGalleryModal.tsx` | Modal implementation |
-| `src/components/RepGalleryModal.css` | Modal styles |
-| `src/components/App.css` | Widget styles (`.rep-gallery-*`) |
-| `src/components/repGalleryConstants.ts` | Shared constants |
+| File                                    | Purpose                          |
+| --------------------------------------- | -------------------------------- |
+| `src/components/VideoSectionV2.tsx`     | Widget implementation (inline)   |
+| `src/components/RepGalleryModal.tsx`    | Modal implementation             |
+| `src/components/RepGalleryModal.css`    | Modal styles                     |
+| `src/components/App.css`                | Widget styles (`.rep-gallery-*`) |
+| `src/components/repGalleryConstants.ts` | Shared constants                 |
 
 ## Future Improvements
 

@@ -8,12 +8,12 @@ This document defines the core terminology and concepts used in the swing analyz
 
 A **position** is a key point in a swing movement. There are 4 positions in a kettlebell swing:
 
-| Position | Description | Angle Range |
-|----------|-------------|-------------|
-| **Top** | Standing upright, kettlebell at chest | Spine < 15° from vertical |
-| **Connect** | Arms connected to body during backswing | Spine ~30-45° forward |
-| **Bottom** | Deepest point of the hinge | Spine > 55° forward |
-| **Release** | Ascending, arms releasing from body | Spine ~30-45° returning to upright |
+| Position    | Description                             | Angle Range                        |
+| ----------- | --------------------------------------- | ---------------------------------- |
+| **Top**     | Standing upright, kettlebell at chest   | Spine < 15° from vertical          |
+| **Connect** | Arms connected to body during backswing | Spine ~30-45° forward              |
+| **Bottom**  | Deepest point of the hinge              | Spine > 55° forward                |
+| **Release** | Ascending, arms releasing from body     | Spine ~30-45° returning to upright |
 
 Positions are defined in `SwingPositionName` enum:
 
@@ -95,19 +95,19 @@ The **filmstrip** shows thumbnail images for each position of each rep. During e
 
 These terms should NOT be used in new code:
 
-| Deprecated | Use Instead | Reason |
-|------------|-------------|--------|
-| checkpoint | position | "Checkpoint" was ambiguous |
-| cycle | rep | "Cycle" was redundant with rep detection |
-| FormCheckpoint | (removed) | Dead code, never used |
-| RepData | (removed) | Dead code, never used |
+| Deprecated     | Use Instead | Reason                                   |
+| -------------- | ----------- | ---------------------------------------- |
+| checkpoint     | position    | "Checkpoint" was ambiguous               |
+| cycle          | rep         | "Cycle" was redundant with rep detection |
+| FormCheckpoint | (removed)   | Dead code, never used                    |
+| RepData        | (removed)   | Dead code, never used                    |
 
 ## File References
 
-| Concept | Primary File |
-|---------|--------------|
-| Position enum | `src/types.ts` |
-| Skeleton model | `src/models/Skeleton.ts` |
-| FormAnalyzer | `src/analyzers/FormAnalyzer.ts` |
-| Pipeline | `src/pipeline/Pipeline.ts` |
-| Exercise definitions | `src/exercises/index.ts` |
+| Concept              | Primary File                    |
+| -------------------- | ------------------------------- |
+| Position enum        | `src/types.ts`                  |
+| Skeleton model       | `src/models/Skeleton.ts`        |
+| FormAnalyzer         | `src/analyzers/FormAnalyzer.ts` |
+| Pipeline             | `src/pipeline/Pipeline.ts`      |
+| Exercise definitions | `src/exercises/index.ts`        |

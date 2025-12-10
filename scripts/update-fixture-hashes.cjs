@@ -10,9 +10,9 @@
  *   node scripts/update-fixture-hashes.js --check # Check only, exit 1 if mismatch
  */
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
 
 const VIDEOS_DIR = path.join(__dirname, '../public/videos');
 const FIXTURES_DIR = path.join(__dirname, '../e2e-tests/fixtures');
@@ -84,7 +84,7 @@ function updateFixtureHash(fixturePath, newHash) {
   const content = fs.readFileSync(fixturePath, 'utf-8');
   const fixture = JSON.parse(content);
   fixture.metadata.sourceVideoHash = newHash;
-  fs.writeFileSync(fixturePath, JSON.stringify(fixture, null, 2) + '\n');
+  fs.writeFileSync(fixturePath, `${JSON.stringify(fixture, null, 2)}\n`);
 }
 
 /**
@@ -112,13 +112,17 @@ const checkOnly = process.argv.includes('--check');
 let hasChanges = false;
 let hasErrors = false;
 
-console.log(checkOnly ? 'Checking fixture hashes...\n' : 'Updating fixture hashes...\n');
+console.log(
+  checkOnly ? 'Checking fixture hashes...\n' : 'Updating fixture hashes...\n'
+);
 
 for (const [videoFile, config] of Object.entries(VIDEO_FIXTURE_MAP)) {
   const videoPath = path.join(VIDEOS_DIR, videoFile);
 
   if (!fs.existsSync(videoPath)) {
-    console.log(`⚠️  ${videoFile}: Video file not found (run 'just download-test-videos')`);
+    console.log(
+      `⚠️  ${videoFile}: Video file not found (run 'just download-test-videos')`
+    );
     continue;
   }
 
@@ -170,7 +174,9 @@ for (const [videoFile, config] of Object.entries(VIDEO_FIXTURE_MAP)) {
 
 if (checkOnly) {
   if (hasErrors) {
-    console.log('\n❌ Hash mismatches found. Run "just update-fixture-hashes" to fix.');
+    console.log(
+      '\n❌ Hash mismatches found. Run "just update-fixture-hashes" to fix.'
+    );
     process.exit(1);
   } else {
     console.log('\n✅ All hashes match.');

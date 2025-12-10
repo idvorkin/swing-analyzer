@@ -1,7 +1,32 @@
 #!/bin/bash
-# Flush pending beads changes before commit
-# This ensures beads database is synced to JSONL before any commit
+# Pre-commit hook that runs:
+# 1. Beads sync (if beads is configured)
+# 2. Pre-commit framework (lint, format, type-check)
+# 3. Unit tests (vitest)
+# 4. Component tests (vitest with jsdom)
 
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# 1. Flush pending beads changes before commit
 if command -v bd &> /dev/null && [ -d ".beads" ]; then
+    echo "📦 Syncing beads..."
     bd sync --quiet 2>/dev/null || true
 fi
+
+# 2. Run pre-commit framework (biome, prettier, typescript)
+if command -v pre-commit &> /dev/null; then
+    echo "🧹 Running linters and formatters..."
+    # Use --hook-stage and point to config to bypass core.hooksPath conflict
+    pre-commit run --config .pre-commit-config.yaml || exit 1
+else
+    echo "⚠️  pre-commit not installed, skipping lint checks"
+    echo "   Install with: pip install pre-commit"
+fi
+
+# 3. Run unit and component tests
+echo "🧪 Running unit tests..."
+npm run test:unit -- --run --reporter=dot || exit 1
+
+echo "✅ All pre-commit checks passed!"

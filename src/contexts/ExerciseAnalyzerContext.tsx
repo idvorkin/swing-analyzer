@@ -1,11 +1,16 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import type React from 'react';
+import { createContext, type ReactNode, useContext } from 'react';
 import { useExerciseAnalyzer } from '../hooks/useExerciseAnalyzer';
 
 // Create the context
-const ExerciseAnalyzerContext = createContext<ReturnType<typeof useExerciseAnalyzer> | null>(null);
+const ExerciseAnalyzerContext = createContext<ReturnType<
+  typeof useExerciseAnalyzer
+> | null>(null);
 
 // Provider component
-export const ExerciseAnalyzerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const ExerciseAnalyzerProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const exerciseAnalyzer = useExerciseAnalyzer();
 
   return (
@@ -20,7 +25,9 @@ export const useExerciseAnalyzerContext = () => {
   const context = useContext(ExerciseAnalyzerContext);
 
   if (!context) {
-    throw new Error('useExerciseAnalyzerContext must be used within an ExerciseAnalyzerProvider');
+    throw new Error(
+      'useExerciseAnalyzerContext must be used within an ExerciseAnalyzerProvider'
+    );
   }
 
   return context;

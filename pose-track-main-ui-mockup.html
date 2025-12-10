@@ -438,7 +438,7 @@
 
       /* Hidden states */
       .hidden {
-        display: none !important;
+        display: none;
       }
     </style>
   </head>
@@ -675,8 +675,8 @@
             document.querySelectorAll('.demo-btn')[0].classList.remove('active');
             progress = 67;
           } else {
-            document.getElementById('miniProgressFill').style.width = progress + '%';
-            document.getElementById('progressText').textContent = Math.round(progress) + '%';
+            document.getElementById('miniProgressFill').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = `${Math.round(progress)}%`;
           }
         }
       }, 100);
