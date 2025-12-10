@@ -268,6 +268,7 @@ describe('RepGalleryWidget', () => {
 
     it('calls onPhaseClick when canvas is double-tapped', () => {
       const onPhaseClick = vi.fn();
+      const onThumbnailClick = vi.fn();
       const { container } = render(
         <RepGalleryWidget
           repCount={1}
@@ -276,7 +277,7 @@ describe('RepGalleryWidget', () => {
           currentPhases={['top']}
           focusedPhase={null}
           onPhaseClick={onPhaseClick}
-          onThumbnailClick={vi.fn()}
+          onThumbnailClick={onThumbnailClick}
         />
       );
 
@@ -284,11 +285,15 @@ describe('RepGalleryWidget', () => {
       expect(canvas).toBeInTheDocument();
 
       // Simulate double-tap by clicking twice quickly
+      // First tap seeks (calls onThumbnailClick), second tap focuses (calls onPhaseClick)
       fireEvent.click(canvas!);
       fireEvent.click(canvas!);
 
-      // Should call onPhaseClick with the phase name on double-tap
+      // First tap triggers seek
+      expect(onThumbnailClick).toHaveBeenCalledTimes(1);
+      // Second tap (within 300ms) triggers phase focus, not another seek
       expect(onPhaseClick).toHaveBeenCalledWith('top');
+      expect(onPhaseClick).toHaveBeenCalledTimes(1);
     });
   });
 

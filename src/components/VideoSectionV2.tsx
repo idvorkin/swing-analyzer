@@ -12,7 +12,6 @@ import { useSwingAnalyzerContext } from '../contexts/ExerciseAnalyzerContext';
 import { ExerciseDetectionBadge } from './ExerciseDetectionBadge';
 import { MediaSelectorDialog } from './MediaSelectorDialog';
 import { RepGalleryModal } from './RepGalleryModal';
-import { RepGalleryWidget } from './RepGalleryWidget';
 import { PHASE_LABELS } from './repGalleryConstants';
 
 const VideoSectionV2: React.FC = () => {
@@ -68,6 +67,9 @@ const VideoSectionV2: React.FC = () => {
     videoLoadMessage,
   } = useSwingAnalyzerContext();
 
+  // Ref for the rep-gallery container
+  const repGalleryRef = useRef<HTMLDivElement>(null);
+
   // Mobile source picker state - show when no video OR when user taps header camera button
   const [showSourcePicker, setShowSourcePicker] = useState(false);
 
@@ -76,6 +78,9 @@ const VideoSectionV2: React.FC = () => {
 
   // Focused phase state for dynamic zoom
   const [focusedPhase, setFocusedPhase] = useState<string | null>(null);
+
+  // Track previous rep index to only scroll when it actually changes
+  const prevRepIndexRef = useRef<number>(-1);
 
   const handleGallerySeek = useCallback((time: number) => {
     if (videoRef.current) {
@@ -176,13 +181,266 @@ const VideoSectionV2: React.FC = () => {
     setFocusedPhase((prev) => (prev === phase ? null : phase));
   }, []);
 
-  // Handle thumbnail click in rep gallery widget
-  const handleThumbnailClick = useCallback((videoTime: number, repNum: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = videoTime;
-      setCurrentRepIndex(repNum - 1); // Convert to 0-indexed
+  // Event delegation handler for rep-gallery clicks (avoids individual event listeners)
+  const handleRepGalleryClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+
+    // Handle phase header button clicks for dynamic zoom
+    if (target.tagName === 'BUTTON' && target.dataset.phase) {
+      handlePhaseClick(target.dataset.phase);
+      return;
     }
-  }, [videoRef, setCurrentRepIndex]);
+
+    // Handle thumbnail canvas clicks for seeking
+    if (target.tagName === 'CANVAS' && target.dataset.seekTime) {
+      const seekTime = parseFloat(target.dataset.seekTime);
+      const repNum = target.dataset.repNum ? parseInt(target.dataset.repNum, 10) : null;
+      if (!isNaN(seekTime) && videoRef.current) {
+        videoRef.current.currentTime = seekTime;
+        // Also set the current rep index when clicking a thumbnail
+        if (repNum !== null && !isNaN(repNum)) {
+          setCurrentRepIndex(repNum - 1); // Convert to 0-indexed
+        }
+      }
+    }
+  }, [videoRef, setCurrentRepIndex, handlePhaseClick]);
+
+  // Double-click handler for rep-gallery - toggles phase focus
+  const handleRepGalleryDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+
+    // Find the phase from the canvas or its parent cell
+    let phase: string | undefined;
+    if (target.tagName === 'CANVAS') {
+      // Look for phase in parent cell
+      const cell = target.closest('.rep-gallery-cell');
+      phase = (cell as HTMLElement)?.dataset.phase;
+    } else if (target.classList.contains('rep-gallery-cell')) {
+      phase = target.dataset.phase;
+    } else if (target.classList.contains('rep-gallery-thumbnail')) {
+      const cell = target.closest('.rep-gallery-cell');
+      phase = (cell as HTMLElement)?.dataset.phase;
+    }
+
+    if (phase) {
+      handlePhaseClick(phase);
+    }
+  }, [handlePhaseClick]);
+
+  // Render the multi-rep rep-gallery with all reps as scrollable rows
+  // Uses in-place DOM updates to preserve scroll position
+  const renderRepGallery = useCallback(() => {
+    const container = repGalleryRef.current;
+    if (!container) return;
+
+    // Handle empty state - show message only when no reps detected
+    // Note: When loading from cache, repCount > 0 but repThumbnails may still be empty
+    // because cached data doesn't include frameImage. We still show rows with position
+    // data (for seeking) using "—" placeholders where thumbnails would normally appear.
+    if (repCount === 0) {
+      container.innerHTML =
+        '<div class="rep-gallery-empty">Complete a rep to see checkpoints</div>';
+      return;
+    }
+
+    // If we have reps but no thumbnail data yet, show a different message
+    if (repThumbnails.size === 0) {
+      container.innerHTML =
+        '<div class="rep-gallery-empty">Loading rep data...</div>';
+      return;
+    }
+
+    // Get sorted rep numbers
+    const repNumbers = Array.from(repThumbnails.keys()).sort((a, b) => a - b);
+    const currentRepNum = appState.currentRepIndex + 1;
+
+    // Check if phases changed - if so, clear the gallery and rebuild
+    const phasesKey = currentPhases.join(',');
+    let headerRow = container.querySelector('.rep-gallery-header') as HTMLElement;
+    const existingPhasesKey = headerRow?.dataset.phasesKey;
+
+    if (headerRow && existingPhasesKey !== phasesKey) {
+      // Phases changed - clear the entire gallery to rebuild with new phases
+      const rowsContainer = container.querySelector('.rep-gallery-rows');
+      if (rowsContainer) {
+        rowsContainer.innerHTML = '';
+      }
+      headerRow.remove();
+      headerRow = null as unknown as HTMLElement;
+    }
+
+    // Get or create header
+    if (!headerRow) {
+      headerRow = document.createElement('div');
+      headerRow.className = 'rep-gallery-header';
+      headerRow.dataset.phasesKey = phasesKey; // Track which phases this header was created for
+
+      // Empty spacer to align with row rep numbers
+      const repSpacer = document.createElement('div');
+      repSpacer.className = 'rep-gallery-header-rep';
+      headerRow.appendChild(repSpacer);
+
+      for (const positionName of currentPhases) {
+        const phaseBtn = document.createElement('button');
+        phaseBtn.type = 'button';
+        const isFocused = focusedPhase === positionName;
+        const isMinimized = focusedPhase && !isFocused;
+        phaseBtn.className = `rep-gallery-header-phase${isFocused ? ' rep-gallery-header-phase--focused' : ''}${isMinimized ? ' rep-gallery-header-phase--minimized' : ''}`;
+        phaseBtn.textContent = PHASE_LABELS[positionName] || positionName;
+        phaseBtn.dataset.phase = positionName;
+        phaseBtn.title = isFocused ? 'Click to show all phases' : `Click to focus on ${PHASE_LABELS[positionName] || positionName}`;
+        headerRow.appendChild(phaseBtn);
+      }
+      container.insertBefore(headerRow, container.firstChild);
+    }
+
+    // Update header classes for focus state
+    headerRow.className = `rep-gallery-header${focusedPhase ? ' rep-gallery-header--focused' : ''}`;
+    const headerPhases = headerRow.querySelectorAll('.rep-gallery-header-phase');
+    headerPhases.forEach((btn) => {
+      const phase = (btn as HTMLElement).dataset.phase;
+      const isFocused = focusedPhase === phase;
+      const isMinimized = focusedPhase && !isFocused;
+      btn.className = `rep-gallery-header-phase${isFocused ? ' rep-gallery-header-phase--focused' : ''}${isMinimized ? ' rep-gallery-header-phase--minimized' : ''}`;
+      (btn as HTMLElement).title = isFocused ? 'Click to show all phases' : `Click to focus on ${PHASE_LABELS[phase || ''] || phase}`;
+    });
+
+    // Get or create rows container
+    let rowsContainer = container.querySelector('.rep-gallery-rows') as HTMLElement;
+    if (!rowsContainer) {
+      rowsContainer = document.createElement('div');
+      rowsContainer.className = 'rep-gallery-rows';
+      container.appendChild(rowsContainer);
+    }
+
+    // Track existing rows by rep number
+    const existingRows = new Map<number, HTMLElement>();
+    rowsContainer.querySelectorAll('.rep-gallery-row').forEach((row) => {
+      const repNum = parseInt((row as HTMLElement).dataset.repNum || '0', 10);
+      if (repNum > 0) {
+        existingRows.set(repNum, row as HTMLElement);
+      }
+    });
+
+    // Update or create rows for each rep
+    let lastRow: HTMLElement | null = null;
+    for (const repNum of repNumbers) {
+      const positions = repThumbnails.get(repNum);
+      if (!positions || positions.size === 0) continue;
+
+      let row: HTMLElement = existingRows.get(repNum) || document.createElement('div');
+      const isNewRow = !existingRows.has(repNum);
+
+      if (isNewRow) {
+        // Initialize new row
+        row.className = 'rep-gallery-row';
+        row.dataset.repNum = repNum.toString();
+
+        // Rep number label
+        const repNumLabel = document.createElement('div');
+        repNumLabel.className = 'rep-gallery-row-rep';
+        repNumLabel.textContent = repNum.toString();
+        row.appendChild(repNumLabel);
+
+        // Create cells for each position
+        for (const positionName of currentPhases) {
+          const cell = document.createElement('div');
+          cell.className = 'rep-gallery-cell';
+          cell.dataset.phase = positionName;
+          cell.innerHTML = '<span class="rep-gallery-cell-empty">—</span>';
+          row.appendChild(cell);
+        }
+
+        // Insert in correct position (after last row or at start)
+        if (lastRow) {
+          lastRow.after(row);
+        } else {
+          rowsContainer.insertBefore(row, rowsContainer.firstChild);
+        }
+      }
+
+      // Update row classes
+      row.className = `rep-gallery-row${focusedPhase ? ' rep-gallery-row--has-focus' : ''}${repNum === currentRepNum ? ' rep-gallery-row--current' : ''}`;
+
+      // Update cells
+      const cells = row.querySelectorAll('.rep-gallery-cell');
+      cells.forEach((cell, idx) => {
+        const positionName = currentPhases[idx];
+        const candidate = positions.get(positionName);
+        const isFocused = focusedPhase === positionName;
+        const isMinimized = focusedPhase && !isFocused;
+
+        // Update cell classes
+        cell.className = `rep-gallery-cell${isFocused ? ' rep-gallery-cell--focused' : ''}${isMinimized ? ' rep-gallery-cell--minimized' : ''}`;
+
+        if (candidate?.frameImage) {
+          // Check if we need to update the canvas
+          let wrapper = cell.querySelector('.rep-gallery-thumbnail') as HTMLElement;
+          let canvas = cell.querySelector('.rep-gallery-canvas') as HTMLCanvasElement;
+
+          if (!wrapper) {
+            // Create wrapper and canvas
+            cell.innerHTML = '';
+            wrapper = document.createElement('div');
+            wrapper.className = 'rep-gallery-thumbnail';
+            canvas = document.createElement('canvas');
+            canvas.className = 'rep-gallery-canvas';
+            wrapper.appendChild(canvas);
+            cell.appendChild(wrapper);
+          }
+
+          // Update wrapper classes
+          wrapper.className = `rep-gallery-thumbnail${isFocused ? ' rep-gallery-thumbnail--focused' : ''}${isMinimized ? ' rep-gallery-thumbnail--minimized' : ''}`;
+          wrapper.title = `${PHASE_LABELS[positionName] || positionName} at ${candidate.videoTime?.toFixed(2)}s`;
+
+          // Update canvas if dimensions changed or first render
+          if (canvas.width !== candidate.frameImage.width || canvas.height !== candidate.frameImage.height) {
+            canvas.width = candidate.frameImage.width;
+            canvas.height = candidate.frameImage.height;
+          }
+
+          // Always update the image data (thumbnails can improve during extraction)
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.putImageData(candidate.frameImage, 0, 0);
+          }
+
+          // Update data attributes
+          if (candidate.videoTime !== undefined) {
+            canvas.style.cursor = 'pointer';
+            canvas.dataset.seekTime = candidate.videoTime.toString();
+            canvas.dataset.repNum = repNum.toString();
+          }
+        } else if (!cell.querySelector('.rep-gallery-cell-empty')) {
+          // Show empty placeholder if no thumbnail
+          cell.innerHTML = '<span class="rep-gallery-cell-empty">—</span>';
+        }
+      });
+
+      lastRow = row;
+      existingRows.delete(repNum); // Mark as processed
+    }
+
+    // Remove rows that no longer exist
+    existingRows.forEach((row) => row.remove());
+
+    // Only auto-scroll when the current rep index actually changes
+    const currentRepIndex = appState.currentRepIndex;
+    if (prevRepIndexRef.current !== currentRepIndex) {
+      prevRepIndexRef.current = currentRepIndex;
+      requestAnimationFrame(() => {
+        const currentRow = rowsContainer.querySelector('.rep-gallery-row--current');
+        if (currentRow) {
+          currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }
+  }, [repCount, repThumbnails, appState.currentRepIndex, focusedPhase, currentPhases]);
+
+  // Re-render rep-gallery when rep changes or thumbnails update
+  useEffect(() => {
+    renderRepGallery();
+  }, [renderRepGallery]);
 
   return (
     <section className="video-section">
@@ -420,17 +678,7 @@ const VideoSectionV2: React.FC = () => {
 
       {/* Rep Gallery Widget - inline multi-rep viewer with dynamic zoom */}
       <div className="rep-gallery-section">
-        <div className="rep-gallery-container">
-          <RepGalleryWidget
-            repCount={repCount}
-            repThumbnails={repThumbnails}
-            currentRepIndex={appState.currentRepIndex}
-            currentPhases={currentPhases}
-            focusedPhase={focusedPhase}
-            onPhaseClick={handlePhaseClick}
-            onThumbnailClick={handleThumbnailClick}
-          />
-        </div>
+        <div className="rep-gallery-container" ref={repGalleryRef} onClick={handleRepGalleryClick} onDoubleClick={handleRepGalleryDoubleClick} />
         {/* Gallery button - show when there are reps */}
         {repCount > 0 && repThumbnails.size > 0 && (
           <button
