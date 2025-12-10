@@ -88,7 +88,7 @@ export function RepGalleryWidget({
       </div>
 
       {/* Rows container */}
-      <div className="rep-gallery-rows" ref={rowsContainerRef}>
+      <div className="rep-gallery-rows">
         {repNumbers.map((repNum) => {
           const positions = repThumbnails.get(repNum);
           if (!positions || positions.size === 0) return null;
@@ -120,6 +120,7 @@ export function RepGalleryWidget({
                     isFocused={isFocused}
                     isMinimized={isMinimized}
                     onThumbnailClick={onThumbnailClick}
+                    onPhaseClick={onPhaseClick}
                   />
                 );
               })}
@@ -141,6 +142,7 @@ interface RepGalleryCellProps {
   isFocused: boolean;
   isMinimized: boolean;
   onThumbnailClick: (videoTime: number, repNum: number) => void;
+  onPhaseClick: (phase: string) => void;
 }
 
 function RepGalleryCell({
@@ -150,12 +152,17 @@ function RepGalleryCell({
   isFocused,
   isMinimized,
   onThumbnailClick,
+  onPhaseClick,
 }: RepGalleryCellProps) {
   const handleClick = useCallback(() => {
     if (candidate?.videoTime !== undefined) {
       onThumbnailClick(candidate.videoTime, repNum);
     }
   }, [candidate?.videoTime, repNum, onThumbnailClick]);
+
+  const handleDoubleTap = useCallback(() => {
+    onPhaseClick(phase);
+  }, [onPhaseClick, phase]);
 
   return (
     <div
@@ -169,6 +176,7 @@ function RepGalleryCell({
           isFocused={isFocused}
           isMinimized={isMinimized}
           onClick={handleClick}
+          onDoubleTap={handleDoubleTap}
         />
       ) : (
         <span className="rep-gallery-cell-empty">—</span>
@@ -186,6 +194,7 @@ interface ThumbnailCanvasProps {
   isFocused: boolean;
   isMinimized: boolean;
   onClick: () => void;
+  onDoubleTap?: () => void;
 }
 
 function ThumbnailCanvas({
@@ -194,8 +203,10 @@ function ThumbnailCanvas({
   isFocused,
   isMinimized,
   onClick,
+  onDoubleTap,
 }: ThumbnailCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastTapRef = useRef<number>(0);
 
   // Render the image data to canvas
   useEffect(() => {
@@ -214,6 +225,21 @@ function ThumbnailCanvas({
     }
   }, [candidate.frameImage]);
 
+  // Handle click with double-tap detection
+  const handleClick = useCallback(() => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY && onDoubleTap) {
+      // Double-tap detected - focus the phase
+      onDoubleTap();
+    } else {
+      // Single tap - seek to timestamp
+      onClick();
+    }
+    lastTapRef.current = now;
+  }, [onClick, onDoubleTap]);
+
   return (
     <div
       className={`rep-gallery-thumbnail${isFocused ? ' rep-gallery-thumbnail--focused' : ''}${isMinimized ? ' rep-gallery-thumbnail--minimized' : ''}`}
@@ -223,7 +249,7 @@ function ThumbnailCanvas({
         ref={canvasRef}
         className="rep-gallery-canvas"
         style={{ cursor: candidate.videoTime !== undefined ? 'pointer' : 'default' }}
-        onClick={onClick}
+        onClick={handleClick}
       />
     </div>
   );
