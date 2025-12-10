@@ -90,6 +90,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenHelp }) => {
           type="button"
           className="header-swap-btn"
           title="Load different video"
+          aria-label="Load different video"
           onClick={() => window.dispatchEvent(new CustomEvent('show-source-picker'))}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

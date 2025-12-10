@@ -54,6 +54,44 @@ const DEFAULT_PHASES = [...PHASE_ORDER];
 const formatPositionForDisplay = (position: string): string =>
   position.charAt(0).toUpperCase() + position.slice(1).toLowerCase();
 
+/**
+ * Fetch a video with download progress reporting.
+ * Returns the blob and reports progress via callback.
+ */
+async function fetchWithProgress(
+  url: string,
+  onProgress: (percent: number) => void,
+  signal?: AbortSignal
+): Promise<Blob> {
+  const response = await fetch(url, { signal });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch: ${response.status}`);
+  }
+
+  const contentLength = response.headers.get('content-length');
+  if (!contentLength || !response.body) {
+    // No content-length header or no body - fall back to regular blob()
+    return response.blob();
+  }
+
+  const total = parseInt(contentLength, 10);
+  let loaded = 0;
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    chunks.push(value);
+    loaded += value.length;
+    onProgress(Math.round((loaded / total) * 100));
+  }
+
+  return new Blob(chunks as BlobPart[], { type: response.headers.get('content-type') || 'video/webm' });
+}
+
 export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   // Core State
@@ -110,8 +148,16 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // Track current video's object URL for cleanup on video switch
   const currentVideoUrlRef = useRef<string | null>(null);
+
+  // Media dialog loading state
+  const [isVideoLoading, setIsVideoLoading] = useState<boolean>(false);
+  const [videoLoadProgress, setVideoLoadProgress] = useState<number | undefined>(undefined);
+  const [videoLoadMessage, setVideoLoadMessage] = useState<string>('');
   // Track if we're in the middle of loading a video (to abort on switch)
   const videoLoadAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Track if cache is being processed (between 'active' state and 'batchComplete')
+  const [isCacheProcessing, setIsCacheProcessing] = useState<boolean>(false);
 
   // Throttle for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
   const lastRepSyncTimeRef = useRef<number>(0);
@@ -426,6 +472,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       if (state.type === 'video-file') {
         if (state.sourceState.type === 'extracting') {
           setStatus('Extracting poses...');
+          // Cache wasn't found, clear the cache processing state
+          setIsCacheProcessing(false);
           // Record extraction start only once per extraction session
           if (!hasRecordedExtractionStartRef.current) {
             hasRecordedExtractionStartRef.current = true;
@@ -449,6 +497,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             // Reset counters for next video
             prevRepCountRef.current = 0;
             frameIndexRef.current = 0;
+            // Cache processing complete - clear the loading state
+            setIsCacheProcessing(false);
           }
           // Check if poses exist for current frame (for HUD visibility)
           const video = videoRef.current;
@@ -476,9 +526,12 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           }
         } else if (state.sourceState.type === 'checking-cache') {
           setStatus('Checking cache...');
+          // Mark cache processing as in progress (will be cleared when batchComplete arrives)
+          setIsCacheProcessing(true);
         }
       } else if (state.type === 'error') {
         setStatus(`Error: ${state.message}`);
+        setIsCacheProcessing(false); // Clear loading state on error
       } else {
         setStatus('Ready');
       }
@@ -813,6 +866,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     videoLoadAbortControllerRef.current = abortController;
 
     setStatus('Loading sample video...');
+    setIsVideoLoading(true);
+    setVideoLoadProgress(undefined);
+    setVideoLoadMessage('Downloading Kettlebell Swing...');
 
     try {
       // Reset state
@@ -829,20 +885,25 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
       // Try remote URL first, fall back to local
       let videoURL = DEFAULT_SAMPLE_VIDEO;
-      let response = await fetch(videoURL);
+      let blob: Blob;
 
-      if (!response.ok) {
-        console.log('Remote sample failed, falling back to local:', response.status);
+      try {
+        blob = await fetchWithProgress(videoURL, (percent) => {
+          setStatus(`Downloading sample video... ${percent}%`);
+          setVideoLoadProgress(percent);
+        });
+      } catch {
+        console.log('Remote sample failed, falling back to local');
         videoURL = LOCAL_SAMPLE_VIDEO;
-        response = await fetch(videoURL);
+        setStatus('Loading sample video (local)...');
+        setVideoLoadMessage('Loading from local cache...');
+        setVideoLoadProgress(undefined);
+        const response = await fetch(videoURL);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch video: ${response.status}`);
+        }
+        blob = await response.blob();
       }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch video: ${response.status}`);
-      }
-
-      // Fetch the video as a File for pose extraction
-      const blob = await response.blob();
       const videoFile = new File([blob], 'swing-sample.webm', {
         type: 'video/webm',
       });
@@ -855,12 +916,17 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       recordVideoLoad({ source: 'hardcoded', fileName: 'swing-sample.webm' });
 
       // Start extraction/cache lookup
+      setVideoLoadMessage('Processing video...');
       await session.startVideoFile(videoFile);
 
       setStatus('Video loaded. Press Play to start.');
+      setIsVideoLoading(false);
     } catch (error) {
-      // AbortError means user switched videos - silently ignore
+      // AbortError means user switched videos - reset loading state and return
       if (error instanceof DOMException && error.name === 'AbortError') {
+        setIsVideoLoading(false);
+        setVideoLoadProgress(undefined);
+        setVideoLoadMessage('');
         return;
       }
       console.error('Error loading hardcoded video:', error);
@@ -880,6 +946,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         }
       }
       setStatus(`Error: ${userMessage}`);
+      setIsVideoLoading(false);
     }
   }, [loadVideoSafely]);
 
@@ -898,6 +965,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     videoLoadAbortControllerRef.current = abortController;
 
     setStatus('Loading pistol squat sample...');
+    setIsVideoLoading(true);
+    setVideoLoadProgress(undefined);
+    setVideoLoadMessage('Downloading Pistol Squat...');
 
     try {
       // Reset state
@@ -914,20 +984,25 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
       // Try remote URL first, fall back to local
       let videoURL = PISTOL_SQUAT_SAMPLE_VIDEO;
-      let response = await fetch(videoURL);
+      let blob: Blob;
 
-      if (!response.ok) {
-        console.log('Remote pistol squat sample failed, falling back to local:', response.status);
+      try {
+        blob = await fetchWithProgress(videoURL, (percent) => {
+          setStatus(`Downloading pistol squat sample... ${percent}%`);
+          setVideoLoadProgress(percent);
+        });
+      } catch {
+        console.log('Remote pistol squat sample failed, falling back to local');
         videoURL = LOCAL_PISTOL_SQUAT_VIDEO;
-        response = await fetch(videoURL);
+        setStatus('Loading pistol squat sample (local)...');
+        setVideoLoadMessage('Loading from local cache...');
+        setVideoLoadProgress(undefined);
+        const response = await fetch(videoURL);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch video: ${response.status}`);
+        }
+        blob = await response.blob();
       }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch video: ${response.status}`);
-      }
-
-      // Fetch the video as a File for pose extraction
-      const blob = await response.blob();
       const videoFile = new File([blob], 'pistol-squat-sample.webm', {
         type: 'video/webm',
       });
@@ -940,12 +1015,17 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       recordVideoLoad({ source: 'hardcoded', fileName: 'pistol-squat-sample.webm' });
 
       // Start extraction/cache lookup
+      setVideoLoadMessage('Processing video...');
       await session.startVideoFile(videoFile);
 
       setStatus('Video loaded. Press Play to start.');
+      setIsVideoLoading(false);
     } catch (error) {
-      // AbortError means user switched videos - silently ignore
+      // AbortError means user switched videos - reset loading state and return
       if (error instanceof DOMException && error.name === 'AbortError') {
+        setIsVideoLoading(false);
+        setVideoLoadProgress(undefined);
+        setVideoLoadMessage('');
         return;
       }
       console.error('Error loading pistol squat sample:', error);
@@ -965,6 +1045,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         }
       }
       setStatus(`Error: ${userMessage}`);
+      setIsVideoLoading(false);
     }
   }, [loadVideoSafely]);
 
@@ -1387,5 +1468,13 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
     // Working leg (for exercises that support it, e.g., pistol squat)
     workingLeg,
+
+    // Cache processing state (true while loading from cache)
+    isCacheProcessing,
+
+    // Media dialog loading state
+    isVideoLoading,
+    videoLoadProgress,
+    videoLoadMessage,
   };
 }

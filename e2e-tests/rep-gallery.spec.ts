@@ -11,6 +11,7 @@
 import { expect, test } from '@playwright/test';
 import {
   clearPoseTrackDB,
+  clickSwingSampleButton,
   generateTestId,
   setVideoTestId,
   setupMockPoseDetector,
@@ -40,7 +41,7 @@ test.describe('Rep Gallery Modal', () => {
     // Configure mock pose detector - 0ms delay for fast test execution
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 10000 });
 
     // Wait for extraction to complete - controls enabled and rep gallery has thumbnails
@@ -223,7 +224,7 @@ test.describe('Rep Gallery Modal', () => {
 
     test('RG-010: empty state shown when no reps exist', async ({ page }) => {
       // Don't use mock detector - no extraction means no reps
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
       await page.waitForSelector('video', { timeout: 10000 });
 
       // Wait a moment for UI to settle

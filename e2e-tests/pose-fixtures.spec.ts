@@ -13,6 +13,7 @@ import { expect, test } from '@playwright/test';
 import { SWING_SAMPLE_4REPS_VIDEO_HASH, SWING_SAMPLE_VIDEO_HASH } from './fixtures';
 import {
   clearPoseTrackDB,
+  clickSwingSampleButton,
   getPoseTrackFromDB,
   listPoseTrackHashes,
   seedPoseTrackFixture,
@@ -34,12 +35,16 @@ test.describe('Pose Track Fixtures', () => {
   test.describe('@smoke Basic App Functionality', () => {
     test('app loads and displays UI', async ({ page }) => {
       await expect(page.locator('h1')).toContainText('Swing Analyzer');
-      await expect(page.locator('#load-hardcoded-btn')).toBeVisible();
+      // MediaSelectorDialog should be visible with sample video option
+      await expect(page.locator('.media-dialog')).toBeVisible();
+      await expect(
+        page.locator('button:has-text("Kettlebell Swing")')
+      ).toBeVisible();
     });
 
     test('sample button clicks and video element appears', async ({ page }) => {
       // Click the sample button
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
 
       // Wait for video element to appear (even if it fails to load codec)
       await page.waitForSelector('video', { timeout: 5000 });
@@ -216,7 +221,7 @@ test.describe('Pose Track Fixtures', () => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Click sample button
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
 
       // Video should appear
       await page.waitForSelector('video', { timeout: 5000 });
@@ -225,7 +230,7 @@ test.describe('Pose Track Fixtures', () => {
 
     test('HUD visible with seeded data after video loads', async ({ page }) => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await page.click('#load-hardcoded-btn');
+      await clickSwingSampleButton(page);
 
       // Wait for video element to appear
       await page.waitForSelector('video', { timeout: 5000 });

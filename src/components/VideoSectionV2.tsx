@@ -10,6 +10,7 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSwingAnalyzerContext } from '../contexts/ExerciseAnalyzerContext';
 import { ExerciseDetectionBadge } from './ExerciseDetectionBadge';
+import { MediaSelectorDialog } from './MediaSelectorDialog';
 import { RepGalleryModal } from './RepGalleryModal';
 import { PHASE_LABELS } from './repGalleryConstants';
 
@@ -58,6 +59,12 @@ const VideoSectionV2: React.FC = () => {
     currentPhases,
     // Working side (for exercises that support it)
     workingLeg,
+    // Cache processing state
+    isCacheProcessing,
+    // Media dialog loading state
+    isVideoLoading,
+    videoLoadProgress,
+    videoLoadMessage,
   } = useSwingAnalyzerContext();
 
   // Ref for the rep-gallery container
@@ -226,10 +233,20 @@ const VideoSectionV2: React.FC = () => {
     const container = repGalleryRef.current;
     if (!container) return;
 
-    // Handle empty state
-    if (repCount === 0 || repThumbnails.size === 0) {
+    // Handle empty state - show message only when no reps detected
+    // Note: When loading from cache, repCount > 0 but repThumbnails may still be empty
+    // because cached data doesn't include frameImage. We still show rows with position
+    // data (for seeking) using "—" placeholders where thumbnails would normally appear.
+    if (repCount === 0) {
       container.innerHTML =
         '<div class="rep-gallery-empty">Complete a rep to see checkpoints</div>';
+      return;
+    }
+
+    // If we have reps but no thumbnail data yet, show a different message
+    if (repThumbnails.size === 0) {
+      container.innerHTML =
+        '<div class="rep-gallery-empty">Loading rep data...</div>';
       return;
     }
 
@@ -427,16 +444,6 @@ const VideoSectionV2: React.FC = () => {
 
   return (
     <section className="video-section">
-      {/* Hidden file input - triggered by labels elsewhere */}
-      <input
-        type="file"
-        id="video-upload"
-        accept="video/*"
-        ref={fileInputRef}
-        onChange={handleVideoUpload}
-        className="sr-only"
-      />
-
       {/* Rep navigation strip - shown when reps are detected */}
       {repCount > 0 && currentVideoFile && (
         <div className="rep-nav-strip">
@@ -512,37 +519,6 @@ const VideoSectionV2: React.FC = () => {
         className={`video-container ${getVideoContainerClass()}`}
         onClick={handleVideoDoubleTap}
       >
-        {/* Source picker overlay - shown when no video OR when user taps header camera button */}
-        {(!currentVideoFile || showSourcePicker) && (
-          <div className="source-picker-overlay" onClick={() => setShowSourcePicker(false)}>
-            <div className="source-picker-buttons" onClick={(e) => e.stopPropagation()}>
-              <label htmlFor="video-upload" className="source-picker-btn camera-roll-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                </svg>
-                <span>Camera Roll</span>
-              </label>
-              <div className="source-picker-samples">
-                <button
-                  type="button"
-                  id="load-hardcoded-btn"
-                  className="source-picker-btn sample-btn"
-                  onClick={loadHardcodedVideo}
-                >
-                  <span>Swing</span>
-                </button>
-                <button
-                  type="button"
-                  id="load-pistol-btn"
-                  className="source-picker-btn sample-btn"
-                  onClick={loadPistolSquatSample}
-                >
-                  <span>Pistol</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* biome-ignore lint/a11y/useMediaCaption: This is a video analysis app, not media playback - no audio captions needed */}
         <video id="video" ref={videoRef} playsInline />
@@ -573,6 +549,14 @@ const VideoSectionV2: React.FC = () => {
                 </svg>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Cache processing overlay - blocks interaction while loading from cache */}
+        {isCacheProcessing && (
+          <div className="cache-loading-overlay" data-testid="cache-loading-overlay">
+            <div className="cache-loading-spinner" />
+            <span className="cache-loading-text">Loading cached data...</span>
           </div>
         )}
 
@@ -733,6 +717,19 @@ const VideoSectionV2: React.FC = () => {
         currentRepIndex={appState.currentRepIndex}
         onSeek={handleGallerySeek}
         onRepSelect={setCurrentRepIndex}
+      />
+
+      {/* Media Selector Dialog */}
+      <MediaSelectorDialog
+        isOpen={showSourcePicker || (!currentVideoFile && !isVideoLoading)}
+        onClose={() => setShowSourcePicker(false)}
+        onUpload={handleVideoUpload}
+        onLoadSwingSample={loadHardcodedVideo}
+        onLoadPistolSample={loadPistolSquatSample}
+        isLoading={isVideoLoading}
+        loadingProgress={videoLoadProgress}
+        loadingMessage={videoLoadMessage}
+        fileInputRef={fileInputRef}
       />
     </section>
   );

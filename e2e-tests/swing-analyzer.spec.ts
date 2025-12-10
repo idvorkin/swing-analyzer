@@ -9,6 +9,7 @@ import { expect, test } from '@playwright/test';
 import { SWING_SAMPLE_4REPS_VIDEO_HASH, SWING_SAMPLE_VIDEO_HASH } from './fixtures';
 import {
   clearPoseTrackDB,
+  clickSwingSampleButton,
   getPoseTrackFromDB,
   seedPoseTrackFixture,
   setPoseTrackStorageMode,
@@ -31,7 +32,11 @@ test.describe('Swing Analyzer', () => {
 
     // Verify that the main elements are visible
     await expect(page.locator('h1')).toContainText('Swing Analyzer');
-    await expect(page.locator('#load-hardcoded-btn')).toBeVisible();
+    // MediaSelectorDialog should be visible with sample video option
+    await expect(page.locator('.media-dialog')).toBeVisible();
+    await expect(
+      page.locator('button:has-text("Kettlebell Swing")')
+    ).toBeVisible();
   });
 
   test('HUD should be hidden before video loads', async ({ page }) => {
@@ -44,7 +49,7 @@ test.describe('Swing Analyzer', () => {
     await clearPoseTrackDB(page);
 
     // Load video to trigger extraction
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
 
     // Wait for extraction to start
     await page.waitForFunction(
@@ -68,7 +73,7 @@ test.describe('Swing Analyzer', () => {
     await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Load video
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
 
     // Wait for video to load
     await page.waitForFunction(
@@ -105,7 +110,7 @@ test.describe('Swing Analyzer', () => {
     await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Load video
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
 
     // Wait for HUD to appear (indicates extraction complete and poses available)
     await expect(page.locator('.hud-overlay-reps')).toBeVisible({ timeout: 15000 });
@@ -122,7 +127,7 @@ test.describe('Swing Analyzer', () => {
     await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Load video (starts paused)
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
 
     // Wait for HUD to appear
     await expect(page.locator('.hud-overlay-angles')).toBeVisible({ timeout: 15000 });
@@ -146,7 +151,7 @@ test.describe('Swing Analyzer', () => {
     page,
   }) => {
     // Click the sample button
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
 
     // Wait for video element to appear
     await page.waitForSelector('video', { timeout: 5000 });
@@ -267,7 +272,8 @@ test.describe('Swing Analyzer', () => {
   test('should have video control buttons visible', async ({ page }) => {
     // Check that control buttons exist on the page
     const playPauseBtn = page.locator('#play-pause-btn');
-    const loadBtn = page.locator('#load-hardcoded-btn');
+    // Sample button is now in the MediaSelectorDialog
+    const loadBtn = page.locator('button:has-text("Kettlebell Swing")');
 
     await expect(loadBtn).toBeVisible();
     await expect(playPauseBtn).toBeVisible();
@@ -278,7 +284,7 @@ test.describe('Swing Analyzer', () => {
     // to video dimensions, causing skeleton to render outside visible area
 
     // Load video
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 5000 });
 
     // Wait for video metadata to load
@@ -317,7 +323,7 @@ test.describe('Swing Analyzer', () => {
     // video's rendered area (accounting for object-fit: contain letterboxing)
 
     // Load video
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
     await page.waitForSelector('video', { timeout: 5000 });
 
     // Wait for video metadata to load

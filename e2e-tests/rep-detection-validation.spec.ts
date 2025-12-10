@@ -7,7 +7,7 @@
  * 3. Angles are captured correctly in session recording
  */
 import { test, expect } from '@playwright/test';
-import { seedPoseTrackFixture, clearPoseTrackDB } from './helpers';
+import { clickSwingSampleButton, seedPoseTrackFixture, clearPoseTrackDB } from './helpers';
 
 test.describe('Rep Detection Validation', () => {
   test('igor-1h-swing detects 9 reps with correct angles in session recording', async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe('Rep Detection Validation', () => {
     await page.waitForLoadState('networkidle');
 
     // Click sample button to load the video
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
 
     // Wait for video to appear
     await page.waitForSelector('video', { timeout: 10000 });
@@ -111,7 +111,7 @@ test.describe('Rep Detection Validation', () => {
     await page.waitForLoadState('networkidle');
 
     // Click sample button to load the video
-    await page.click('#load-hardcoded-btn');
+    await clickSwingSampleButton(page);
 
     // Wait for video to appear
     await page.waitForSelector('video', { timeout: 10000 });

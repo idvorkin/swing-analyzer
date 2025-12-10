@@ -8,6 +8,7 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { clickPistolSampleButton } from './helpers';
 
 test.describe('Pistol Squat: Sample Video Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -17,47 +18,54 @@ test.describe('Pistol Squat: Sample Video Flow', () => {
   });
 
   test('PS-001: Pistol button exists and is clickable', async ({ page }) => {
-    const pistolButton = page.locator('#load-pistol-btn');
+    // MediaSelectorDialog should be visible with Pistol Squat option
+    await page.waitForSelector('.media-dialog', { timeout: 5000 });
+    const pistolButton = page.locator('button:has-text("Pistol Squat")');
     await expect(pistolButton).toBeVisible();
-    await expect(pistolButton).toContainText('Pistol');
+    await expect(pistolButton).toContainText('Pistol Squat');
   });
 
-  test('PS-002: Clicking Pistol button attempts to load video', async ({ page }) => {
-    const pistolButton = page.locator('#load-pistol-btn');
-    await pistolButton.click();
+  test('PS-002: Clicking Pistol button attempts to load video', async ({
+    page,
+  }) => {
+    await clickPistolSampleButton(page);
 
-    // Wait for main video element to appear
+    // Wait for main video element to appear (use #video to be specific)
     const video = page.locator('#video');
     await expect(video).toBeVisible({ timeout: 10000 });
   });
 
-  test('PS-003: Video element gets a source after clicking Pistol button', async ({ page }) => {
-    const pistolButton = page.locator('#load-pistol-btn');
-    await pistolButton.click();
+  test('PS-003: Video element gets a source after clicking Pistol button', async ({
+    page,
+  }) => {
+    await clickPistolSampleButton(page);
 
     // Wait for main video element (use #video to be specific)
     const video = page.locator('#video');
     await expect(video).toBeVisible({ timeout: 10000 });
 
-    // Wait a bit for the source to be set
-    await page.waitForTimeout(3000);
-
-    // Video should have a src attribute (either blob URL or direct URL)
+    // Video should have a src attribute (blob URL)
     const src = await video.getAttribute('src');
 
     // Log for debugging
-    console.log('Video src:', src ? 'present' : 'missing', src?.substring(0, 50));
+    console.log(
+      'Video src:',
+      src ? 'present' : 'missing',
+      src?.substring(0, 50)
+    );
 
     // Verify the video has a source
     expect(src).toBeTruthy();
+    expect(src).toMatch(/^blob:/);
   });
 
-  test('PS-004: App does not crash after clicking Pistol button', async ({ page }) => {
-    const pistolButton = page.locator('#load-pistol-btn');
-    await pistolButton.click();
+  test('PS-004: App does not crash after clicking Pistol button', async ({
+    page,
+  }) => {
+    await clickPistolSampleButton(page);
 
     // Wait for any loading to complete
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(2000);
 
     // App should still be functional - header should still be visible
     await expect(page.locator('header')).toContainText('Swing Analyzer');
@@ -72,10 +80,10 @@ test.describe('Pistol Squat: Rep Counter', () => {
   test('PS-005: Rep counter appears when HUD is visible', async ({ page }) => {
     await page.goto('/');
 
-    // Click pistol button
-    await page.locator('#load-pistol-btn').click();
+    // Click pistol button via new dialog
+    await clickPistolSampleButton(page);
 
-    // Wait for video to load
+    // Wait for video to load (use #video to be specific)
     await expect(page.locator('#video')).toBeVisible({ timeout: 30000 });
 
     // Wait for HUD to appear (may take time during extraction)
@@ -98,13 +106,15 @@ test.describe('Pistol Squat: Rep Counter', () => {
 });
 
 test.describe('Pistol Squat: Exercise Detection', () => {
-  test('PS-006: Exercise detection badge appears during extraction', async ({ page }) => {
+  test('PS-006: Exercise detection badge appears during extraction', async ({
+    page,
+  }) => {
     await page.goto('/');
 
-    // Click pistol button
-    await page.locator('#load-pistol-btn').click();
+    // Click pistol button via new dialog
+    await clickPistolSampleButton(page);
 
-    // Wait for video to load
+    // Wait for video to load (use #video to be specific)
     await expect(page.locator('#video')).toBeVisible({ timeout: 30000 });
 
     // Wait for extraction to progress
