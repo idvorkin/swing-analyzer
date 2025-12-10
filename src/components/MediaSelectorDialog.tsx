@@ -82,7 +82,7 @@ export const MediaSelectorDialog: React.FC<MediaSelectorDialogProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, isLoading, onClose]);
 
-  // Trap focus in dialog
+  // Focus first element when dialog opens
   useEffect(() => {
     if (isOpen && dialogRef.current) {
       const firstFocusable = dialogRef.current.querySelector('button, input, [tabindex="0"]') as HTMLElement;
@@ -230,7 +230,7 @@ export const MediaSelectorDialog: React.FC<MediaSelectorDialogProps> = ({
                     src={option.thumbnail}
                     alt=""
                     onError={(e) => {
-                      // Hide broken images, show placeholder
+                      // Hide broken images (icon behind serves as fallback)
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
