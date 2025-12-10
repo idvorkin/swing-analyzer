@@ -921,8 +921,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       setStatus('Video loaded. Press Play to start.');
       setIsVideoLoading(false);
     } catch (error) {
-      // AbortError means user switched videos - silently ignore
+      // AbortError means user switched videos - reset loading state and return
       if (error instanceof DOMException && error.name === 'AbortError') {
+        setIsVideoLoading(false);
+        setVideoLoadProgress(undefined);
+        setVideoLoadMessage('');
         return;
       }
       console.error('Error loading hardcoded video:', error);
@@ -1017,8 +1020,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       setStatus('Video loaded. Press Play to start.');
       setIsVideoLoading(false);
     } catch (error) {
-      // AbortError means user switched videos - silently ignore
+      // AbortError means user switched videos - reset loading state and return
       if (error instanceof DOMException && error.name === 'AbortError') {
+        setIsVideoLoading(false);
+        setVideoLoadProgress(undefined);
+        setVideoLoadMessage('');
         return;
       }
       console.error('Error loading pistol squat sample:', error);

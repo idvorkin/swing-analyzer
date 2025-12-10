@@ -17,7 +17,6 @@ interface VideoOption {
   subtitle: string;
   thumbnail?: string;
   comingSoon?: boolean;
-  onClick?: () => void;
 }
 
 interface MediaSelectorDialogProps {
