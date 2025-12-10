@@ -58,8 +58,6 @@ const VideoSectionV2: React.FC = () => {
     currentPhases,
     // Working side (for exercises that support it)
     workingLeg,
-    // Cache processing state
-    isCacheProcessing,
   } = useSwingAnalyzerContext();
 
   // Ref for the rep-gallery container
@@ -585,14 +583,6 @@ const VideoSectionV2: React.FC = () => {
                 </svg>
               )}
             </div>
-          </div>
-        )}
-
-        {/* Cache processing overlay - blocks interaction while loading from cache */}
-        {isCacheProcessing && (
-          <div className="cache-loading-overlay" data-testid="cache-loading-overlay">
-            <div className="cache-loading-spinner" />
-            <span className="cache-loading-text">Loading cached data...</span>
           </div>
         )}
 

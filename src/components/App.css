@@ -560,43 +560,6 @@ main {
 }
 
 /* ============================================
-   CACHE LOADING OVERLAY
-   ============================================ */
-.cache-loading-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  z-index: 25;
-}
-
-.cache-loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: cache-spinner 0.8s linear infinite;
-}
-
-@keyframes cache-spinner {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.cache-loading-text {
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-/* ============================================
    HUD OVERLAY - Floating on video
    ============================================ */
 

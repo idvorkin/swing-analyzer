@@ -150,9 +150,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // Track if we're in the middle of loading a video (to abort on switch)
   const videoLoadAbortControllerRef = useRef<AbortController | null>(null);
 
-  // Track if cache is being processed (between 'active' state and 'batchComplete')
-  const [isCacheProcessing, setIsCacheProcessing] = useState<boolean>(false);
-
   // Throttle for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
   const lastRepSyncTimeRef = useRef<number>(0);
   // Ref to hold the rep sync handler (enables stable reference from event handlers)
@@ -466,8 +463,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       if (state.type === 'video-file') {
         if (state.sourceState.type === 'extracting') {
           setStatus('Extracting poses...');
-          // Cache wasn't found, clear the cache processing state
-          setIsCacheProcessing(false);
           // Record extraction start only once per extraction session
           if (!hasRecordedExtractionStartRef.current) {
             hasRecordedExtractionStartRef.current = true;
@@ -491,8 +486,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             // Reset counters for next video
             prevRepCountRef.current = 0;
             frameIndexRef.current = 0;
-            // Cache processing complete - clear the loading state
-            setIsCacheProcessing(false);
           }
           // Check if poses exist for current frame (for HUD visibility)
           const video = videoRef.current;
@@ -520,12 +513,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           }
         } else if (state.sourceState.type === 'checking-cache') {
           setStatus('Checking cache...');
-          // Mark cache processing as in progress (will be cleared when batchComplete arrives)
-          setIsCacheProcessing(true);
         }
       } else if (state.type === 'error') {
         setStatus(`Error: ${state.message}`);
-        setIsCacheProcessing(false); // Clear loading state on error
       } else {
         setStatus('Ready');
       }
@@ -1438,8 +1428,5 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
     // Working leg (for exercises that support it, e.g., pistol squat)
     workingLeg,
-
-    // Cache processing state (true while loading from cache)
-    isCacheProcessing,
   };
 }
