@@ -103,11 +103,11 @@ describe('VideoSectionV2', () => {
       expect(container).toContainElement(canvas);
     });
 
-    it('renders source picker buttons when no video', () => {
+    it('renders media selector dialog when no video', () => {
       render(<VideoSectionV2 />);
-      // Source picker shows Camera Roll and Sample buttons
-      expect(document.querySelector('.source-picker-btn.camera-roll-btn')).toBeInTheDocument();
-      expect(document.querySelector('.source-picker-btn.sample-btn')).toBeInTheDocument();
+      // MediaSelectorDialog shows when no video is loaded
+      expect(document.querySelector('.media-dialog-backdrop')).toBeInTheDocument();
+      expect(document.querySelector('.media-dialog')).toBeInTheDocument();
     });
 
     it('renders video control buttons', () => {
@@ -179,19 +179,21 @@ describe('VideoSectionV2', () => {
       expect(mockTogglePlayPause).not.toHaveBeenCalled();
     });
 
-    it('toggles play/pause on double-tap', () => {
+    it('double-tap on center zone does nothing (play/pause removed)', () => {
       vi.useFakeTimers();
       render(<VideoSectionV2 />);
       const container = document.querySelector('.video-container');
+      const rect = container!.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
 
-      // First tap
-      fireEvent.click(container!);
-      // Second tap within 300ms
+      // First tap in center
+      fireEvent.click(container!, { clientX: centerX });
+      // Second tap within 300ms in center
       vi.advanceTimersByTime(100);
-      fireEvent.click(container!);
+      fireEvent.click(container!, { clientX: centerX });
 
-      expect(mockClearPositionLabel).toHaveBeenCalled();
-      expect(mockTogglePlayPause).toHaveBeenCalled();
+      // Center zone no longer triggers play/pause
+      expect(mockTogglePlayPause).not.toHaveBeenCalled();
       vi.useRealTimers();
     });
 
@@ -211,17 +213,24 @@ describe('VideoSectionV2', () => {
       vi.useRealTimers();
     });
 
-    it('shows play/pause overlay feedback on double-tap', async () => {
+    it('shows navigation overlay feedback on double-tap left/right zones', async () => {
       vi.useFakeTimers();
       render(<VideoSectionV2 />);
-      const container = document.querySelector('.video-container');
+      const container = document.querySelector('.video-container') as HTMLElement;
 
-      // Double-tap
-      fireEvent.click(container!);
+      // Mock getBoundingClientRect since jsdom returns 0 for all dimensions
+      const mockRect = { left: 0, top: 0, width: 400, height: 300, right: 400, bottom: 300, x: 0, y: 0, toJSON: () => ({}) };
+      vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(mockRect);
+
+      // Left zone is < 25% of width (i.e., < 100px)
+      const leftX = 40; // 10% of 400
+
+      // Double-tap in left zone
+      fireEvent.click(container, { clientX: leftX });
       act(() => { vi.advanceTimersByTime(100); });
-      fireEvent.click(container!);
+      fireEvent.click(container, { clientX: leftX });
 
-      // Overlay should appear
+      // Overlay should appear for prev navigation
       expect(document.querySelector('.video-tap-overlay')).toBeInTheDocument();
 
       // Overlay should disappear after 500ms
@@ -396,33 +405,33 @@ describe('VideoSectionV2', () => {
     });
   });
 
-  describe('Source Picker', () => {
-    it('shows source picker when no video loaded', () => {
+  describe('Media Selector Dialog', () => {
+    it('shows media dialog when no video loaded', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
         currentVideoFile: null,
       }));
       render(<VideoSectionV2 />);
-      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
-      expect(screen.getByText('Camera Roll')).toBeInTheDocument();
-      expect(document.querySelector('.source-picker-btn.sample-btn')).toBeInTheDocument();
+      expect(document.querySelector('.media-dialog-backdrop')).toBeInTheDocument();
+      expect(screen.getByText('Select Video')).toBeInTheDocument();
+      expect(screen.getByText('Upload from device')).toBeInTheDocument();
     });
 
-    it('hides source picker when video is loaded', () => {
+    it('hides media dialog when video is loaded', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
         currentVideoFile: new File([], 'test.mp4'),
       }));
       render(<VideoSectionV2 />);
-      expect(document.querySelector('.source-picker-overlay')).not.toBeInTheDocument();
+      expect(document.querySelector('.media-dialog-backdrop')).not.toBeInTheDocument();
     });
 
-    it('shows source picker when show-source-picker event is dispatched', () => {
+    it('shows media dialog when show-source-picker event is dispatched', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
         currentVideoFile: new File([], 'test.mp4'),
       }));
       render(<VideoSectionV2 />);
 
       // Initially hidden when video loaded
-      expect(document.querySelector('.source-picker-overlay')).not.toBeInTheDocument();
+      expect(document.querySelector('.media-dialog-backdrop')).not.toBeInTheDocument();
 
       // Dispatch event to show picker
       act(() => {
@@ -430,46 +439,46 @@ describe('VideoSectionV2', () => {
       });
 
       // Now visible
-      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
+      expect(document.querySelector('.media-dialog-backdrop')).toBeInTheDocument();
     });
 
-    it('hides source picker when clicking outside buttons', () => {
+    it('hides media dialog when clicking backdrop', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
         currentVideoFile: new File([], 'test.mp4'),
       }));
       render(<VideoSectionV2 />);
 
-      // Show the picker
+      // Show the dialog
       act(() => {
         window.dispatchEvent(new CustomEvent('show-source-picker'));
       });
-      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
+      expect(document.querySelector('.media-dialog-backdrop')).toBeInTheDocument();
 
-      // Click on the overlay background (outside buttons)
-      const overlay = document.querySelector('.source-picker-overlay');
-      fireEvent.click(overlay!);
+      // Click on the backdrop (outside dialog)
+      const backdrop = document.querySelector('.media-dialog-backdrop');
+      fireEvent.click(backdrop!);
 
       // Should be hidden
-      expect(document.querySelector('.source-picker-overlay')).not.toBeInTheDocument();
+      expect(document.querySelector('.media-dialog-backdrop')).not.toBeInTheDocument();
     });
 
-    it('keeps source picker open when clicking on buttons container', () => {
+    it('keeps media dialog open when clicking on dialog content', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
         currentVideoFile: new File([], 'test.mp4'),
       }));
       render(<VideoSectionV2 />);
 
-      // Show the picker
+      // Show the dialog
       act(() => {
         window.dispatchEvent(new CustomEvent('show-source-picker'));
       });
 
-      // Click on the buttons container (not the overlay background)
-      const buttonsContainer = document.querySelector('.source-picker-buttons');
-      fireEvent.click(buttonsContainer!);
+      // Click on the dialog content (not the backdrop)
+      const dialogContent = document.querySelector('.media-dialog');
+      fireEvent.click(dialogContent!);
 
       // Should still be visible (stopPropagation)
-      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
+      expect(document.querySelector('.media-dialog-backdrop')).toBeInTheDocument();
     });
   });
 });
