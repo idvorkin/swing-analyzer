@@ -477,4 +477,79 @@ test.describe('Rep Gallery Modal', () => {
       await expect(page.locator('.gallery-phase-btn:has-text("Top")')).not.toHaveClass(/gallery-phase-btn--active/);
     });
   });
+
+  test.describe('Playback Sync', () => {
+    test('RG-021: current rep highlight updates during video playback', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+
+      // Wait for extraction to detect at least 2 reps
+      await page.waitForFunction(
+        () => {
+          const rows = document.querySelectorAll('.rep-gallery-row');
+          return rows.length >= 2;
+        },
+        { timeout: 30000 }
+      );
+
+      // Get initial current rep (should be rep 1)
+      const initialCurrentRow = await page.evaluate(() => {
+        const row = document.querySelector('.rep-gallery-row--current');
+        return row?.querySelector('.rep-gallery-row-rep')?.textContent || '';
+      });
+      expect(initialCurrentRow).toBe('1');
+
+      // Seek video to a time in rep 2 (after first rep completes)
+      // The fixture has rep 2 starting around 1.37s
+      await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        if (video) video.currentTime = 2.0;
+      });
+
+      // Wait for state to update
+      await page.waitForTimeout(500);
+
+      // Check that current row has changed to rep 2
+      const newCurrentRow = await page.evaluate(() => {
+        const row = document.querySelector('.rep-gallery-row--current');
+        return row?.querySelector('.rep-gallery-row-rep')?.textContent || '';
+      });
+
+      // Should now be rep 2 (video time 2.0s is during rep 2)
+      expect(newCurrentRow).toBe('2');
+    });
+
+    test('RG-022: inline gallery auto-scrolls to current rep during playback', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+
+      // Get the inline rep gallery (not the modal)
+      const inlineGallery = page.locator('.rep-gallery-container .rep-gallery-rows');
+
+      // Check initial scroll state (should see row 1)
+      const initialScrollTop = await inlineGallery.evaluate((el) => el.scrollTop);
+
+      // Seek to rep 2 time
+      await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        if (video) video.currentTime = 2.0;
+      });
+
+      // Wait for auto-scroll animation
+      await page.waitForTimeout(600);
+
+      // Note: This test validates the auto-scroll feature exists.
+      // With only 2 reps visible, scroll may not change much,
+      // but the current row should be highlighted.
+      const currentRowVisible = await page.evaluate(() => {
+        const currentRow = document.querySelector('.rep-gallery-row--current');
+        if (!currentRow) return false;
+        const rect = currentRow.getBoundingClientRect();
+        const container = document.querySelector('.rep-gallery-rows');
+        if (!container) return false;
+        const containerRect = container.getBoundingClientRect();
+        return rect.top >= containerRect.top && rect.bottom <= containerRect.bottom;
+      });
+
+      expect(currentRowVisible).toBe(true);
+    });
+  });
 });

@@ -105,7 +105,7 @@ export function ThumbnailCanvas({
     <div className={containerClasses} title={title}>
       <canvas
         ref={canvasRef}
-        className="thumbnail-canvas__canvas"
+        className="rep-gallery-canvas"
         style={{ cursor: candidate.videoTime !== undefined ? 'pointer' : 'default' }}
         onClick={handleClick}
       />
