@@ -62,8 +62,9 @@ export interface SkeletonSource {
   /**
    * Start the source
    * Checks cache, then extracts if needed
+   * @param signal - Optional AbortSignal to cancel the operation
    */
-  start(): Promise<void>;
+  start(signal?: AbortSignal): Promise<void>;
 
   /**
    * Stop the source

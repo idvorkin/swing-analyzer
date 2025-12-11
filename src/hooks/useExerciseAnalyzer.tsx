@@ -938,37 +938,22 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         // Load video into DOM
         await loadVideoSafely(video, blobUrl, abortController.signal);
 
-        // Check if aborted before continuing (user may have switched videos)
-        if (abortController.signal.aborted) {
-          return false;
-        }
-
         setCurrentVideoFile(videoFile);
         recordVideoLoad({
           source: context === 'video' ? 'upload' : 'hardcoded',
           fileName: videoFile.name,
         });
 
-        // Start extraction/cache lookup
+        // Start extraction/cache lookup - pass signal to allow cancellation
         setVideoLoadMessage('Processing video...');
-        await session.startVideoFile(videoFile);
-
-        // Check if aborted after processing (user may have switched videos mid-extraction)
-        if (abortController.signal.aborted) {
-          return false;
-        }
+        await session.startVideoFile(videoFile, abortController.signal);
 
         setStatus('Video loaded. Press Play to start.');
         clearLoadingState();
         return true;
       } catch (error) {
-        // Check if aborted - don't update UI state for stale video loads
-        if (abortController.signal.aborted) {
-          return false;
-        }
-        // AbortError means user switched videos - silently reset
+        // AbortError means user switched videos - silently return
         if (error instanceof DOMException && error.name === 'AbortError') {
-          clearLoadingState();
           return false;
         }
         console.error(`Error loading ${context}:`, error);

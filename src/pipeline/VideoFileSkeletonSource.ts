@@ -99,10 +99,16 @@ export class VideoFileSkeletonSource implements SkeletonSource {
 
   /**
    * Start the source - check cache, then extract if needed
+   * @param signal - Optional AbortSignal to cancel the operation
    */
-  async start(): Promise<void> {
+  async start(signal?: AbortSignal): Promise<void> {
     // Clean up any previous session
     this.stop();
+
+    // Check if already aborted
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
 
     this.stateSubject.next({ type: 'starting' });
 
@@ -110,9 +116,19 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       // Compute video hash
       this.videoHash = await computeQuickVideoHash(this.videoFile);
 
+      // Check if aborted after hash computation
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+      }
+
       // Check cache first
       this.stateSubject.next({ type: 'checking-cache' });
       const cached = await loadPoseTrackFromStorage(this.videoHash);
+
+      // Check if aborted after cache lookup
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+      }
 
       if (cached) {
         // Use cached data
@@ -176,9 +192,14 @@ export class VideoFileSkeletonSource implements SkeletonSource {
         return;
       }
 
-      // Start extraction
-      await this.extract();
+      // Start extraction (pass signal to allow cancellation)
+      await this.extract(signal);
     } catch (error) {
+      // Re-throw abort errors without logging as error
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        this.stateSubject.next({ type: 'idle' });
+        throw error;
+      }
       const message =
         error instanceof Error ? error.message : 'Failed to process video';
       this.stateSubject.next({ type: 'error', message });
@@ -263,14 +284,26 @@ export class VideoFileSkeletonSource implements SkeletonSource {
 
   /**
    * Run extraction, streaming frames as they're processed
+   * @param externalSignal - Optional external AbortSignal to link to
    */
-  private async extract(): Promise<void> {
+  private async extract(externalSignal?: AbortSignal): Promise<void> {
     if (!this.videoHash) {
       throw new Error('Video hash not computed');
     }
 
     // Create abort controller for cancellation
     this.abortController = new AbortController();
+
+    // Link external signal to our internal abort controller
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        this.abortController.abort();
+      } else {
+        externalSignal.addEventListener('abort', () => {
+          this.abortController?.abort();
+        });
+      }
+    }
 
     // Create live cache for streaming
     this.liveCache = new LivePoseCache(this.videoHash);
