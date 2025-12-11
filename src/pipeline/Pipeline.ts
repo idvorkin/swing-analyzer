@@ -1,14 +1,14 @@
 import { type Observable, Subject, type Subscription } from 'rxjs';
 import { share, switchMap, tap } from 'rxjs/operators';
 import {
-  type FormAnalyzer,
-  type RepPosition,
-  KettlebellSwingFormAnalyzer,
-  ExerciseDetector,
-  type DetectionResult,
-  type DetectedExercise,
   createAnalyzerForExercise,
+  type DetectedExercise,
+  type DetectionResult,
+  ExerciseDetector,
+  type FormAnalyzer,
   getExerciseDisplayName,
+  KettlebellSwingFormAnalyzer,
+  type RepPosition,
 } from '../analyzers';
 import type { Skeleton } from '../models/Skeleton';
 import type { CropRegion } from '../types/posetrack';
@@ -305,7 +305,9 @@ export class Pipeline {
       // Run exercise detection (only until locked)
       if (!this.exerciseDetector.isLocked()) {
         try {
-          const detection = this.exerciseDetector.processFrame(skeletonEvent.skeleton);
+          const detection = this.exerciseDetector.processFrame(
+            skeletonEvent.skeleton
+          );
           this.exerciseDetectionSubject.next(detection);
 
           // Auto-switch analyzer when detection is confident
@@ -316,7 +318,10 @@ export class Pipeline {
             this.exerciseDetectionSubject.next(detection);
           }
         } catch (error) {
-          console.error('[Pipeline] Exercise detection error, continuing with current analyzer:', error);
+          console.error(
+            '[Pipeline] Exercise detection error, continuing with current analyzer:',
+            error
+          );
           // Don't block form analysis if detection fails
         }
       }
@@ -373,7 +378,9 @@ export class Pipeline {
     if (currentAnalyzerName === targetAnalyzerName) {
       // Already using the right analyzer type, just update detected exercise
       this.detectedExercise = exercise;
-      console.log(`[Pipeline] Detection locked: ${exercise} (keeping existing analyzer)`);
+      console.log(
+        `[Pipeline] Detection locked: ${exercise} (keeping existing analyzer)`
+      );
       return;
     }
 

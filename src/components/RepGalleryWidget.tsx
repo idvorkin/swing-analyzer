@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { PositionCandidate } from '../types/exercise';
 import { PHASE_LABELS } from './repGalleryConstants';
+import { ThumbnailCanvas } from './ThumbnailCanvas';
 
 interface RepGalleryWidgetProps {
   repCount: number;
@@ -44,7 +45,10 @@ export function RepGalleryWidget({
   useEffect(() => {
     if (prevRepIndexRef.current !== currentRepIndex && currentRowRef.current) {
       prevRepIndexRef.current = currentRepIndex;
-      currentRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      currentRowRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
     }
   }, [currentRepIndex]);
 
@@ -57,9 +61,7 @@ export function RepGalleryWidget({
 
   // Loading state: reps detected but no thumbnail data yet
   if (repThumbnails.size === 0) {
-    return (
-      <div className="rep-gallery-empty">Loading rep data...</div>
-    );
+    return <div className="rep-gallery-empty">Loading rep data...</div>;
   }
 
   const currentRepNum = currentRepIndex + 1;
@@ -67,7 +69,9 @@ export function RepGalleryWidget({
   return (
     <>
       {/* Header row with phase names */}
-      <div className={`rep-gallery-header${focusedPhase ? ' rep-gallery-header--focused' : ''}`}>
+      <div
+        className={`rep-gallery-header${focusedPhase ? ' rep-gallery-header--focused' : ''}`}
+      >
         <div className="rep-gallery-header-rep" />
         {currentPhases.map((phase) => {
           const isFocused = focusedPhase === phase;
@@ -78,7 +82,11 @@ export function RepGalleryWidget({
               type="button"
               className={`rep-gallery-header-phase${isFocused ? ' rep-gallery-header-phase--focused' : ''}${isMinimized ? ' rep-gallery-header-phase--minimized' : ''}`}
               data-phase={phase}
-              title={isFocused ? 'Click to show all phases' : `Click to focus on ${PHASE_LABELS[phase] || phase}`}
+              title={
+                isFocused
+                  ? 'Click to show all phases'
+                  : `Click to focus on ${PHASE_LABELS[phase] || phase}`
+              }
               onClick={() => onPhaseClick(phase)}
             >
               {PHASE_LABELS[phase] || phase}
@@ -164,6 +172,9 @@ function RepGalleryCell({
     onPhaseClick(phase);
   }, [onPhaseClick, phase]);
 
+  // Determine size based on focus state
+  const size = isFocused ? 'large' : isMinimized ? 'mini' : 'small';
+
   return (
     <div
       className={`rep-gallery-cell${isFocused ? ' rep-gallery-cell--focused' : ''}${isMinimized ? ' rep-gallery-cell--minimized' : ''}`}
@@ -173,84 +184,16 @@ function RepGalleryCell({
         <ThumbnailCanvas
           candidate={candidate}
           phase={phase}
+          size={size}
           isFocused={isFocused}
           isMinimized={isMinimized}
           onClick={handleClick}
           onDoubleTap={handleDoubleTap}
+          className="rep-gallery-thumbnail"
         />
       ) : (
         <span className="rep-gallery-cell-empty">—</span>
       )}
-    </div>
-  );
-}
-
-/**
- * Canvas component that renders a thumbnail from ImageData
- */
-interface ThumbnailCanvasProps {
-  candidate: PositionCandidate;
-  phase: string;
-  isFocused: boolean;
-  isMinimized: boolean;
-  onClick: () => void;
-  onDoubleTap?: () => void;
-}
-
-function ThumbnailCanvas({
-  candidate,
-  phase,
-  isFocused,
-  isMinimized,
-  onClick,
-  onDoubleTap,
-}: ThumbnailCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const lastTapRef = useRef<number>(0);
-
-  // Render the image data to canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !candidate.frameImage) return;
-
-    // Update canvas dimensions if needed
-    if (canvas.width !== candidate.frameImage.width || canvas.height !== candidate.frameImage.height) {
-      canvas.width = candidate.frameImage.width;
-      canvas.height = candidate.frameImage.height;
-    }
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.putImageData(candidate.frameImage, 0, 0);
-    }
-  }, [candidate.frameImage]);
-
-  // Handle click with double-tap detection
-  const handleClick = useCallback(() => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY && onDoubleTap) {
-      // Double-tap detected - focus the phase
-      onDoubleTap();
-    } else {
-      // Single tap - seek to timestamp
-      onClick();
-    }
-    lastTapRef.current = now;
-  }, [onClick, onDoubleTap]);
-
-  return (
-    <div
-      className={`rep-gallery-thumbnail${isFocused ? ' rep-gallery-thumbnail--focused' : ''}${isMinimized ? ' rep-gallery-thumbnail--minimized' : ''}`}
-      title={`${PHASE_LABELS[phase] || phase} at ${candidate.videoTime?.toFixed(2)}s`}
-    >
-      <canvas
-        ref={canvasRef}
-        className="rep-gallery-canvas"
-        style={{ cursor: candidate.videoTime !== undefined ? 'pointer' : 'default' }}
-        onClick={handleClick}
-      />
     </div>
   );
 }

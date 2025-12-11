@@ -1,6 +1,9 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { KettlebellSwingFormAnalyzer, type SwingPhase } from './KettlebellSwingFormAnalyzer';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Skeleton } from '../models/Skeleton';
+import {
+  KettlebellSwingFormAnalyzer,
+  type SwingPhase,
+} from './KettlebellSwingFormAnalyzer';
 
 /**
  * Creates a mock Skeleton that returns specific angle values.
@@ -88,12 +91,19 @@ describe('KettlebellSwingFormAnalyzer', () => {
 
     it('returns all phases in display order', () => {
       // Display order: bottom first (start of rep cycle visually)
-      expect(analyzer.getPhases()).toEqual(['bottom', 'release', 'top', 'connect']);
+      expect(analyzer.getPhases()).toEqual([
+        'bottom',
+        'release',
+        'top',
+        'connect',
+      ]);
     });
   });
 
   // Run phase transition tests with BOTH normal and mirrored video angles
-  describe.each(VIDEO_ORIENTATIONS)('phase transitions ($name)', ({ angles: ANGLES }) => {
+  describe.each(VIDEO_ORIENTATIONS)('phase transitions ($name)', ({
+    angles: ANGLES,
+  }) => {
     it('transitions from TOP to CONNECT when arms reach vertical with spine upright', () => {
       // Start in top
       analyzer.processFrame(createMockSkeleton(ANGLES.top), 0);
@@ -179,7 +189,10 @@ describe('KettlebellSwingFormAnalyzer', () => {
 
       // Complete the cycle - release phase
       for (let i = 0; i < 3; i++) {
-        analyzer.processFrame(createMockSkeleton(PHASE_ANGLES.release), 200 + i * 10);
+        analyzer.processFrame(
+          createMockSkeleton(PHASE_ANGLES.release),
+          200 + i * 10
+        );
       }
 
       // Final transition to top with peak detection
@@ -226,7 +239,8 @@ describe('KettlebellSwingFormAnalyzer', () => {
       const results = collectResults(analyzer, () => completeOneRep(analyzer));
       const completionResult = results.find((r) => r.repCompleted);
 
-      const positionNames = completionResult?.repPositions?.map((p) => p.name) ?? [];
+      const positionNames =
+        completionResult?.repPositions?.map((p) => p.name) ?? [];
 
       // Should have positions for top, connect, bottom, release
       expect(positionNames).toContain('top');
@@ -309,7 +323,9 @@ describe('KettlebellSwingFormAnalyzer', () => {
       goToPhase(analyzer, 'bottom', 50, goodBottom);
       goToPhase(analyzer, 'release', 100);
 
-      const results = collectResults(analyzer, () => goToPhase(analyzer, 'top', 150));
+      const results = collectResults(analyzer, () =>
+        goToPhase(analyzer, 'top', 150)
+      );
       const completionResult = results.find((r) => r.repCompleted);
 
       // Should have good score
@@ -400,12 +416,18 @@ describe('KettlebellSwingFormAnalyzer', () => {
       expect(analyzer.getPhase()).toBe('top');
 
       for (let i = 0; i < 3; i++) {
-        analyzer.processFrame(createMockSkeleton(normalAngles.connect), 30 + i * 10);
+        analyzer.processFrame(
+          createMockSkeleton(normalAngles.connect),
+          30 + i * 10
+        );
       }
       expect(analyzer.getPhase()).toBe('connect');
 
       for (let i = 0; i < 3; i++) {
-        analyzer.processFrame(createMockSkeleton(normalAngles.bottom), 60 + i * 10);
+        analyzer.processFrame(
+          createMockSkeleton(normalAngles.bottom),
+          60 + i * 10
+        );
       }
       expect(analyzer.getPhase()).toBe('bottom');
     });
@@ -427,12 +449,18 @@ describe('KettlebellSwingFormAnalyzer', () => {
       expect(analyzer.getPhase()).toBe('top');
 
       for (let i = 0; i < 3; i++) {
-        analyzer.processFrame(createMockSkeleton(mirroredAngles.connect), 30 + i * 10);
+        analyzer.processFrame(
+          createMockSkeleton(mirroredAngles.connect),
+          30 + i * 10
+        );
       }
       expect(analyzer.getPhase()).toBe('connect');
 
       for (let i = 0; i < 3; i++) {
-        analyzer.processFrame(createMockSkeleton(mirroredAngles.bottom), 60 + i * 10);
+        analyzer.processFrame(
+          createMockSkeleton(mirroredAngles.bottom),
+          60 + i * 10
+        );
       }
       expect(analyzer.getPhase()).toBe('bottom');
     });
@@ -452,7 +480,10 @@ describe('KettlebellSwingFormAnalyzer', () => {
       // Complete one rep with mirrored angles
       for (const phase of ['top', 'connect', 'bottom', 'release'] as const) {
         for (let i = 0; i < 3; i++) {
-          analyzer.processFrame(createMockSkeleton(mirroredPhases[phase]), time);
+          analyzer.processFrame(
+            createMockSkeleton(mirroredPhases[phase]),
+            time
+          );
           time += 10;
         }
       }
@@ -468,7 +499,6 @@ describe('KettlebellSwingFormAnalyzer', () => {
       expect(analyzer.getRepCount()).toBe(1);
     });
   });
-
 });
 
 // ========================================
@@ -520,10 +550,16 @@ function goToPhase(
     }
   } else {
     // Simple forward progression through phases
-    for (let i = currentIndex === -1 ? 0 : currentIndex; i <= targetIndex; i++) {
+    for (
+      let i = currentIndex === -1 ? 0 : currentIndex;
+      i <= targetIndex;
+      i++
+    ) {
       const phase = phases[i];
       const angles =
-        i === targetIndex && overrideAngles ? overrideAngles : PHASE_ANGLES[phase];
+        i === targetIndex && overrideAngles
+          ? overrideAngles
+          : PHASE_ANGLES[phase];
 
       for (let j = 0; j < 4; j++) {
         analyzer.processFrame(createMockSkeleton(angles), time);
@@ -567,7 +603,11 @@ function goToPhaseWithAngles(
       time += 10;
     }
   } else {
-    for (let i = currentIndex === -1 ? 0 : currentIndex; i <= targetIndex; i++) {
+    for (
+      let i = currentIndex === -1 ? 0 : currentIndex;
+      i <= targetIndex;
+      i++
+    ) {
       const phase = phases[i];
       const angles = phaseAngles[phase];
       for (let j = 0; j < 4; j++) {

@@ -56,7 +56,7 @@ export function findNextCheckpoint(
   currentTime: number,
   tolerance = 0.01
 ): Checkpoint | undefined {
-  return checkpoints.find(cp => cp.videoTime > currentTime + tolerance);
+  return checkpoints.find((cp) => cp.videoTime > currentTime + tolerance);
 }
 
 /**

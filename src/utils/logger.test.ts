@@ -2,7 +2,7 @@
  * Logger Utility Tests
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createLogger, log } from './logger';
 
 describe('logger', () => {
@@ -31,7 +31,9 @@ describe('logger', () => {
       const logger = createLogger({ component: 'TestComponent' });
       logger.info('Test message');
 
-      expect(consoleSpy.info).toHaveBeenCalledWith('[TestComponent] Test message');
+      expect(consoleSpy.info).toHaveBeenCalledWith(
+        '[TestComponent] Test message'
+      );
     });
 
     it('logs messages with action context', () => {

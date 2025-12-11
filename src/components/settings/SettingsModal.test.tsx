@@ -68,7 +68,8 @@ const mockSetPoseTrackStorageMode = vi.fn();
 vi.mock('../../services/PoseTrackService', () => ({
   clearAllPoseTracks: () => mockClearAllPoseTracks(),
   getPoseTrackStorageMode: () => mockGetPoseTrackStorageMode(),
-  setPoseTrackStorageMode: (...args: unknown[]) => mockSetPoseTrackStorageMode(...args),
+  setPoseTrackStorageMode: (...args: unknown[]) =>
+    mockSetPoseTrackStorageMode(...args),
 }));
 
 const defaultProps = {
@@ -96,7 +97,9 @@ describe('SettingsModal', () => {
   it('renders when isOpen is true', () => {
     renderWithRouter(<SettingsModal {...defaultProps} />);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Settings' })
+    ).toBeInTheDocument();
   });
 
   it('does not render when isOpen is false', () => {
@@ -146,9 +149,9 @@ describe('SettingsModal', () => {
     it('has three tabs: Settings, Developer, About', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       // Get all tab buttons
-      const tabs = screen.getAllByRole('button').filter(btn =>
-        btn.classList.contains('settings-tab')
-      );
+      const tabs = screen
+        .getAllByRole('button')
+        .filter((btn) => btn.classList.contains('settings-tab'));
       expect(tabs).toHaveLength(3);
       expect(screen.getByText('Developer')).toBeInTheDocument();
       expect(screen.getByText('About')).toBeInTheDocument();
@@ -226,14 +229,18 @@ describe('SettingsModal', () => {
     });
 
     it('shows Failed! when clearAllPoseTracks fails', async () => {
-      mockClearAllPoseTracks.mockRejectedValueOnce(new Error('IndexedDB error'));
+      mockClearAllPoseTracks.mockRejectedValueOnce(
+        new Error('IndexedDB error')
+      );
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
       const clearButton = screen.getByRole('button', { name: 'Clear' });
       fireEvent.click(clearButton);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Failed!' })).toBeInTheDocument();
+        expect(
+          screen.getByRole('button', { name: 'Failed!' })
+        ).toBeInTheDocument();
       });
     });
   });
@@ -340,7 +347,6 @@ describe('SettingsModal', () => {
       fireEvent.click(screen.getByText('About'));
       expect(screen.getByText('...')).toBeInTheDocument();
     });
-
   });
 
   describe('Developer Tab', () => {

@@ -10,12 +10,13 @@
  *
  * This complements the unit tests which use mock skeletons.
  */
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-import { KettlebellSwingFormAnalyzer } from './KettlebellSwingFormAnalyzer';
 import { Skeleton } from '../models/Skeleton';
 import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
+import { KettlebellSwingFormAnalyzer } from './KettlebellSwingFormAnalyzer';
 
 // MediaPipe left/right pairs to swap when mirroring
 const LEFT_RIGHT_PAIRS: [number, number][] = [
@@ -141,11 +142,7 @@ function countRepsFromPosetrack(
  * Load a posetrack fixture file.
  */
 function loadPosetrack(filename: string): PoseTrack {
-  const path = resolve(
-    __dirname,
-    '../../e2e-tests/fixtures/poses',
-    filename
-  );
+  const path = resolve(__dirname, '../../e2e-tests/fixtures/poses', filename);
   return JSON.parse(readFileSync(path, 'utf-8'));
 }
 
@@ -181,5 +178,4 @@ describe('KettlebellSwingFormAnalyzer with real posetrack data', () => {
       expect(repCount).toBe(4);
     });
   });
-
 });

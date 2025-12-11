@@ -4,7 +4,22 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "suspicious": {
+        "noExplicitAny": "warn"
+      },
+      "a11y": {
+        "noSvgWithoutTitle": "warn",
+        "useKeyWithClickEvents": "warn",
+        "noStaticElementInteractions": "warn",
+        "useSemanticElements": "warn"
+      },
+      "style": {
+        "noNonNullAssertion": "warn"
+      },
+      "complexity": {
+        "noStaticOnlyClass": "warn"
+      }
     }
   },
   "formatter": {
@@ -20,6 +35,10 @@
     }
   },
   "files": {
-    "includes": ["**", "!**/dist/**/*"]
+    "includes": [
+      "**",
+      "!**/dist/**/*",
+      "!!e2e-tests/fixtures/poses/*.posetrack.json"
+    ]
   }
 }

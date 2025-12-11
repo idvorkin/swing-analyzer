@@ -40,7 +40,7 @@
   align-items: center;
   gap: 8px;
   color: var(--status-text);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 0.75rem;
   letter-spacing: 0.02em;
 }
@@ -77,8 +77,12 @@
 
 /* Spin animation */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Mini progress bar */
@@ -92,7 +96,11 @@
 
 .mini-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--status-warning) 0%, var(--status-accent) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--status-warning) 0%,
+    var(--status-accent) 100%
+  );
   border-radius: 9999px;
   transition: width 0.3s ease;
 }
@@ -100,7 +108,7 @@
 .progress-text {
   color: var(--status-text-dim);
   font-size: 0.7rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
 }
 
 /* Right side actions */
@@ -115,7 +123,7 @@
   color: var(--status-text-dim);
   text-decoration: none;
   font-size: 0.7rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   cursor: pointer;
   background: none;
   border: none;
@@ -141,7 +149,7 @@
   border-radius: 6px;
   color: var(--status-accent);
   font-size: 0.7rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -203,7 +211,7 @@
 
 .model-selector-label {
   font-size: 0.65rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-weight: 600;
   color: var(--status-text-dim);
   text-transform: uppercase;
@@ -216,7 +224,7 @@
   border: 1px solid var(--status-border);
   border-radius: 6px;
   font-size: 0.75rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   color: var(--status-text);
   cursor: pointer;
   appearance: none;

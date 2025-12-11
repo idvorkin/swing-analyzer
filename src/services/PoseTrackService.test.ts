@@ -119,11 +119,7 @@ describe('PoseTrackService', () => {
     });
 
     it('accepts all valid model types', () => {
-      const models = [
-        'blazepose',
-        'blazepose',
-        'blazepose',
-      ] as const;
+      const models = ['blazepose', 'blazepose', 'blazepose'] as const;
       for (const model of models) {
         const poseTrack = createValidPoseTrack();
         poseTrack.metadata.model = model;
@@ -183,10 +179,7 @@ describe('PoseTrackService', () => {
     });
 
     it('removes video extension', () => {
-      const filename = generatePoseTrackFilename(
-        'video.mov',
-        'blazepose'
-      );
+      const filename = generatePoseTrackFilename('video.mov', 'blazepose');
       expect(filename).toContain('video_');
       expect(filename).not.toContain('.mov');
     });
@@ -203,10 +196,7 @@ describe('PoseTrackService', () => {
     });
 
     it('uses current date when not provided', () => {
-      const filename = generatePoseTrackFilename(
-        'video.mp4',
-        'blazepose'
-      );
+      const filename = generatePoseTrackFilename('video.mp4', 'blazepose');
       const today = new Date().toISOString().split('T')[0];
       expect(filename).toContain(today);
     });

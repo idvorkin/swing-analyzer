@@ -29,39 +29,43 @@ import type {
 /**
  * Pistol squat phases
  */
-export type PistolSquatPhase = 'standing' | 'descending' | 'bottom' | 'ascending';
+export type PistolSquatPhase =
+  | 'standing'
+  | 'descending'
+  | 'bottom'
+  | 'ascending';
 
 /**
  * Thresholds for phase transitions (in degrees)
  */
 export interface PistolSquatThresholds {
   // STANDING position
-  standingKneeMin: number;      // Working knee must be above this (nearly straight)
-  standingSpineMax: number;     // Spine must be below this (relatively upright)
+  standingKneeMin: number; // Working knee must be above this (nearly straight)
+  standingSpineMax: number; // Spine must be below this (relatively upright)
 
   // BOTTOM position
-  bottomKneeMax: number;        // Working knee must be below this (deep squat)
-  bottomHipMax: number;         // Working hip must be below this (flexed)
+  bottomKneeMax: number; // Working knee must be below this (deep squat)
+  bottomHipMax: number; // Working hip must be below this (flexed)
 
   // Transition thresholds
   descendingKneeThreshold: number; // Start descending when knee drops below this
-  ascendingKneeThreshold: number;  // Start ascending when knee rises above this
+  ascendingKneeThreshold: number; // Start ascending when knee rises above this
 
   // Posture validation (reject horizontal/lying poses)
-  maxValidSpineAngle: number;   // Reject frames with spine angle above this (person lying down)
+  maxValidSpineAngle: number; // Reject frames with spine angle above this (person lying down)
 }
 
 /**
  * Default thresholds based on typical pistol squat biomechanics
  */
 const DEFAULT_THRESHOLDS: PistolSquatThresholds = {
-  standingKneeMin: 150,        // ~150° = slightly bent but mostly straight
-  standingSpineMax: 25,        // ~25° = relatively upright
-  bottomKneeMax: 80,           // ~80° = deep squat position
-  bottomHipMax: 100,           // ~100° = hip flexed in squat
+  standingKneeMin: 150, // ~150° = slightly bent but mostly straight
+  standingSpineMax: 25, // ~25° = relatively upright
+  bottomKneeMax: 80, // ~80° = deep squat position
+  bottomHipMax: 100, // ~100° = hip flexed in squat
   descendingKneeThreshold: 140, // Start descending when knee < 140°
-  ascendingKneeThreshold: 90,   // Start ascending when knee > 90°
-  maxValidSpineAngle: 60,      // ~60° = reject horizontal/lying poses (>60° is not upright)
+  ascendingKneeThreshold: 90, // Start ascending when knee > 90°
+  maxValidSpineAngle: 60, // ~60° = reject horizontal/lying poses (>60° is not upright)
 };
 
 /**
@@ -73,7 +77,12 @@ interface PhasePeak {
   timestamp: number;
   videoTime?: number;
   score: number;
-  angles: { workingKnee: number; workingHip: number; spine: number; extendedKnee: number };
+  angles: {
+    workingKnee: number;
+    workingHip: number;
+    spine: number;
+    extendedKnee: number;
+  };
   earY: number;
   frameImage?: ImageData;
 }
@@ -86,7 +95,12 @@ interface EarFrameRecord {
   timestamp: number;
   videoTime?: number;
   earY: number;
-  angles: { workingKnee: number; workingHip: number; spine: number; extendedKnee: number };
+  angles: {
+    workingKnee: number;
+    workingHip: number;
+    spine: number;
+    extendedKnee: number;
+  };
   frameImage?: ImageData;
 }
 
@@ -102,8 +116,8 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
 
   // Track quality metrics during the rep
   private currentRepMetrics = {
-    minWorkingKneeAngle: 180,   // Deepest squat (lower = better)
-    maxSpineAngle: 0,          // Forward lean (too much = poor balance)
+    minWorkingKneeAngle: 180, // Deepest squat (lower = better)
+    maxSpineAngle: 0, // Forward lean (too much = poor balance)
     minExtendedKneeAngle: 180, // Extended leg straightness (higher = better)
   };
 
@@ -172,10 +186,16 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       const workingCandidate = leftKnee < rightKnee ? 'left' : 'right';
       this.legDetectionVotes[workingCandidate]++;
 
-      const totalVotes = this.legDetectionVotes.left + this.legDetectionVotes.right;
+      const totalVotes =
+        this.legDetectionVotes.left + this.legDetectionVotes.right;
       if (totalVotes >= this.votesNeededForLock) {
-        this.workingLeg = this.legDetectionVotes.left >= this.legDetectionVotes.right ? 'left' : 'right';
-        console.debug(`detectWorkingLeg: Locked in ${this.workingLeg} leg (votes: L=${this.legDetectionVotes.left}, R=${this.legDetectionVotes.right})`);
+        this.workingLeg =
+          this.legDetectionVotes.left >= this.legDetectionVotes.right
+            ? 'left'
+            : 'right';
+        console.debug(
+          `detectWorkingLeg: Locked in ${this.workingLeg} leg (votes: L=${this.legDetectionVotes.left}, R=${this.legDetectionVotes.right})`
+        );
       }
     }
   }
@@ -280,7 +300,9 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     // Track smoothed knee angle history for direction detection
     this.kneeAngleHistory.push(smoothedWorkingKnee);
     if (this.kneeAngleHistory.length > this.historySize * 2) {
-      this.kneeAngleHistory = this.kneeAngleHistory.slice(-this.historySize * 2);
+      this.kneeAngleHistory = this.kneeAngleHistory.slice(
+        -this.historySize * 2
+      );
     }
 
     // Create frame record for history
@@ -367,7 +389,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       repCompleted,
       repCount: this.repCount,
       repPositions,
-      repQuality: repCompleted ? this.lastRepQuality ?? undefined : undefined,
+      repQuality: repCompleted ? (this.lastRepQuality ?? undefined) : undefined,
       angles: {
         workingKnee: angles.workingKnee,
         workingHip: angles.workingHip,
@@ -431,9 +453,15 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    */
   private updateBottomCandidate(frame: EarFrameRecord): void {
     // Check if ear is now descending (person ascending physically)
-    if (this.bottomCandidate && frame.earY < this.bottomCandidate.earY - this.earYThresholdForAscent) {
+    if (
+      this.bottomCandidate &&
+      frame.earY < this.bottomCandidate.earY - this.earYThresholdForAscent
+    ) {
       this.framesAscendingAfterBottom++;
-    } else if (!this.bottomCandidate || frame.earY >= this.bottomCandidate.earY) {
+    } else if (
+      !this.bottomCandidate ||
+      frame.earY >= this.bottomCandidate.earY
+    ) {
       this.framesAscendingAfterBottom = 0;
     }
 
@@ -449,7 +477,9 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    */
   private captureBottomCheckpoint(): void {
     if (!this.bottomCandidate) {
-      console.debug('[PistolSquatFormAnalyzer] captureBottomCheckpoint: No bottom candidate available');
+      console.debug(
+        '[PistolSquatFormAnalyzer] captureBottomCheckpoint: No bottom candidate available'
+      );
       return;
     }
 
@@ -470,11 +500,15 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    */
   private captureDescendingCheckpoint(): void {
     if (!this.standingEarY) {
-      console.debug('[PistolSquatFormAnalyzer] captureDescendingCheckpoint: No standing ear Y reference');
+      console.debug(
+        '[PistolSquatFormAnalyzer] captureDescendingCheckpoint: No standing ear Y reference'
+      );
       return;
     }
     if (!this.bottomCandidate) {
-      console.debug('[PistolSquatFormAnalyzer] captureDescendingCheckpoint: No bottom candidate');
+      console.debug(
+        '[PistolSquatFormAnalyzer] captureDescendingCheckpoint: No bottom candidate'
+      );
       return;
     }
 
@@ -483,15 +517,21 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
 
     // Find frame closest to 50% ear Y in history (before bottom)
     const bottomTime = this.bottomCandidate.timestamp;
-    const candidateFrames = this.frameHistory.filter(f => f.timestamp < bottomTime);
+    const candidateFrames = this.frameHistory.filter(
+      (f) => f.timestamp < bottomTime
+    );
 
     if (candidateFrames.length === 0) {
-      console.debug(`[PistolSquatFormAnalyzer] captureDescendingCheckpoint: No frames in history before bottom (bottomTime=${bottomTime}, historySize=${this.frameHistory.length})`);
+      console.debug(
+        `[PistolSquatFormAnalyzer] captureDescendingCheckpoint: No frames in history before bottom (bottomTime=${bottomTime}, historySize=${this.frameHistory.length})`
+      );
       return;
     }
 
     const closest = candidateFrames.reduce((best, f) =>
-      Math.abs(f.earY - target50EarY) < Math.abs(best.earY - target50EarY) ? f : best
+      Math.abs(f.earY - target50EarY) < Math.abs(best.earY - target50EarY)
+        ? f
+        : best
     );
 
     this.currentRepPeaks.descending = {
@@ -511,11 +551,15 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    */
   private captureAscendingCheckpoint(): void {
     if (!this.standingEarY) {
-      console.debug('[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No standing ear Y reference');
+      console.debug(
+        '[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No standing ear Y reference'
+      );
       return;
     }
     if (!this.bottomCandidate) {
-      console.debug('[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No bottom candidate');
+      console.debug(
+        '[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No bottom candidate'
+      );
       return;
     }
 
@@ -524,15 +568,21 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
 
     // Find frame closest to 50% ear Y in history (after bottom)
     const bottomTime = this.bottomCandidate.timestamp;
-    const candidateFrames = this.frameHistory.filter(f => f.timestamp > bottomTime);
+    const candidateFrames = this.frameHistory.filter(
+      (f) => f.timestamp > bottomTime
+    );
 
     if (candidateFrames.length === 0) {
-      console.debug(`[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No frames in history after bottom (bottomTime=${bottomTime}, historySize=${this.frameHistory.length})`);
+      console.debug(
+        `[PistolSquatFormAnalyzer] captureAscendingCheckpoint: No frames in history after bottom (bottomTime=${bottomTime}, historySize=${this.frameHistory.length})`
+      );
       return;
     }
 
     const closest = candidateFrames.reduce((best, f) =>
-      Math.abs(f.earY - target50EarY) < Math.abs(best.earY - target50EarY) ? f : best
+      Math.abs(f.earY - target50EarY) < Math.abs(best.earY - target50EarY)
+        ? f
+        : best
     );
 
     this.currentRepPeaks.ascending = {
@@ -550,7 +600,10 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   /**
    * Check if we should transition from STANDING to DESCENDING
    */
-  private shouldTransitionToDescending(angles: { workingKnee: number; spine: number }): boolean {
+  private shouldTransitionToDescending(angles: {
+    workingKnee: number;
+    spine: number;
+  }): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
 
     // Working knee starting to bend significantly
@@ -574,7 +627,9 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    * Check if we should transition from BOTTOM to ASCENDING
    * Detects when knee angle is increasing and above the ascending threshold.
    */
-  private shouldTransitionToAscending(angles: { workingKnee: number }): boolean {
+  private shouldTransitionToAscending(angles: {
+    workingKnee: number;
+  }): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
     if (this.kneeAngleHistory.length < 2) return false;
 
@@ -584,13 +639,19 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
 
     // Knee is increasing AND above threshold
     const isIncreasing = curr > prev;
-    return isIncreasing && angles.workingKnee > this.thresholds.ascendingKneeThreshold;
+    return (
+      isIncreasing &&
+      angles.workingKnee > this.thresholds.ascendingKneeThreshold
+    );
   }
 
   /**
    * Check if we should transition from ASCENDING to STANDING (rep complete)
    */
-  private shouldTransitionToStanding(angles: { workingKnee: number; spine: number }): boolean {
+  private shouldTransitionToStanding(angles: {
+    workingKnee: number;
+    spine: number;
+  }): boolean {
     if (this.framesInPhase < this.minFramesInPhase) return false;
 
     // Back to standing: knee nearly straight, relatively upright
@@ -603,7 +664,11 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   /**
    * Update tracking metrics during rep
    */
-  private updateMetrics(angles: { workingKnee: number; extendedKnee: number; spine: number }): void {
+  private updateMetrics(angles: {
+    workingKnee: number;
+    extendedKnee: number;
+    spine: number;
+  }): void {
     this.currentRepMetrics.minWorkingKneeAngle = Math.min(
       this.currentRepMetrics.minWorkingKneeAngle,
       angles.workingKnee
@@ -636,7 +701,8 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     const feedback: string[] = [];
     let score = 100;
 
-    const { minWorkingKneeAngle, maxSpineAngle, minExtendedKneeAngle } = this.currentRepMetrics;
+    const { minWorkingKneeAngle, maxSpineAngle, minExtendedKneeAngle } =
+      this.currentRepMetrics;
 
     // Depth scoring - deeper is better (lower knee angle)
     if (minWorkingKneeAngle > 90) {
@@ -673,7 +739,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       score: Math.max(0, score),
       metrics: {
         depth: 180 - minWorkingKneeAngle, // Higher = deeper
-        balance: 90 - maxSpineAngle,      // Higher = better balance
+        balance: 90 - maxSpineAngle, // Higher = better balance
         extendedLeg: minExtendedKneeAngle, // Higher = straighter
       },
       feedback,

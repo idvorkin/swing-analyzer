@@ -7,8 +7,8 @@
  */
 
 import type { PoseKeypoint } from '../types';
-import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
 import { MediaPipeBodyParts } from '../types';
+import type { PoseTrackFile, PoseTrackFrame } from '../types/posetrack';
 
 /**
  * MediaPipe keypoint indices (33-point format)
@@ -32,47 +32,210 @@ export enum SwingPhase {
 function createBaseKeypoints(): PoseKeypoint[] {
   // Create 33-element array for MediaPipe format
   const kp: PoseKeypoint[] = new Array(33).fill(null).map(() => ({
-    x: 0, y: 0, score: 0.5, visibility: 0.5,
+    x: 0,
+    y: 0,
+    score: 0.5,
+    visibility: 0.5,
   }));
 
   // Face keypoints (0-10)
   kp[KEYPOINT_INDICES.NOSE] = { x: 320, y: 60, score: 0.95, visibility: 0.95 };
-  kp[KEYPOINT_INDICES.LEFT_EYE_INNER] = { x: 315, y: 50, score: 0.92, visibility: 0.92 };
-  kp[KEYPOINT_INDICES.LEFT_EYE] = { x: 310, y: 50, score: 0.92, visibility: 0.92 };
-  kp[KEYPOINT_INDICES.LEFT_EYE_OUTER] = { x: 305, y: 50, score: 0.92, visibility: 0.92 };
-  kp[KEYPOINT_INDICES.RIGHT_EYE_INNER] = { x: 325, y: 50, score: 0.92, visibility: 0.92 };
-  kp[KEYPOINT_INDICES.RIGHT_EYE] = { x: 330, y: 50, score: 0.92, visibility: 0.92 };
-  kp[KEYPOINT_INDICES.RIGHT_EYE_OUTER] = { x: 335, y: 50, score: 0.92, visibility: 0.92 };
-  kp[KEYPOINT_INDICES.LEFT_EAR] = { x: 295, y: 55, score: 0.88, visibility: 0.88 };
-  kp[KEYPOINT_INDICES.RIGHT_EAR] = { x: 345, y: 55, score: 0.88, visibility: 0.88 };
-  kp[KEYPOINT_INDICES.MOUTH_LEFT] = { x: 315, y: 70, score: 0.85, visibility: 0.85 };
-  kp[KEYPOINT_INDICES.MOUTH_RIGHT] = { x: 325, y: 70, score: 0.85, visibility: 0.85 };
+  kp[KEYPOINT_INDICES.LEFT_EYE_INNER] = {
+    x: 315,
+    y: 50,
+    score: 0.92,
+    visibility: 0.92,
+  };
+  kp[KEYPOINT_INDICES.LEFT_EYE] = {
+    x: 310,
+    y: 50,
+    score: 0.92,
+    visibility: 0.92,
+  };
+  kp[KEYPOINT_INDICES.LEFT_EYE_OUTER] = {
+    x: 305,
+    y: 50,
+    score: 0.92,
+    visibility: 0.92,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_EYE_INNER] = {
+    x: 325,
+    y: 50,
+    score: 0.92,
+    visibility: 0.92,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_EYE] = {
+    x: 330,
+    y: 50,
+    score: 0.92,
+    visibility: 0.92,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_EYE_OUTER] = {
+    x: 335,
+    y: 50,
+    score: 0.92,
+    visibility: 0.92,
+  };
+  kp[KEYPOINT_INDICES.LEFT_EAR] = {
+    x: 295,
+    y: 55,
+    score: 0.88,
+    visibility: 0.88,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_EAR] = {
+    x: 345,
+    y: 55,
+    score: 0.88,
+    visibility: 0.88,
+  };
+  kp[KEYPOINT_INDICES.MOUTH_LEFT] = {
+    x: 315,
+    y: 70,
+    score: 0.85,
+    visibility: 0.85,
+  };
+  kp[KEYPOINT_INDICES.MOUTH_RIGHT] = {
+    x: 325,
+    y: 70,
+    score: 0.85,
+    visibility: 0.85,
+  };
 
   // Upper body keypoints (11-22)
-  kp[KEYPOINT_INDICES.LEFT_SHOULDER] = { x: 280, y: 120, score: 0.95, visibility: 0.95 };
-  kp[KEYPOINT_INDICES.RIGHT_SHOULDER] = { x: 360, y: 120, score: 0.95, visibility: 0.95 };
-  kp[KEYPOINT_INDICES.LEFT_ELBOW] = { x: 260, y: 200, score: 0.92, visibility: 0.92 };
-  kp[KEYPOINT_INDICES.RIGHT_ELBOW] = { x: 380, y: 200, score: 0.92, visibility: 0.92 };
-  kp[KEYPOINT_INDICES.LEFT_WRIST] = { x: 250, y: 280, score: 0.9, visibility: 0.9 };
-  kp[KEYPOINT_INDICES.RIGHT_WRIST] = { x: 390, y: 280, score: 0.9, visibility: 0.9 };
-  kp[KEYPOINT_INDICES.LEFT_PINKY] = { x: 245, y: 290, score: 0.85, visibility: 0.85 };
-  kp[KEYPOINT_INDICES.RIGHT_PINKY] = { x: 395, y: 290, score: 0.85, visibility: 0.85 };
-  kp[KEYPOINT_INDICES.LEFT_INDEX] = { x: 250, y: 295, score: 0.85, visibility: 0.85 };
-  kp[KEYPOINT_INDICES.RIGHT_INDEX] = { x: 390, y: 295, score: 0.85, visibility: 0.85 };
-  kp[KEYPOINT_INDICES.LEFT_THUMB] = { x: 255, y: 285, score: 0.85, visibility: 0.85 };
-  kp[KEYPOINT_INDICES.RIGHT_THUMB] = { x: 385, y: 285, score: 0.85, visibility: 0.85 };
+  kp[KEYPOINT_INDICES.LEFT_SHOULDER] = {
+    x: 280,
+    y: 120,
+    score: 0.95,
+    visibility: 0.95,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_SHOULDER] = {
+    x: 360,
+    y: 120,
+    score: 0.95,
+    visibility: 0.95,
+  };
+  kp[KEYPOINT_INDICES.LEFT_ELBOW] = {
+    x: 260,
+    y: 200,
+    score: 0.92,
+    visibility: 0.92,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_ELBOW] = {
+    x: 380,
+    y: 200,
+    score: 0.92,
+    visibility: 0.92,
+  };
+  kp[KEYPOINT_INDICES.LEFT_WRIST] = {
+    x: 250,
+    y: 280,
+    score: 0.9,
+    visibility: 0.9,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_WRIST] = {
+    x: 390,
+    y: 280,
+    score: 0.9,
+    visibility: 0.9,
+  };
+  kp[KEYPOINT_INDICES.LEFT_PINKY] = {
+    x: 245,
+    y: 290,
+    score: 0.85,
+    visibility: 0.85,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_PINKY] = {
+    x: 395,
+    y: 290,
+    score: 0.85,
+    visibility: 0.85,
+  };
+  kp[KEYPOINT_INDICES.LEFT_INDEX] = {
+    x: 250,
+    y: 295,
+    score: 0.85,
+    visibility: 0.85,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_INDEX] = {
+    x: 390,
+    y: 295,
+    score: 0.85,
+    visibility: 0.85,
+  };
+  kp[KEYPOINT_INDICES.LEFT_THUMB] = {
+    x: 255,
+    y: 285,
+    score: 0.85,
+    visibility: 0.85,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_THUMB] = {
+    x: 385,
+    y: 285,
+    score: 0.85,
+    visibility: 0.85,
+  };
 
   // Lower body keypoints (23-32)
-  kp[KEYPOINT_INDICES.LEFT_HIP] = { x: 290, y: 280, score: 0.95, visibility: 0.95 };
-  kp[KEYPOINT_INDICES.RIGHT_HIP] = { x: 350, y: 280, score: 0.95, visibility: 0.95 };
-  kp[KEYPOINT_INDICES.LEFT_KNEE] = { x: 285, y: 380, score: 0.93, visibility: 0.93 };
-  kp[KEYPOINT_INDICES.RIGHT_KNEE] = { x: 355, y: 380, score: 0.93, visibility: 0.93 };
-  kp[KEYPOINT_INDICES.LEFT_ANKLE] = { x: 280, y: 470, score: 0.91, visibility: 0.91 };
-  kp[KEYPOINT_INDICES.RIGHT_ANKLE] = { x: 360, y: 470, score: 0.91, visibility: 0.91 };
-  kp[KEYPOINT_INDICES.LEFT_HEEL] = { x: 275, y: 475, score: 0.88, visibility: 0.88 };
-  kp[KEYPOINT_INDICES.RIGHT_HEEL] = { x: 365, y: 475, score: 0.88, visibility: 0.88 };
-  kp[KEYPOINT_INDICES.LEFT_FOOT_INDEX] = { x: 270, y: 480, score: 0.88, visibility: 0.88 };
-  kp[KEYPOINT_INDICES.RIGHT_FOOT_INDEX] = { x: 370, y: 480, score: 0.88, visibility: 0.88 };
+  kp[KEYPOINT_INDICES.LEFT_HIP] = {
+    x: 290,
+    y: 280,
+    score: 0.95,
+    visibility: 0.95,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_HIP] = {
+    x: 350,
+    y: 280,
+    score: 0.95,
+    visibility: 0.95,
+  };
+  kp[KEYPOINT_INDICES.LEFT_KNEE] = {
+    x: 285,
+    y: 380,
+    score: 0.93,
+    visibility: 0.93,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_KNEE] = {
+    x: 355,
+    y: 380,
+    score: 0.93,
+    visibility: 0.93,
+  };
+  kp[KEYPOINT_INDICES.LEFT_ANKLE] = {
+    x: 280,
+    y: 470,
+    score: 0.91,
+    visibility: 0.91,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_ANKLE] = {
+    x: 360,
+    y: 470,
+    score: 0.91,
+    visibility: 0.91,
+  };
+  kp[KEYPOINT_INDICES.LEFT_HEEL] = {
+    x: 275,
+    y: 475,
+    score: 0.88,
+    visibility: 0.88,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_HEEL] = {
+    x: 365,
+    y: 475,
+    score: 0.88,
+    visibility: 0.88,
+  };
+  kp[KEYPOINT_INDICES.LEFT_FOOT_INDEX] = {
+    x: 270,
+    y: 480,
+    score: 0.88,
+    visibility: 0.88,
+  };
+  kp[KEYPOINT_INDICES.RIGHT_FOOT_INDEX] = {
+    x: 370,
+    y: 480,
+    score: 0.88,
+    visibility: 0.88,
+  };
 
   return kp;
 }

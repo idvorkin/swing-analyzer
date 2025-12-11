@@ -1,9 +1,10 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import { Skeleton } from '../src/models/Skeleton';
 import { MediaPipeBodyParts, type PoseKeypoint } from '../src/types';
 
 // Load pose data
-const poseFile = './e2e-tests/fixtures/poses/pistol-squat-sample.posetrack.json';
+const poseFile =
+  './e2e-tests/fixtures/poses/pistol-squat-sample.posetrack.json';
 const data = JSON.parse(fs.readFileSync(poseFile, 'utf8'));
 
 console.log(`Loaded ${data.frames.length} frames from ${poseFile}`);
@@ -65,10 +66,14 @@ for (const frame of data.frames) {
 }
 
 // Detect working leg (the one with more variance - bending more)
-const leftKneeVariance = frames.reduce((sum, f) => sum + Math.pow(f.leftKnee - 150, 2), 0) / frames.length;
-const rightKneeVariance = frames.reduce((sum, f) => sum + Math.pow(f.rightKnee - 150, 2), 0) / frames.length;
+const leftKneeVariance =
+  frames.reduce((sum, f) => sum + (f.leftKnee - 150) ** 2, 0) / frames.length;
+const rightKneeVariance =
+  frames.reduce((sum, f) => sum + (f.rightKnee - 150) ** 2, 0) / frames.length;
 const workingLeg = leftKneeVariance > rightKneeVariance ? 'left' : 'right';
-console.log(`\nWorking leg: ${workingLeg} (variance: L=${leftKneeVariance.toFixed(1)}, R=${rightKneeVariance.toFixed(1)})`);
+console.log(
+  `\nWorking leg: ${workingLeg} (variance: L=${leftKneeVariance.toFixed(1)}, R=${rightKneeVariance.toFixed(1)})`
+);
 
 // Get working knee angles
 const workingKneeKey = workingLeg === 'left' ? 'leftKnee' : 'rightKnee';
@@ -97,7 +102,9 @@ for (let i = windowSize; i < frames.length - windowSize; i++) {
       angle: currAngle,
       videoTime: curr.videoTime,
     });
-    console.log(`  Frame ${curr.frameIndex} (t=${curr.videoTime.toFixed(2)}s): knee=${currAngle.toFixed(1)}°, spine=${curr.spine.toFixed(1)}°`);
+    console.log(
+      `  Frame ${curr.frameIndex} (t=${curr.videoTime.toFixed(2)}s): knee=${currAngle.toFixed(1)}°, spine=${curr.spine.toFixed(1)}°`
+    );
   }
 }
 
@@ -147,13 +154,15 @@ for (let i = 0; i < frames.length; i++) {
     continue;
   }
 
-  const smoothed = smoothAngle(rawAngle);
+  const _smoothed = smoothAngle(rawAngle);
 
   // Phase transitions
   if (phase === 'standing') {
     if (rawAngle < descendingKneeThreshold) {
       if (detailedLogging) {
-        console.log(`\n[Frame ${f.frameIndex}] STANDING -> DESCENDING (knee=${rawAngle.toFixed(1)}° < ${descendingKneeThreshold}°)`);
+        console.log(
+          `\n[Frame ${f.frameIndex}] STANDING -> DESCENDING (knee=${rawAngle.toFixed(1)}° < ${descendingKneeThreshold}°)`
+        );
       }
       phase = 'descending';
       troughCandidate = null;
@@ -167,11 +176,15 @@ for (let i = 0; i < frames.length; i++) {
       if (clampedAngle > troughCandidate.angle + 2) {
         framesAscendingAfterTrough++;
         if (detailedLogging) {
-          console.log(`  [Frame ${f.frameIndex}] Ascending: ${clampedAngle.toFixed(1)}° > ${troughCandidate.angle.toFixed(1)}° + 2, count=${framesAscendingAfterTrough}`);
+          console.log(
+            `  [Frame ${f.frameIndex}] Ascending: ${clampedAngle.toFixed(1)}° > ${troughCandidate.angle.toFixed(1)}° + 2, count=${framesAscendingAfterTrough}`
+          );
         }
       } else if (clampedAngle <= troughCandidate.angle) {
         if (detailedLogging && framesAscendingAfterTrough > 0) {
-          console.log(`  [Frame ${f.frameIndex}] Reset ascending count (${clampedAngle.toFixed(1)}° <= ${troughCandidate.angle.toFixed(1)}°)`);
+          console.log(
+            `  [Frame ${f.frameIndex}] Reset ascending count (${clampedAngle.toFixed(1)}° <= ${troughCandidate.angle.toFixed(1)}°)`
+          );
         }
         framesAscendingAfterTrough = 0;
       }
@@ -180,7 +193,9 @@ for (let i = 0; i < frames.length; i++) {
     // Update trough candidate
     if (!troughCandidate || clampedAngle < troughCandidate.angle) {
       if (detailedLogging) {
-        console.log(`  [Frame ${f.frameIndex}] New trough candidate: ${clampedAngle.toFixed(1)}° (t=${f.videoTime.toFixed(2)}s)`);
+        console.log(
+          `  [Frame ${f.frameIndex}] New trough candidate: ${clampedAngle.toFixed(1)}° (t=${f.videoTime.toFixed(2)}s)`
+        );
       }
       troughCandidate = {
         angle: clampedAngle,
@@ -191,9 +206,14 @@ for (let i = 0; i < frames.length; i++) {
     }
 
     // Confirm trough
-    if (framesAscendingAfterTrough >= framesNeededToConfirmTrough && troughCandidate) {
+    if (
+      framesAscendingAfterTrough >= framesNeededToConfirmTrough &&
+      troughCandidate
+    ) {
       if (detailedLogging) {
-        console.log(`  [Frame ${f.frameIndex}] TROUGH CONFIRMED at frame ${troughCandidate.frameIndex} (${troughCandidate.angle.toFixed(1)}°)`);
+        console.log(
+          `  [Frame ${f.frameIndex}] TROUGH CONFIRMED at frame ${troughCandidate.frameIndex} (${troughCandidate.angle.toFixed(1)}°)`
+        );
       }
       detectedBottoms.push({ ...troughCandidate });
       phase = 'bottom';
@@ -203,7 +223,9 @@ for (let i = 0; i < frames.length; i++) {
     if (rawAngle > 90) {
       phase = 'ascending';
       if (detailedLogging) {
-        console.log(`[Frame ${f.frameIndex}] BOTTOM -> ASCENDING (knee=${rawAngle.toFixed(1)}° > 90°)`);
+        console.log(
+          `[Frame ${f.frameIndex}] BOTTOM -> ASCENDING (knee=${rawAngle.toFixed(1)}° > 90°)`
+        );
       }
     }
   } else if (phase === 'ascending') {
@@ -212,7 +234,9 @@ for (let i = 0; i < frames.length; i++) {
       phase = 'standing';
       repCount++;
       if (detailedLogging) {
-        console.log(`[Frame ${f.frameIndex}] ASCENDING -> STANDING (rep ${repCount} complete)`);
+        console.log(
+          `[Frame ${f.frameIndex}] ASCENDING -> STANDING (rep ${repCount} complete)`
+        );
         loggedReps++;
         if (loggedReps >= 3) {
           detailedLogging = false;
@@ -230,12 +254,16 @@ for (let i = 0; i < frames.length; i++) {
 console.log('\n=== COMPARISON: Algorithm vs Actual Troughs ===');
 console.log(`Algorithm detected ${detectedBottoms.length} bottoms:`);
 for (const b of detectedBottoms) {
-  console.log(`  Frame ${b.frameIndex} (t=${b.videoTime.toFixed(2)}s): ${b.angle.toFixed(1)}°`);
+  console.log(
+    `  Frame ${b.frameIndex} (t=${b.videoTime.toFixed(2)}s): ${b.angle.toFixed(1)}°`
+  );
 }
 
 console.log(`\nActual troughs: ${actualTroughs.length}`);
 for (const t of actualTroughs) {
-  console.log(`  Frame ${t.frame} (t=${t.videoTime.toFixed(2)}s): ${t.angle.toFixed(1)}°`);
+  console.log(
+    `  Frame ${t.frame} (t=${t.videoTime.toFixed(2)}s): ${t.angle.toFixed(1)}°`
+  );
 }
 
 // Compare timing accuracy
@@ -257,30 +285,39 @@ for (const detected of detectedBottoms) {
   const frameDiff = detected.frameIndex - closestTrough.frame;
   const angleDiff = detected.angle - closestTrough.angle;
 
-  console.log(`  Detected frame ${detected.frameIndex} vs actual ${closestTrough.frame}:`);
+  console.log(
+    `  Detected frame ${detected.frameIndex} vs actual ${closestTrough.frame}:`
+  );
   console.log(`    Time diff: ${timeDiff.toFixed(0)}ms (${frameDiff} frames)`);
-  console.log(`    Angle diff: ${angleDiff.toFixed(1)}° (detected: ${detected.angle.toFixed(1)}°, actual: ${closestTrough.angle.toFixed(1)}°)`);
+  console.log(
+    `    Angle diff: ${angleDiff.toFixed(1)}° (detected: ${detected.angle.toFixed(1)}°, actual: ${closestTrough.angle.toFixed(1)}°)`
+  );
 }
 
 // Show frame-by-frame around each actual trough
 console.log('\n=== FRAME-BY-FRAME AROUND ACTUAL TROUGHS ===');
-for (const trough of actualTroughs.slice(0, 3)) { // First 3 troughs only
-  console.log(`\nTrough at frame ${trough.frame} (t=${trough.videoTime.toFixed(2)}s):`);
+for (const trough of actualTroughs.slice(0, 3)) {
+  // First 3 troughs only
+  console.log(
+    `\nTrough at frame ${trough.frame} (t=${trough.videoTime.toFixed(2)}s):`
+  );
   for (let i = trough.frame - 8; i <= trough.frame + 8; i++) {
     if (i >= 0 && i < frames.length) {
       const f = frames[i];
       const rawKnee = f[workingKneeKey];
       const marker = i === trough.frame ? ' <-- ACTUAL TROUGH' : '';
-      const detected = detectedBottoms.find(b => b.frameIndex === i);
+      const detected = detectedBottoms.find((b) => b.frameIndex === i);
       const detectedMarker = detected ? ' <-- DETECTED' : '';
-      console.log(`  ${i}: knee=${rawKnee.toFixed(1)}°, spine=${f.spine.toFixed(1)}°${marker}${detectedMarker}`);
+      console.log(
+        `  ${i}: knee=${rawKnee.toFixed(1)}°, spine=${f.spine.toFixed(1)}°${marker}${detectedMarker}`
+      );
     }
   }
 }
 
 // Analyze noise levels
 console.log('\n=== NOISE ANALYSIS ===');
-const kneeAngles = frames.map(f => f[workingKneeKey]);
+const kneeAngles = frames.map((f) => f[workingKneeKey]);
 const diffs: number[] = [];
 for (let i = 1; i < kneeAngles.length; i++) {
   diffs.push(Math.abs(kneeAngles[i] - kneeAngles[i - 1]));
@@ -290,8 +327,8 @@ const maxDiff = Math.max(...diffs);
 console.log(`Frame-to-frame angle changes:`);
 console.log(`  Average: ${avgDiff.toFixed(2)}°`);
 console.log(`  Max: ${maxDiff.toFixed(2)}°`);
-console.log(`  Frames with >5° jump: ${diffs.filter(d => d > 5).length}`);
-console.log(`  Frames with >10° jump: ${diffs.filter(d => d > 10).length}`);
+console.log(`  Frames with >5° jump: ${diffs.filter((d) => d > 5).length}`);
+console.log(`  Frames with >10° jump: ${diffs.filter((d) => d > 10).length}`);
 
 // Test different framesNeededToConfirmTrough values
 console.log('\n=== SENSITIVITY ANALYSIS: framesNeededToConfirmTrough ===');
@@ -326,7 +363,11 @@ for (const testFrames of [2, 3, 4, 5, 6]) {
       }
 
       if (!troughCandidate || clampedAngle < troughCandidate.angle) {
-        troughCandidate = { angle: clampedAngle, frameIndex: f.frameIndex, videoTime: f.videoTime };
+        troughCandidate = {
+          angle: clampedAngle,
+          frameIndex: f.frameIndex,
+          videoTime: f.videoTime,
+        };
         framesAscendingAfterTrough = 0;
       }
 
@@ -356,7 +397,10 @@ for (const testFrames of [2, 3, 4, 5, 6]) {
     }
     totalError += minDiff;
   }
-  const avgError = testDetected.length > 0 ? totalError / testDetected.length : 0;
+  const avgError =
+    testDetected.length > 0 ? totalError / testDetected.length : 0;
 
-  console.log(`  framesNeededToConfirmTrough=${testFrames}: detected ${testDetected.length} bottoms, avg error: ${avgError.toFixed(1)} frames`);
+  console.log(
+    `  framesNeededToConfirmTrough=${testFrames}: detected ${testDetected.length} bottoms, avg error: ${avgError.toFixed(1)} frames`
+  );
 }

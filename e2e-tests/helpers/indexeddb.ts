@@ -23,7 +23,11 @@ export async function setPoseTrackStorageMode(
 ): Promise<boolean> {
   return page.evaluate((storageMode) => {
     // Access the service through the test setup
-    const testSetup = (window as unknown as { __testSetup?: { setPoseTrackStorageMode?: (mode: string) => void } }).__testSetup;
+    const testSetup = (
+      window as unknown as {
+        __testSetup?: { setPoseTrackStorageMode?: (mode: string) => void };
+      }
+    ).__testSetup;
     if (testSetup?.setPoseTrackStorageMode) {
       testSetup.setPoseTrackStorageMode(storageMode);
       return true;
@@ -59,13 +63,19 @@ export async function seedPoseTrackData(
 ): Promise<void> {
   // First check if testSetup exposes a seeding function
   const hasTestSetup = await page.evaluate(() => {
-    return !!(window as unknown as { __testSetup?: { seedPoseTrack?: unknown } }).__testSetup?.seedPoseTrack;
+    return !!(
+      window as unknown as { __testSetup?: { seedPoseTrack?: unknown } }
+    ).__testSetup?.seedPoseTrack;
   });
 
   if (hasTestSetup) {
     // Use testSetup's seeding function (respects storage mode)
     await page.evaluate((data) => {
-      const testSetup = (window as unknown as { __testSetup: { seedPoseTrack: (data: unknown) => Promise<void> } }).__testSetup;
+      const testSetup = (
+        window as unknown as {
+          __testSetup: { seedPoseTrack: (data: unknown) => Promise<void> };
+        }
+      ).__testSetup;
       return testSetup.seedPoseTrack(data);
     }, poseTrack);
   } else {

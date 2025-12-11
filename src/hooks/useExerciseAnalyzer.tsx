@@ -13,42 +13,96 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AppState } from '../types';
+import type { DetectedExercise } from '../analyzers';
+import { PHASE_ORDER } from '../components/repGalleryConstants';
 import {
   DEFAULT_SAMPLE_VIDEO,
+  LOCAL_PISTOL_SQUAT_VIDEO,
   LOCAL_SAMPLE_VIDEO,
   PISTOL_SQUAT_SAMPLE_VIDEO,
-  LOCAL_PISTOL_SQUAT_VIDEO,
 } from '../config/sampleVideos';
-import { InputSession, type InputSessionState } from '../pipeline/InputSession';
 import type { Skeleton } from '../models/Skeleton';
+import { InputSession, type InputSessionState } from '../pipeline/InputSession';
 import type { Pipeline, ThumbnailEvent } from '../pipeline/Pipeline';
 import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { ExtractionProgress } from '../pipeline/SkeletonSource';
 import {
-  recordExtractionStart,
   recordExtractionComplete,
-  recordVideoLoad,
-  recordPlaybackStart,
+  recordExtractionStart,
   recordPlaybackPause,
+  recordPlaybackStart,
   recordRepDetected,
   recordSkeletonProcessingComplete,
+  recordVideoLoad,
   sessionRecorder,
 } from '../services/SessionRecorder';
+import type { AppState } from '../types';
 import type { PositionCandidate } from '../types/exercise';
 import type { CropRegion } from '../types/posetrack';
+import {
+  buildCheckpointList,
+  findNextCheckpoint,
+  findPreviousCheckpoint,
+} from '../utils/checkpointUtils';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
-import type { DetectedExercise } from '../analyzers';
-import { PHASE_ORDER } from '../components/repGalleryConstants';
-import { buildCheckpointList, findNextCheckpoint, findPreviousCheckpoint } from '../utils/checkpointUtils';
 
 // Throttle interval for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
 const REP_SYNC_INTERVAL_MS = 1000; // 1 second
 
 // Default phases (swing) - used when resetting before exercise detection runs
 const DEFAULT_PHASES = [...PHASE_ORDER];
+
+// Sample video configuration for DRY loading
+interface SampleVideoConfig {
+  name: string; // Display name for UI (e.g., "Kettlebell Swing")
+  fileName: string; // File name for the File object (e.g., "swing-sample.webm")
+  remoteUrl: string; // Primary remote URL
+  localFallback: string; // Local fallback URL
+}
+
+const SAMPLE_VIDEOS: Record<string, SampleVideoConfig> = {
+  swing: {
+    name: 'Kettlebell Swing',
+    fileName: 'swing-sample.webm',
+    remoteUrl: DEFAULT_SAMPLE_VIDEO,
+    localFallback: LOCAL_SAMPLE_VIDEO,
+  },
+  pistol: {
+    name: 'Pistol Squat',
+    fileName: 'pistol-squat-sample.webm',
+    remoteUrl: PISTOL_SQUAT_SAMPLE_VIDEO,
+    localFallback: LOCAL_PISTOL_SQUAT_VIDEO,
+  },
+};
+
+/**
+ * Convert error to user-friendly message for video loading failures.
+ */
+function getVideoLoadErrorMessage(error: unknown, context: string): string {
+  if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+    return 'Storage full. Clear browser data and try again.';
+  }
+  if (error instanceof Error) {
+    if (error.message.includes('Timeout')) {
+      return 'Video load timed out. Check your network and try again.';
+    }
+    if (error.message.includes('fetch') || error.message.includes('Network')) {
+      return 'Network error loading video. Check your connection.';
+    }
+    if (error.message.includes('model')) {
+      return 'Failed to load pose detection. Check network and refresh.';
+    }
+    if (
+      error.message.includes('format') ||
+      error.message.includes('supported')
+    ) {
+      return 'Video format not supported by your browser.';
+    }
+  }
+  return `Could not load ${context}`;
+}
 
 // Helper for consistent position display (e.g., "top" → "Top")
 const formatPositionForDisplay = (position: string): string =>
@@ -89,7 +143,9 @@ async function fetchWithProgress(
     onProgress(Math.round((loaded / total) * 100));
   }
 
-  return new Blob(chunks as BlobPart[], { type: response.headers.get('content-type') || 'video/webm' });
+  return new Blob(chunks as BlobPart[], {
+    type: response.headers.get('content-type') || 'video/webm',
+  });
 }
 
 export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
@@ -117,14 +173,21 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const [repCount, setRepCount] = useState<number>(0);
   const [spineAngle, setSpineAngle] = useState<number>(0);
   const [armToSpineAngle, setArmToSpineAngle] = useState<number>(0);
-  const [repThumbnails, setRepThumbnails] = useState<Map<number, Map<string, PositionCandidate>>>(new Map());
-  const [extractionProgress, setExtractionProgress] = useState<ExtractionProgress | null>(null);
-  const [inputState, setInputState] = useState<InputSessionState>({ type: 'idle' });
-  const [hasPosesForCurrentFrame, setHasPosesForCurrentFrame] = useState<boolean>(false);
+  const [repThumbnails, setRepThumbnails] = useState<
+    Map<number, Map<string, PositionCandidate>>
+  >(new Map());
+  const [extractionProgress, setExtractionProgress] =
+    useState<ExtractionProgress | null>(null);
+  const [inputState, setInputState] = useState<InputSessionState>({
+    type: 'idle',
+  });
+  const [hasPosesForCurrentFrame, setHasPosesForCurrentFrame] =
+    useState<boolean>(false);
   const [currentPosition, setCurrentPosition] = useState<string | null>(null);
 
   // Exercise detection state
-  const [detectedExercise, setDetectedExercise] = useState<DetectedExercise>('unknown');
+  const [detectedExercise, setDetectedExercise] =
+    useState<DetectedExercise>('unknown');
   const [detectionConfidence, setDetectionConfidence] = useState<number>(0);
   const [isDetectionLocked, setIsDetectionLocked] = useState<boolean>(false);
   const [currentPhases, setCurrentPhases] = useState<string[]>(DEFAULT_PHASES);
@@ -151,7 +214,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // Media dialog loading state
   const [isVideoLoading, setIsVideoLoading] = useState<boolean>(false);
-  const [videoLoadProgress, setVideoLoadProgress] = useState<number | undefined>(undefined);
+  const [videoLoadProgress, setVideoLoadProgress] = useState<
+    number | undefined
+  >(undefined);
   const [videoLoadMessage, setVideoLoadMessage] = useState<string>('');
   // Track if we're in the middle of loading a video (to abort on switch)
   const videoLoadAbortControllerRef = useRef<AbortController | null>(null);
@@ -189,7 +254,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
     // Calculate video element's position relative to container
     // (needed when flexbox centers video within container)
-    const videoOffsetX = containerRect ? videoRect.left - containerRect.left : 0;
+    const videoOffsetX = containerRect
+      ? videoRect.left - containerRect.left
+      : 0;
     const videoOffsetY = containerRect ? videoRect.top - containerRect.top : 0;
 
     // Calculate video content's rendered dimensions within video element
@@ -225,7 +292,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     canvas.style.left = `${finalX}px`;
     canvas.style.top = `${finalY}px`;
 
-    console.log(`[Canvas] Synced: ${canvas.width}x${canvas.height}, CSS: ${renderedWidth.toFixed(0)}x${renderedHeight.toFixed(0)} at (${finalX.toFixed(0)},${finalY.toFixed(0)}) [video offset: ${videoOffsetX.toFixed(0)},${videoOffsetY.toFixed(0)}]`);
+    console.log(
+      `[Canvas] Synced: ${canvas.width}x${canvas.height}, CSS: ${renderedWidth.toFixed(0)}x${renderedHeight.toFixed(0)} at (${finalX.toFixed(0)},${finalY.toFixed(0)}) [video offset: ${videoOffsetX.toFixed(0)},${videoOffsetY.toFixed(0)}]`
+    );
   }, []);
 
   // Re-sync canvas on window resize
@@ -241,7 +310,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   useEffect(() => {
     return () => {
       // Revoke any remaining blob URL to prevent memory leak
-      if (currentVideoUrlRef.current && currentVideoUrlRef.current.startsWith('blob:')) {
+      if (currentVideoUrlRef.current?.startsWith('blob:')) {
         URL.revokeObjectURL(currentVideoUrlRef.current);
       }
       // Abort any in-flight video load
@@ -253,85 +322,93 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // Safe Video Loading Helper
   // ========================================
   // Handles all cleanup and race conditions when switching videos
-  const loadVideoSafely = useCallback(async (
-    videoElement: HTMLVideoElement,
-    url: string,
-    signal: AbortSignal
-  ): Promise<void> => {
-    // 1. Pause any current playback
-    videoElement.pause();
-    videoElement.currentTime = 0;
+  const loadVideoSafely = useCallback(
+    async (
+      videoElement: HTMLVideoElement,
+      url: string,
+      signal: AbortSignal
+    ): Promise<void> => {
+      // 1. Pause any current playback
+      videoElement.pause();
+      videoElement.currentTime = 0;
 
-    // 2. Clean up previous object URL if it was a blob URL
-    if (currentVideoUrlRef.current && currentVideoUrlRef.current.startsWith('blob:')) {
-      URL.revokeObjectURL(currentVideoUrlRef.current);
-    }
-
-    // 3. Set new source and track it
-    currentVideoUrlRef.current = url;
-    videoElement.src = url;
-
-    // 4. Wait for metadata with proper event handling (no property assignment)
-    await new Promise<void>((resolve, reject) => {
-      // Check if aborted before we even start
-      if (signal.aborted) {
-        reject(new DOMException('Video load aborted', 'AbortError'));
-        return;
+      // 2. Clean up previous object URL if it was a blob URL
+      if (currentVideoUrlRef.current?.startsWith('blob:')) {
+        URL.revokeObjectURL(currentVideoUrlRef.current);
       }
 
-      const timeoutId = setTimeout(() => {
-        cleanup();
-        reject(new Error('Timeout loading video metadata'));
-      }, 10000);
+      // 3. Set new source and track it
+      currentVideoUrlRef.current = url;
+      videoElement.src = url;
 
-      const cleanup = () => {
-        clearTimeout(timeoutId);
-        videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        videoElement.removeEventListener('error', handleError);
-        signal.removeEventListener('abort', handleAbort);
-      };
-
-      const handleLoadedMetadata = () => {
-        cleanup();
-        // Sync canvas to video after a small delay (wait for layout)
-        requestAnimationFrame(() => syncCanvasToVideo());
-        resolve();
-      };
-
-      const handleError = () => {
-        cleanup();
-        const mediaError = videoElement.error;
-        let message = 'Failed to load video';
-        if (mediaError) {
-          switch (mediaError.code) {
-            case MediaError.MEDIA_ERR_ABORTED:
-              message = 'Video load was aborted';
-              break;
-            case MediaError.MEDIA_ERR_NETWORK:
-              message = 'Network error loading video';
-              break;
-            case MediaError.MEDIA_ERR_DECODE:
-              message = 'Video format could not be decoded';
-              break;
-            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-              message = 'Video format not supported';
-              break;
-          }
+      // 4. Wait for metadata with proper event handling (no property assignment)
+      await new Promise<void>((resolve, reject) => {
+        // Check if aborted before we even start
+        if (signal.aborted) {
+          reject(new DOMException('Video load aborted', 'AbortError'));
+          return;
         }
-        reject(new Error(message));
-      };
 
-      const handleAbort = () => {
-        cleanup();
-        reject(new DOMException('Video load aborted', 'AbortError'));
-      };
+        const timeoutId = setTimeout(() => {
+          cleanup();
+          reject(new Error('Timeout loading video metadata'));
+        }, 10000);
 
-      // Use addEventListener (not property assignment) to avoid race conditions
-      videoElement.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
-      videoElement.addEventListener('error', handleError, { once: true });
-      signal.addEventListener('abort', handleAbort, { once: true });
-    });
-  }, [syncCanvasToVideo]);
+        const cleanup = () => {
+          clearTimeout(timeoutId);
+          videoElement.removeEventListener(
+            'loadedmetadata',
+            handleLoadedMetadata
+          );
+          videoElement.removeEventListener('error', handleError);
+          signal.removeEventListener('abort', handleAbort);
+        };
+
+        const handleLoadedMetadata = () => {
+          cleanup();
+          // Sync canvas to video after a small delay (wait for layout)
+          requestAnimationFrame(() => syncCanvasToVideo());
+          resolve();
+        };
+
+        const handleError = () => {
+          cleanup();
+          const mediaError = videoElement.error;
+          let message = 'Failed to load video';
+          if (mediaError) {
+            switch (mediaError.code) {
+              case MediaError.MEDIA_ERR_ABORTED:
+                message = 'Video load was aborted';
+                break;
+              case MediaError.MEDIA_ERR_NETWORK:
+                message = 'Network error loading video';
+                break;
+              case MediaError.MEDIA_ERR_DECODE:
+                message = 'Video format could not be decoded';
+                break;
+              case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                message = 'Video format not supported';
+                break;
+            }
+          }
+          reject(new Error(message));
+        };
+
+        const handleAbort = () => {
+          cleanup();
+          reject(new DOMException('Video load aborted', 'AbortError'));
+        };
+
+        // Use addEventListener (not property assignment) to avoid race conditions
+        videoElement.addEventListener('loadedmetadata', handleLoadedMetadata, {
+          once: true,
+        });
+        videoElement.addEventListener('error', handleError, { once: true });
+        signal.addEventListener('abort', handleAbort, { once: true });
+      });
+    },
+    [syncCanvasToVideo]
+  );
 
   // ========================================
   // Pipeline Setup
@@ -345,7 +422,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     // Convert RepPosition[] to Map<string, PositionCandidate> for UI compatibility
     pipeline.getThumbnailEvents().subscribe({
       next: (event: ThumbnailEvent) => {
-        setRepThumbnails(prev => {
+        setRepThumbnails((prev) => {
           const updated = new Map(prev);
           // Convert RepPosition[] to Map<string, PositionCandidate>
           const positionMap = new Map<string, PositionCandidate>();
@@ -384,10 +461,41 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   }, []);
 
   // ========================================
+  // HUD Update Helper
+  // ========================================
+  // Updates HUD display from a skeleton (called during playback and seek)
+  const updateHudFromSkeleton = useCallback((skeleton: Skeleton) => {
+    setSpineAngle(Math.round(skeleton.getSpineAngle() || 0));
+    setArmToSpineAngle(Math.round(skeleton.getArmToVerticalAngle() || 0));
+
+    // Estimate position from spine angle (stateless, for HUD display during seek)
+    // Position thresholds based on spine angle:
+    //   top: ~10° (upright), connect: ~45°, release: ~37°, bottom: ~75° (hinged)
+    const spine = skeleton.getSpineAngle() || 0;
+    let position: string | null = null;
+
+    if (spine < 25) {
+      position = 'Top';
+    } else if (spine >= 25 && spine < 41) {
+      position = 'Release'; // ~37° ideal
+    } else if (spine >= 41 && spine < 60) {
+      position = 'Connect'; // ~45° ideal
+    } else if (spine >= 60) {
+      position = 'Bottom'; // ~75° ideal
+    }
+
+    if (position) {
+      setStatus(position);
+    }
+  }, []);
+
+  // ========================================
   // Skeleton Event Handler
   // ========================================
   // Use a ref to hold the handler so video events can access it stably
-  const skeletonHandlerRef = useRef<((event: SkeletonEvent) => void) | null>(null);
+  const skeletonHandlerRef = useRef<((event: SkeletonEvent) => void) | null>(
+    null
+  );
 
   // Track previous rep count for detecting new reps
   const prevRepCountRef = useRef<number>(0);
@@ -432,9 +540,13 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     }
 
     // Debug: log every 100 frames and on rep changes
-    if (event.poseEvent.frameEvent.videoTime !== undefined &&
-        Math.floor(event.poseEvent.frameEvent.videoTime * 30) % 100 === 0) {
-      console.log(`[processSkeletonEvent] videoTime=${event.poseEvent.frameEvent.videoTime?.toFixed(2)}, repCount=${result}`);
+    if (
+      event.poseEvent.frameEvent.videoTime !== undefined &&
+      Math.floor(event.poseEvent.frameEvent.videoTime * 30) % 100 === 0
+    ) {
+      console.log(
+        `[processSkeletonEvent] videoTime=${event.poseEvent.frameEvent.videoTime?.toFixed(2)}, repCount=${result}`
+      );
     }
 
     // Update rep count (cumulative across all extracted frames)
@@ -486,7 +598,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             recordExtractionComplete({ fileName: state.fileName });
           }
           // Record skeleton processing complete (for both extraction and cache load)
-          const sourceState = state.sourceState as { batchComplete?: boolean; framesProcessed?: number; processingTimeMs?: number };
+          const sourceState = state.sourceState as {
+            batchComplete?: boolean;
+            framesProcessed?: number;
+            processingTimeMs?: number;
+          };
           if (sourceState.batchComplete) {
             recordSkeletonProcessingComplete({
               framesProcessed: sourceState.framesProcessed ?? 0,
@@ -510,7 +626,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
               updateHudFromSkeleton(skeletonEvent.skeleton);
               // Also render skeleton on canvas
               if (skeletonRendererRef.current) {
-                skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, performance.now());
+                skeletonRendererRef.current.renderSkeleton(
+                  skeletonEvent.skeleton,
+                  performance.now()
+                );
               }
             }
           }
@@ -538,52 +657,56 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
       // Mark model as loaded once we have an active source
       if (state.type === 'video-file' && state.sourceState.type === 'active') {
-        setAppState(prev => ({ ...prev, isModelLoaded: true }));
+        setAppState((prev) => ({ ...prev, isModelLoaded: true }));
       }
     });
 
     // Subscribe to skeleton events - use processSkeletonEvent via ref for stable access
     skeletonHandlerRef.current = processSkeletonEvent;
-    let skeletonEventCount = 0;
+    let _skeletonEventCount = 0;
     const skeletonSubscription = session.skeletons$.subscribe((event) => {
-      skeletonEventCount++;
+      _skeletonEventCount++;
       // Use the ref to access the latest handler (avoids stale closure)
       skeletonHandlerRef.current?.(event);
     });
 
     // Subscribe to extraction progress
-    const progressSubscription = session.extractionProgress$.subscribe((progress) => {
-      setExtractionProgress(progress);
-    });
+    const progressSubscription = session.extractionProgress$.subscribe(
+      (progress) => {
+        setExtractionProgress(progress);
+      }
+    );
 
     // Subscribe to exercise detection events
-    const detectionSubscription = pipeline.getExerciseDetectionEvents().subscribe({
-      next: (detection) => {
-        // Batch related state updates to prevent multiple re-renders
-        const formAnalyzer = pipeline.getFormAnalyzer();
-        const newPhases = formAnalyzer.getPhases();
-        const newWorkingLeg = formAnalyzer.getWorkingLeg?.() ?? null;
-        const newIsLocked = pipeline.isExerciseDetectionLocked();
+    const detectionSubscription = pipeline
+      .getExerciseDetectionEvents()
+      .subscribe({
+        next: (detection) => {
+          // Batch related state updates to prevent multiple re-renders
+          const formAnalyzer = pipeline.getFormAnalyzer();
+          const newPhases = formAnalyzer.getPhases();
+          const newWorkingLeg = formAnalyzer.getWorkingLeg?.() ?? null;
+          const newIsLocked = pipeline.isExerciseDetectionLocked();
 
-        // Update all detection-related state together
-        setDetectedExercise(detection.exercise);
-        setDetectionConfidence(detection.confidence);
-        setIsDetectionLocked(newIsLocked);
-        setCurrentPhases(newPhases);
-        setWorkingLeg(newWorkingLeg);
-      },
-      error: (error) => {
-        console.error('Error in exercise detection subscription:', error);
-        // Provide user feedback and set a sensible default
-        setStatus('Detection error - defaulting to kettlebell swing');
-        setDetectedExercise('kettlebell-swing');
-        setIsDetectionLocked(true);
-        setCurrentPhases(['top', 'connect', 'bottom', 'release']);
-      },
-    });
+          // Update all detection-related state together
+          setDetectedExercise(detection.exercise);
+          setDetectionConfidence(detection.confidence);
+          setIsDetectionLocked(newIsLocked);
+          setCurrentPhases(newPhases);
+          setWorkingLeg(newWorkingLeg);
+        },
+        error: (error) => {
+          console.error('Error in exercise detection subscription:', error);
+          // Provide user feedback and set a sensible default
+          setStatus('Detection error - defaulting to kettlebell swing');
+          setDetectedExercise('kettlebell-swing');
+          setIsDetectionLocked(true);
+          setCurrentPhases(['top', 'connect', 'bottom', 'release']);
+        },
+      });
 
     // Mark as ready
-    setAppState(prev => ({ ...prev, isModelLoaded: true }));
+    setAppState((prev) => ({ ...prev, isModelLoaded: true }));
     setStatus('Ready');
 
     // Set up session recorder pipeline state getter for debugging
@@ -620,36 +743,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       session.dispose();
       inputSessionRef.current = null;
     };
-  }, [initializePipeline, processSkeletonEvent]);
-
-  // ========================================
-  // HUD Update Helper
-  // ========================================
-  // Updates HUD display from a skeleton (called during playback and seek)
-  const updateHudFromSkeleton = useCallback((skeleton: Skeleton) => {
-    setSpineAngle(Math.round(skeleton.getSpineAngle() || 0));
-    setArmToSpineAngle(Math.round(skeleton.getArmToVerticalAngle() || 0));
-
-    // Estimate position from spine angle (stateless, for HUD display during seek)
-    // Position thresholds based on spine angle:
-    //   top: ~10° (upright), connect: ~45°, release: ~37°, bottom: ~75° (hinged)
-    const spine = skeleton.getSpineAngle() || 0;
-    let position: string | null = null;
-
-    if (spine < 25) {
-      position = 'Top';
-    } else if (spine >= 25 && spine < 41) {
-      position = 'Release'; // ~37° ideal
-    } else if (spine >= 41 && spine < 60) {
-      position = 'Connect'; // ~45° ideal
-    } else if (spine >= 60) {
-      position = 'Bottom'; // ~75° ideal
-    }
-
-    if (position) {
-      setStatus(position);
-    }
-  }, []);
+  }, [initializePipeline, processSkeletonEvent, updateHudFromSkeleton]);
 
   // ========================================
   // Video Playback Handlers
@@ -661,21 +755,21 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     const handlePlay = () => {
       isPlayingRef.current = true;
       setIsPlaying(true);
-      setAppState(prev => ({ ...prev, isProcessing: true }));
+      setAppState((prev) => ({ ...prev, isProcessing: true }));
       recordPlaybackStart({ videoTime: video.currentTime });
     };
 
     const handlePause = () => {
       isPlayingRef.current = false;
       setIsPlaying(false);
-      setAppState(prev => ({ ...prev, isProcessing: false }));
+      setAppState((prev) => ({ ...prev, isProcessing: false }));
       recordPlaybackPause({ videoTime: video.currentTime });
     };
 
     const handleEnded = () => {
       isPlayingRef.current = false;
       setIsPlaying(false);
-      setAppState(prev => ({ ...prev, isProcessing: false }));
+      setAppState((prev) => ({ ...prev, isProcessing: false }));
       // Don't reset rep count when video ends - just stop processing
     };
 
@@ -693,7 +787,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         if (skeletonEvent?.skeleton) {
           // Render the skeleton
           if (skeletonRendererRef.current) {
-            skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, now);
+            skeletonRendererRef.current.renderSkeleton(
+              skeletonEvent.skeleton,
+              now
+            );
           }
           // Update HUD with current frame's data
           updateHudFromSkeleton(skeletonEvent.skeleton);
@@ -710,18 +807,26 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
       // Request next frame callback if still playing
       if (isPlayingRef.current) {
-        videoFrameCallbackId = video.requestVideoFrameCallback(renderVideoFrame);
+        videoFrameCallbackId =
+          video.requestVideoFrameCallback(renderVideoFrame);
       }
     };
 
     const startVideoFrameCallback = () => {
-      if (videoFrameCallbackId === null && 'requestVideoFrameCallback' in video) {
-        videoFrameCallbackId = video.requestVideoFrameCallback(renderVideoFrame);
+      if (
+        videoFrameCallbackId === null &&
+        'requestVideoFrameCallback' in video
+      ) {
+        videoFrameCallbackId =
+          video.requestVideoFrameCallback(renderVideoFrame);
       }
     };
 
     const stopVideoFrameCallback = () => {
-      if (videoFrameCallbackId !== null && 'cancelVideoFrameCallback' in video) {
+      if (
+        videoFrameCallbackId !== null &&
+        'cancelVideoFrameCallback' in video
+      ) {
         video.cancelVideoFrameCallback(videoFrameCallbackId);
         videoFrameCallbackId = null;
       }
@@ -754,7 +859,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       if (skeletonEvent?.skeleton) {
         // Render the skeleton
         if (skeletonRendererRef.current) {
-          skeletonRendererRef.current.renderSkeleton(skeletonEvent.skeleton, performance.now());
+          skeletonRendererRef.current.renderSkeleton(
+            skeletonEvent.skeleton,
+            performance.now()
+          );
         }
         // Update HUD with current frame's data
         updateHudFromSkeleton(skeletonEvent.skeleton);
@@ -781,273 +889,182 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   // Video File Controls
   // ========================================
-  const handleVideoUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
 
-    const session = inputSessionRef.current;
-    const video = videoRef.current;
-    if (!session || !video) {
-      console.error('handleVideoUpload: session or video element not initialized', {
-        hasSession: !!session,
-        hasVideo: !!video,
-      });
-      setStatus('Error: App not initialized. Please refresh.');
-      return;
-    }
-
-    // Abort any in-progress video load
-    videoLoadAbortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    videoLoadAbortControllerRef.current = abortController;
-
-    // Reset state
+  // Helper: Reset all video-related state for a new video
+  const resetVideoState = useCallback(() => {
     setRepCount(0);
     setRepThumbnails(new Map());
     pipelineRef.current?.reset();
-    hasRecordedExtractionStartRef.current = false; // Reset for new video
-    // Reset exercise detection state for new video
+    hasRecordedExtractionStartRef.current = false;
     setDetectedExercise('unknown');
     setDetectionConfidence(0);
     setIsDetectionLocked(false);
     setCurrentPhases(DEFAULT_PHASES);
     setWorkingLeg(null);
+  }, []);
 
-    // Load video safely (handles cleanup, pausing, and race conditions)
-    const url = URL.createObjectURL(file);
-    try {
-      await loadVideoSafely(video, url, abortController.signal);
-    } catch (error) {
-      // AbortError means user switched videos - silently ignore
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        return;
-      }
-      console.error('Failed to load video:', error);
-      setStatus(`Error: ${error instanceof Error ? error.message : 'Failed to load video'}`);
-      return;
-    }
+  // Helper: Clear loading UI state (used on abort or completion)
+  const clearLoadingState = useCallback(() => {
+    setIsVideoLoading(false);
+    setVideoLoadProgress(undefined);
+    setVideoLoadMessage('');
+  }, []);
 
-    setCurrentVideoFile(file);
-
-    // Start extraction/cache lookup
-    try {
-      await session.startVideoFile(file);
-    } catch (error) {
-      console.error('Failed to process video:', error);
-      let userMessage = 'Could not process video';
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        userMessage = 'Storage full. Clear browser data and try again.';
-      } else if (error instanceof Error) {
-        if (error.message.includes('model')) {
-          userMessage = 'Failed to load pose detection. Check network and refresh.';
-        } else if (error.message.includes('format')) {
-          userMessage = 'Invalid video format. Try a different file.';
-        }
-      }
-      setStatus(`Error: ${userMessage}`);
-    }
-  }, [loadVideoSafely]);
-
-  const loadHardcodedVideo = useCallback(async () => {
-    const session = inputSessionRef.current;
-    const video = videoRef.current;
-    if (!session || !video) {
-      console.error('loadHardcodedVideo: session or video element not initialized', {
-        hasSession: !!session,
-        hasVideo: !!video,
-      });
-      setStatus('Error: App not initialized. Please refresh.');
-      return;
-    }
-
-    // Abort any in-progress video load
+  // Helper: Prepare for video loading (abort previous, create new controller)
+  const prepareVideoLoad = useCallback(() => {
     videoLoadAbortControllerRef.current?.abort();
     const abortController = new AbortController();
     videoLoadAbortControllerRef.current = abortController;
+    return abortController;
+  }, []);
 
-    setStatus('Loading sample video...');
-    setIsVideoLoading(true);
-    setVideoLoadProgress(undefined);
-    setVideoLoadMessage('Downloading Kettlebell Swing...');
-
-    try {
-      // Reset state
-      setRepCount(0);
-      setRepThumbnails(new Map());
-      pipelineRef.current?.reset();
-      hasRecordedExtractionStartRef.current = false; // Reset for new video
-      // Reset exercise detection state for new video
-      setDetectedExercise('unknown');
-      setDetectionConfidence(0);
-      setIsDetectionLocked(false);
-      setCurrentPhases(DEFAULT_PHASES);
-      setWorkingLeg(null);
-
-      // Try remote URL first, fall back to local
-      let videoURL = DEFAULT_SAMPLE_VIDEO;
-      let blob: Blob;
+  // Core video loading function - handles both user uploads and sample videos
+  const loadVideo = useCallback(
+    async (
+      videoFile: File,
+      blobUrl: string,
+      abortController: AbortController,
+      context: string // For error messages (e.g., "video" or "sample video")
+    ) => {
+      const session = inputSessionRef.current;
+      const video = videoRef.current;
+      if (!session || !video) {
+        console.error(`loadVideo: session or video element not initialized`);
+        setStatus('Error: App not initialized. Please refresh.');
+        return false;
+      }
 
       try {
-        blob = await fetchWithProgress(videoURL, (percent) => {
-          setStatus(`Downloading sample video... ${percent}%`);
-          setVideoLoadProgress(percent);
+        // Load video into DOM
+        await loadVideoSafely(video, blobUrl, abortController.signal);
+        setCurrentVideoFile(videoFile);
+        recordVideoLoad({
+          source: context === 'video' ? 'upload' : 'hardcoded',
+          fileName: videoFile.name,
         });
-      } catch {
-        console.log('Remote sample failed, falling back to local');
-        videoURL = LOCAL_SAMPLE_VIDEO;
-        setStatus('Loading sample video (local)...');
-        setVideoLoadMessage('Loading from local cache...');
-        setVideoLoadProgress(undefined);
-        const response = await fetch(videoURL);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch video: ${response.status}`);
+
+        // Start extraction/cache lookup
+        setVideoLoadMessage('Processing video...');
+        await session.startVideoFile(videoFile);
+
+        setStatus('Video loaded. Press Play to start.');
+        clearLoadingState();
+        return true;
+      } catch (error) {
+        // AbortError means user switched videos - silently reset
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          clearLoadingState();
+          return false;
         }
-        blob = await response.blob();
+        console.error(`Error loading ${context}:`, error);
+        setStatus(`Error: ${getVideoLoadErrorMessage(error, context)}`);
+        clearLoadingState();
+        return false;
       }
-      const videoFile = new File([blob], 'swing-sample.webm', {
-        type: 'video/webm',
-      });
+    },
+    [loadVideoSafely, clearLoadingState]
+  );
 
-      // Load video safely (handles cleanup, pausing, and race conditions)
-      const blobUrl = URL.createObjectURL(blob);
-      await loadVideoSafely(video, blobUrl, abortController.signal);
+  // Handle user-uploaded video files
+  const handleVideoUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
 
-      setCurrentVideoFile(videoFile);
-      recordVideoLoad({ source: 'hardcoded', fileName: 'swing-sample.webm' });
-
-      // Start extraction/cache lookup
-      setVideoLoadMessage('Processing video...');
-      await session.startVideoFile(videoFile);
-
-      setStatus('Video loaded. Press Play to start.');
-      setIsVideoLoading(false);
-    } catch (error) {
-      // AbortError means user switched videos - reset loading state and return
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        setIsVideoLoading(false);
-        setVideoLoadProgress(undefined);
-        setVideoLoadMessage('');
+      if (!inputSessionRef.current || !videoRef.current) {
+        console.error(
+          'handleVideoUpload: session or video element not initialized'
+        );
+        setStatus('Error: App not initialized. Please refresh.');
         return;
       }
-      console.error('Error loading hardcoded video:', error);
-      // Apply same detailed error handling as handleVideoUpload
-      let userMessage = 'Could not load sample video';
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        userMessage = 'Storage full. Clear browser data and try again.';
-      } else if (error instanceof Error) {
-        if (error.message.includes('Timeout')) {
-          userMessage = 'Video load timed out. Check your network and try again.';
-        } else if (error.message.includes('fetch') || error.message.includes('Network')) {
-          userMessage = 'Network error loading video. Check your connection.';
-        } else if (error.message.includes('model')) {
-          userMessage = 'Failed to load pose detection. Check network and refresh.';
-        } else if (error.message.includes('format') || error.message.includes('supported')) {
-          userMessage = 'Video format not supported by your browser.';
-        }
+
+      const abortController = prepareVideoLoad();
+      setIsVideoLoading(true);
+      setVideoLoadProgress(undefined);
+      setVideoLoadMessage(`Loading ${file.name}...`);
+      resetVideoState();
+
+      const url = URL.createObjectURL(file);
+      await loadVideo(file, url, abortController, 'video');
+    },
+    [prepareVideoLoad, resetVideoState, loadVideo]
+  );
+
+  // Load a sample video by key (shared implementation for all samples)
+  const loadSampleVideo = useCallback(
+    async (sampleKey: keyof typeof SAMPLE_VIDEOS) => {
+      const config = SAMPLE_VIDEOS[sampleKey];
+      if (!config) {
+        console.error(`Unknown sample video: ${sampleKey}`);
+        return;
       }
-      setStatus(`Error: ${userMessage}`);
-      setIsVideoLoading(false);
-    }
-  }, [loadVideoSafely]);
 
-  const loadPistolSquatSample = useCallback(async () => {
-    const session = inputSessionRef.current;
-    const video = videoRef.current;
-    if (!session || !video) {
-      console.error('loadPistolSquatSample: session or video element not initialized');
-      setStatus('Error: App not initialized. Please refresh.');
-      return;
-    }
+      if (!inputSessionRef.current || !videoRef.current) {
+        console.error(
+          `loadSampleVideo: session or video element not initialized`
+        );
+        setStatus('Error: App not initialized. Please refresh.');
+        return;
+      }
 
-    // Abort any in-progress video load
-    videoLoadAbortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    videoLoadAbortControllerRef.current = abortController;
-
-    setStatus('Loading pistol squat sample...');
-    setIsVideoLoading(true);
-    setVideoLoadProgress(undefined);
-    setVideoLoadMessage('Downloading Pistol Squat...');
-
-    try {
-      // Reset state
-      setRepCount(0);
-      setRepThumbnails(new Map());
-      pipelineRef.current?.reset();
-      hasRecordedExtractionStartRef.current = false;
-      // Reset exercise detection state for new video
-      setDetectedExercise('unknown');
-      setDetectionConfidence(0);
-      setIsDetectionLocked(false);
-      setCurrentPhases(DEFAULT_PHASES);
-      setWorkingLeg(null);
-
-      // Try remote URL first, fall back to local
-      let videoURL = PISTOL_SQUAT_SAMPLE_VIDEO;
-      let blob: Blob;
+      const abortController = prepareVideoLoad();
+      setStatus(`Loading ${config.name.toLowerCase()} sample...`);
+      setIsVideoLoading(true);
+      setVideoLoadProgress(undefined);
+      setVideoLoadMessage(`Downloading ${config.name}...`);
+      resetVideoState();
 
       try {
-        blob = await fetchWithProgress(videoURL, (percent) => {
-          setStatus(`Downloading pistol squat sample... ${percent}%`);
-          setVideoLoadProgress(percent);
+        // Try remote URL first, fall back to local
+        let blob: Blob;
+        try {
+          blob = await fetchWithProgress(config.remoteUrl, (percent) => {
+            setStatus(
+              `Downloading ${config.name.toLowerCase()}... ${percent}%`
+            );
+            setVideoLoadProgress(percent);
+          });
+        } catch {
+          console.log(`Remote ${config.name} failed, falling back to local`);
+          setStatus(`Loading ${config.name.toLowerCase()} (local)...`);
+          setVideoLoadMessage('Loading from local cache...');
+          setVideoLoadProgress(undefined);
+          const response = await fetch(config.localFallback);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch video: ${response.status}`);
+          }
+          blob = await response.blob();
+        }
+
+        const videoFile = new File([blob], config.fileName, {
+          type: 'video/webm',
         });
-      } catch {
-        console.log('Remote pistol squat sample failed, falling back to local');
-        videoURL = LOCAL_PISTOL_SQUAT_VIDEO;
-        setStatus('Loading pistol squat sample (local)...');
-        setVideoLoadMessage('Loading from local cache...');
-        setVideoLoadProgress(undefined);
-        const response = await fetch(videoURL);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch video: ${response.status}`);
+        const blobUrl = URL.createObjectURL(blob);
+        await loadVideo(videoFile, blobUrl, abortController, 'sample video');
+      } catch (error) {
+        // AbortError means user switched videos - silently reset
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          clearLoadingState();
+          return;
         }
-        blob = await response.blob();
+        console.error(`Error loading ${config.name}:`, error);
+        setStatus(`Error: ${getVideoLoadErrorMessage(error, 'sample video')}`);
+        clearLoadingState();
       }
-      const videoFile = new File([blob], 'pistol-squat-sample.webm', {
-        type: 'video/webm',
-      });
+    },
+    [prepareVideoLoad, resetVideoState, loadVideo, clearLoadingState]
+  );
 
-      // Load video safely
-      const blobUrl = URL.createObjectURL(blob);
-      await loadVideoSafely(video, blobUrl, abortController.signal);
-
-      setCurrentVideoFile(videoFile);
-      recordVideoLoad({ source: 'hardcoded', fileName: 'pistol-squat-sample.webm' });
-
-      // Start extraction/cache lookup
-      setVideoLoadMessage('Processing video...');
-      await session.startVideoFile(videoFile);
-
-      setStatus('Video loaded. Press Play to start.');
-      setIsVideoLoading(false);
-    } catch (error) {
-      // AbortError means user switched videos - reset loading state and return
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        setIsVideoLoading(false);
-        setVideoLoadProgress(undefined);
-        setVideoLoadMessage('');
-        return;
-      }
-      console.error('Error loading pistol squat sample:', error);
-      // Apply same detailed error handling as handleVideoUpload
-      let userMessage = 'Could not load sample video';
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        userMessage = 'Storage full. Clear browser data and try again.';
-      } else if (error instanceof Error) {
-        if (error.message.includes('Timeout')) {
-          userMessage = 'Video load timed out. Check your network and try again.';
-        } else if (error.message.includes('fetch') || error.message.includes('Network')) {
-          userMessage = 'Network error loading video. Check your connection.';
-        } else if (error.message.includes('model')) {
-          userMessage = 'Failed to load pose detection. Check network and refresh.';
-        } else if (error.message.includes('format') || error.message.includes('supported')) {
-          userMessage = 'Video format not supported by your browser.';
-        }
-      }
-      setStatus(`Error: ${userMessage}`);
-      setIsVideoLoading(false);
-    }
-  }, [loadVideoSafely]);
+  // Convenience wrappers for specific samples (maintain existing API)
+  const loadHardcodedVideo = useCallback(
+    () => loadSampleVideo('swing'),
+    [loadSampleVideo]
+  );
+  const loadPistolSquatSample = useCallback(
+    () => loadSampleVideo('pistol'),
+    [loadSampleVideo]
+  );
 
   // ========================================
   // Playback Controls
@@ -1096,24 +1113,25 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     if (!video) return;
 
     // Guard against NaN when video metadata isn't loaded
-    if (!isFinite(video.duration) || !isFinite(video.currentTime)) return;
+    if (!Number.isFinite(video.duration) || !Number.isFinite(video.currentTime))
+      return;
 
     video.pause();
     video.currentTime = Math.min(video.duration, video.currentTime + frameStep);
     // Skeleton will be rendered via 'seeked' event handler
-  }, [frameStep]);
+  }, []);
 
   const previousFrame = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
 
     // Guard against NaN when video metadata isn't loaded
-    if (!isFinite(video.currentTime)) return;
+    if (!Number.isFinite(video.currentTime)) return;
 
     video.pause();
     video.currentTime = Math.max(0, video.currentTime - frameStep);
     // Skeleton will be rendered via 'seeked' event handler
-  }, [frameStep]);
+  }, []);
 
   // ========================================
   // Rep Navigation - seeks to same phase in target rep (or first available) and pauses
@@ -1131,9 +1149,14 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
     // Try to preserve current phase (convert "Top" -> "top" for lookup)
     const currentPhaseKey = currentPosition?.toLowerCase() ?? null;
-    const samePhaseCheckpoint = currentPhaseKey ? positions?.get(currentPhaseKey) : null;
-    const targetCheckpoint = samePhaseCheckpoint || positions?.values().next().value;
-    const actualPosition = samePhaseCheckpoint ? currentPhaseKey : (positions?.keys().next().value ?? null);
+    const samePhaseCheckpoint = currentPhaseKey
+      ? positions?.get(currentPhaseKey)
+      : null;
+    const targetCheckpoint =
+      samePhaseCheckpoint || positions?.values().next().value;
+    const actualPosition = samePhaseCheckpoint
+      ? currentPhaseKey
+      : (positions?.keys().next().value ?? null);
 
     video.pause(); // Pause when seeking to rep
     if (targetCheckpoint?.videoTime !== undefined) {
@@ -1142,7 +1165,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         setCurrentPosition(formatPositionForDisplay(actualPosition));
       }
     }
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
       currentRepIndex: newRepIndex,
     }));
@@ -1161,9 +1184,14 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
     // Try to preserve current phase (convert "Top" -> "top" for lookup)
     const currentPhaseKey = currentPosition?.toLowerCase() ?? null;
-    const samePhaseCheckpoint = currentPhaseKey ? positions?.get(currentPhaseKey) : null;
-    const targetCheckpoint = samePhaseCheckpoint || positions?.values().next().value;
-    const actualPosition = samePhaseCheckpoint ? currentPhaseKey : (positions?.keys().next().value ?? null);
+    const samePhaseCheckpoint = currentPhaseKey
+      ? positions?.get(currentPhaseKey)
+      : null;
+    const targetCheckpoint =
+      samePhaseCheckpoint || positions?.values().next().value;
+    const actualPosition = samePhaseCheckpoint
+      ? currentPhaseKey
+      : (positions?.keys().next().value ?? null);
 
     video.pause(); // Pause when seeking to rep
     if (targetCheckpoint?.videoTime !== undefined) {
@@ -1172,20 +1200,23 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         setCurrentPosition(formatPositionForDisplay(actualPosition));
       }
     }
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
       currentRepIndex: newRepIndex,
     }));
   }, [repCount, appState.currentRepIndex, repThumbnails, currentPosition]);
 
   // Set current rep index directly (used by gallery modal)
-  const setCurrentRepIndex = useCallback((index: number) => {
-    if (index < 0 || index >= repCount) return;
-    setAppState(prev => ({
-      ...prev,
-      currentRepIndex: index,
-    }));
-  }, [repCount]);
+  const setCurrentRepIndex = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= repCount) return;
+      setAppState((prev) => ({
+        ...prev,
+        currentRepIndex: index,
+      }));
+    },
+    [repCount]
+  );
 
   // ========================================
   // Checkpoint Navigation
@@ -1203,39 +1234,43 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // Updates currentRepIndex and currentPosition based on video time.
   // Called from throttled playback loop and on seek events.
   // See ARCHITECTURE.md "Throttled Playback Sync" for design rationale.
-  const updateRepAndPositionFromTime = useCallback((videoTime: number) => {
-    const checkpoints = getAllCheckpoints();
-    if (checkpoints.length === 0) return;
+  const updateRepAndPositionFromTime = useCallback(
+    (videoTime: number) => {
+      const checkpoints = getAllCheckpoints();
+      if (checkpoints.length === 0) return;
 
-    // Find which rep/position we're in: last checkpoint where time >= checkpoint.videoTime
-    // Default to rep 1 before first checkpoint (per spec: show rep 1 before first rep)
-    let foundRepNum = 1;
-    let foundPosition: string | null = null;
+      // Find which rep/position we're in: last checkpoint where time >= checkpoint.videoTime
+      // Default to rep 1 before first checkpoint (per spec: show rep 1 before first rep)
+      let foundRepNum = 1;
+      let foundPosition: string | null = null;
 
-    for (const cp of checkpoints) {
-      if (videoTime >= cp.videoTime - 0.05) {  // Small tolerance for frame timing
-        foundRepNum = cp.repNum;
-        foundPosition = cp.position;
-      } else {
-        break; // Checkpoints are sorted, so we've passed current time
+      for (const cp of checkpoints) {
+        if (videoTime >= cp.videoTime - 0.05) {
+          // Small tolerance for frame timing
+          foundRepNum = cp.repNum;
+          foundPosition = cp.position;
+        } else {
+          break; // Checkpoints are sorted, so we've passed current time
+        }
       }
-    }
 
-    // Update rep index if changed (repNum is 1-indexed, currentRepIndex is 0-indexed)
-    // Use functional update to avoid stale closure on appState.currentRepIndex
-    const newRepIndex = foundRepNum - 1;
-    setAppState(prev => {
-      if (newRepIndex !== prev.currentRepIndex) {
-        return { ...prev, currentRepIndex: newRepIndex };
+      // Update rep index if changed (repNum is 1-indexed, currentRepIndex is 0-indexed)
+      // Use functional update to avoid stale closure on appState.currentRepIndex
+      const newRepIndex = foundRepNum - 1;
+      setAppState((prev) => {
+        if (newRepIndex !== prev.currentRepIndex) {
+          return { ...prev, currentRepIndex: newRepIndex };
+        }
+        return prev; // Return same reference to avoid unnecessary re-render
+      });
+
+      // Update position if found
+      if (foundPosition) {
+        setCurrentPosition(formatPositionForDisplay(foundPosition));
       }
-      return prev; // Return same reference to avoid unnecessary re-render
-    });
-
-    // Update position if found
-    if (foundPosition) {
-      setCurrentPosition(formatPositionForDisplay(foundPosition));
-    }
-  }, [getAllCheckpoints]); // No appState dependency needed with functional update
+    },
+    [getAllCheckpoints]
+  ); // No appState dependency needed with functional update
 
   // Keep ref up to date for use in event handlers (avoids stale closure)
   repSyncHandlerRef.current = updateRepAndPositionFromTime;
@@ -1254,7 +1289,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       video.currentTime = nextCheckpoint.videoTime;
       setCurrentPosition(formatPositionForDisplay(nextCheckpoint.position));
       // Update rep index if needed
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
         currentRepIndex: nextCheckpoint.repNum - 1, // repNum is 1-indexed
       }));
@@ -1269,14 +1304,17 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     const checkpoints = getAllCheckpoints();
     if (checkpoints.length === 0) return;
 
-    const prevCheckpoint = findPreviousCheckpoint(checkpoints, video.currentTime);
+    const prevCheckpoint = findPreviousCheckpoint(
+      checkpoints,
+      video.currentTime
+    );
 
     if (prevCheckpoint) {
       video.pause(); // Pause when seeking to checkpoint
       video.currentTime = prevCheckpoint.videoTime;
       setCurrentPosition(formatPositionForDisplay(prevCheckpoint.position));
       // Update rep index if needed
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
         currentRepIndex: prevCheckpoint.repNum - 1, // repNum is 1-indexed
       }));
@@ -1306,7 +1344,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // Display Mode
   // ========================================
   const setDisplayMode = useCallback((mode: 'both' | 'video' | 'overlay') => {
-    setAppState(prev => ({ ...prev, displayMode: mode }));
+    setAppState((prev) => ({ ...prev, displayMode: mode }));
 
     switch (mode) {
       case 'both':
@@ -1351,7 +1389,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     setIsDetectionLocked(false);
     setCurrentPhases(DEFAULT_PHASES);
     setWorkingLeg(null);
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
       currentRepIndex: 0,
       repCounter: {
@@ -1387,7 +1425,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   }, []);
 
   // Derived state
-  const isExtracting = inputState.type === 'video-file' &&
+  const isExtracting =
+    inputState.type === 'video-file' &&
     inputState.sourceState.type === 'extracting';
 
   // ========================================
@@ -1443,7 +1482,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     reinitializeWithLiveCache: async () => {}, // No-op in V2
 
     // V2-specific
-    getSkeletonAtTime: (time: number) => inputSessionRef.current?.getSkeletonAtTime(time) ?? null,
+    getSkeletonAtTime: (time: number) =>
+      inputSessionRef.current?.getSkeletonAtTime(time) ?? null,
 
     // Crop controls
     cropRegion,

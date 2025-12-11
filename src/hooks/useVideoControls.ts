@@ -11,11 +11,11 @@ import {
   DEFAULT_SAMPLE_VIDEO,
   LOCAL_SAMPLE_VIDEO,
 } from '../config/sampleVideos';
-import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
 import type {
   SkeletonEvent,
   SkeletonTransformer,
 } from '../pipeline/PipelineInterfaces';
+import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
 import {
   recordPlaybackPause,
   recordPlaybackStart,
@@ -72,7 +72,7 @@ export interface UseVideoControlsParams {
   setStatus: (status: string) => void;
   setSpineAngle: (angle: number) => void;
   setArmToSpineAngle: (angle: number) => void;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState?: React.Dispatch<React.SetStateAction<AppState>>;
   setDisplayMode: (mode: 'both' | 'video' | 'overlay') => void;
   resetPipeline?: () => void;
 }
@@ -99,7 +99,7 @@ export function useVideoControls({
   setStatus,
   setSpineAngle,
   setArmToSpineAngle,
-  setAppState,
+  setAppState: _setAppState,
   setDisplayMode,
   resetPipeline,
 }: UseVideoControlsParams): UseVideoControlsReturn {
@@ -407,7 +407,6 @@ export function useVideoControls({
     resetVideoAndState,
     resetPipeline,
     setStatus,
-    setAppState,
   ]);
 
   // Handle video upload
@@ -444,7 +443,7 @@ export function useVideoControls({
           setStatus(getVideoLoadErrorMessage(error));
         });
     },
-    [frameAcquisitionRef, videoRef, resetVideoAndState, setStatus, setAppState]
+    [frameAcquisitionRef, videoRef, resetVideoAndState, setStatus]
   );
 
   // Stop video but preserve rep count and videoStartTime (for filmstrip seeking)

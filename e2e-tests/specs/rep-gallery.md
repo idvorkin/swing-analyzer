@@ -14,50 +14,56 @@ Tests marked with `*` below require actual extraction and are currently skipped.
 
 ### Grid View (Default)
 
-| Requirement | Description | Test ID | Status |
-|------------|-------------|---------|--------|
-| Open Gallery | Gallery button appears below filmstrip when reps exist. Clicking opens modal. | RG-001 | PASS |
-| Phase Headers | Dynamic phase columns based on detected phases (not hardcoded). | RG-002 | PASS |
-| Rep Rows | Each row shows one rep with phase cells. | RG-003 | PASS |
-| Current Rep Highlight | Current rep row has teal border/glow. | RG-004 | PASS |
-| Phase Focus | Clicking phase header expands that column, shrinks others. | RG-005 | PASS |
-| Phase Unfocus | Clicking focused phase header returns to normal view. | RG-006 | PASS |
-| Thumbnail Seek* | Clicking thumbnail seeks video to that timestamp. | RG-007 | SKIP |
-| Double-Tap Focus* | Double-tap thumbnail focuses that phase column. | RG-019 | SKIP |
-| Double-Tap Unfocus* | Double-tap on already-focused phase unfocuses it. | RG-020 | SKIP |
-| Rep Selection | Checkbox selects rep for comparison (max 4). | RG-008 | PASS |
-| Compare Button | Appears when 2+ reps selected. | RG-009 | PASS |
-| Empty State | Gallery button hidden when no reps exist. | RG-010 | PASS |
+| Requirement               | Description                                                                   | Test ID | Status |
+| ------------------------- | ----------------------------------------------------------------------------- | ------- | ------ |
+| Open Gallery              | Gallery button appears below filmstrip when reps exist. Clicking opens modal. | RG-001  | PASS   |
+| Phase Headers             | Dynamic phase columns based on detected phases (not hardcoded).               | RG-002  | PASS   |
+| Rep Rows                  | Each row shows one rep with phase cells.                                      | RG-003  | PASS   |
+| Current Rep Highlight     | Current rep row has teal border/glow based on video playback position.        | RG-004  | PASS   |
+| Playback Sync             | Current rep highlight updates as video plays through different reps.          | RG-021  | PASS   |
+| Auto-Scroll to Current    | Inline gallery auto-scrolls to keep current rep row visible during playback.  | RG-022  | PASS   |
+| Inline Double-Tap Focus   | Double-tap thumbnail in inline widget focuses that phase column.              | RG-023  | PASS   |
+| Inline Double-Tap Unfocus | Double-tap on focused phase in inline widget unfocuses it.                    | RG-024  | PASS   |
+| Inline Single-Tap Seek    | Single tap on inline widget thumbnail seeks video (not focus).                | RG-025  | PASS   |
+| Phase Focus               | Clicking phase header expands that column, shrinks others.                    | RG-005  | PASS   |
+| Phase Unfocus             | Clicking focused phase header returns to normal view.                         | RG-006  | PASS   |
+| Thumbnail Seek\*          | Clicking thumbnail seeks video to that timestamp.                             | RG-007  | SKIP   |
+| Double-Tap Focus\*        | Double-tap thumbnail focuses that phase column.                               | RG-019  | SKIP   |
+| Double-Tap Unfocus\*      | Double-tap on already-focused phase unfocuses it.                             | RG-020  | SKIP   |
+| Rep Selection             | Checkbox selects rep for comparison (max 4).                                  | RG-008  | PASS   |
+| Compare Button            | Appears when 2+ reps selected.                                                | RG-009  | PASS   |
+| Empty State               | Gallery button hidden when no reps exist.                                     | RG-010  | PASS   |
 
 ### Compare View
 
-| Requirement | Description | Test ID | Status |
-|------------|-------------|---------|--------|
-| Enter Compare | Clicking Compare button shows selected reps side-by-side. | RG-011 | PASS |
-| Back Button | Returns to grid view without losing selections. | RG-012 | PASS |
-| Thumbnail Seek* | Clicking thumbnail seeks video (same as grid). | RG-013 | SKIP |
-| Large Thumbnails* | Always shows large thumbnails in compare view. | RG-014 | SKIP |
+| Requirement        | Description                                               | Test ID | Status |
+| ------------------ | --------------------------------------------------------- | ------- | ------ |
+| Enter Compare      | Clicking Compare button shows selected reps side-by-side. | RG-011  | PASS   |
+| Back Button        | Returns to grid view without losing selections.           | RG-012  | PASS   |
+| Thumbnail Seek\*   | Clicking thumbnail seeks video (same as grid).            | RG-013  | SKIP   |
+| Large Thumbnails\* | Always shows large thumbnails in compare view.            | RG-014  | SKIP   |
 
 ### Modal Behavior
 
-| Requirement | Description | Test ID | Status |
-|------------|-------------|---------|--------|
-| Close Button | X button closes modal. | RG-015 | PASS |
-| Escape Key | Pressing Escape closes modal. | RG-016 | PASS |
-| Overlay Click | Clicking outside modal closes it. | RG-017 | PASS |
-| Reset on Close | Selection and view mode reset when modal closes. | RG-018 | PASS |
+| Requirement    | Description                                      | Test ID | Status |
+| -------------- | ------------------------------------------------ | ------- | ------ |
+| Close Button   | X button closes modal.                           | RG-015  | PASS   |
+| Escape Key     | Pressing Escape closes modal.                    | RG-016  | PASS   |
+| Overlay Click  | Clicking outside modal closes it.                | RG-017  | PASS   |
+| Reset on Close | Selection and view mode reset when modal closes. | RG-018  | PASS   |
 
 ### Additional Tests
 
-| Requirement | Description | Status |
-|------------|-------------|--------|
-| Timestamp Display* | Thumbnails show video time overlay. | SKIP |
-| Grid View Hint | Footer shows grid-specific instructions. | PASS |
-| Compare View Hint | Footer shows compare-specific instructions. | PASS |
+| Requirement         | Description                                 | Status |
+| ------------------- | ------------------------------------------- | ------ |
+| Timestamp Display\* | Thumbnails show video time overlay.         | SKIP   |
+| Grid View Hint      | Footer shows grid-specific instructions.    | PASS   |
+| Compare View Hint   | Footer shows compare-specific instructions. | PASS   |
 
 ## Test Data
 
 Tests use the `swing-sample-4reps` fixture which provides:
+
 - 4 detected reps with pose data
 - 4 phases per rep: Top, Connect, Bottom, Release
 - Pre-computed skeleton data for deterministic testing
@@ -65,8 +71,8 @@ Tests use the `swing-sample-4reps` fixture which provides:
 
 ## Test Summary
 
-- **Total tests:** 23
-- **Passing:** 17
+- **Total tests:** 28
+- **Passing:** 22
 - **Skipped:** 6 (require actual extraction with frame images)
 
 ## Running Thumbnail Tests
@@ -92,6 +98,8 @@ To test thumbnail functionality manually or with realistic mode:
 2. Selection limited to 4 reps (tested)
 3. Thumbnail click seeks video (skipped - requires extraction)
 4. Video timestamp shown on thumbnails (skipped - requires extraction)
+5. Playback sync - current rep updates during playback (tested - RG-021)
+6. Auto-scroll to current rep during playback (tested - RG-022)
 
 ### Nice to Have (P2) - Not Tested
 

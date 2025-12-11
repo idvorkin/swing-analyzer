@@ -31,6 +31,7 @@
 **Location**: `src/**/*.test.ts`
 
 **Example**:
+
 ```typescript
 // Test the rep counting logic in isolation
 const analyzer = new SwingAnalyzer();
@@ -52,6 +53,7 @@ expect(analyzer.getRepCount()).toBe(1);
 **Location**: `e2e-tests/user-journey.spec.ts`, `e2e-tests/swing-analyzer.spec.ts`
 
 **Example**:
+
 ```typescript
 // Seed pose data, test playback UI
 await seedPoseTrackFixture(page, 'swing-sample-4reps');
@@ -73,6 +75,7 @@ await expect(page.locator('#rep-counter')).not.toHaveText('0');
 **Location**: `e2e-tests/extraction-flow.spec.ts`
 
 **Example**:
+
 ```typescript
 // Mock detector with realistic timing (30ms = ~33fps extraction)
 await setupMockPoseDetector(page, 'swing-sample', 30);
@@ -83,24 +86,24 @@ await page.waitForSelector('.pose-status-bar:has-text("ready")');
 
 ## What to Mock vs. What to Run Real
 
-| Component | Fast Tests | Realistic Tests | Rationale |
-|-----------|-----------|-----------------|-----------|
-| Video element | Real | Real | Fast enough, catches codec issues |
-| Pose detection (ML) | Skip (seeded) | Mock with delay | ML is slow, non-deterministic |
-| Frame extraction | Skip | Real | This is where timing bugs live |
-| Pipeline processing | Real | Real | Core business logic |
-| Skeleton rendering | Real | Real | Canvas drawing, UI bugs |
-| IndexedDB | Seeded data | Fresh | Test caching behavior |
+| Component           | Fast Tests    | Realistic Tests | Rationale                         |
+| ------------------- | ------------- | --------------- | --------------------------------- |
+| Video element       | Real          | Real            | Fast enough, catches codec issues |
+| Pose detection (ML) | Skip (seeded) | Mock with delay | ML is slow, non-deterministic     |
+| Frame extraction    | Skip          | Real            | This is where timing bugs live    |
+| Pipeline processing | Real          | Real            | Core business logic               |
+| Skeleton rendering  | Real          | Real            | Canvas drawing, UI bugs           |
+| IndexedDB           | Seeded data   | Fresh           | Test caching behavior             |
 
 ## When to Write Which Test
 
-| Scenario | Test Type | Why |
-|----------|-----------|-----|
-| New algorithm (angles, rep counting) | Unit | Fast feedback, isolate logic |
-| New UI component | E2E Fast | Test rendering, interactions |
-| Bug reported by user | E2E Realistic | Reproduce exact user flow |
-| Performance issue | E2E Realistic | Measure real timing |
-| Refactoring | All | Ensure no regressions |
+| Scenario                             | Test Type     | Why                          |
+| ------------------------------------ | ------------- | ---------------------------- |
+| New algorithm (angles, rep counting) | Unit          | Fast feedback, isolate logic |
+| New UI component                     | E2E Fast      | Test rendering, interactions |
+| Bug reported by user                 | E2E Realistic | Reproduce exact user flow    |
+| Performance issue                    | E2E Realistic | Measure real timing          |
+| Refactoring                          | All           | Ensure no regressions        |
 
 ## CI Configuration
 
@@ -154,20 +157,20 @@ e2e-tests/
 
 The `frameDelayMs` parameter controls extraction speed:
 
-| Value | Speed | Use Case |
-|-------|-------|----------|
-| 0 | Instant | Fast CI tests |
-| 10ms | ~100fps | Quick realistic tests |
-| 30ms | ~33fps | Simulates typical extraction |
-| 100ms | ~10fps | Simulates slow device |
+| Value | Speed   | Use Case                     |
+| ----- | ------- | ---------------------------- |
+| 0     | Instant | Fast CI tests                |
+| 10ms  | ~100fps | Quick realistic tests        |
+| 30ms  | ~33fps  | Simulates typical extraction |
+| 100ms | ~10fps  | Simulates slow device        |
 
 ## Coverage Goals
 
-| Area | Target | Current |
-|------|--------|---------|
-| Unit (logic) | 80%+ | TBD |
-| E2E Fast (UI) | All user journeys | Yes |
-| E2E Realistic (extraction) | Critical paths | Partial |
+| Area                       | Target            | Current |
+| -------------------------- | ----------------- | ------- |
+| Unit (logic)               | 80%+              | TBD     |
+| E2E Fast (UI)              | All user journeys | Yes     |
+| E2E Realistic (extraction) | Critical paths    | Partial |
 
 ## Flaky Test Policy
 

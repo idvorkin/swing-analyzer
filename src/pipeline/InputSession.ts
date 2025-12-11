@@ -9,7 +9,12 @@
  * It also provides getSkeletonAtTime() for playback/seeking.
  */
 
-import { BehaviorSubject, type Observable, Subject, type Subscription } from 'rxjs';
+import {
+  BehaviorSubject,
+  type Observable,
+  Subject,
+  type Subscription,
+} from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import type { SkeletonEvent } from './PipelineInterfaces';
 import type {
@@ -66,7 +71,9 @@ export class InputSession {
   constructor(config: InputSessionConfig) {
     this.videoElement = config.videoElement;
     this.canvasElement = config.canvasElement;
-    this.stateSubject = new BehaviorSubject<InputSessionState>({ type: 'idle' });
+    this.stateSubject = new BehaviorSubject<InputSessionState>({
+      type: 'idle',
+    });
   }
 
   /**
@@ -131,12 +138,16 @@ export class InputSession {
     });
 
     this.source = videoSource;
-    this.subscribeToSource(videoSource, { type: 'video-file', fileName: videoFile.name });
+    this.subscribeToSource(videoSource, {
+      type: 'video-file',
+      fileName: videoFile.name,
+    });
 
     try {
       await videoSource.start();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to process video';
+      const message =
+        error instanceof Error ? error.message : 'Failed to process video';
       this.stateSubject.next({ type: 'error', message });
       throw error;
     }
@@ -230,7 +241,8 @@ export class InputSession {
         },
         error: (err) => {
           console.error('Error in skeleton stream:', err);
-          const message = err instanceof Error ? err.message : 'Skeleton detection failed';
+          const message =
+            err instanceof Error ? err.message : 'Skeleton detection failed';
           this.stateSubject.next({ type: 'error', message });
         },
       });

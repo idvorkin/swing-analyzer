@@ -8,10 +8,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  InputSession,
-  type InputSessionState,
-} from '../pipeline/InputSession';
+import { InputSession, type InputSessionState } from '../pipeline/InputSession';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { ExtractionProgress } from '../pipeline/SkeletonSource';
 
@@ -65,12 +62,8 @@ export interface UseInputSessionReturn {
 export function useInputSession(
   options: UseInputSessionOptions
 ): UseInputSessionReturn {
-  const {
-    videoElement,
-    canvasElement,
-    onSkeleton,
-    onExtractionProgress,
-  } = options;
+  const { videoElement, canvasElement, onSkeleton, onExtractionProgress } =
+    options;
 
   // Session instance
   const sessionRef = useRef<InputSession | null>(null);
@@ -90,7 +83,8 @@ export function useInputSession(
 
   // State
   const [state, setState] = useState<InputSessionState>({ type: 'idle' });
-  const [extractionProgress, setExtractionProgress] = useState<ExtractionProgress | null>(null);
+  const [extractionProgress, setExtractionProgress] =
+    useState<ExtractionProgress | null>(null);
 
   // Create session when elements are available
   useEffect(() => {
@@ -117,10 +111,12 @@ export function useInputSession(
     });
 
     // Subscribe to extraction progress (use ref for callback stability)
-    const progressSubscription = session.extractionProgress$.subscribe((progress) => {
-      setExtractionProgress(progress);
-      onExtractionProgressRef.current?.(progress);
-    });
+    const progressSubscription = session.extractionProgress$.subscribe(
+      (progress) => {
+        setExtractionProgress(progress);
+        onExtractionProgressRef.current?.(progress);
+      }
+    );
 
     // Cleanup
     return () => {

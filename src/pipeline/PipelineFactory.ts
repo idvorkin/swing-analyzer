@@ -78,7 +78,11 @@ export function createPipeline(
   }
 
   // Create the pipeline with optional custom analyzer
-  return new Pipeline(frameAcquisition, skeletonTransformer, options.formAnalyzer);
+  return new Pipeline(
+    frameAcquisition,
+    skeletonTransformer,
+    options.formAnalyzer
+  );
 }
 
 /**
@@ -118,7 +122,9 @@ export function createCachedSkeletonTransformer(
  * Build a SkeletonEvent from a PoseTrackFrame
  * Useful for processing cached pose data
  */
-export function buildSkeletonEventFromFrame(frame: PoseTrackFrame): SkeletonEvent {
+export function buildSkeletonEventFromFrame(
+  frame: PoseTrackFrame
+): SkeletonEvent {
   const skeleton = buildSkeletonFromFrame(frame.keypoints);
   return {
     skeleton,

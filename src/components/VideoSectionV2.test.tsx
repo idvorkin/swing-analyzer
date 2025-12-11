@@ -1,4 +1,10 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import VideoSectionV2 from './VideoSectionV2';
 
@@ -66,6 +72,7 @@ vi.mock('../contexts/ExerciseAnalyzerContext', () => ({
 
 // Import the mock to access it
 import { useSwingAnalyzerContext } from '../contexts/ExerciseAnalyzerContext';
+
 const mockUseSwingAnalyzerContext = vi.mocked(useSwingAnalyzerContext);
 
 // Mock scrollIntoView which isn't implemented in jsdom
@@ -103,11 +110,13 @@ describe('VideoSectionV2', () => {
       expect(container).toContainElement(canvas);
     });
 
-    it('renders source picker buttons when no video', () => {
+    it('renders media selector dialog when no video', () => {
       render(<VideoSectionV2 />);
-      // Source picker shows Camera Roll and Sample buttons
-      expect(document.querySelector('.source-picker-btn.camera-roll-btn')).toBeInTheDocument();
-      expect(document.querySelector('.source-picker-btn.sample-btn')).toBeInTheDocument();
+      // MediaSelectorDialog shows when no video is loaded
+      expect(
+        document.querySelector('.media-dialog-backdrop')
+      ).toBeInTheDocument();
+      expect(document.querySelector('.media-dialog')).toBeInTheDocument();
     });
 
     it('renders video control buttons', () => {
@@ -118,41 +127,53 @@ describe('VideoSectionV2', () => {
 
   describe('HUD Overlay', () => {
     it('does not show HUD when no video is loaded', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: null,
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: null,
+        })
+      );
       render(<VideoSectionV2 />);
       expect(document.querySelector('.hud-overlay')).not.toBeInTheDocument();
     });
 
     it('shows HUD overlay when video is loaded', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: new File([], 'test.mp4'),
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: new File([], 'test.mp4'),
+        })
+      );
       render(<VideoSectionV2 />);
       expect(document.querySelector('.hud-overlay')).toBeInTheDocument();
     });
 
     it('shows extraction progress when extracting', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: new File([], 'test.mp4'),
-        isExtracting: true,
-        extractionProgress: { percentage: 50, currentFrame: 50, totalFrames: 100 },
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: new File([], 'test.mp4'),
+          isExtracting: true,
+          extractionProgress: {
+            percentage: 50,
+            currentFrame: 50,
+            totalFrames: 100,
+          },
+        })
+      );
       render(<VideoSectionV2 />);
       expect(screen.getByText('50%')).toBeInTheDocument();
       expect(screen.getByText('EXTRACTING')).toBeInTheDocument();
     });
 
     it('shows angles when poses exist for current frame', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: new File([], 'test.mp4'),
-        hasPosesForCurrentFrame: true,
-        spineAngle: 45,
-        armToSpineAngle: 120,
-        repCount: 2,
-        appState: { isModelLoaded: true, currentRepIndex: 0 },
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: new File([], 'test.mp4'),
+          hasPosesForCurrentFrame: true,
+          spineAngle: 45,
+          armToSpineAngle: 120,
+          repCount: 2,
+          appState: { isModelLoaded: true, currentRepIndex: 0 },
+        })
+      );
       render(<VideoSectionV2 />);
       expect(screen.getByText('45°')).toBeInTheDocument();
       expect(screen.getByText('120°')).toBeInTheDocument();
@@ -160,11 +181,13 @@ describe('VideoSectionV2', () => {
     });
 
     it('shows position label when navigating checkpoints', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: new File([], 'test.mp4'),
-        hasPosesForCurrentFrame: true,
-        currentPosition: 'bottom',
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: new File([], 'test.mp4'),
+          hasPosesForCurrentFrame: true,
+          currentPosition: 'bottom',
+        })
+      );
       render(<VideoSectionV2 />);
       expect(screen.getByText('Bottom')).toBeInTheDocument();
     });
@@ -179,19 +202,21 @@ describe('VideoSectionV2', () => {
       expect(mockTogglePlayPause).not.toHaveBeenCalled();
     });
 
-    it('toggles play/pause on double-tap', () => {
+    it('double-tap on center zone does nothing (play/pause removed)', () => {
       vi.useFakeTimers();
       render(<VideoSectionV2 />);
       const container = document.querySelector('.video-container');
+      const rect = container?.getBoundingClientRect();
+      const centerX = (rect?.left ?? 0) + (rect?.width ?? 0) / 2;
 
-      // First tap
-      fireEvent.click(container!);
-      // Second tap within 300ms
+      // First tap in center
+      fireEvent.click(container!, { clientX: centerX });
+      // Second tap within 300ms in center
       vi.advanceTimersByTime(100);
-      fireEvent.click(container!);
+      fireEvent.click(container!, { clientX: centerX });
 
-      expect(mockClearPositionLabel).toHaveBeenCalled();
-      expect(mockTogglePlayPause).toHaveBeenCalled();
+      // Center zone no longer triggers play/pause
+      expect(mockTogglePlayPause).not.toHaveBeenCalled();
       vi.useRealTimers();
     });
 
@@ -211,58 +236,91 @@ describe('VideoSectionV2', () => {
       vi.useRealTimers();
     });
 
-    it('shows play/pause overlay feedback on double-tap', async () => {
+    it('shows navigation overlay feedback on double-tap left/right zones', async () => {
       vi.useFakeTimers();
       render(<VideoSectionV2 />);
-      const container = document.querySelector('.video-container');
+      const container = document.querySelector(
+        '.video-container'
+      ) as HTMLElement;
 
-      // Double-tap
-      fireEvent.click(container!);
-      act(() => { vi.advanceTimersByTime(100); });
-      fireEvent.click(container!);
+      // Mock getBoundingClientRect since jsdom returns 0 for all dimensions
+      const mockRect = {
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 300,
+        right: 400,
+        bottom: 300,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      };
+      vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(mockRect);
 
-      // Overlay should appear
+      // Left zone is < 25% of width (i.e., < 100px)
+      const leftX = 40; // 10% of 400
+
+      // Double-tap in left zone
+      fireEvent.click(container, { clientX: leftX });
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      fireEvent.click(container, { clientX: leftX });
+
+      // Overlay should appear for prev navigation
       expect(document.querySelector('.video-tap-overlay')).toBeInTheDocument();
 
       // Overlay should disappear after 500ms
-      act(() => { vi.advanceTimersByTime(600); });
-      expect(document.querySelector('.video-tap-overlay')).not.toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+      expect(
+        document.querySelector('.video-tap-overlay')
+      ).not.toBeInTheDocument();
       vi.useRealTimers();
     });
   });
 
   describe('Button States', () => {
     it('disables play button when model not loaded', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        appState: { isModelLoaded: false, currentRepIndex: 0 },
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          appState: { isModelLoaded: false, currentRepIndex: 0 },
+        })
+      );
       render(<VideoSectionV2 />);
       expect(screen.getByRole('button', { name: /play/i })).toBeDisabled();
     });
 
     it('disables play button when no video loaded', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: null,
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: null,
+        })
+      );
       render(<VideoSectionV2 />);
       expect(screen.getByRole('button', { name: /play/i })).toBeDisabled();
     });
 
     it('enables play button when model loaded and video present', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        appState: { isModelLoaded: true, currentRepIndex: 0 },
-        currentVideoFile: new File([], 'test.mp4'),
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          appState: { isModelLoaded: true, currentRepIndex: 0 },
+          currentVideoFile: new File([], 'test.mp4'),
+        })
+      );
       render(<VideoSectionV2 />);
       expect(screen.getByRole('button', { name: /play/i })).not.toBeDisabled();
     });
 
     it('hides rep-nav-strip when no reps', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        appState: { isModelLoaded: true, currentRepIndex: 0 },
-        currentVideoFile: new File([], 'test.mp4'),
-        repCount: 0,
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          appState: { isModelLoaded: true, currentRepIndex: 0 },
+          currentVideoFile: new File([], 'test.mp4'),
+          repCount: 0,
+        })
+      );
       render(<VideoSectionV2 />);
       expect(document.querySelector('.rep-nav-strip')).not.toBeInTheDocument();
     });
@@ -270,56 +328,80 @@ describe('VideoSectionV2', () => {
 
   describe('Rep Navigation Strip', () => {
     it('shows rep-nav-strip when reps exist and video loaded', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        appState: { isModelLoaded: true, currentRepIndex: 0 },
-        currentVideoFile: new File([], 'test.mp4'),
-        repCount: 3,
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          appState: { isModelLoaded: true, currentRepIndex: 0 },
+          currentVideoFile: new File([], 'test.mp4'),
+          repCount: 3,
+        })
+      );
       render(<VideoSectionV2 />);
       expect(document.querySelector('.rep-nav-strip')).toBeInTheDocument();
     });
 
     it('has four navigation buttons (double arrows for reps, single for checkpoints)', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        appState: { isModelLoaded: true, currentRepIndex: 1 },
-        currentVideoFile: new File([], 'test.mp4'),
-        repCount: 3,
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          appState: { isModelLoaded: true, currentRepIndex: 1 },
+          currentVideoFile: new File([], 'test.mp4'),
+          repCount: 3,
+        })
+      );
       render(<VideoSectionV2 />);
-      expect(screen.getByRole('button', { name: /previous rep/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /previous checkpoint/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /next checkpoint/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /next rep/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /previous rep/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /previous checkpoint/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /next checkpoint/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /next rep/i })
+      ).toBeInTheDocument();
     });
 
     it('disables previous rep button on first rep', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        appState: { isModelLoaded: true, currentRepIndex: 0 },
-        currentVideoFile: new File([], 'test.mp4'),
-        repCount: 3,
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          appState: { isModelLoaded: true, currentRepIndex: 0 },
+          currentVideoFile: new File([], 'test.mp4'),
+          repCount: 3,
+        })
+      );
       render(<VideoSectionV2 />);
-      expect(screen.getByRole('button', { name: /previous rep/i })).toBeDisabled();
-      expect(screen.getByRole('button', { name: /next rep/i })).not.toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: /previous rep/i })
+      ).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: /next rep/i })
+      ).not.toBeDisabled();
     });
 
     it('disables next rep button on last rep', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        appState: { isModelLoaded: true, currentRepIndex: 2 },
-        currentVideoFile: new File([], 'test.mp4'),
-        repCount: 3,
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          appState: { isModelLoaded: true, currentRepIndex: 2 },
+          currentVideoFile: new File([], 'test.mp4'),
+          repCount: 3,
+        })
+      );
       render(<VideoSectionV2 />);
-      expect(screen.getByRole('button', { name: /previous rep/i })).not.toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: /previous rep/i })
+      ).not.toBeDisabled();
       expect(screen.getByRole('button', { name: /next rep/i })).toBeDisabled();
     });
 
     it('calls navigation functions when buttons clicked', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        appState: { isModelLoaded: true, currentRepIndex: 1 },
-        currentVideoFile: new File([], 'test.mp4'),
-        repCount: 3,
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          appState: { isModelLoaded: true, currentRepIndex: 1 },
+          currentVideoFile: new File([], 'test.mp4'),
+          repCount: 3,
+        })
+      );
       render(<VideoSectionV2 />);
 
       fireEvent.click(screen.getByRole('button', { name: /previous rep/i }));
@@ -328,7 +410,9 @@ describe('VideoSectionV2', () => {
       fireEvent.click(screen.getByRole('button', { name: /next rep/i }));
       expect(mockNavigateToNextRep).toHaveBeenCalled();
 
-      fireEvent.click(screen.getByRole('button', { name: /previous checkpoint/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /previous checkpoint/i })
+      );
       expect(mockNavigateToPreviousCheckpoint).toHaveBeenCalled();
 
       fireEvent.click(screen.getByRole('button', { name: /next checkpoint/i }));
@@ -336,13 +420,15 @@ describe('VideoSectionV2', () => {
     });
 
     it('shows current position in HUD when checkpoint selected', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        appState: { isModelLoaded: true, currentRepIndex: 0 },
-        currentVideoFile: new File([], 'test.mp4'),
-        repCount: 2,
-        hasPosesForCurrentFrame: true,
-        currentPosition: 'connect',
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          appState: { isModelLoaded: true, currentRepIndex: 0 },
+          currentVideoFile: new File([], 'test.mp4'),
+          repCount: 2,
+          hasPosesForCurrentFrame: true,
+          currentPosition: 'connect',
+        })
+      );
       render(<VideoSectionV2 />);
       // Position should be inline with angles in HUD (also shown in nav strip)
       const hudPosition = document.querySelector('.hud-overlay-position');
@@ -353,24 +439,30 @@ describe('VideoSectionV2', () => {
 
   describe('Filmstrip', () => {
     it('shows empty message when no reps', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        repCount: 0,
-        repThumbnails: new Map(),
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          repCount: 0,
+          repThumbnails: new Map(),
+        })
+      );
       render(<VideoSectionV2 />);
-      expect(screen.getByText('Complete a rep to see checkpoints')).toBeInTheDocument();
+      expect(
+        screen.getByText('Complete a rep to see checkpoints')
+      ).toBeInTheDocument();
     });
 
     it('shows rep navigation when reps exist', () => {
       const thumbnails = new Map();
       thumbnails.set(1, new Map([['top', { videoTime: 1.0 }]]));
 
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        repCount: 2,
-        repThumbnails: thumbnails,
-        appState: { isModelLoaded: true, currentRepIndex: 0 },
-        currentVideoFile: new File([], 'test.mp4'),
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          repCount: 2,
+          repThumbnails: thumbnails,
+          appState: { isModelLoaded: true, currentRepIndex: 0 },
+          currentVideoFile: new File([], 'test.mp4'),
+        })
+      );
       render(<VideoSectionV2 />);
       expect(screen.getByText('Rep 1/2')).toBeInTheDocument();
     });
@@ -378,51 +470,67 @@ describe('VideoSectionV2', () => {
 
   describe('Crop Toggle', () => {
     it('does not show crop button when no crop region', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        hasCropRegion: false,
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          hasCropRegion: false,
+        })
+      );
       render(<VideoSectionV2 />);
       expect(document.getElementById('crop-btn')).not.toBeInTheDocument();
     });
 
     it('shows crop button when crop region exists', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        hasCropRegion: true,
-        currentVideoFile: new File([], 'test.mp4'),
-        appState: { isModelLoaded: true, currentRepIndex: 0 },
-      }));
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          hasCropRegion: true,
+          currentVideoFile: new File([], 'test.mp4'),
+          appState: { isModelLoaded: true, currentRepIndex: 0 },
+        })
+      );
       render(<VideoSectionV2 />);
       expect(document.getElementById('crop-btn')).toBeInTheDocument();
     });
   });
 
-  describe('Source Picker', () => {
-    it('shows source picker when no video loaded', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: null,
-      }));
+  describe('Media Selector Dialog', () => {
+    it('shows media dialog when no video loaded', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: null,
+        })
+      );
       render(<VideoSectionV2 />);
-      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
-      expect(screen.getByText('Camera Roll')).toBeInTheDocument();
-      expect(document.querySelector('.source-picker-btn.sample-btn')).toBeInTheDocument();
+      expect(
+        document.querySelector('.media-dialog-backdrop')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Select Video')).toBeInTheDocument();
+      expect(screen.getByText('Upload from device')).toBeInTheDocument();
     });
 
-    it('hides source picker when video is loaded', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: new File([], 'test.mp4'),
-      }));
+    it('hides media dialog when video is loaded', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: new File([], 'test.mp4'),
+        })
+      );
       render(<VideoSectionV2 />);
-      expect(document.querySelector('.source-picker-overlay')).not.toBeInTheDocument();
+      expect(
+        document.querySelector('.media-dialog-backdrop')
+      ).not.toBeInTheDocument();
     });
 
-    it('shows source picker when show-source-picker event is dispatched', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: new File([], 'test.mp4'),
-      }));
+    it('shows media dialog when show-source-picker event is dispatched', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: new File([], 'test.mp4'),
+        })
+      );
       render(<VideoSectionV2 />);
 
       // Initially hidden when video loaded
-      expect(document.querySelector('.source-picker-overlay')).not.toBeInTheDocument();
+      expect(
+        document.querySelector('.media-dialog-backdrop')
+      ).not.toBeInTheDocument();
 
       // Dispatch event to show picker
       act(() => {
@@ -430,46 +538,58 @@ describe('VideoSectionV2', () => {
       });
 
       // Now visible
-      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
+      expect(
+        document.querySelector('.media-dialog-backdrop')
+      ).toBeInTheDocument();
     });
 
-    it('hides source picker when clicking outside buttons', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: new File([], 'test.mp4'),
-      }));
+    it('hides media dialog when clicking backdrop', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: new File([], 'test.mp4'),
+        })
+      );
       render(<VideoSectionV2 />);
 
-      // Show the picker
+      // Show the dialog
       act(() => {
         window.dispatchEvent(new CustomEvent('show-source-picker'));
       });
-      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
+      expect(
+        document.querySelector('.media-dialog-backdrop')
+      ).toBeInTheDocument();
 
-      // Click on the overlay background (outside buttons)
-      const overlay = document.querySelector('.source-picker-overlay');
-      fireEvent.click(overlay!);
+      // Click on the backdrop (outside dialog)
+      const backdrop = document.querySelector('.media-dialog-backdrop');
+      fireEvent.click(backdrop!);
 
       // Should be hidden
-      expect(document.querySelector('.source-picker-overlay')).not.toBeInTheDocument();
+      expect(
+        document.querySelector('.media-dialog-backdrop')
+      ).not.toBeInTheDocument();
     });
 
-    it('keeps source picker open when clicking on buttons container', () => {
-      mockUseSwingAnalyzerContext.mockReturnValue(createMockContext({
-        currentVideoFile: new File([], 'test.mp4'),
-      }));
+    it('keeps media dialog open when clicking on dialog content', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          currentVideoFile: new File([], 'test.mp4'),
+        })
+      );
       render(<VideoSectionV2 />);
 
-      // Show the picker
+      // Show the dialog
       act(() => {
         window.dispatchEvent(new CustomEvent('show-source-picker'));
       });
 
-      // Click on the buttons container (not the overlay background)
-      const buttonsContainer = document.querySelector('.source-picker-buttons');
-      fireEvent.click(buttonsContainer!);
+      // Click on the dialog content (not the backdrop)
+      const dialogContent = document.querySelector('.media-dialog');
+      fireEvent.click(dialogContent!);
 
       // Should still be visible (stopPropagation)
-      expect(document.querySelector('.source-picker-overlay')).toBeInTheDocument();
+      expect(
+        document.querySelector('.media-dialog-backdrop')
+      ).toBeInTheDocument();
     });
   });
 });

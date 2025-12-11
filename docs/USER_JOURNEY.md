@@ -12,15 +12,16 @@ Swing Analyzer is a web app that analyzes kettlebell swing form using computer v
 
 **User opens the app**
 
-| What User Sees | What's Happening |
-|----------------|------------------|
-| Header with "Swing Analyzer" title | React app mounting |
+| What User Sees                              | What's Happening               |
+| ------------------------------------------- | ------------------------------ |
+| Header with "Swing Analyzer" title          | React app mounting             |
 | 4 input buttons: File, Sample, Camera, Swap | ML model loading in background |
-| Empty video container (dark) | Pipeline initializing |
-| Disabled playback controls | Waiting for video source |
-| Metrics showing zeros | Initial state |
+| Empty video container (dark)                | Pipeline initializing          |
+| Disabled playback controls                  | Waiting for video source       |
+| Metrics showing zeros                       | Initial state                  |
 
 **Success Criteria:**
+
 - [ ] App loads without errors
 - [ ] All 4 input buttons visible and styled
 - [ ] Playback controls visible but disabled
@@ -33,6 +34,7 @@ Swing Analyzer is a web app that analyzes kettlebell swing form using computer v
 **Three paths available:**
 
 #### Path A: Sample Video (Primary Test Path)
+
 ```
 User clicks [Sample]
   → swing-sample.webm loads
@@ -41,6 +43,7 @@ User clicks [Sample]
 ```
 
 #### Path B: File Upload
+
 ```
 User clicks [File]
   → File picker opens
@@ -49,6 +52,7 @@ User clicks [File]
 ```
 
 #### Path C: Live Camera
+
 ```
 User clicks [Camera]
   → Browser requests permission
@@ -57,6 +61,7 @@ User clicks [Camera]
 ```
 
 **Success Criteria:**
+
 - [ ] Sample video loads within 2 seconds
 - [ ] Video displays in container
 - [ ] Pose extraction status bar appears
@@ -77,12 +82,13 @@ User clicks [Camera]
 
 **Two scenarios:**
 
-| Scenario | Duration | User Experience |
-|----------|----------|-----------------|
-| Cached poses exist | < 1 second | "Pose track loaded" immediately |
-| No cache | 30-60 seconds | Progress bar with frame count |
+| Scenario           | Duration      | User Experience                 |
+| ------------------ | ------------- | ------------------------------- |
+| Cached poses exist | < 1 second    | "Pose track loaded" immediately |
+| No cache           | 30-60 seconds | Progress bar with frame count   |
 
 **Success Criteria:**
+
 - [ ] Progress bar shows percentage
 - [ ] Frame count updates
 - [ ] Cancel button available
@@ -94,23 +100,24 @@ User clicks [Camera]
 
 **User clicks Play button**
 
-| Element | Behavior |
-|---------|----------|
-| Video | Plays at normal speed |
-| Canvas overlay | Skeleton drawn on each frame |
-| Metrics | Update in real-time |
-| Rep counter | Increments on complete swings |
+| Element        | Behavior                      |
+| -------------- | ----------------------------- |
+| Video          | Plays at normal speed         |
+| Canvas overlay | Skeleton drawn on each frame  |
+| Metrics        | Update in real-time           |
+| Rep counter    | Increments on complete swings |
 
 **Playback Controls:**
 
-| Button | Action | Keyboard |
-|--------|--------|----------|
-| Play/Pause | Toggle playback | Space |
-| Prev Frame | Step back 1 frame | `,` |
-| Next Frame | Step forward 1 frame | `.` |
-| Stop | Reset to beginning | None |
+| Button     | Action               | Keyboard |
+| ---------- | -------------------- | -------- |
+| Play/Pause | Toggle playback      | Space    |
+| Prev Frame | Step back 1 frame    | `,`      |
+| Next Frame | Step forward 1 frame | `.`      |
+| Stop       | Reset to beginning   | None     |
 
 **Success Criteria:**
+
 - [ ] Video plays smoothly
 - [ ] Skeleton overlay visible
 - [ ] Metrics update during playback
@@ -126,18 +133,20 @@ User clicks [Camera]
 TOP → CONNECT → BOTTOM → RELEASE → (back to TOP)
 ```
 
-| Position | Description | Visual Cue |
-|----------|-------------|------------|
-| Top | Arms extended overhead | Kettlebell at highest point |
-| Connect | Arms pulling back | Transition to backswing |
-| Bottom | Kettlebell between legs | Deepest hip hinge |
-| Release | Explosive extension | Power generation |
+| Position | Description             | Visual Cue                  |
+| -------- | ----------------------- | --------------------------- |
+| Top      | Arms extended overhead  | Kettlebell at highest point |
+| Connect  | Arms pulling back       | Transition to backswing     |
+| Bottom   | Kettlebell between legs | Deepest hip hinge           |
+| Release  | Explosive extension     | Power generation            |
 
 **Rep Counting Logic:**
+
 - Release → Top transition = 1 rep completed
 - Each rep captures checkpoints for all 4 positions
 
 **Success Criteria:**
+
 - [ ] Position detection works
 - [ ] Rep counter increments correctly
 - [ ] Checkpoints captured for each position
@@ -156,12 +165,14 @@ TOP → CONNECT → BOTTOM → RELEASE → (back to TOP)
 ```
 
 **Features:**
+
 - Thumbnail images of each position
 - Click thumbnail to seek video to that moment
 - Arrow buttons navigate between reps
 - Shows current rep / total reps
 
 **Success Criteria:**
+
 - [ ] Filmstrip appears after first rep
 - [ ] 4 thumbnails with labels
 - [ ] Clicking thumbnail seeks video
@@ -173,13 +184,14 @@ TOP → CONNECT → BOTTOM → RELEASE → (back to TOP)
 
 **Real-time feedback panel:**
 
-| Metric | Description | Normal Range |
-|--------|-------------|--------------|
-| Reps | Completed swing cycles | 0+ |
-| Spine Angle | Back position | 30° - 90° |
-| Arm Angle | Arm-to-spine angle | 120° - 180° |
+| Metric      | Description            | Normal Range |
+| ----------- | ---------------------- | ------------ |
+| Reps        | Completed swing cycles | 0+           |
+| Spine Angle | Back position          | 30° - 90°    |
+| Arm Angle   | Arm-to-spine angle     | 120° - 180°  |
 
 **Success Criteria:**
+
 - [ ] Reps count matches actual swings
 - [ ] Spine angle updates during playback
 - [ ] Arm angle updates during playback
@@ -190,21 +202,21 @@ TOP → CONNECT → BOTTOM → RELEASE → (back to TOP)
 
 **Settings modal (gear icon):** Opens to About tab by default.
 
-| Tab | Purpose |
-|-----|---------|
-| About | Version info, architecture (default) |
-| Display | Toggle skeleton overlay, debug options |
-| Bug Report | Submit issues with video excerpt |
-| Updates | Check for new versions |
+| Tab        | Purpose                                |
+| ---------- | -------------------------------------- |
+| About      | Version info, architecture (default)   |
+| Display    | Toggle skeleton overlay, debug options |
+| Bug Report | Submit issues with video excerpt       |
+| Updates    | Check for new versions                 |
 
 **Keyboard Shortcuts:**
 
-| Shortcut | Action |
-|----------|--------|
+| Shortcut     | Action            |
+| ------------ | ----------------- |
 | Ctrl/Cmd + I | Open bug reporter |
-| `.` | Next frame |
-| `,` | Previous frame |
-| Esc | Close modals |
+| `.`          | Next frame        |
+| `,`          | Previous frame    |
+| Esc          | Close modals      |
 
 ---
 
@@ -262,12 +274,12 @@ TOP → CONNECT → BOTTOM → RELEASE → (back to TOP)
 
 ## Error Scenarios
 
-| Scenario | Expected Behavior |
-|----------|-------------------|
-| Invalid video file | Error message, suggest sample video |
+| Scenario                 | Expected Behavior                    |
+| ------------------------ | ------------------------------------ |
+| Invalid video file       | Error message, suggest sample video  |
 | Camera permission denied | Camera button disabled, show message |
-| ML model fails to load | Use cached poses if available |
-| Browser crash | Error boundary shows, reload option |
+| ML model fails to load   | Use cached poses if available        |
+| Browser crash            | Error boundary shows, reload option  |
 
 ---
 
@@ -283,10 +295,10 @@ TOP → CONNECT → BOTTOM → RELEASE → (back to TOP)
 
 ## Performance Benchmarks
 
-| Metric | Target | Acceptable |
-|--------|--------|------------|
-| App load | < 2s | < 5s |
-| Sample video load | < 1s | < 3s |
-| Pose extraction (cached) | < 1s | < 2s |
-| Pose extraction (fresh) | < 60s | < 90s |
-| Frame rate during playback | 30fps | 15fps |
+| Metric                     | Target | Acceptable |
+| -------------------------- | ------ | ---------- |
+| App load                   | < 2s   | < 5s       |
+| Sample video load          | < 1s   | < 3s       |
+| Pose extraction (cached)   | < 1s   | < 2s       |
+| Pose extraction (fresh)    | < 60s  | < 90s      |
+| Frame rate during playback | 30fps  | 15fps      |

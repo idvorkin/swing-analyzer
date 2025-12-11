@@ -45,6 +45,7 @@ E2E tests can run in two modes:
 ### Mode 1: Pre-Seeded IndexedDB (Cached Poses)
 
 For tests where poses are already "extracted":
+
 - Seed IndexedDB with pose fixture before test
 - App finds cached poses, skips extraction
 - Uses `CachedPoseSkeletonTransformer` for playback
@@ -52,6 +53,7 @@ For tests where poses are already "extracted":
 ### Mode 2: Mock Pose Detector (Simulated Extraction)
 
 For tests that exercise the extraction flow:
+
 - Replace real ML detector with `MockPoseDetector`
 - Mock detector returns poses from a fixture file
 - Simulates realistic extraction timing with FPS delay
@@ -86,7 +88,7 @@ export interface MockPoseDetectorOptions {
   /** Pre-extracted pose data to return */
   poseTrack: PoseTrackFile;
   /** Delay per frame to simulate ML inference (ms) */
-  frameDelayMs?: number;  // Default: 0 (instant)
+  frameDelayMs?: number; // Default: 0 (instant)
 }
 
 export function createMockPoseDetector(options: MockPoseDetectorOptions): PoseDetector {
@@ -97,7 +99,7 @@ export function createMockPoseDetector(options: MockPoseDetectorOptions): PoseDe
     async estimatePoses(_image: unknown): Promise<Pose[]> {
       // Simulate ML inference time
       if (frameDelayMs > 0) {
-        await new Promise(resolve => setTimeout(resolve, frameDelayMs));
+        await new Promise((resolve) => setTimeout(resolve, frameDelayMs));
       }
 
       // Return pre-computed pose from fixture
@@ -108,7 +110,9 @@ export function createMockPoseDetector(options: MockPoseDetectorOptions): PoseDe
     },
 
     dispose(): void {},
-    reset(): void { frameIndex = 0; }
+    reset(): void {
+      frameIndex = 0;
+    },
   };
 }
 ```
@@ -117,12 +121,12 @@ export function createMockPoseDetector(options: MockPoseDetectorOptions): PoseDe
 
 The `frameDelayMs` parameter is critical for realistic testing:
 
-| Scenario | frameDelayMs | Simulated FPS | Use Case |
-|----------|--------------|---------------|----------|
-| Instant | 0 | ∞ | Fast unit tests |
-| Fast device | 33 | ~30 FPS | High-end desktop |
-| Typical device | 67 | ~15 FPS | Average laptop |
-| Slow device | 100 | ~10 FPS | Mobile/low-end |
+| Scenario       | frameDelayMs | Simulated FPS | Use Case         |
+| -------------- | ------------ | ------------- | ---------------- |
+| Instant        | 0            | ∞             | Fast unit tests  |
+| Fast device    | 33           | ~30 FPS       | High-end desktop |
+| Typical device | 67           | ~15 FPS       | Average laptop   |
+| Slow device    | 100          | ~10 FPS       | Mobile/low-end   |
 
 **Why simulate FPS delay?**
 
@@ -155,6 +159,7 @@ Extraction complete
 ```
 
 At 15 FPS simulation, a 60-second video with 10 reps:
+
 - Total extraction time: ~4 seconds (60s video ÷ 15 FPS)
 - First rep appears: ~0.4 seconds (after ~6 frames)
 - User sees thumbnails appearing progressively
@@ -166,7 +171,7 @@ test('filmstrip populates during extraction', async ({ page }) => {
   // Configure mock detector with realistic timing
   await page.evaluate(() => {
     window.__MOCK_POSE_DETECTOR_CONFIG__ = {
-      frameDelayMs: 67,  // Simulate 15 FPS extraction
+      frameDelayMs: 67, // Simulate 15 FPS extraction
     };
   });
 
@@ -175,7 +180,7 @@ test('filmstrip populates during extraction', async ({ page }) => {
 
   // Wait for first rep to appear (not instant!)
   await expect(page.locator('.filmstrip-thumbnail')).toBeVisible({
-    timeout: 5000
+    timeout: 5000,
   });
 
   // More thumbnails should appear over time
@@ -189,10 +194,10 @@ test('filmstrip populates during extraction', async ({ page }) => {
 
 Two different FPS concepts:
 
-| Context | What it controls | Default |
-|---------|------------------|---------|
-| `MockPoseDetector.frameDelayMs` | Extraction speed | 0 (instant) |
-| `CachedPoseSkeletonTransformer.simulatedFps` | Playback speed from cache | 15 FPS |
+| Context                                      | What it controls          | Default     |
+| -------------------------------------------- | ------------------------- | ----------- |
+| `MockPoseDetector.frameDelayMs`              | Extraction speed          | 0 (instant) |
+| `CachedPoseSkeletonTransformer.simulatedFps` | Playback speed from cache | 15 FPS      |
 
 **Extraction FPS**: How fast poses are "detected" during the extraction phase.
 

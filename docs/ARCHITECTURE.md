@@ -66,14 +66,15 @@ src/
 
 React components for rendering. **No business logic here.**
 
-| Component | Purpose |
-|-----------|---------|
-| `VideoSectionV2.tsx` | Main video player container |
-| `AnalysisSection.tsx` | Results display (rep count, form feedback) |
-| `SettingsModal.tsx` | User preferences |
-| `PoseTrackStatusBar.tsx` | Extraction progress |
+| Component                | Purpose                                    |
+| ------------------------ | ------------------------------------------ |
+| `VideoSectionV2.tsx`     | Main video player container                |
+| `AnalysisSection.tsx`    | Results display (rep count, form feedback) |
+| `SettingsModal.tsx`      | User preferences                           |
+| `PoseTrackStatusBar.tsx` | Extraction progress                        |
 
 **Where to add UI:**
+
 - New visual elements → `components/`
 - Complex UI state → create a hook in `hooks/`
 
@@ -81,14 +82,15 @@ React components for rendering. **No business logic here.**
 
 State management and side effect coordination.
 
-| Hook | Purpose |
-|------|---------|
-| `useSwingAnalyzerV2.tsx` | Main coordinator - connects pipeline to UI |
-| `useVideoControls.ts` | Video playback state |
-| `useInputSession.ts` | Input mode state machine |
-| `useKeyboardNavigation.ts` | Keyboard shortcuts |
+| Hook                       | Purpose                                    |
+| -------------------------- | ------------------------------------------ |
+| `useSwingAnalyzerV2.tsx`   | Main coordinator - connects pipeline to UI |
+| `useVideoControls.ts`      | Video playback state                       |
+| `useInputSession.ts`       | Input mode state machine                   |
+| `useKeyboardNavigation.ts` | Keyboard shortcuts                         |
 
 **Where to add state logic:**
+
 - UI-specific state → keep in component
 - Shared/complex state → create hook
 - Cross-cutting concerns → add to `useSwingAnalyzerV2`
@@ -97,17 +99,18 @@ State management and side effect coordination.
 
 Data processing orchestration. This is where frames become analysis results.
 
-| Module | Purpose |
-|--------|---------|
-| `Pipeline.ts` | Main orchestrator - combines frame + skeleton + analysis |
-| `InputSession.ts` | State machine for input lifecycle |
-| `VideoFileSkeletonSource.ts` | Extracts skeletons from video files |
-| `PoseSkeletonTransformer.ts` | Converts ML poses → Skeleton objects |
-| `CachedPoseSkeletonTransformer.ts` | Uses pre-extracted poses |
-| `PipelineFactory.ts` | Creates pipeline instances |
-| `KeypointAdapter.ts` | Validates MediaPipe BlazePose-33 keypoint format |
+| Module                             | Purpose                                                  |
+| ---------------------------------- | -------------------------------------------------------- |
+| `Pipeline.ts`                      | Main orchestrator - combines frame + skeleton + analysis |
+| `InputSession.ts`                  | State machine for input lifecycle                        |
+| `VideoFileSkeletonSource.ts`       | Extracts skeletons from video files                      |
+| `PoseSkeletonTransformer.ts`       | Converts ML poses → Skeleton objects                     |
+| `CachedPoseSkeletonTransformer.ts` | Uses pre-extracted poses                                 |
+| `PipelineFactory.ts`               | Creates pipeline instances                               |
+| `KeypointAdapter.ts`               | Validates MediaPipe BlazePose-33 keypoint format         |
 
 **Data flow:**
+
 ```
 VideoFileSkeletonSource
     │
@@ -122,6 +125,7 @@ UI updates
 ```
 
 **Where to add pipeline logic:**
+
 - New input sources → implement `SkeletonSource` interface
 - New processing steps → add to `Pipeline.ts`
 - New skeleton transformations → create transformer
@@ -130,15 +134,21 @@ UI updates
 
 Exercise-specific form analysis. **This is the plugin system.**
 
-| Module | Purpose |
-|--------|---------|
-| `FormAnalyzer.ts` | Interface definition |
+| Module                           | Purpose                      |
+| -------------------------------- | ---------------------------- |
+| `FormAnalyzer.ts`                | Interface definition         |
 | `KettlebellSwingFormAnalyzer.ts` | Swing-specific state machine |
 
 **FormAnalyzer interface:**
+
 ```typescript
 interface FormAnalyzer {
-  processFrame(skeleton: Skeleton, timestamp: number, videoTime?: number, frameImage?: ImageData): FormAnalyzerResult;
+  processFrame(
+    skeleton: Skeleton,
+    timestamp: number,
+    videoTime?: number,
+    frameImage?: ImageData
+  ): FormAnalyzerResult;
   getPhase(): string;
   getRepCount(): number;
   getLastRepQuality(): RepQuality | null;
@@ -151,13 +161,14 @@ interface FormAnalyzerResult {
   phase: string;
   repCompleted: boolean;
   repCount: number;
-  repPositions?: RepPosition[];  // Present when repCompleted=true
-  repQuality?: RepQuality;       // Present when repCompleted=true
+  repPositions?: RepPosition[]; // Present when repCompleted=true
+  repQuality?: RepQuality; // Present when repCompleted=true
   angles: Record<string, number>;
 }
 ```
 
 **Adding a new exercise:**
+
 1. Create `src/analyzers/YourExerciseFormAnalyzer.ts`
 2. Implement `FormAnalyzer` interface
 3. Define phases (e.g., top, bottom for pull-ups)
@@ -169,6 +180,7 @@ interface FormAnalyzerResult {
 The `Skeleton` class - domain model for human pose.
 
 **Key responsibilities:**
+
 - Store keypoints from ML detection
 - Calculate angles (spine, hip, knee, arm)
 - Cache expensive calculations
@@ -176,15 +188,16 @@ The `Skeleton` class - domain model for human pose.
 
 ```typescript
 // Skeleton provides cached angle calculations
-skeleton.getSpineAngle()      // Torso lean from vertical
-skeleton.getHipAngle()        // Hip hinge depth
-skeleton.getKneeAngle()       // Knee bend
-skeleton.getArmToVerticalAngle() // Arm position
-skeleton.getWristHeight()     // For phase detection
-skeleton.getFacingDirection() // Left or right
+skeleton.getSpineAngle(); // Torso lean from vertical
+skeleton.getHipAngle(); // Hip hinge depth
+skeleton.getKneeAngle(); // Knee bend
+skeleton.getArmToVerticalAngle(); // Arm position
+skeleton.getWristHeight(); // For phase detection
+skeleton.getFacingDirection(); // Left or right
 ```
 
 **Where to add biomechanics:**
+
 - New angle calculations → add method to `Skeleton`
 - New keypoint queries → add method to `Skeleton`
 - Exercise-specific thresholds → keep in analyzer, not here
@@ -193,15 +206,16 @@ skeleton.getFacingDirection() // Left or right
 
 External integrations and system services.
 
-| Service | Purpose |
-|---------|---------|
-| `PoseDetectorFactory.ts` | Creates ML model instances |
-| `PoseExtractor.ts` | Batch extraction from video |
-| `PoseTrackService.ts` | File I/O for pose data |
-| `SessionRecorder.ts` | Debug logging and telemetry |
-| `DeviceService.ts` | Device capability detection |
+| Service                  | Purpose                     |
+| ------------------------ | --------------------------- |
+| `PoseDetectorFactory.ts` | Creates ML model instances  |
+| `PoseExtractor.ts`       | Batch extraction from video |
+| `PoseTrackService.ts`    | File I/O for pose data      |
+| `SessionRecorder.ts`     | Debug logging and telemetry |
+| `DeviceService.ts`       | Device capability detection |
 
 **Where to add infrastructure:**
+
 - ML model support → `PoseDetectorFactory`
 - File format support → `PoseTrackService`
 - External API → new service file
@@ -210,11 +224,12 @@ External integrations and system services.
 
 Visual representation of domain models.
 
-| Module | Purpose |
-|--------|---------|
+| Module                | Purpose                              |
+| --------------------- | ------------------------------------ |
 | `SkeletonRenderer.ts` | Canvas rendering of skeleton overlay |
 
 **Where to add rendering:**
+
 - Skeleton visualization changes → `SkeletonRenderer`
 - New overlays → add methods to `SkeletonRenderer`
 
@@ -222,15 +237,16 @@ Visual representation of domain models.
 
 Pure functions with no side effects.
 
-| Utility | Purpose |
-|---------|---------|
-| `videoHash.ts` | Content hashing for cache keys |
-| `videoCrop.ts` | Person-centered cropping |
-| `frameHash.ts` | Frame deduplication |
-| `shakeDetection.ts` | Mobile gesture detection |
-| `logger.ts` | Logging utilities |
+| Utility             | Purpose                        |
+| ------------------- | ------------------------------ |
+| `videoHash.ts`      | Content hashing for cache keys |
+| `videoCrop.ts`      | Person-centered cropping       |
+| `frameHash.ts`      | Frame deduplication            |
+| `shakeDetection.ts` | Mobile gesture detection       |
+| `logger.ts`         | Logging utilities              |
 
 **Where to add utilities:**
+
 - Pure transformations → `utils/`
 - Side effects → `services/`
 
@@ -314,17 +330,20 @@ if (now - lastRepSyncTimeRef.current >= REP_SYNC_INTERVAL_MS) {
 ```
 
 **Benefits:**
+
 - **No additional timers** - Uses the existing frame loop
 - **Automatic cleanup** - No interval to manage on pause/end
 - **Synced with playback** - Uses `metadata.mediaTime` (actual video time)
 - **Configurable frequency** - `REP_SYNC_INTERVAL_MS` (default 1000ms)
 
 **When to use this pattern:**
+
 - Any UI update during playback that doesn't need per-frame precision
 - State that depends on video time but changes infrequently
 - Expensive calculations that shouldn't run every frame
 
 **Example locations:**
+
 - `useSwingAnalyzerV2.tsx`: Rep counter and position sync during playback
 - Future: Form quality indicators, coaching cues
 
@@ -339,19 +358,25 @@ See [TEST_STRATEGY.md](./tech-pack/TEST_STRATEGY.md) for details.
 ## Common Tasks
 
 ### "I need to change how angles are calculated"
+
 → Edit `src/models/Skeleton.ts`
 
 ### "I need to add a new exercise"
+
 → Create analyzer in `src/analyzers/`, implement `FormAnalyzer` interface
 
 ### "I need to support a new ML model"
+
 → Update `PoseDetectorFactory` and `KeypointAdapter`
 
 ### "I need to add a new UI feature"
+
 → Create component in `src/components/`, hook in `src/hooks/` if needed
 
 ### "I need to change rep counting logic"
+
 → Edit the relevant `FormAnalyzer` implementation
 
 ### "I need to add a new file format"
+
 → Update `PoseTrackService` in `src/services/`

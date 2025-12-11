@@ -1,5 +1,5 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 
 describe('useKeyboardNavigation', () => {
@@ -271,7 +271,9 @@ describe('useKeyboardNavigation', () => {
         value: document.createElement('div'),
       });
 
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowLeft' })
+      );
 
       expect(onNavigateToPreviousRepMock).toHaveBeenCalledOnce();
     });
@@ -296,7 +298,9 @@ describe('useKeyboardNavigation', () => {
         value: document.createElement('div'),
       });
 
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight' })
+      );
 
       expect(onNavigateToNextRepMock).toHaveBeenCalledOnce();
     });
@@ -321,8 +325,12 @@ describe('useKeyboardNavigation', () => {
         value: null,
       });
 
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowLeft' })
+      );
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight' })
+      );
 
       expect(onNavigateToPreviousRepMock).not.toHaveBeenCalled();
       expect(onNavigateToNextRepMock).not.toHaveBeenCalled();

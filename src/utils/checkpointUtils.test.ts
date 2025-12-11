@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { PositionCandidate } from '../types/exercise';
 import {
   buildCheckpointList,
   findNextCheckpoint,
   findPreviousCheckpoint,
 } from './checkpointUtils';
-import type { PositionCandidate } from '../types/exercise';
 
 // Helper to create a minimal position candidate for testing
 // Only videoTime is needed for checkpoint building
@@ -33,7 +33,12 @@ describe('checkpointUtils', () => {
       const checkpoints = buildCheckpointList(repThumbnails, swingPhases);
 
       expect(checkpoints).toHaveLength(4);
-      expect(checkpoints.map(c => c.position)).toEqual(['bottom', 'release', 'top', 'connect']);
+      expect(checkpoints.map((c) => c.position)).toEqual([
+        'bottom',
+        'release',
+        'top',
+        'connect',
+      ]);
     });
 
     it('builds checkpoints for pistol squat phases', () => {
@@ -49,7 +54,12 @@ describe('checkpointUtils', () => {
       const checkpoints = buildCheckpointList(repThumbnails, pistolPhases);
 
       expect(checkpoints).toHaveLength(4);
-      expect(checkpoints.map(c => c.position)).toEqual(['standing', 'descending', 'bottom', 'ascending']);
+      expect(checkpoints.map((c) => c.position)).toEqual([
+        'standing',
+        'descending',
+        'bottom',
+        'ascending',
+      ]);
     });
 
     it('only includes phases that exist in the provided phases list', () => {
@@ -60,7 +70,7 @@ describe('checkpointUtils', () => {
       // Pistol squat data
       rep1.set('standing', makeCandidate(1.0));
       rep1.set('descending', makeCandidate(2.0));
-      rep1.set('bottom', makeCandidate(3.0));  // 'bottom' exists in both swing and pistol
+      rep1.set('bottom', makeCandidate(3.0)); // 'bottom' exists in both swing and pistol
       rep1.set('ascending', makeCandidate(4.0));
       repThumbnails.set(1, rep1);
 
@@ -74,7 +84,10 @@ describe('checkpointUtils', () => {
 
       // FIX: Using correct pistol phases should find all 4
       const pistolPhases = ['standing', 'descending', 'bottom', 'ascending'];
-      const correctCheckpoints = buildCheckpointList(repThumbnails, pistolPhases);
+      const correctCheckpoints = buildCheckpointList(
+        repThumbnails,
+        pistolPhases
+      );
       expect(correctCheckpoints).toHaveLength(4);
     });
 
@@ -95,8 +108,8 @@ describe('checkpointUtils', () => {
       const checkpoints = buildCheckpointList(repThumbnails, phases);
 
       expect(checkpoints).toHaveLength(4);
-      expect(checkpoints.map(c => c.videoTime)).toEqual([1.0, 2.0, 3.0, 4.0]);
-      expect(checkpoints.map(c => c.repNum)).toEqual([1, 1, 2, 2]);
+      expect(checkpoints.map((c) => c.videoTime)).toEqual([1.0, 2.0, 3.0, 4.0]);
+      expect(checkpoints.map((c) => c.repNum)).toEqual([1, 1, 2, 2]);
     });
 
     it('handles empty repThumbnails', () => {

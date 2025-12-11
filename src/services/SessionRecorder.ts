@@ -18,7 +18,11 @@
  * - Use getPersistedSessions() to retrieve after crash
  */
 
-import { GIT_SHA_SHORT, BUILD_TIMESTAMP, GIT_BRANCH } from '../generated_version';
+import {
+  BUILD_TIMESTAMP,
+  GIT_BRANCH,
+  GIT_SHA_SHORT,
+} from '../generated_version';
 
 // IndexedDB configuration
 const SESSION_DB_NAME = 'swing-analyzer-sessions';
@@ -73,14 +77,14 @@ export interface StateChangeEvent {
 export interface MemorySnapshot {
   timestamp: number;
   // From performance.memory (Chrome only)
-  usedJSHeapSize?: number;      // JS heap currently in use (bytes)
-  totalJSHeapSize?: number;     // Total allocated JS heap (bytes)
-  jsHeapSizeLimit?: number;     // Max heap size (bytes)
+  usedJSHeapSize?: number; // JS heap currently in use (bytes)
+  totalJSHeapSize?: number; // Total allocated JS heap (bytes)
+  jsHeapSizeLimit?: number; // Max heap size (bytes)
   // Calculated
-  usedMB?: number;              // usedJSHeapSize in MB
-  totalMB?: number;             // totalJSHeapSize in MB
-  limitMB?: number;             // jsHeapSizeLimit in MB
-  percentUsed?: number;         // usedJSHeapSize / jsHeapSizeLimit * 100
+  usedMB?: number; // usedJSHeapSize in MB
+  totalMB?: number; // totalJSHeapSize in MB
+  limitMB?: number; // jsHeapSizeLimit in MB
+  percentUsed?: number; // usedJSHeapSize / jsHeapSizeLimit * 100
 }
 
 /**
@@ -89,14 +93,14 @@ export interface MemorySnapshot {
  */
 export interface EnvironmentInfo {
   // Build info
-  buildVersion?: string;        // App version from package.json
-  buildCommit?: string;         // Git commit hash
-  buildTime?: string;           // When the build was created
+  buildVersion?: string; // App version from package.json
+  buildCommit?: string; // Git commit hash
+  buildTime?: string; // When the build was created
 
   // Browser/OS
   userAgent: string;
-  platform: string;             // navigator.platform
-  language: string;             // navigator.language
+  platform: string; // navigator.platform
+  language: string; // navigator.language
   cookiesEnabled: boolean;
   onLine: boolean;
 
@@ -110,7 +114,7 @@ export interface EnvironmentInfo {
 
   // Hardware/Performance
   hardwareConcurrency?: number; // CPU cores
-  deviceMemory?: number;        // RAM in GB (Chrome only)
+  deviceMemory?: number; // RAM in GB (Chrome only)
 
   // WebGL (for ML model debugging)
   webglRenderer?: string;
@@ -231,7 +235,9 @@ async function pruneOldSessions(): Promise<void> {
           cursor.continue();
         } else {
           // Done iterating, delete old sessions
-          toDelete.forEach((id) => store.delete(id));
+          for (const id of toDelete) {
+            store.delete(id);
+          }
         }
       };
 
@@ -395,7 +401,8 @@ class SessionRecorderImpl {
 
       // Hardware
       hardwareConcurrency: nav?.hardwareConcurrency,
-      deviceMemory: (nav as Navigator & { deviceMemory?: number })?.deviceMemory,
+      deviceMemory: (nav as Navigator & { deviceMemory?: number })
+        ?.deviceMemory,
 
       // WebGL
       ...webglInfo,
@@ -408,7 +415,11 @@ class SessionRecorderImpl {
   /**
    * Get WebGL renderer info for debugging ML model issues
    */
-  private getWebGLInfo(): { webglRenderer?: string; webglVendor?: string; webglVersion?: string } {
+  private getWebGLInfo(): {
+    webglRenderer?: string;
+    webglVendor?: string;
+    webglVersion?: string;
+  } {
     if (typeof document === 'undefined') return {};
 
     try {
@@ -418,8 +429,12 @@ class SessionRecorderImpl {
 
       const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
       return {
-        webglRenderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : undefined,
-        webglVendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : undefined,
+        webglRenderer: debugInfo
+          ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+          : undefined,
+        webglVendor: debugInfo
+          ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL)
+          : undefined,
         webglVersion: gl.getParameter(gl.VERSION),
       };
     } catch {
@@ -432,7 +447,14 @@ class SessionRecorderImpl {
    */
   private checkVideoCodecs(): EnvironmentInfo['videoCodecs'] {
     if (typeof document === 'undefined') {
-      return { h264: false, h265: false, vp8: false, vp9: false, av1: false, webm: false };
+      return {
+        h264: false,
+        h265: false,
+        vp8: false,
+        vp9: false,
+        av1: false,
+        webm: false,
+      };
     }
 
     try {
@@ -446,7 +468,14 @@ class SessionRecorderImpl {
         webm: video.canPlayType('video/webm') !== '',
       };
     } catch {
-      return { h264: false, h265: false, vp8: false, vp9: false, av1: false, webm: false };
+      return {
+        h264: false,
+        h265: false,
+        vp8: false,
+        vp9: false,
+        av1: false,
+        webm: false,
+      };
     }
   }
 
@@ -497,7 +526,9 @@ class SessionRecorderImpl {
         type: 'error',
         timestamp: Date.now(),
         details: {
-          message: args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '),
+          message: args
+            .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+            .join(' '),
         },
       });
       this.originalConsoleError?.apply(console, args);
@@ -555,7 +586,9 @@ class SessionRecorderImpl {
     // Text content (truncated)
     const text = el.textContent?.trim().slice(0, 30);
     if (text) {
-      parts.push(`"${text}${el.textContent && el.textContent.length > 30 ? '...' : ''}"`);
+      parts.push(
+        `"${text}${el.textContent && el.textContent.length > 30 ? '...' : ''}"`
+      );
     }
 
     return parts.join('');
@@ -607,7 +640,9 @@ class SessionRecorderImpl {
     };
 
     if (!perf.memory) {
-      console.log('[SessionRecorder] Memory tracking not available (Chrome only)');
+      console.log(
+        '[SessionRecorder] Memory tracking not available (Chrome only)'
+      );
       return;
     }
 
@@ -633,10 +668,11 @@ class SessionRecorderImpl {
     if (!perf.memory) return;
 
     const { usedJSHeapSize, totalJSHeapSize, jsHeapSizeLimit } = perf.memory;
-    const usedMB = Math.round(usedJSHeapSize / 1024 / 1024 * 100) / 100;
-    const totalMB = Math.round(totalJSHeapSize / 1024 / 1024 * 100) / 100;
-    const limitMB = Math.round(jsHeapSizeLimit / 1024 / 1024 * 100) / 100;
-    const percentUsed = Math.round(usedJSHeapSize / jsHeapSizeLimit * 10000) / 100;
+    const usedMB = Math.round((usedJSHeapSize / 1024 / 1024) * 100) / 100;
+    const totalMB = Math.round((totalJSHeapSize / 1024 / 1024) * 100) / 100;
+    const limitMB = Math.round((jsHeapSizeLimit / 1024 / 1024) * 100) / 100;
+    const percentUsed =
+      Math.round((usedJSHeapSize / jsHeapSizeLimit) * 10000) / 100;
 
     const snapshot: MemorySnapshot = {
       timestamp: Date.now(),
@@ -653,12 +689,16 @@ class SessionRecorderImpl {
 
     // Trim old snapshots if over limit
     if (this.recording.memorySnapshots.length > this.maxMemorySnapshots) {
-      this.recording.memorySnapshots = this.recording.memorySnapshots.slice(-this.maxMemorySnapshots);
+      this.recording.memorySnapshots = this.recording.memorySnapshots.slice(
+        -this.maxMemorySnapshots
+      );
     }
 
     // Log warning if memory usage is high
     if (percentUsed > 80) {
-      console.warn(`[SessionRecorder] HIGH MEMORY: ${usedMB}MB / ${limitMB}MB (${percentUsed}%)`);
+      console.warn(
+        `[SessionRecorder] HIGH MEMORY: ${usedMB}MB / ${limitMB}MB (${percentUsed}%)`
+      );
     }
   }
 
@@ -684,7 +724,8 @@ class SessionRecorderImpl {
 
       // Trim old snapshots if over limit
       if (this.recording.pipelineSnapshots.length > this.maxSnapshots) {
-        this.recording.pipelineSnapshots = this.recording.pipelineSnapshots.slice(-this.maxSnapshots);
+        this.recording.pipelineSnapshots =
+          this.recording.pipelineSnapshots.slice(-this.maxSnapshots);
       }
     }
   }
@@ -738,7 +779,9 @@ class SessionRecorderImpl {
 
     // Trim old interactions if over limit
     if (this.recording.interactions.length > this.maxInteractions) {
-      this.recording.interactions = this.recording.interactions.slice(-this.maxInteractions);
+      this.recording.interactions = this.recording.interactions.slice(
+        -this.maxInteractions
+      );
     }
   }
 
@@ -753,7 +796,9 @@ class SessionRecorderImpl {
 
     // Trim old state changes if over limit
     if (this.recording.stateChanges.length > this.maxStateChanges) {
-      this.recording.stateChanges = this.recording.stateChanges.slice(-this.maxStateChanges);
+      this.recording.stateChanges = this.recording.stateChanges.slice(
+        -this.maxStateChanges
+      );
     }
   }
 
@@ -805,7 +850,9 @@ class SessionRecorderImpl {
     stateChanges: number;
     errors: number;
   } {
-    const errors = this.recording.stateChanges.filter((e) => e.type === 'error').length;
+    const errors = this.recording.stateChanges.filter(
+      (e) => e.type === 'error'
+    ).length;
     return {
       duration: Date.now() - this.recording.startTime,
       interactions: this.recording.interactions.length,
@@ -846,11 +893,15 @@ class SessionRecorderImpl {
 
     if (typeof window !== 'undefined') {
       if (this.clickHandler) {
-        window.removeEventListener('click', this.clickHandler, { capture: true });
+        window.removeEventListener('click', this.clickHandler, {
+          capture: true,
+        });
         this.clickHandler = null;
       }
       if (this.keydownHandler) {
-        window.removeEventListener('keydown', this.keydownHandler, { capture: true });
+        window.removeEventListener('keydown', this.keydownHandler, {
+          capture: true,
+        });
         this.keydownHandler = null;
       }
       if (this.errorHandler) {
@@ -887,7 +938,9 @@ export function recordExtractionStart(details?: Record<string, unknown>): void {
   });
 }
 
-export function recordExtractionComplete(details?: Record<string, unknown>): void {
+export function recordExtractionComplete(
+  details?: Record<string, unknown>
+): void {
   sessionRecorder.recordStateChange({
     type: 'extraction_complete',
     timestamp: Date.now(),
@@ -895,7 +948,9 @@ export function recordExtractionComplete(details?: Record<string, unknown>): voi
   });
 }
 
-export function recordExtractionCancel(details?: Record<string, unknown>): void {
+export function recordExtractionCancel(
+  details?: Record<string, unknown>
+): void {
   sessionRecorder.recordStateChange({
     type: 'extraction_cancel',
     timestamp: Date.now(),
@@ -951,7 +1006,10 @@ export function recordPipelineReinit(details?: Record<string, unknown>): void {
   });
 }
 
-export function recordRepDetected(repNumber: number, details?: Record<string, unknown>): void {
+export function recordRepDetected(
+  repNumber: number,
+  details?: Record<string, unknown>
+): void {
   sessionRecorder.recordStateChange({
     type: 'rep_detected',
     timestamp: Date.now(),
@@ -1041,13 +1099,15 @@ if (typeof window !== 'undefined') {
           jsHeapSizeLimit: number;
         };
       };
-      if (!perf.memory) return { error: 'Memory API not available (Chrome only)' };
+      if (!perf.memory)
+        return { error: 'Memory API not available (Chrome only)' };
       const { usedJSHeapSize, totalJSHeapSize, jsHeapSizeLimit } = perf.memory;
       return {
-        usedMB: Math.round(usedJSHeapSize / 1024 / 1024 * 100) / 100,
-        totalMB: Math.round(totalJSHeapSize / 1024 / 1024 * 100) / 100,
-        limitMB: Math.round(jsHeapSizeLimit / 1024 / 1024 * 100) / 100,
-        percentUsed: Math.round(usedJSHeapSize / jsHeapSizeLimit * 10000) / 100,
+        usedMB: Math.round((usedJSHeapSize / 1024 / 1024) * 100) / 100,
+        totalMB: Math.round((totalJSHeapSize / 1024 / 1024) * 100) / 100,
+        limitMB: Math.round((jsHeapSizeLimit / 1024 / 1024) * 100) / 100,
+        percentUsed:
+          Math.round((usedJSHeapSize / jsHeapSizeLimit) * 10000) / 100,
       };
     },
 
@@ -1081,7 +1141,12 @@ if (typeof window !== 'undefined') {
         growthMB: Math.round(growthMB * 100) / 100,
         growthPercent: Math.round(growthPercent * 100) / 100,
         mbPerMinute: Math.round(mbPerMinute * 100) / 100,
-        trend: mbPerMinute > 1 ? 'GROWING (possible leak)' : mbPerMinute < -1 ? 'SHRINKING' : 'STABLE',
+        trend:
+          mbPerMinute > 1
+            ? 'GROWING (possible leak)'
+            : mbPerMinute < -1
+              ? 'SHRINKING'
+              : 'STABLE',
         samples: recent.length,
         durationSec: Math.round(durationSec),
       };
@@ -1097,7 +1162,8 @@ if (typeof window !== 'undefined') {
      * Set app settings for bug reports.
      * Usage: swingDebug.setAppSettings({ model: 'blazepose', exercise: 'swing' })
      */
-    setAppSettings: (settings: Record<string, unknown>) => sessionRecorder.setAppSettings(settings),
+    setAppSettings: (settings: Record<string, unknown>) =>
+      sessionRecorder.setAppSettings(settings),
 
     /**
      * Get current pose track data (if available).
@@ -1120,7 +1186,10 @@ if (typeof window !== 'undefined') {
       try {
         // Serialize in chunks to avoid string length limits
         // Exclude frameImage (runtime-only ImageData, not for serialization)
-        const track = poseTrack as { metadata: unknown; frames: Record<string, unknown>[] };
+        const track = poseTrack as {
+          metadata: unknown;
+          frames: Record<string, unknown>[];
+        };
         const chunks: string[] = [];
         chunks.push('{"metadata":');
         chunks.push(JSON.stringify(track.metadata));
@@ -1142,14 +1211,16 @@ if (typeof window !== 'undefined') {
 
         // Compress with gzip using CompressionStream API
         const compressionStream = new CompressionStream('gzip');
-        const compressedStream = jsonBlob.stream().pipeThrough(compressionStream);
+        const compressedStream = jsonBlob
+          .stream()
+          .pipeThrough(compressionStream);
         const compressedBlob = await new Response(compressedStream).blob();
 
         // Download the gzipped file
         const url = URL.createObjectURL(compressedBlob);
         const metadata = track.metadata as { sourceVideoName?: string };
         const videoName = metadata?.sourceVideoName || 'video';
-        const filename = videoName.replace(/\.[^.]+$/, '') + '.posetrack.json.gz';
+        const filename = `${videoName.replace(/\.[^.]+$/, '')}.posetrack.json.gz`;
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
@@ -1159,9 +1230,13 @@ if (typeof window !== 'undefined') {
         URL.revokeObjectURL(url);
 
         const compressedSize = compressedBlob.size;
-        const ratio = ((1 - compressedSize / uncompressedSize) * 100).toFixed(1);
+        const ratio = ((1 - compressedSize / uncompressedSize) * 100).toFixed(
+          1
+        );
         console.log(`[swingDebug] Downloaded pose track: ${filename}`);
-        console.log(`[swingDebug] Size: ${(compressedSize / 1024).toFixed(1)} KB (${ratio}% compression, was ${(uncompressedSize / 1024 / 1024).toFixed(2)} MB)`);
+        console.log(
+          `[swingDebug] Size: ${(compressedSize / 1024).toFixed(1)} KB (${ratio}% compression, was ${(uncompressedSize / 1024 / 1024).toFixed(2)} MB)`
+        );
         return filename;
       } catch (error) {
         console.error('[swingDebug] Failed to download pose track:', error);
@@ -1170,6 +1245,9 @@ if (typeof window !== 'undefined') {
     },
   };
 
-  (window as unknown as { swingDebug: typeof swingDebug }).swingDebug = swingDebug;
-  console.log('[SessionRecorder] Debug functions available at window.swingDebug');
+  (window as unknown as { swingDebug: typeof swingDebug }).swingDebug =
+    swingDebug;
+  console.log(
+    '[SessionRecorder] Debug functions available at window.swingDebug'
+  );
 }

@@ -10,7 +10,10 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { SWING_SAMPLE_4REPS_VIDEO_HASH, SWING_SAMPLE_VIDEO_HASH } from './fixtures';
+import {
+  SWING_SAMPLE_4REPS_VIDEO_HASH,
+  SWING_SAMPLE_VIDEO_HASH,
+} from './fixtures';
 import {
   clearPoseTrackDB,
   clickSwingSampleButton,
@@ -70,7 +73,9 @@ test.describe('Pose Track Fixtures', () => {
         SWING_SAMPLE_4REPS_VIDEO_HASH
       );
       expect(storedTrack).not.toBeNull();
-      expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample-4reps.webm');
+      expect(storedTrack?.metadata.sourceVideoName).toBe(
+        'swing-sample-4reps.webm'
+      );
       expect(storedTrack?.metadata.version).toBe('1.0');
       expect(storedTrack?.frames.length).toBeGreaterThan(0);
     });
@@ -80,12 +85,18 @@ test.describe('Pose Track Fixtures', () => {
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
       // Verify it's there
-      let storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
+      let storedTrack = await getPoseTrackFromDB(
+        page,
+        SWING_SAMPLE_4REPS_VIDEO_HASH
+      );
       expect(storedTrack).not.toBeNull();
 
       // Clear and verify it's gone
       await clearPoseTrackDB(page);
-      storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
+      storedTrack = await getPoseTrackFromDB(
+        page,
+        SWING_SAMPLE_4REPS_VIDEO_HASH
+      );
       expect(storedTrack).toBeNull();
     });
 
@@ -236,7 +247,9 @@ test.describe('Pose Track Fixtures', () => {
       await page.waitForSelector('video', { timeout: 5000 });
 
       // Wait for HUD to become visible (poses exist for current frame)
-      await expect(page.locator('#rep-counter')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('#rep-counter')).toBeVisible({
+        timeout: 10000,
+      });
       await expect(page.locator('#spine-angle')).toBeVisible();
     });
   });

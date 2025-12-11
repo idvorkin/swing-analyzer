@@ -24,7 +24,10 @@ export function generateTestId(): string {
  * @param page - Playwright page instance
  * @param testId - Unique identifier for this test run
  */
-export async function setVideoTestId(page: Page, testId: string): Promise<void> {
+export async function setVideoTestId(
+  page: Page,
+  testId: string
+): Promise<void> {
   await page.evaluate((id) => {
     (window as any).__VIDEO_TEST_ID__ = id;
   }, testId);
@@ -74,7 +77,7 @@ export async function clickSwingSampleButton(page: Page): Promise<void> {
   await page.waitForFunction(
     () => {
       const video = document.querySelector('#video') as HTMLVideoElement;
-      return video && video.src && video.src.startsWith('blob:');
+      return video?.src?.startsWith('blob:');
     },
     { timeout: 15000 }
   );
@@ -101,7 +104,7 @@ export async function clickPistolSampleButton(page: Page): Promise<void> {
   await page.waitForFunction(
     () => {
       const video = document.querySelector('#video') as HTMLVideoElement;
-      return video && video.src && video.src.startsWith('blob:');
+      return video?.src?.startsWith('blob:');
     },
     { timeout: 15000 }
   );
@@ -162,7 +165,7 @@ export async function playVideoToEnd(
   // Ensure video is playing
   await page.evaluate(() => {
     const video = document.querySelector('video');
-    if (video && video.paused) {
+    if (video?.paused) {
       video.play();
     }
   });
@@ -171,7 +174,7 @@ export async function playVideoToEnd(
   await page.waitForFunction(
     () => {
       const video = document.querySelector('video');
-      return video && video.ended;
+      return video?.ended;
     },
     { timeout }
   );

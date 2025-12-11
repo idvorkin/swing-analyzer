@@ -79,7 +79,13 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenHelp }) => {
           onClick={onOpenHelp}
           aria-label="Touch controls help"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
             <circle cx="12" cy="12" r="10" />
             <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -91,9 +97,17 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenHelp }) => {
           className="header-swap-btn"
           title="Load different video"
           aria-label="Load different video"
-          onClick={() => window.dispatchEvent(new CustomEvent('show-source-picker'))}
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent('show-source-picker'))
+          }
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
             <circle cx="12" cy="13" r="4" />
           </svg>
@@ -148,7 +162,10 @@ const AppContent: React.FC = () => {
 
   return (
     <SwingAnalyzerProvider>
-      <Header onOpenSettings={() => setSettingsOpen(true)} onOpenHelp={() => setHelpOpen(true)} />
+      <Header
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
+      />
       <Routes>
         <Route path="/" element={<MainApplication />} />
       </Routes>

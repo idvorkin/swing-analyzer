@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PositionCandidate } from '../types/exercise';
-import { PHASE_LABELS, getPhaseNames, getSortedRepNumbers } from './repGalleryConstants';
+import {
+  getPhaseNames,
+  getSortedRepNumbers,
+  PHASE_LABELS,
+} from './repGalleryConstants';
+import { ThumbnailCanvas } from './ThumbnailCanvas';
 import './RepGalleryModal.css';
 
 interface RepGalleryModalProps {
@@ -28,10 +33,16 @@ export function RepGalleryModal({
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Get phase names dynamically from the data (exercise-agnostic)
-  const phaseNames = useMemo(() => getPhaseNames(repThumbnails), [repThumbnails]);
+  const phaseNames = useMemo(
+    () => getPhaseNames(repThumbnails),
+    [repThumbnails]
+  );
 
   // Get sorted rep numbers
-  const repNumbers = useMemo(() => getSortedRepNumbers(repThumbnails), [repThumbnails]);
+  const repNumbers = useMemo(
+    () => getSortedRepNumbers(repThumbnails),
+    [repThumbnails]
+  );
 
   // Reset selection when closing
   useEffect(() => {
@@ -157,7 +168,10 @@ export function RepGalleryModal({
               No reps recorded yet. Complete some reps to see them here.
             </div>
           ) : viewMode === 'grid' ? (
-            <div className={`gallery-grid ${focusedPhase ? 'gallery-grid--focused' : ''}`} ref={gridRef}>
+            <div
+              className={`gallery-grid ${focusedPhase ? 'gallery-grid--focused' : ''}`}
+              ref={gridRef}
+            >
               {/* Header row with phase names */}
               <div className="gallery-grid-header">
                 <div className="gallery-grid-cell gallery-grid-cell--header gallery-grid-cell--rep">
@@ -169,7 +183,11 @@ export function RepGalleryModal({
                     key={phase}
                     className={`gallery-grid-cell gallery-grid-cell--header gallery-phase-btn ${focusedPhase === phase ? 'gallery-phase-btn--active' : ''}`}
                     onClick={() => handlePhaseClick(phase)}
-                    title={focusedPhase === phase ? 'Click to show all phases' : `Focus on ${PHASE_LABELS[phase] || phase}`}
+                    title={
+                      focusedPhase === phase
+                        ? 'Click to show all phases'
+                        : `Focus on ${PHASE_LABELS[phase] || phase}`
+                    }
                   >
                     {PHASE_LABELS[phase] || phase}
                   </button>
@@ -204,7 +222,7 @@ export function RepGalleryModal({
                     {phaseNames.map((phase) => {
                       const position = positions?.get(phase);
                       const isFocused = focusedPhase === phase;
-                      const isMinimized = focusedPhase && !isFocused;
+                      const isMinimized = Boolean(focusedPhase && !isFocused);
                       return (
                         <div
                           key={phase}
@@ -212,15 +230,30 @@ export function RepGalleryModal({
                         >
                           {position?.frameImage ? (
                             <ThumbnailCanvas
-                              position={position}
+                              candidate={position}
+                              phase={phase}
+                              size={
+                                isFocused
+                                  ? 'large'
+                                  : isMinimized
+                                    ? 'mini'
+                                    : 'small'
+                              }
+                              isFocused={isFocused}
+                              isMinimized={isMinimized}
                               onClick={() =>
                                 handleThumbnailClick(repNum, position)
                               }
                               onDoubleTap={() => handlePhaseClick(phase)}
-                              size={isFocused ? 'large' : isMinimized ? 'mini' : 'small'}
+                              showTimestamp
+                              className="gallery-thumbnail"
                             />
                           ) : (
-                            <div className={`gallery-thumbnail-empty ${isMinimized ? 'gallery-thumbnail-empty--mini' : ''}`}>—</div>
+                            <div
+                              className={`gallery-thumbnail-empty ${isMinimized ? 'gallery-thumbnail-empty--mini' : ''}`}
+                            >
+                              —
+                            </div>
                           )}
                         </div>
                       );
@@ -256,11 +289,14 @@ export function RepGalleryModal({
                         <div key={phase} className="gallery-compare-cell">
                           {position?.frameImage ? (
                             <ThumbnailCanvas
-                              position={position}
+                              candidate={position}
+                              phase={phase}
+                              size="large"
                               onClick={() =>
                                 handleThumbnailClick(repNum, position)
                               }
-                              size="large"
+                              showTimestamp
+                              className="gallery-thumbnail"
                             />
                           ) : (
                             <div className="gallery-thumbnail-empty">—</div>
@@ -279,81 +315,15 @@ export function RepGalleryModal({
         <div className="gallery-footer">
           {viewMode === 'grid' ? (
             <span className="gallery-hint">
-              Double-tap thumbnail to focus phase. Tap to seek. Select reps to compare.
+              Double-tap thumbnail to focus phase. Tap to seek. Select reps to
+              compare.
             </span>
           ) : (
-            <span className="gallery-hint">
-              Tap thumbnails to seek video.
-            </span>
+            <span className="gallery-hint">Tap thumbnails to seek video.</span>
           )}
         </div>
       </div>
     </div>
-  );
-}
-
-/** Renders a thumbnail canvas from ImageData */
-function ThumbnailCanvas({
-  position,
-  onClick,
-  onDoubleTap,
-  size,
-}: {
-  position: PositionCandidate;
-  onClick: () => void;
-  onDoubleTap?: () => void;
-  size: 'small' | 'large' | 'mini';
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const lastTapRef = useRef<number>(0);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !position.frameImage) return;
-
-    canvas.width = position.frameImage.width;
-    canvas.height = position.frameImage.height;
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      try {
-        ctx.putImageData(position.frameImage, 0, 0);
-      } catch (error) {
-        console.error('Failed to render thumbnail:', error);
-        // Canvas will show empty - graceful degradation
-      }
-    }
-  }, [position.frameImage]);
-
-  const timestamp =
-    position.videoTime !== undefined
-      ? `${position.videoTime.toFixed(2)}s`
-      : undefined;
-
-  const handleClick = useCallback(() => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY && onDoubleTap) {
-      // Double-tap detected - focus the phase
-      onDoubleTap();
-    } else {
-      // Single tap - seek to timestamp
-      onClick();
-    }
-    lastTapRef.current = now;
-  }, [onClick, onDoubleTap]);
-
-  return (
-    <button
-      type="button"
-      className={`gallery-thumbnail gallery-thumbnail--${size}`}
-      onClick={handleClick}
-      title={timestamp ? `Seek to ${timestamp}` : undefined}
-    >
-      <canvas ref={canvasRef} className="gallery-thumbnail-canvas" />
-      {timestamp && <span className="gallery-thumbnail-time">{timestamp}</span>}
-    </button>
   );
 }
 

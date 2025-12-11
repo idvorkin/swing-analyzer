@@ -129,12 +129,12 @@ describe('calculateStableCropRegion', () => {
 
     expect(crop).not.toBeNull();
     // Should be square
-    expect(crop!.width).toBe(crop!.height);
+    expect(crop?.width).toBe(crop?.height);
     // Should be within video bounds
-    expect(crop!.x).toBeGreaterThanOrEqual(0);
-    expect(crop!.y).toBeGreaterThanOrEqual(0);
-    expect(crop!.x + crop!.width).toBeLessThanOrEqual(1920);
-    expect(crop!.y + crop!.height).toBeLessThanOrEqual(1080);
+    expect(crop?.x).toBeGreaterThanOrEqual(0);
+    expect(crop?.y).toBeGreaterThanOrEqual(0);
+    expect((crop?.x ?? 0) + (crop?.width ?? 0)).toBeLessThanOrEqual(1920);
+    expect((crop?.y ?? 0) + (crop?.height ?? 0)).toBeLessThanOrEqual(1080);
   });
 
   it('clamps crop region to video bounds when person is near edge', () => {
@@ -147,8 +147,8 @@ describe('calculateStableCropRegion', () => {
     const crop = calculateStableCropRegion(frames, 1920, 1080);
 
     expect(crop).not.toBeNull();
-    expect(crop!.x).toBeGreaterThanOrEqual(0);
-    expect(crop!.y).toBeGreaterThanOrEqual(0);
+    expect(crop?.x).toBeGreaterThanOrEqual(0);
+    expect(crop?.y).toBeGreaterThanOrEqual(0);
   });
 
   it('uses union of bounding boxes across multiple frames', () => {
@@ -166,7 +166,7 @@ describe('calculateStableCropRegion', () => {
 
     expect(crop).not.toBeNull();
     // Crop should be large enough to cover both positions
-    expect(crop!.width).toBeGreaterThan(300); // At least covers the movement range
+    expect(crop?.width).toBeGreaterThan(300); // At least covers the movement range
   });
 
   it('applies padding for movement', () => {
@@ -181,7 +181,7 @@ describe('calculateStableCropRegion', () => {
     expect(crop).not.toBeNull();
     // With 30% padding, crop should be larger than raw bounding box
     const rawWidth = 520 - 500; // 20px
-    expect(crop!.width).toBeGreaterThan(rawWidth * 1.6); // At least padded size
+    expect(crop?.width).toBeGreaterThan(rawWidth * 1.6); // At least padded size
   });
 });
 
@@ -212,7 +212,13 @@ describe('transformPointToCropped', () => {
     const canvasHeight = 200;
 
     // Point at crop origin should map to canvas origin
-    const result = transformPointToCropped(100, 50, crop, canvasWidth, canvasHeight);
+    const result = transformPointToCropped(
+      100,
+      50,
+      crop,
+      canvasWidth,
+      canvasHeight
+    );
     expect(result.x).toBe(0);
     expect(result.y).toBe(0);
   });
@@ -223,7 +229,13 @@ describe('transformPointToCropped', () => {
     const canvasHeight = 100;
 
     // Point before crop region
-    const result = transformPointToCropped(50, 50, crop, canvasWidth, canvasHeight);
+    const result = transformPointToCropped(
+      50,
+      50,
+      crop,
+      canvasWidth,
+      canvasHeight
+    );
     expect(result.x).toBe(-25); // Negative, outside canvas
     expect(result.y).toBe(-25);
   });

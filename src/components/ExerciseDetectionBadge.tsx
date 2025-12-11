@@ -7,10 +7,10 @@
 
 import type { DetectedExercise } from '../analyzers';
 import {
+  EXERCISE_REGISTRY,
+  getAvailableExercises,
   getExerciseDisplayName,
   getExerciseIcon,
-  getAvailableExercises,
-  EXERCISE_REGISTRY,
 } from '../analyzers';
 
 interface ExerciseDetectionBadgeProps {
@@ -48,7 +48,9 @@ export function ExerciseDetectionBadge({
   const handleOverride = (e: React.MouseEvent, exercise: DetectedExercise) => {
     e.stopPropagation(); // Prevent video container from capturing the click
     if (exercise !== detectedExercise) {
-      console.log(`[ExerciseDetectionBadge] Switching from ${detectedExercise} to ${exercise}`);
+      console.log(
+        `[ExerciseDetectionBadge] Switching from ${detectedExercise} to ${exercise}`
+      );
       onOverride(exercise);
     }
   };
@@ -71,7 +73,9 @@ export function ExerciseDetectionBadge({
 
       {/* Confidence indicator */}
       {detectedExercise !== 'unknown' && (
-        <span className={`exercise-detection-badge__confidence ${getConfidenceClass()}`}>
+        <span
+          className={`exercise-detection-badge__confidence ${getConfidenceClass()}`}
+        >
           {confidence}%
         </span>
       )}

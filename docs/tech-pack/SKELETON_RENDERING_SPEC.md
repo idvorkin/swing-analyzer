@@ -7,6 +7,7 @@
 **Skeleton is visible when pose data exists for `video.currentTime`.**
 
 That's it. No other conditions matter:
+
 - Playing, paused, seeking? Doesn't matter - check if poses exist
 - Extraction running? Doesn't matter - check if poses exist
 - First frame or last frame? Doesn't matter - check if poses exist
@@ -33,12 +34,12 @@ Extraction and playback are **decoupled**:
 
 ## When Skeleton Updates
 
-| Event | What Happens |
-|-------|--------------|
-| Video plays | `requestVideoFrameCallback` fires → lookup poses → render |
-| Video paused | Show skeleton at paused `currentTime` |
-| User seeks | `seeked` event fires → lookup poses → render |
-| Poses don't exist | Clear canvas (nothing to show) |
+| Event             | What Happens                                              |
+| ----------------- | --------------------------------------------------------- |
+| Video plays       | `requestVideoFrameCallback` fires → lookup poses → render |
+| Video paused      | Show skeleton at paused `currentTime`                     |
+| User seeks        | `seeked` event fires → lookup poses → render              |
+| Poses don't exist | Clear canvas (nothing to show)                            |
 
 ## Canvas Alignment
 
@@ -74,13 +75,14 @@ SkeletonRenderer.renderSkeleton(skeleton, canvas)
 ```
 
 All skeleton rendering goes through this path. Triggered by:
+
 - `requestVideoFrameCallback` (during playback)
 - `seeked` event (after user seeks)
 
 ## Troubleshooting
 
-| Symptom | Likely Cause |
-|---------|--------------|
-| Skeleton not visible | Canvas dimensions wrong, or no poses in cache |
-| Skeleton offset | CSS doesn't account for letterboxing |
-| Skeleton not updating | Missing event handler for playback/seek |
+| Symptom               | Likely Cause                                  |
+| --------------------- | --------------------------------------------- |
+| Skeleton not visible  | Canvas dimensions wrong, or no poses in cache |
+| Skeleton offset       | CSS doesn't account for letterboxing          |
+| Skeleton not updating | Missing event handler for playback/seek       |
