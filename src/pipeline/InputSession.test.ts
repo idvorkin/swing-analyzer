@@ -208,4 +208,36 @@ describe('InputSession', () => {
       expect(session.getVideoFileSource()).toBeNull();
     });
   });
+
+  describe('abort signal support', () => {
+    it('passes abort signal to video source start()', async () => {
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      const abortController = new AbortController();
+
+      await session.startVideoFile(mockFile, abortController.signal);
+
+      const source = session.getVideoFileSource();
+      expect(source?.start).toHaveBeenCalledWith(abortController.signal);
+    });
+
+    it('returns early if signal is already aborted', async () => {
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      const abortController = new AbortController();
+      abortController.abort();
+
+      await session.startVideoFile(mockFile, abortController.signal);
+
+      // Should not create a source since we aborted before starting
+      expect(session.getSource()).toBeNull();
+    });
+
+    it('works without abort signal (backward compatible)', async () => {
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+
+      await session.startVideoFile(mockFile);
+
+      const source = session.getVideoFileSource();
+      expect(source?.start).toHaveBeenCalledWith(undefined);
+    });
+  });
 });
