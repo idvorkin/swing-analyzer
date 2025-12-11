@@ -6,7 +6,12 @@
 export const PHASE_ORDER = ['bottom', 'release', 'top', 'connect'] as const;
 
 /** Display order for pistol squat phases */
-export const PISTOL_SQUAT_PHASE_ORDER = ['standing', 'descending', 'bottom', 'ascending'] as const;
+export const PISTOL_SQUAT_PHASE_ORDER = [
+  'standing',
+  'descending',
+  'bottom',
+  'ascending',
+] as const;
 
 /** All known phase orders by exercise type */
 const PHASE_ORDERS: Record<string, readonly string[]> = {
@@ -19,7 +24,7 @@ export const PHASE_LABELS: Record<string, string> = {
   // Kettlebell swing phases
   top: 'Top',
   connect: 'Connect',
-  bottom: 'Bottom',  // Shared with pistol squat
+  bottom: 'Bottom', // Shared with pistol squat
   release: 'Release',
   // Pistol squat phases
   standing: 'Standing',
@@ -34,7 +39,7 @@ export function sortPhases(phases: string[]): string[] {
   let maxOverlap = 0;
 
   for (const order of Object.values(PHASE_ORDERS)) {
-    const overlap = phases.filter(p => order.includes(p)).length;
+    const overlap = phases.filter((p) => order.includes(p)).length;
     if (overlap > maxOverlap) {
       maxOverlap = overlap;
       knownOrder = order;
@@ -54,12 +59,16 @@ export function sortPhases(phases: string[]): string[] {
 }
 
 /** Get sorted rep numbers from a repThumbnails map */
-export function getSortedRepNumbers(repThumbnails: Map<number, unknown>): number[] {
+export function getSortedRepNumbers(
+  repThumbnails: Map<number, unknown>
+): number[] {
   return Array.from(repThumbnails.keys()).sort((a, b) => a - b);
 }
 
 /** Get unique phase names from repThumbnails, sorted */
-export function getPhaseNames(repThumbnails: Map<number, Map<string, unknown>>): string[] {
+export function getPhaseNames(
+  repThumbnails: Map<number, Map<string, unknown>>
+): string[] {
   const phases = new Set<string>();
   for (const positions of repThumbnails.values()) {
     for (const posName of positions.keys()) {

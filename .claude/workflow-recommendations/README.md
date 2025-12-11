@@ -21,6 +21,7 @@ Say "workflow review" or run the slash command at session end.
 ## Recommendations
 
 ### Short title
+
 - **Pattern**: What the agent kept getting wrong or user kept correcting
 - **Recommendation**: Specific text to add to CLAUDE.md or chop-conventions
 - **Target**: CLAUDE.md | chop-conventions | other

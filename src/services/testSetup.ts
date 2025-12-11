@@ -13,9 +13,9 @@ import {
   type PoseDetectorFactory,
 } from './MockPoseDetector';
 import {
-  setPoseTrackStorageMode as setStorageMode,
-  savePoseTrackToStorage,
   type PoseTrackStorageMode,
+  savePoseTrackToStorage,
+  setPoseTrackStorageMode as setStorageMode,
 } from './PoseTrackService';
 
 // Map of session IDs to mock detector factories (supports parallel tests)
@@ -62,7 +62,10 @@ export function setupMockPoseDetector(
  * Clear the mock pose detector for a session
  */
 export function clearMockPoseDetector(sessionId?: string): void {
-  const id = sessionId || (typeof window !== 'undefined' ? window.__mockSessionId : undefined) || 'default';
+  const id =
+    sessionId ||
+    (typeof window !== 'undefined' ? window.__mockSessionId : undefined) ||
+    'default';
   mockDetectorFactories.delete(id);
   // Clear session ID from window if it matches
   if (typeof window !== 'undefined' && window.__mockSessionId === id) {
@@ -96,14 +99,18 @@ export function setCurrentSession(sessionId: string): void {
  * Uses the session ID from window (per-tab), or falls back to 'default'
  */
 export function getMockDetectorFactory(): PoseDetectorFactory | undefined {
-  const id = (typeof window !== 'undefined' ? window.__mockSessionId : undefined) || 'default';
+  const id =
+    (typeof window !== 'undefined' ? window.__mockSessionId : undefined) ||
+    'default';
   return mockDetectorFactories.get(id);
 }
 
 /**
  * Get a mock detector factory by session ID
  */
-export function getMockDetectorFactoryBySession(sessionId: string): PoseDetectorFactory | undefined {
+export function getMockDetectorFactoryBySession(
+  sessionId: string
+): PoseDetectorFactory | undefined {
   return mockDetectorFactories.get(sessionId);
 }
 
@@ -122,7 +129,9 @@ export function setPoseTrackStorageMode(mode: PoseTrackStorageMode): void {
  */
 export async function seedPoseTrack(poseTrack: PoseTrackFile): Promise<void> {
   await savePoseTrackToStorage(poseTrack);
-  console.log(`[Test] Seeded pose track: ${poseTrack.metadata.sourceVideoHash}`);
+  console.log(
+    `[Test] Seeded pose track: ${poseTrack.metadata.sourceVideoHash}`
+  );
 }
 
 // Expose to window for E2E tests (only in development)

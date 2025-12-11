@@ -20,7 +20,6 @@ import {
   clearPoseTrackDB,
   clickSwingSampleButton,
   getPoseTrackFromDB,
-  openMediaSelectorDialog,
   seedPoseTrackFixture,
   seekToTime,
   setPoseTrackStorageMode,
@@ -49,9 +48,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await expect(page.locator('.media-dialog')).toBeVisible();
 
       // Upload option should be visible (uses label element)
-      await expect(
-        page.locator('.media-dialog-upload-btn')
-      ).toBeVisible();
+      await expect(page.locator('.media-dialog-upload-btn')).toBeVisible();
 
       // Sample video button should be visible
       await expect(
@@ -85,7 +82,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await page.waitForFunction(
         () => {
           const video = document.querySelector('video');
-          return video && video.src && video.src.startsWith('blob:');
+          return video?.src?.startsWith('blob:');
         },
         { timeout: 10000 }
       );
@@ -218,7 +215,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await page.waitForFunction(
         () => {
           const video = document.querySelector('video');
-          return video && video.paused;
+          return video?.paused;
         },
         { timeout: 5000 }
       );
@@ -229,7 +226,6 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       });
       expect(isPaused).toBe(true);
     });
-
   });
 
   test.describe('Step 4-5: Rep Counting', () => {
@@ -241,7 +237,9 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       // Wait for pipeline to fully initialize (controls become enabled)
       await page.waitForFunction(
         () => {
-          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          const btn = document.querySelector(
+            '#play-pause-btn'
+          ) as HTMLButtonElement;
           return btn && !btn.disabled;
         },
         { timeout: 20000 }
@@ -251,7 +249,9 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await expect(page.locator('#rep-counter')).toBeVisible({ timeout: 5000 });
       // Seeded fixture contains ~4 swings which produces 4 detected reps
       // Format is "current/total" e.g. "1/4"
-      await expect(page.locator('#rep-counter')).toHaveText(/\d+\/4/, { timeout: 5000 });
+      await expect(page.locator('#rep-counter')).toHaveText(/\d+\/4/, {
+        timeout: 5000,
+      });
     });
 
     test('angle displays update during playback', async ({ page }) => {
@@ -457,9 +457,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
   });
 
   test.describe('Skeleton Redraw on Seek', () => {
-    test('skeleton redraws when video is seeked manually', async ({
-      page,
-    }) => {
+    test('skeleton redraws when video is seeked manually', async ({ page }) => {
       // These tests read from IndexedDB directly with getPoseTrackFromDB
       await setPoseTrackStorageMode(page, 'indexeddb');
       // Seed pose data first
@@ -590,7 +588,9 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
   test.describe('Video Switching', () => {
     // Helper to click the reload button (header button when video loaded, or direct button when not)
-    async function clickLoadSampleButton(page: import('@playwright/test').Page) {
+    async function clickLoadSampleButton(
+      page: import('@playwright/test').Page
+    ) {
       // Check if dialog is already visible (no video loaded yet)
       const dialog = page.locator('.media-dialog');
       if (await dialog.isVisible()) {
@@ -607,7 +607,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await page.waitForFunction(
         () => {
           const video = document.querySelector('video');
-          return video && video.src && video.src.startsWith('blob:');
+          return video?.src?.startsWith('blob:');
         },
         { timeout: 15000 }
       );
@@ -625,7 +625,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await page.waitForFunction(
         () => {
           const video = document.querySelector('video') as HTMLVideoElement;
-          return video && video.src && video.src.startsWith('blob:');
+          return video?.src?.startsWith('blob:');
         },
         { timeout: 10000 }
       );
@@ -639,7 +639,9 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       // Wait for controls to be enabled
       await page.waitForFunction(
         () => {
-          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          const btn = document.querySelector(
+            '#play-pause-btn'
+          ) as HTMLButtonElement;
           return btn && !btn.disabled;
         },
         { timeout: 20000 }
@@ -652,7 +654,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await page.waitForFunction(
         (oldSrc) => {
           const video = document.querySelector('video') as HTMLVideoElement;
-          return video && video.src && video.src.startsWith('blob:') && video.src !== oldSrc;
+          return video?.src?.startsWith('blob:') && video.src !== oldSrc;
         },
         firstSrc,
         { timeout: 10000 }
@@ -670,14 +672,18 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       // Controls should still be enabled
       await page.waitForFunction(
         () => {
-          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          const btn = document.querySelector(
+            '#play-pause-btn'
+          ) as HTMLButtonElement;
           return btn && !btn.disabled;
         },
         { timeout: 20000 }
       );
     });
 
-    test('switching video while playing pauses and loads new video', async ({ page }) => {
+    test('switching video while playing pauses and loads new video', async ({
+      page,
+    }) => {
       // Seed pose data first
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
@@ -687,7 +693,9 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
 
       await page.waitForFunction(
         () => {
-          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          const btn = document.querySelector(
+            '#play-pause-btn'
+          ) as HTMLButtonElement;
           return btn && !btn.disabled;
         },
         { timeout: 20000 }
@@ -716,7 +724,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await page.waitForFunction(
         (oldSrc) => {
           const video = document.querySelector('video') as HTMLVideoElement;
-          return video && video.src && video.src.startsWith('blob:') && video.src !== oldSrc;
+          return video?.src?.startsWith('blob:') && video.src !== oldSrc;
         },
         playingSrc,
         { timeout: 10000 }
@@ -749,7 +757,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await page.waitForFunction(
         () => {
           const video = document.querySelector('video') as HTMLVideoElement;
-          return video && video.src && video.src.startsWith('blob:') && video.readyState >= 1;
+          return video?.src?.startsWith('blob:') && video.readyState >= 1;
         },
         { timeout: 15000 }
       );
@@ -765,7 +773,7 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       await page.waitForFunction(
         () => {
           const video = document.querySelector('video') as HTMLVideoElement;
-          return video && video.src && video.src.startsWith('blob:') && video.readyState >= 1;
+          return video?.src?.startsWith('blob:') && video.readyState >= 1;
         },
         { timeout: 15000 }
       );
@@ -789,7 +797,9 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       // Wait for controls to be enabled
       await page.waitForFunction(
         () => {
-          const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+          const btn = document.querySelector(
+            '#play-pause-btn'
+          ) as HTMLButtonElement;
           return btn && !btn.disabled;
         },
         { timeout: 20000 }

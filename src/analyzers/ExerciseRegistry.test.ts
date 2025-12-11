@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
-  EXERCISE_REGISTRY,
-  getExerciseDefinition,
   createAnalyzerForExercise,
-  getExerciseDisplayName,
-  getExerciseIcon,
+  EXERCISE_REGISTRY,
   getAvailableExercises,
   getDefaultSampleVideo,
+  getExerciseDefinition,
+  getExerciseDisplayName,
+  getExerciseIcon,
   getSampleVideos,
 } from './ExerciseRegistry';
 import { KettlebellSwingFormAnalyzer } from './KettlebellSwingFormAnalyzer';
@@ -16,12 +16,16 @@ describe('ExerciseRegistry', () => {
   describe('EXERCISE_REGISTRY', () => {
     it('contains kettlebell-swing definition', () => {
       expect(EXERCISE_REGISTRY['kettlebell-swing']).toBeDefined();
-      expect(EXERCISE_REGISTRY['kettlebell-swing'].displayName).toBe('Kettlebell Swing');
+      expect(EXERCISE_REGISTRY['kettlebell-swing'].displayName).toBe(
+        'Kettlebell Swing'
+      );
     });
 
     it('contains pistol-squat definition', () => {
       expect(EXERCISE_REGISTRY['pistol-squat']).toBeDefined();
-      expect(EXERCISE_REGISTRY['pistol-squat'].displayName).toBe('Pistol Squat');
+      expect(EXERCISE_REGISTRY['pistol-squat'].displayName).toBe(
+        'Pistol Squat'
+      );
     });
 
     it('each exercise has required fields', () => {
@@ -39,13 +43,13 @@ describe('ExerciseRegistry', () => {
     it('returns definition for kettlebell-swing', () => {
       const def = getExerciseDefinition('kettlebell-swing');
       expect(def).toBeDefined();
-      expect(def!.displayName).toBe('Kettlebell Swing');
+      expect(def?.displayName).toBe('Kettlebell Swing');
     });
 
     it('returns definition for pistol-squat', () => {
       const def = getExerciseDefinition('pistol-squat');
       expect(def).toBeDefined();
-      expect(def!.displayName).toBe('Pistol Squat');
+      expect(def?.displayName).toBe('Pistol Squat');
     });
 
     it('returns undefined for unknown exercise', () => {
@@ -73,7 +77,9 @@ describe('ExerciseRegistry', () => {
 
   describe('getExerciseDisplayName', () => {
     it('returns "Kettlebell Swing" for kettlebell-swing', () => {
-      expect(getExerciseDisplayName('kettlebell-swing')).toBe('Kettlebell Swing');
+      expect(getExerciseDisplayName('kettlebell-swing')).toBe(
+        'Kettlebell Swing'
+      );
     });
 
     it('returns "Pistol Squat" for pistol-squat', () => {

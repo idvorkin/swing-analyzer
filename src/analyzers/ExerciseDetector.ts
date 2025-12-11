@@ -31,7 +31,7 @@ export interface ExerciseDetectorConfig {
 }
 
 const DEFAULT_CONFIG: ExerciseDetectorConfig = {
-  minFrames: 60,  // ~2 seconds at 30fps - need to see actual movement, not just standing
+  minFrames: 60, // ~2 seconds at 30fps - need to see actual movement, not just standing
   maxFrames: 120, // ~4 seconds - see at least one full rep before deciding
   asymmetryThreshold: 35,
   confidenceThreshold: 70,
@@ -101,7 +101,10 @@ export class ExerciseDetector {
     const result = this.calculateDetection();
 
     // Lock in if confident enough or max frames reached
-    if (result.confidence >= this.config.confidenceThreshold || this.frameCount >= this.config.maxFrames) {
+    if (
+      result.confidence >= this.config.confidenceThreshold ||
+      this.frameCount >= this.config.maxFrames
+    ) {
       this.locked = true;
       this.lockedResult = result;
     }
@@ -115,13 +118,15 @@ export class ExerciseDetector {
   private calculateDetection(): DetectionResult {
     // Calculate average asymmetry over recent frames
     const recentHistory = this.kneeAsymmetryHistory.slice(-20);
-    const avgAsymmetry = recentHistory.reduce((a, b) => a + b, 0) / recentHistory.length;
+    const avgAsymmetry =
+      recentHistory.reduce((a, b) => a + b, 0) / recentHistory.length;
 
     // Count frames with high asymmetry
     const highAsymmetryFrames = this.kneeAsymmetryHistory.filter(
       (a) => a > this.config.asymmetryThreshold
     ).length;
-    const highAsymmetryRatio = highAsymmetryFrames / this.kneeAsymmetryHistory.length;
+    const highAsymmetryRatio =
+      highAsymmetryFrames / this.kneeAsymmetryHistory.length;
 
     // Decision logic
     // Key insight: Max asymmetry is the strongest signal
@@ -132,15 +137,24 @@ export class ExerciseDetector {
     // No kettlebell swing would ever show 80°+ knee angle difference
     if (this.maxKneeAsymmetry > 80) {
       // Strong pistol squat signal - give high confidence
-      const confidence = Math.min(100, Math.round(70 + (this.maxKneeAsymmetry - 80) / 2));
+      const confidence = Math.min(
+        100,
+        Math.round(70 + (this.maxKneeAsymmetry - 80) / 2)
+      );
       return {
         exercise: 'pistol-squat',
         confidence,
         reason: `Clear pistol squat (max asymmetry: ${this.maxKneeAsymmetry.toFixed(0)}°)`,
       };
-    } else if (this.maxKneeAsymmetry > this.config.asymmetryThreshold && highAsymmetryRatio > 0.3) {
+    } else if (
+      this.maxKneeAsymmetry > this.config.asymmetryThreshold &&
+      highAsymmetryRatio > 0.3
+    ) {
       // Moderate asymmetry with consistent pattern → Pistol Squat
-      const confidence = Math.min(100, Math.round(50 + highAsymmetryRatio * 50));
+      const confidence = Math.min(
+        100,
+        Math.round(50 + highAsymmetryRatio * 50)
+      );
       return {
         exercise: 'pistol-squat',
         confidence,
@@ -148,7 +162,10 @@ export class ExerciseDetector {
       };
     } else if (this.maxKneeAsymmetry < this.config.asymmetryThreshold * 0.7) {
       // Low asymmetry → Kettlebell Swing
-      const confidence = Math.min(100, Math.round(70 + (1 - highAsymmetryRatio) * 30));
+      const confidence = Math.min(
+        100,
+        Math.round(70 + (1 - highAsymmetryRatio) * 30)
+      );
       return {
         exercise: 'kettlebell-swing',
         confidence,
@@ -158,7 +175,10 @@ export class ExerciseDetector {
       // Ambiguous - need more data
       const confidence = Math.round(30 + this.frameCount);
       return {
-        exercise: this.maxKneeAsymmetry > this.config.asymmetryThreshold ? 'pistol-squat' : 'kettlebell-swing',
+        exercise:
+          this.maxKneeAsymmetry > this.config.asymmetryThreshold
+            ? 'pistol-squat'
+            : 'kettlebell-swing',
         confidence: Math.min(60, confidence),
         reason: `Analyzing movement pattern (asymmetry: ${avgAsymmetry.toFixed(0)}°)`,
       };
@@ -223,7 +243,8 @@ export class ExerciseDetector {
   } {
     const avg =
       this.kneeAsymmetryHistory.length > 0
-        ? this.kneeAsymmetryHistory.reduce((a, b) => a + b, 0) / this.kneeAsymmetryHistory.length
+        ? this.kneeAsymmetryHistory.reduce((a, b) => a + b, 0) /
+          this.kneeAsymmetryHistory.length
         : 0;
     return {
       frameCount: this.frameCount,

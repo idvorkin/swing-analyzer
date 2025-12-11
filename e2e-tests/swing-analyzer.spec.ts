@@ -6,7 +6,10 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { SWING_SAMPLE_4REPS_VIDEO_HASH, SWING_SAMPLE_VIDEO_HASH } from './fixtures';
+import {
+  SWING_SAMPLE_4REPS_VIDEO_HASH,
+  SWING_SAMPLE_VIDEO_HASH,
+} from './fixtures';
 import {
   clearPoseTrackDB,
   clickSwingSampleButton,
@@ -55,20 +58,24 @@ test.describe('Swing Analyzer', () => {
     await page.waitForFunction(
       () => {
         const video = document.querySelector('video') as HTMLVideoElement;
-        return video && video.src && video.src.startsWith('blob:');
+        return video?.src?.startsWith('blob:');
       },
       { timeout: 10000 }
     );
 
     // Extraction % should be visible during extraction
     try {
-      await expect(page.locator('.hud-overlay-extraction')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('.hud-overlay-extraction')).toBeVisible({
+        timeout: 3000,
+      });
     } catch {
       // Extraction may have been instant (cached) - that's OK
     }
   });
 
-  test('HUD visible when poses exist for current frame (seeded fixture)', async ({ page }) => {
+  test('HUD visible when poses exist for current frame (seeded fixture)', async ({
+    page,
+  }) => {
     // Seed fixture - poses will exist immediately
     await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
@@ -79,7 +86,7 @@ test.describe('Swing Analyzer', () => {
     await page.waitForFunction(
       () => {
         const video = document.querySelector('video') as HTMLVideoElement;
-        return video && video.src && video.src.startsWith('blob:');
+        return video?.src?.startsWith('blob:');
       },
       { timeout: 10000 }
     );
@@ -100,7 +107,9 @@ test.describe('Swing Analyzer', () => {
     );
 
     // HUD should be visible because poses exist for this frame
-    await expect(page.locator('.hud-overlay-reps')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.hud-overlay-reps')).toBeVisible({
+      timeout: 5000,
+    });
     await expect(page.locator('.hud-overlay-angles')).toBeVisible();
     // Note: .hud-overlay-status (position label) is only shown during checkpoint navigation
   });
@@ -113,7 +122,9 @@ test.describe('Swing Analyzer', () => {
     await clickSwingSampleButton(page);
 
     // Wait for HUD to appear (indicates extraction complete and poses available)
-    await expect(page.locator('.hud-overlay-reps')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.hud-overlay-reps')).toBeVisible({
+      timeout: 15000,
+    });
 
     // Extraction indicator should be hidden after completion
     await expect(page.locator('.hud-overlay-extraction')).not.toBeVisible();
@@ -130,7 +141,9 @@ test.describe('Swing Analyzer', () => {
     await clickSwingSampleButton(page);
 
     // Wait for HUD to appear
-    await expect(page.locator('.hud-overlay-angles')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.hud-overlay-angles')).toBeVisible({
+      timeout: 15000,
+    });
 
     // Record the initial angle value
     const getSpineAngle = () =>
@@ -164,7 +177,7 @@ test.describe('Swing Analyzer', () => {
     await page.waitForFunction(
       () => {
         const video = document.querySelector('video') as HTMLVideoElement;
-        return video && video.src && video.src.startsWith('blob:');
+        return video?.src?.startsWith('blob:');
       },
       { timeout: 10000 }
     );
@@ -184,9 +197,14 @@ test.describe('Swing Analyzer', () => {
     await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Verify data was stored
-    const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
+    const storedTrack = await getPoseTrackFromDB(
+      page,
+      SWING_SAMPLE_4REPS_VIDEO_HASH
+    );
     expect(storedTrack).not.toBeNull();
-    expect(storedTrack?.metadata.sourceVideoName).toBe('swing-sample-4reps.webm');
+    expect(storedTrack?.metadata.sourceVideoName).toBe(
+      'swing-sample-4reps.webm'
+    );
     expect(storedTrack?.frames.length).toBeGreaterThan(0);
   });
 
@@ -195,7 +213,10 @@ test.describe('Swing Analyzer', () => {
     await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Get stored track and verify keypoints
-    const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
+    const storedTrack = await getPoseTrackFromDB(
+      page,
+      SWING_SAMPLE_4REPS_VIDEO_HASH
+    );
     expect(storedTrack).not.toBeNull();
 
     // Find first frame WITH keypoints (frame 0 may be empty if no pose detected)
@@ -211,7 +232,10 @@ test.describe('Swing Analyzer', () => {
     await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
     // Get stored track
-    const storedTrack = await getPoseTrackFromDB(page, SWING_SAMPLE_4REPS_VIDEO_HASH);
+    const storedTrack = await getPoseTrackFromDB(
+      page,
+      SWING_SAMPLE_4REPS_VIDEO_HASH
+    );
     expect(storedTrack).not.toBeNull();
 
     // Find a frame with angles
@@ -279,7 +303,9 @@ test.describe('Swing Analyzer', () => {
     await expect(playPauseBtn).toBeVisible();
   });
 
-  test('canvas dimensions should match video dimensions after loading', async ({ page }) => {
+  test('canvas dimensions should match video dimensions after loading', async ({
+    page,
+  }) => {
     // This test catches the bug where canvas internal dimensions weren't synced
     // to video dimensions, causing skeleton to render outside visible area
 
@@ -304,7 +330,9 @@ test.describe('Swing Analyzer', () => {
 
     // Get canvas dimensions
     const canvasDimensions = await page.evaluate(() => {
-      const canvas = document.querySelector('#output-canvas') as HTMLCanvasElement;
+      const canvas = document.querySelector(
+        '#output-canvas'
+      ) as HTMLCanvasElement;
       return { width: canvas.width, height: canvas.height };
     });
 
@@ -318,7 +346,9 @@ test.describe('Swing Analyzer', () => {
     expect(canvasDimensions.height).toBeGreaterThan(150);
   });
 
-  test('canvas CSS position should align with video content area', async ({ page }) => {
+  test('canvas CSS position should align with video content area', async ({
+    page,
+  }) => {
     // This test catches skeleton offset bugs where canvas CSS doesn't match
     // video's rendered area (accounting for object-fit: contain letterboxing)
 
@@ -341,7 +371,9 @@ test.describe('Swing Analyzer', () => {
     // Get video and canvas bounding rects
     const alignment = await page.evaluate(() => {
       const video = document.querySelector('video') as HTMLVideoElement;
-      const canvas = document.querySelector('#output-canvas') as HTMLCanvasElement;
+      const canvas = document.querySelector(
+        '#output-canvas'
+      ) as HTMLCanvasElement;
 
       const videoRect = video.getBoundingClientRect();
       const canvasRect = canvas.getBoundingClientRect();
@@ -389,6 +421,9 @@ test.describe('Swing Analyzer', () => {
     expect(alignment.canvas.left).toBeCloseTo(alignment.videoContent.left, 0);
     expect(alignment.canvas.top).toBeCloseTo(alignment.videoContent.top, 0);
     expect(alignment.canvas.width).toBeCloseTo(alignment.videoContent.width, 0);
-    expect(alignment.canvas.height).toBeCloseTo(alignment.videoContent.height, 0);
+    expect(alignment.canvas.height).toBeCloseTo(
+      alignment.videoContent.height,
+      0
+    );
   });
 });

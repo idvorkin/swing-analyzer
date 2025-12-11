@@ -25,13 +25,15 @@ const AnalysisSection: React.FC = () => {
           <div className="hud-gauge">
             <div className="hud-gauge-label">SPINE</div>
             <div className="hud-gauge-value" id="spine-angle">
-              {spineAngle}<span className="hud-gauge-unit">°</span>
+              {spineAngle}
+              <span className="hud-gauge-unit">°</span>
             </div>
           </div>
           <div className="hud-gauge">
             <div className="hud-gauge-label">ARM</div>
             <div className="hud-gauge-value" id="arm-angle">
-              {armToSpineAngle}<span className="hud-gauge-unit">°</span>
+              {armToSpineAngle}
+              <span className="hud-gauge-unit">°</span>
             </div>
           </div>
         </div>

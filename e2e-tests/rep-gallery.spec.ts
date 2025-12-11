@@ -10,11 +10,10 @@
 
 import { expect, test } from '@playwright/test';
 import {
-  clearPoseTrackDB,
   clickSwingSampleButton,
   generateTestId,
-  setVideoTestId,
   setupMockPoseDetector,
+  setVideoTestId,
   useShortTestVideo,
 } from './helpers';
 
@@ -37,7 +36,9 @@ test.describe('Rep Gallery Modal', () => {
    * Helper to load video and wait for gallery button to appear
    * Uses mock detector for extraction to populate repThumbnails
    */
-  async function loadVideoAndWaitForGallery(page: import('@playwright/test').Page) {
+  async function loadVideoAndWaitForGallery(
+    page: import('@playwright/test').Page
+  ) {
     // Configure mock pose detector - 0ms delay for fast test execution
     await setupMockPoseDetector(page, 'swing-sample-4reps', 0);
 
@@ -47,7 +48,9 @@ test.describe('Rep Gallery Modal', () => {
     // Wait for extraction to complete - controls enabled and rep gallery has thumbnails
     await page.waitForFunction(
       () => {
-        const btn = document.querySelector('#play-pause-btn') as HTMLButtonElement;
+        const btn = document.querySelector(
+          '#play-pause-btn'
+        ) as HTMLButtonElement;
         const repGallery = document.querySelector('.rep-gallery-container');
         const thumbnails = repGallery?.querySelectorAll('canvas').length || 0;
         return btn && !btn.disabled && thumbnails > 0;
@@ -60,7 +63,9 @@ test.describe('Rep Gallery Modal', () => {
   }
 
   test.describe('Grid View (Default)', () => {
-    test('RG-001: gallery button appears when reps exist and opens modal', async ({ page }) => {
+    test('RG-001: gallery button appears when reps exist and opens modal', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
 
       // Gallery button should be visible
@@ -74,7 +79,9 @@ test.describe('Rep Gallery Modal', () => {
       await expect(page.locator('#gallery-title')).toHaveText('Rep Gallery');
     });
 
-    test('RG-002: phase headers are dynamically detected from data', async ({ page }) => {
+    test('RG-002: phase headers are dynamically detected from data', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
       await page.click('.rep-gallery-gallery-btn');
 
@@ -99,7 +106,9 @@ test.describe('Rep Gallery Modal', () => {
       expect(rowCount).toBeGreaterThanOrEqual(1);
 
       // First row should have rep number "1"
-      await expect(repRows.nth(0).locator('.gallery-rep-number')).toHaveText('1');
+      await expect(repRows.nth(0).locator('.gallery-rep-number')).toHaveText(
+        '1'
+      );
 
       // Each row should have phase cells (4 phases + 1 rep cell = 5 cells per row)
       const firstRowCells = repRows.nth(0).locator('.gallery-grid-cell');
@@ -115,7 +124,9 @@ test.describe('Rep Gallery Modal', () => {
       await expect(firstRow).toHaveClass(/gallery-grid-row--current/);
     });
 
-    test('RG-005: clicking phase header focuses that column', async ({ page }) => {
+    test('RG-005: clicking phase header focuses that column', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
       await page.click('.rep-gallery-gallery-btn');
 
@@ -123,35 +134,49 @@ test.describe('Rep Gallery Modal', () => {
       await page.click('.gallery-phase-btn:has-text("Top")');
 
       // Phase button should be active
-      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).toHaveClass(/gallery-phase-btn--active/);
+      await expect(
+        page.locator('.gallery-phase-btn:has-text("Top")')
+      ).toHaveClass(/gallery-phase-btn--active/);
 
       // Grid should be in focused mode
-      await expect(page.locator('.gallery-grid')).toHaveClass(/gallery-grid--focused/);
+      await expect(page.locator('.gallery-grid')).toHaveClass(
+        /gallery-grid--focused/
+      );
 
       // Cells for focused phase should be larger
       const focusedCells = page.locator('.gallery-grid-cell--focused');
       expect(await focusedCells.count()).toBeGreaterThan(0);
     });
 
-    test('RG-006: clicking focused phase header unfocuses it', async ({ page }) => {
+    test('RG-006: clicking focused phase header unfocuses it', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
       await page.click('.rep-gallery-gallery-btn');
 
       // Focus "Top" phase
       await page.click('.gallery-phase-btn:has-text("Top")');
-      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).toHaveClass(/gallery-phase-btn--active/);
+      await expect(
+        page.locator('.gallery-phase-btn:has-text("Top")')
+      ).toHaveClass(/gallery-phase-btn--active/);
 
       // Click again to unfocus
       await page.click('.gallery-phase-btn:has-text("Top")');
 
       // Should no longer be active
-      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).not.toHaveClass(/gallery-phase-btn--active/);
+      await expect(
+        page.locator('.gallery-phase-btn:has-text("Top")')
+      ).not.toHaveClass(/gallery-phase-btn--active/);
 
       // Grid should not be in focused mode
-      await expect(page.locator('.gallery-grid')).not.toHaveClass(/gallery-grid--focused/);
+      await expect(page.locator('.gallery-grid')).not.toHaveClass(
+        /gallery-grid--focused/
+      );
     });
 
-    test.skip('RG-007: clicking thumbnail seeks video to that timestamp', async ({ page }) => {
+    test.skip('RG-007: clicking thumbnail seeks video to that timestamp', async ({
+      page,
+    }) => {
       // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
       // Seeded fixtures don't include frameImage because it's captured at runtime.
       // This test should be run with realistic test mode (mock detector with timing).
@@ -187,7 +212,9 @@ test.describe('Rep Gallery Modal', () => {
       expect(newTime).not.toBe(initialTime);
     });
 
-    test('RG-008: checkbox selects rep for comparison (max 4)', async ({ page }) => {
+    test('RG-008: checkbox selects rep for comparison (max 4)', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
       await page.click('.rep-gallery-gallery-btn');
 
@@ -195,7 +222,9 @@ test.describe('Rep Gallery Modal', () => {
       await page.click('.gallery-checkbox >> nth=0');
 
       // Row should be selected
-      await expect(page.locator('.gallery-grid-row').first()).toHaveClass(/gallery-grid-row--selected/);
+      await expect(page.locator('.gallery-grid-row').first()).toHaveClass(
+        /gallery-grid-row--selected/
+      );
 
       // Select second rep
       await page.click('.gallery-checkbox >> nth=1');
@@ -205,7 +234,9 @@ test.describe('Rep Gallery Modal', () => {
       await expect(selectedRows).toHaveCount(2);
     });
 
-    test('RG-009: compare button appears when 2+ reps selected', async ({ page }) => {
+    test('RG-009: compare button appears when 2+ reps selected', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
       await page.click('.rep-gallery-gallery-btn');
 
@@ -219,7 +250,9 @@ test.describe('Rep Gallery Modal', () => {
       // Select second rep - compare button should appear
       await page.click('.gallery-checkbox >> nth=1');
       await expect(page.locator('.gallery-compare-btn')).toBeVisible();
-      await expect(page.locator('.gallery-compare-btn')).toHaveText('Compare (2)');
+      await expect(page.locator('.gallery-compare-btn')).toHaveText(
+        'Compare (2)'
+      );
     });
 
     test('RG-010: empty state shown when no reps exist', async ({ page }) => {
@@ -236,7 +269,9 @@ test.describe('Rep Gallery Modal', () => {
   });
 
   test.describe('Compare View', () => {
-    test('RG-011: compare button switches to compare view', async ({ page }) => {
+    test('RG-011: compare button switches to compare view', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
       await page.click('.rep-gallery-gallery-btn');
 
@@ -276,7 +311,9 @@ test.describe('Rep Gallery Modal', () => {
       await expect(page.locator('.gallery-grid')).toBeVisible();
     });
 
-    test.skip('RG-013: thumbnails seek video in compare view', async ({ page }) => {
+    test.skip('RG-013: thumbnails seek video in compare view', async ({
+      page,
+    }) => {
       // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
       // Seeded fixtures don't include frameImage because it's captured at runtime.
       await loadVideoAndWaitForGallery(page);
@@ -307,7 +344,9 @@ test.describe('Rep Gallery Modal', () => {
       );
     });
 
-    test.skip('RG-014: compare view shows large thumbnails', async ({ page }) => {
+    test.skip('RG-014: compare view shows large thumbnails', async ({
+      page,
+    }) => {
       // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
       // Seeded fixtures don't include frameImage because it's captured at runtime.
       await loadVideoAndWaitForGallery(page);
@@ -367,7 +406,9 @@ test.describe('Rep Gallery Modal', () => {
       await expect(page.locator('.gallery-modal')).not.toBeVisible();
     });
 
-    test('RG-018: selection and view mode reset when modal closes', async ({ page }) => {
+    test('RG-018: selection and view mode reset when modal closes', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
       await page.click('.rep-gallery-gallery-btn');
 
@@ -434,7 +475,9 @@ test.describe('Rep Gallery Modal', () => {
   });
 
   test.describe('Double-Tap Phase Focus', () => {
-    test.skip('RG-019: double-tap thumbnail focuses that phase column', async ({ page }) => {
+    test.skip('RG-019: double-tap thumbnail focuses that phase column', async ({
+      page,
+    }) => {
       // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
       // Seeded fixtures don't include frameImage because it's captured at runtime.
       // Double-tap logic: two clicks within 300ms triggers phase focus instead of seek.
@@ -442,44 +485,68 @@ test.describe('Rep Gallery Modal', () => {
       await page.click('.rep-gallery-gallery-btn');
 
       // Grid should NOT be in focused mode initially
-      await expect(page.locator('.gallery-grid')).not.toHaveClass(/gallery-grid--focused/);
+      await expect(page.locator('.gallery-grid')).not.toHaveClass(
+        /gallery-grid--focused/
+      );
 
       // Double-click a thumbnail in the "Top" column
-      const topThumbnail = page.locator('.gallery-grid-row').first().locator('.gallery-thumbnail').first();
+      const topThumbnail = page
+        .locator('.gallery-grid-row')
+        .first()
+        .locator('.gallery-thumbnail')
+        .first();
       await topThumbnail.dblclick();
 
       // Grid should now be in focused mode
-      await expect(page.locator('.gallery-grid')).toHaveClass(/gallery-grid--focused/);
+      await expect(page.locator('.gallery-grid')).toHaveClass(
+        /gallery-grid--focused/
+      );
 
       // "Top" phase button should be active
-      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).toHaveClass(/gallery-phase-btn--active/);
+      await expect(
+        page.locator('.gallery-phase-btn:has-text("Top")')
+      ).toHaveClass(/gallery-phase-btn--active/);
 
       // Focused cells should be visible
       const focusedCells = page.locator('.gallery-grid-cell--focused');
       expect(await focusedCells.count()).toBeGreaterThan(0);
     });
 
-    test.skip('RG-020: double-tap on already-focused phase unfocuses it', async ({ page }) => {
+    test.skip('RG-020: double-tap on already-focused phase unfocuses it', async ({
+      page,
+    }) => {
       // NOTE: This test requires actual extraction to generate thumbnails with frameImage data.
       await loadVideoAndWaitForGallery(page);
       await page.click('.rep-gallery-gallery-btn');
 
       // Focus "Top" phase via header click first
       await page.click('.gallery-phase-btn:has-text("Top")');
-      await expect(page.locator('.gallery-grid')).toHaveClass(/gallery-grid--focused/);
+      await expect(page.locator('.gallery-grid')).toHaveClass(
+        /gallery-grid--focused/
+      );
 
       // Double-click a thumbnail in the "Top" column (already focused)
-      const topThumbnail = page.locator('.gallery-grid-row').first().locator('.gallery-thumbnail').first();
+      const topThumbnail = page
+        .locator('.gallery-grid-row')
+        .first()
+        .locator('.gallery-thumbnail')
+        .first();
       await topThumbnail.dblclick();
 
       // Grid should unfocus (toggle behavior)
-      await expect(page.locator('.gallery-grid')).not.toHaveClass(/gallery-grid--focused/);
-      await expect(page.locator('.gallery-phase-btn:has-text("Top")')).not.toHaveClass(/gallery-phase-btn--active/);
+      await expect(page.locator('.gallery-grid')).not.toHaveClass(
+        /gallery-grid--focused/
+      );
+      await expect(
+        page.locator('.gallery-phase-btn:has-text("Top")')
+      ).not.toHaveClass(/gallery-phase-btn--active/);
     });
   });
 
   test.describe('Playback Sync', () => {
-    test('RG-021: current rep highlight updates during video playback', async ({ page }) => {
+    test('RG-021: current rep highlight updates during video playback', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
 
       // Wait for extraction to detect at least 2 reps
@@ -518,14 +585,20 @@ test.describe('Rep Gallery Modal', () => {
       expect(newCurrentRow).toBe('2');
     });
 
-    test('RG-022: inline gallery auto-scrolls to current rep during playback', async ({ page }) => {
+    test('RG-022: inline gallery auto-scrolls to current rep during playback', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
 
       // Get the inline rep gallery (not the modal)
-      const inlineGallery = page.locator('.rep-gallery-container .rep-gallery-rows');
+      const inlineGallery = page.locator(
+        '.rep-gallery-container .rep-gallery-rows'
+      );
 
       // Check initial scroll state (should see row 1)
-      const initialScrollTop = await inlineGallery.evaluate((el) => el.scrollTop);
+      const _initialScrollTop = await inlineGallery.evaluate(
+        (el) => el.scrollTop
+      );
 
       // Seek to rep 2 time
       await page.evaluate(() => {
@@ -546,7 +619,9 @@ test.describe('Rep Gallery Modal', () => {
         const container = document.querySelector('.rep-gallery-rows');
         if (!container) return false;
         const containerRect = container.getBoundingClientRect();
-        return rect.top >= containerRect.top && rect.bottom <= containerRect.bottom;
+        return (
+          rect.top >= containerRect.top && rect.bottom <= containerRect.bottom
+        );
       });
 
       expect(currentRowVisible).toBe(true);
@@ -554,7 +629,9 @@ test.describe('Rep Gallery Modal', () => {
   });
 
   test.describe('Inline Widget Double-Tap Zoom', () => {
-    test('RG-023: double-tap on inline widget thumbnail focuses phase column', async ({ page }) => {
+    test('RG-023: double-tap on inline widget thumbnail focuses phase column', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
 
       // The inline gallery is in .rep-gallery-container (NOT the modal)
@@ -562,36 +639,52 @@ test.describe('Rep Gallery Modal', () => {
       await expect(inlineGallery).toBeVisible();
 
       // Verify gallery is NOT in focused mode initially
-      await expect(inlineGallery.locator('.rep-gallery-header--focused')).not.toBeVisible();
+      await expect(
+        inlineGallery.locator('.rep-gallery-header--focused')
+      ).not.toBeVisible();
 
       // Find a thumbnail canvas in the inline gallery
-      const thumbnail = inlineGallery.locator('canvas.rep-gallery-canvas').first();
+      const thumbnail = inlineGallery
+        .locator('canvas.rep-gallery-canvas')
+        .first();
       await expect(thumbnail).toBeVisible();
 
       // Double-click the thumbnail (simulates double-tap)
       await thumbnail.dblclick();
 
       // The inline gallery header should now be in focused mode
-      await expect(inlineGallery.locator('.rep-gallery-header--focused')).toBeVisible();
+      await expect(
+        inlineGallery.locator('.rep-gallery-header--focused')
+      ).toBeVisible();
 
       // At least one phase header should be focused
-      await expect(inlineGallery.locator('.rep-gallery-header-phase--focused')).toBeVisible();
+      await expect(
+        inlineGallery.locator('.rep-gallery-header-phase--focused')
+      ).toBeVisible();
 
       // At least one cell should be focused (larger)
-      await expect(inlineGallery.locator('.rep-gallery-cell--focused')).toBeVisible();
+      await expect(
+        inlineGallery.locator('.rep-gallery-cell--focused')
+      ).toBeVisible();
     });
 
-    test('RG-024: double-tap on focused phase unfocuses in inline widget', async ({ page }) => {
+    test('RG-024: double-tap on focused phase unfocuses in inline widget', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
 
       const inlineGallery = page.locator('.rep-gallery-container');
 
       // First, focus a phase by clicking the header button
       await inlineGallery.locator('.rep-gallery-header-phase').first().click();
-      await expect(inlineGallery.locator('.rep-gallery-header--focused')).toBeVisible();
+      await expect(
+        inlineGallery.locator('.rep-gallery-header--focused')
+      ).toBeVisible();
 
       // Find the focused phase's thumbnail
-      const focusedCell = inlineGallery.locator('.rep-gallery-cell--focused').first();
+      const focusedCell = inlineGallery
+        .locator('.rep-gallery-cell--focused')
+        .first();
       const thumbnail = focusedCell.locator('canvas.rep-gallery-canvas');
       await expect(thumbnail).toBeVisible();
 
@@ -599,11 +692,17 @@ test.describe('Rep Gallery Modal', () => {
       await thumbnail.dblclick();
 
       // Should no longer be in focused mode
-      await expect(inlineGallery.locator('.rep-gallery-header--focused')).not.toBeVisible();
-      await expect(inlineGallery.locator('.rep-gallery-cell--focused')).not.toBeVisible();
+      await expect(
+        inlineGallery.locator('.rep-gallery-header--focused')
+      ).not.toBeVisible();
+      await expect(
+        inlineGallery.locator('.rep-gallery-cell--focused')
+      ).not.toBeVisible();
     });
 
-    test('RG-025: single tap on inline widget thumbnail seeks video (not focus)', async ({ page }) => {
+    test('RG-025: single tap on inline widget thumbnail seeks video (not focus)', async ({
+      page,
+    }) => {
       await loadVideoAndWaitForGallery(page);
 
       const inlineGallery = page.locator('.rep-gallery-container');
@@ -615,7 +714,9 @@ test.describe('Rep Gallery Modal', () => {
       });
 
       // Single click on a thumbnail (use nth(4) to get one that's not at time 0)
-      const thumbnail = inlineGallery.locator('canvas.rep-gallery-canvas').nth(4);
+      const thumbnail = inlineGallery
+        .locator('canvas.rep-gallery-canvas')
+        .nth(4);
       if (await thumbnail.isVisible()) {
         await thumbnail.click();
 
@@ -632,7 +733,9 @@ test.describe('Rep Gallery Modal', () => {
         expect(newTime).not.toBe(initialTime);
 
         // Gallery should NOT be in focused mode (single tap = seek, not focus)
-        await expect(inlineGallery.locator('.rep-gallery-header--focused')).not.toBeVisible();
+        await expect(
+          inlineGallery.locator('.rep-gallery-header--focused')
+        ).not.toBeVisible();
       }
     });
   });

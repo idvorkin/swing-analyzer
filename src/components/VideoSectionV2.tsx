@@ -77,18 +77,22 @@ const VideoSectionV2: React.FC = () => {
   // Focused phase state for dynamic zoom
   const [focusedPhase, setFocusedPhase] = useState<string | null>(null);
 
-  const handleGallerySeek = useCallback((time: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      videoRef.current.pause();
-    }
-  }, [videoRef]);
+  const handleGallerySeek = useCallback(
+    (time: number) => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = time;
+        videoRef.current.pause();
+      }
+    },
+    [videoRef]
+  );
 
   // Listen for header camera button click via custom event
   useEffect(() => {
     const handleShowSourcePicker = () => setShowSourcePicker(true);
     window.addEventListener('show-source-picker', handleShowSourcePicker);
-    return () => window.removeEventListener('show-source-picker', handleShowSourcePicker);
+    return () =>
+      window.removeEventListener('show-source-picker', handleShowSourcePicker);
   }, []);
 
   // Hide source picker when video loads
@@ -117,53 +121,56 @@ const VideoSectionV2: React.FC = () => {
 
   // Double-tap/double-click handler for video container with zone detection
   // Works on both touch devices (double-tap) and desktop (double-click)
-  const handleVideoDoubleTap = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300; // ms
-    const currentX = e.clientX;
+  const handleVideoDoubleTap = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const now = Date.now();
+      const DOUBLE_TAP_DELAY = 300; // ms
+      const currentX = e.clientX;
 
-    if (now - lastTapRef.current.time < DOUBLE_TAP_DELAY) {
-      // Double tap detected - determine zone based on first tap position
-      const container = e.currentTarget;
-      const rect = container.getBoundingClientRect();
-      const relativeX = lastTapRef.current.x - rect.left;
-      const containerWidth = rect.width;
-      const tapPosition = relativeX / containerWidth;
+      if (now - lastTapRef.current.time < DOUBLE_TAP_DELAY) {
+        // Double tap detected - determine zone based on first tap position
+        const container = e.currentTarget;
+        const rect = container.getBoundingClientRect();
+        const relativeX = lastTapRef.current.x - rect.left;
+        const containerWidth = rect.width;
+        const tapPosition = relativeX / containerWidth;
 
-      // Zone thresholds: left 25%, middle 50%, right 25%
-      const LEFT_ZONE = 0.25;
-      const RIGHT_ZONE = 0.75;
+        // Zone thresholds: left 25%, middle 50%, right 25%
+        const LEFT_ZONE = 0.25;
+        const RIGHT_ZONE = 0.75;
 
-      let action: 'play' | 'pause' | 'prev' | 'next';
-      let position: 'left' | 'center' | 'right';
+        let action: 'play' | 'pause' | 'prev' | 'next';
+        let position: 'left' | 'center' | 'right';
 
-      if (tapPosition < LEFT_ZONE) {
-        // Left zone - previous checkpoint
-        navigateToPreviousCheckpoint();
-        action = 'prev';
-        position = 'left';
-      } else if (tapPosition > RIGHT_ZONE) {
-        // Right zone - next checkpoint
-        navigateToNextCheckpoint();
-        action = 'next';
-        position = 'right';
+        if (tapPosition < LEFT_ZONE) {
+          // Left zone - previous checkpoint
+          navigateToPreviousCheckpoint();
+          action = 'prev';
+          position = 'left';
+        } else if (tapPosition > RIGHT_ZONE) {
+          // Right zone - next checkpoint
+          navigateToNextCheckpoint();
+          action = 'next';
+          position = 'right';
+        } else {
+          // Middle zone - no action (play/pause removed)
+          lastTapRef.current = { time: 0, x: 0 };
+          return;
+        }
+
+        // Show visual feedback
+        if (overlayTimeoutRef.current) {
+          clearTimeout(overlayTimeoutRef.current);
+        }
+        setTapOverlay({ type: action, position });
+        overlayTimeoutRef.current = setTimeout(() => setTapOverlay(null), 500);
+        lastTapRef.current = { time: 0, x: 0 }; // Reset to prevent triple-tap
       } else {
-        // Middle zone - no action (play/pause removed)
-        lastTapRef.current = { time: 0, x: 0 };
-        return;
+        lastTapRef.current = { time: now, x: currentX };
       }
-
-      // Show visual feedback
-      if (overlayTimeoutRef.current) {
-        clearTimeout(overlayTimeoutRef.current);
-      }
-      setTapOverlay({ type: action, position });
-      overlayTimeoutRef.current = setTimeout(() => setTapOverlay(null), 500);
-      lastTapRef.current = { time: 0, x: 0 }; // Reset to prevent triple-tap
-    } else {
-      lastTapRef.current = { time: now, x: currentX };
-    }
-  }, [navigateToPreviousCheckpoint, navigateToNextCheckpoint]);
+    },
+    [navigateToPreviousCheckpoint, navigateToNextCheckpoint]
+  );
 
   // Handle phase header click for dynamic zoom (toggle focus on a phase column)
   const handlePhaseClick = useCallback((phase: string) => {
@@ -171,12 +178,15 @@ const VideoSectionV2: React.FC = () => {
   }, []);
 
   // Handle thumbnail click - seek video and update current rep
-  const handleThumbnailClick = useCallback((videoTime: number, repNum: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = videoTime;
-      setCurrentRepIndex(repNum - 1); // Convert to 0-indexed
-    }
-  }, [videoRef, setCurrentRepIndex]);
+  const handleThumbnailClick = useCallback(
+    (videoTime: number, repNum: number) => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = videoTime;
+        setCurrentRepIndex(repNum - 1); // Convert to 0-indexed
+      }
+    },
+    [videoRef, setCurrentRepIndex]
+  );
 
   return (
     <section className="video-section">
@@ -193,7 +203,13 @@ const VideoSectionV2: React.FC = () => {
               aria-label="Previous rep"
               title="Previous rep"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 <path d="M18.41 7.41L17 6l-6 6 6 6 1.41-1.41L13.83 12z" />
                 <path d="M12.41 7.41L11 6l-6 6 6 6 1.41-1.41L7.83 12z" />
               </svg>
@@ -205,7 +221,13 @@ const VideoSectionV2: React.FC = () => {
               aria-label="Previous checkpoint"
               title="Previous checkpoint"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
               </svg>
             </button>
@@ -213,10 +235,14 @@ const VideoSectionV2: React.FC = () => {
 
           {/* Center: Rep and checkpoint display */}
           <span className="rep-nav-display">
-            <span className="rep-nav-label">Rep {appState.currentRepIndex + 1}/{repCount}</span>
+            <span className="rep-nav-label">
+              Rep {appState.currentRepIndex + 1}/{repCount}
+            </span>
             <span className="rep-nav-dot">•</span>
             <span className="rep-nav-position">
-              {currentPosition ? (PHASE_LABELS[currentPosition] || currentPosition) : '—'}
+              {currentPosition
+                ? PHASE_LABELS[currentPosition] || currentPosition
+                : '—'}
             </span>
           </span>
 
@@ -229,7 +255,13 @@ const VideoSectionV2: React.FC = () => {
               aria-label="Next checkpoint"
               title="Next checkpoint"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
               </svg>
             </button>
@@ -241,7 +273,13 @@ const VideoSectionV2: React.FC = () => {
               aria-label="Next rep"
               title="Next rep"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 <path d="M5.59 7.41L7 6l6 6-6 6-1.41-1.41L10.17 12z" />
                 <path d="M11.59 7.41L13 6l6 6-6 6-1.41-1.41L16.17 12z" />
               </svg>
@@ -250,19 +288,20 @@ const VideoSectionV2: React.FC = () => {
         </div>
       )}
 
-      {/* biome-ignore lint/a11y/useKeyboardEquivalent: Double-tap is supplementary to existing button controls */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: Double-tap is supplementary to existing button controls */}
       <div
         className={`video-container ${getVideoContainerClass()}`}
         onClick={handleVideoDoubleTap}
       >
-
         {/* biome-ignore lint/a11y/useMediaCaption: This is a video analysis app, not media playback - no audio captions needed */}
         <video id="video" ref={videoRef} playsInline />
         <canvas id="output-canvas" ref={canvasRef} />
 
         {/* Double-tap zone feedback overlay */}
         {tapOverlay && (
-          <div className={`video-tap-overlay video-tap-overlay--${tapOverlay.position}`}>
+          <div
+            className={`video-tap-overlay video-tap-overlay--${tapOverlay.position}`}
+          >
             <div className="video-tap-icon">
               {tapOverlay.type === 'pause' && (
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
@@ -290,7 +329,10 @@ const VideoSectionV2: React.FC = () => {
 
         {/* Cache processing overlay - blocks interaction while loading from cache */}
         {isCacheProcessing && (
-          <div className="cache-loading-overlay" data-testid="cache-loading-overlay">
+          <div
+            className="cache-loading-overlay"
+            data-testid="cache-loading-overlay"
+          >
             <div className="cache-loading-spinner" />
             <span className="cache-loading-text">Loading cached data...</span>
           </div>
@@ -309,7 +351,9 @@ const VideoSectionV2: React.FC = () => {
                   <span className="hud-overlay-extraction-value">
                     {Math.round(extractionProgress.percentage)}%
                   </span>
-                  <span className="hud-overlay-extraction-label">EXTRACTING</span>
+                  <span className="hud-overlay-extraction-label">
+                    EXTRACTING
+                  </span>
                 </div>
               </div>
             )}
@@ -318,18 +362,24 @@ const VideoSectionV2: React.FC = () => {
               <div className="hud-overlay-top">
                 <div className="hud-overlay-reps">
                   <span id="rep-counter" className="hud-overlay-reps-value">
-                    {repCount > 0 ? `${appState.currentRepIndex + 1}/${repCount}` : '0'}
+                    {repCount > 0
+                      ? `${appState.currentRepIndex + 1}/${repCount}`
+                      : '0'}
                   </span>
                   <span className="hud-overlay-reps-label">REP</span>
                 </div>
                 <div className="hud-overlay-angles">
                   <div className="hud-overlay-angle">
                     <span className="hud-overlay-angle-label">SPINE</span>
-                    <span id="spine-angle" className="hud-overlay-angle-value">{spineAngle}°</span>
+                    <span id="spine-angle" className="hud-overlay-angle-value">
+                      {spineAngle}°
+                    </span>
                   </div>
                   <div className="hud-overlay-angle">
                     <span className="hud-overlay-angle-label">ARM</span>
-                    <span id="arm-angle" className="hud-overlay-angle-value">{armToSpineAngle}°</span>
+                    <span id="arm-angle" className="hud-overlay-angle-value">
+                      {armToSpineAngle}°
+                    </span>
                   </div>
                   {currentPosition && (
                     <div className="hud-overlay-angle hud-overlay-position">
@@ -351,10 +401,20 @@ const VideoSectionV2: React.FC = () => {
             id="play-pause-btn"
             className="toggle-button"
             disabled={!appState.isModelLoaded || !currentVideoFile}
-            onClick={() => { clearPositionLabel(); togglePlayPause(); }}
+            onClick={() => {
+              clearPositionLabel();
+              togglePlayPause();
+            }}
             type="button"
           >
-            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <svg
+              className="icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
               {isPlaying ? (
                 <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
               ) : (
@@ -368,11 +428,21 @@ const VideoSectionV2: React.FC = () => {
           <button
             id="prev-frame-btn"
             disabled={!appState.isModelLoaded || !currentVideoFile}
-            onClick={() => { clearPositionLabel(); previousFrame(); }}
+            onClick={() => {
+              clearPositionLabel();
+              previousFrame();
+            }}
             title="Previous Frame (Shortcut: ,)"
             type="button"
           >
-            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <svg
+              className="icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
               <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
             </svg>
           </button>
@@ -381,11 +451,21 @@ const VideoSectionV2: React.FC = () => {
           <button
             id="next-frame-btn"
             disabled={!appState.isModelLoaded || !currentVideoFile}
-            onClick={() => { clearPositionLabel(); nextFrame(); }}
+            onClick={() => {
+              clearPositionLabel();
+              nextFrame();
+            }}
             title="Next Frame (Shortcut: .)"
             type="button"
           >
-            <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <svg
+              className="icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
               <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
             </svg>
           </button>
@@ -399,14 +479,23 @@ const VideoSectionV2: React.FC = () => {
               type="button"
               title={isCropEnabled ? 'Show full frame' : 'Zoom to person'}
             >
-              <svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg
+                className="icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 {isCropEnabled ? (
                   <path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z" />
                 ) : (
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-2h2v-4h4v-2h-4V7h-2v4H7v2h4z" />
                 )}
               </svg>
-              <span className="button-text">{isCropEnabled ? 'Full' : 'Crop'}</span>
+              <span className="button-text">
+                {isCropEnabled ? 'Full' : 'Crop'}
+              </span>
             </button>
           )}
         </div>
@@ -434,7 +523,16 @@ const VideoSectionV2: React.FC = () => {
             aria-label="View all reps"
             title="View all reps"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <rect x="3" y="3" width="7" height="7" />
               <rect x="14" y="3" width="7" height="7" />
               <rect x="14" y="14" width="7" height="7" />

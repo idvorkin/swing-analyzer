@@ -51,11 +51,11 @@ Video matching uses SHA-256 hash of first/last 64KB chunks + file size.
 
 ## Supported Models
 
-| Model          | Status    | Notes                        |
-| -------------- | --------- | ---------------------------- |
-| blazepose-lite | ✓ Default | Fast, good accuracy          |
-| blazepose-full | ✓ Enabled | Balanced speed/accuracy      |
-| blazepose-heavy| ✓ Enabled | Highest accuracy, slowest    |
+| Model           | Status    | Notes                     |
+| --------------- | --------- | ------------------------- |
+| blazepose-lite  | ✓ Default | Fast, good accuracy       |
+| blazepose-full  | ✓ Enabled | Balanced speed/accuracy   |
+| blazepose-heavy | ✓ Enabled | Highest accuracy, slowest |
 
 ## Main Page Integration
 

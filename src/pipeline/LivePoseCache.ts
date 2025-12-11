@@ -10,7 +10,7 @@
  * - Playback uses cached frames, waiting if extraction hasn't caught up
  */
 
-import { Subject, firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
 import { filter, first, timeout } from 'rxjs/operators';
 import type {
   PoseTrackFile,

@@ -6,12 +6,12 @@
  * and TensorFlow. These tests cover the core control flow.
  */
 
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useVideoControls } from './useVideoControls';
-import type { AppState } from '../types';
 import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
+import type { AppState } from '../types';
 import type { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
+import { useVideoControls } from './useVideoControls';
 
 // Mock the session recorder
 vi.mock('../services/SessionRecorder', () => ({
@@ -202,7 +202,9 @@ describe('useVideoControls', () => {
         result.current.togglePlayPause();
       });
 
-      expect(setStatus).toHaveBeenCalledWith('Error: Could not play video. Please try again.');
+      expect(setStatus).toHaveBeenCalledWith(
+        'Error: Could not play video. Please try again.'
+      );
     });
 
     it('does nothing when video ref is null', async () => {
@@ -574,7 +576,9 @@ describe('useVideoControls', () => {
 
       expect(global.fetch).toHaveBeenCalled();
       expect(mockFrameAcquisition.loadVideoFromURL).toHaveBeenCalled();
-      expect(setStatus).toHaveBeenCalledWith('Video loaded. Press Play to start.');
+      expect(setStatus).toHaveBeenCalledWith(
+        'Video loaded. Press Play to start.'
+      );
     });
 
     it('handles fetch errors gracefully', async () => {
@@ -756,7 +760,9 @@ describe('useVideoControls', () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
       });
 
-      expect(setStatus).toHaveBeenCalledWith('Error: Could not load video. Please try a different file.');
+      expect(setStatus).toHaveBeenCalledWith(
+        'Error: Could not load video. Please try a different file.'
+      );
     });
   });
 

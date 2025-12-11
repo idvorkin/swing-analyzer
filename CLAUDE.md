@@ -41,6 +41,7 @@ agent/swing-2
 **Why:** Feature names are self-documenting, make PRs clearer, and help when reviewing git history. Multiple agents can work on different features without confusion.
 
 **Session start:**
+
 ```bash
 # Create or switch to your feature branch
 git fetch origin
@@ -54,6 +55,7 @@ just dev  # Runs vite dev server (auto-finds available port)
 ```
 
 **⚠️ After switching branches:** Always rebuild to ensure you're running the new code:
+
 ```bash
 # Kill existing dev server if running, then restart
 # Vite usually hot-reloads, but for safety after branch switch:
@@ -63,6 +65,7 @@ npm run build  # or just restart dev server
 **⚠️ EVERY Claude instance runs its own server.** The dashboard detects servers by their working directory, so each clone (swing-1, swing-2, etc.) appears as a separate agent when its server is running. Vite auto-finds an available port (5173, 5174, etc.), so multiple servers can run simultaneously.
 
 This ensures:
+
 1. **Dashboard visibility** - Your clone appears as "active" with a server link
 2. **E2E test speed** - Tests reuse the running server instead of starting a new one
 3. **Consistent testing** - Tests run against your current code changes
@@ -71,33 +74,41 @@ This ensures:
 **E2E tests automatically use your running server** via `reuseExistingServer: true` in playwright.config.ts. If no server is running, Playwright starts one temporarily.
 
 **Check your server is detected:**
+
 ```bash
 curl -s http://localhost:9999/api/agents | jq '.agents[] | select(.id == "swing-N") | .servers'
 ```
 
 **Verify server is from YOUR directory before reusing:**
+
 ```bash
 # Multiple clones may have servers running - verify the port serves YOUR code
 for pid in $(lsof -ti :5173 -ti :5174 2>/dev/null); do
   echo "PID $pid port $(lsof -p $pid -i -P | grep LISTEN | awk '{print $9}'): $(readlink -f /proc/$pid/cwd)"
 done
 ```
+
 Only reuse a server if its cwd matches your working directory. Otherwise, start a new one with `just dev`.
 
 **During work (commit → push immediately):**
+
 ```bash
 git pull origin feature/your-branch --rebase  # Get any updates first
 git add . && git commit -m "..."
 git push origin feature/your-branch           # Push right after commit!
 ```
+
 Always push after every commit - keeps your work visible in dashboard.
 
 **Stay current (rebase often):**
+
 ```bash
 git fetch origin main && git rebase origin/main
 git push origin feature/your-branch --force-with-lease
 ```
+
 Rebase on main:
+
 - Every 15 minutes during active work
 - Before starting any major new task
 - Before merging to main
@@ -105,6 +116,7 @@ Rebase on main:
 This keeps your branch up-to-date with changes from other agents.
 
 **Merging to main** (on origin/idvorkin-ai-tools):
+
 ```bash
 git checkout main && git merge feature/your-branch
 # If merge had conflicts, run tests before pushing:
@@ -113,17 +125,20 @@ git push origin main
 ```
 
 **Merge criteria:**
+
 - Feature/task is complete
 - Rebased on latest main (no conflicts, or conflicts resolved)
 - If merge had conflicts: **must run test suite before pushing**
 
 **If merge conflicts occur:**
+
 1. Resolve conflicts carefully
 2. Run full test suite: `npx playwright test && npx tsc --noEmit`
 3. Only push if tests pass
 4. If tests fail, fix issues before pushing
 
 **If main is broken after merge:**
+
 1. `git revert HEAD && git push origin main` (quick rollback)
 2. Fix the issue on your agent branch
 3. Re-merge after fixing
@@ -144,6 +159,7 @@ bd create --title="Help needed: optimize skeleton math on feature/skeleton-rende
 ```
 
 **Other agent picks up work:**
+
 ```bash
 bd ready                                    # Sees the help request
 bd update swing-xyz --status=in_progress    # Claims it
@@ -155,6 +171,7 @@ bd close swing-xyz --reason="Done"
 ```
 
 **Naming convention:**
+
 - `feature/description` - Feature work (preferred)
 - `fix/description` - Bug fix work
 - `refactor/description` - Refactoring work
@@ -164,12 +181,14 @@ bd close swing-xyz --reason="Done"
 Monitor all running agents from a central portal: **http://localhost:9999** (or via Tailscale)
 
 Shows for each agent clone:
+
 - Branch and PR status
 - GitHub links (Diff, Commit, History)
 - Running servers (vite, playwright)
 - Beads status (open issues, work in progress)
 
 **Start dashboard:**
+
 ```bash
 cd ~/gits/agent-dashboard && npm run dev
 # Or: just dashboard (from any swing clone)
@@ -188,6 +207,7 @@ Actions requiring explicit "YES" approval from user:
 - **`bd init --force`** - Erases the beads database and rebuilds from JSONL. The database should already exist from clone.
 
 **Allowed without approval:**
+
 - Merging to origin/main (idvorkin-ai-tools) - this is the agent working repo
 
 **Encouraged** (not losing work): Deleting unused functions/files, removing commented-out code, cleaning unused imports - these are preserved in git history.
@@ -210,6 +230,7 @@ This project uses [beads](https://github.com/steveyegge/beads) for issue trackin
 - Never rely on `.beads/issues.jsonl` in the working tree - always verify issues are in `beads-metadata` branch
 
 **Fix for permission errors**: The `beads-metadata` branch must track `origin`, not `upstream`:
+
 ```bash
 git branch --set-upstream-to=origin/beads-metadata beads-metadata
 ```
@@ -244,11 +265,11 @@ bd dep add swing-new swing-48b --type discovered-from
 
 **Dependency types:**
 
-| Type | Use When |
-|------|----------|
-| `blocks` | Work cannot start until blocker done |
-| `related` | Issues share context but don't block |
-| `parent-child` | Epic/subtask hierarchy |
+| Type              | Use When                                    |
+| ----------------- | ------------------------------------------- |
+| `blocks`          | Work cannot start until blocker done        |
+| `related`         | Issues share context but don't block        |
+| `parent-child`    | Epic/subtask hierarchy                      |
 | `discovered-from` | Found during other work (agent audit trail) |
 
 **Quick reference:**
@@ -284,6 +305,7 @@ bd sync               # Force sync with remote
 ```
 
 Common issues:
+
 - **"Database not found"**: The database should exist from clone. Run `bd sync` to pull from remote. If truly missing, ask user for permission to run `bd init --force --prefix=swing` (this erases local data).
 - **"beads-metadata branch missing"**: `git fetch origin beads-metadata && git branch beads-metadata origin/beads-metadata`
 - **Sync permission errors**: `git branch --set-upstream-to=origin/beads-metadata beads-metadata`
@@ -315,6 +337,7 @@ This avoids downloading browsers separately for each project.
 ### Git Hooks
 
 The `.githooks/` directory contains:
+
 - `pre-commit` - Syncs beads before commits
 - `post-merge` - Syncs beads after pulls
 - `pre-push` - Blocks pushes to upstream/main only (origin/main is allowed)
@@ -341,11 +364,13 @@ done | sort -r
 ```
 
 **Delete criteria:**
+
 - Branches 100+ commits behind with 0 unique commits (already merged)
 - Branches 200+ commits behind (too stale to salvage)
 - Copilot/exploration branches older than 2 weeks
 
 **Keep criteria:**
+
 - Active feature branches with recent work
 - Branches with open PRs
 - `main`, `beads-metadata`
@@ -369,6 +394,7 @@ done
 ```
 
 **Action items:**
+
 - Branches 50+ commits ahead with no PR: either create PR or reset to main
 - Uncommitted changes: commit/push or discard
 - Stale feature branches: delete if work was merged elsewhere
@@ -412,6 +438,7 @@ Before merging your feature branch to main:
 ```
 
 This runs multiple specialized agents in parallel:
+
 - **code-reviewer** - General code quality and CLAUDE.md compliance
 - **silent-failure-hunter** - Error handling and silent failures
 - **pr-test-analyzer** - Test coverage gaps
@@ -420,6 +447,7 @@ This runs multiple specialized agents in parallel:
 Fix all critical and important issues before merging.
 
 **📋 E2E TEST COVERAGE**: Any change affecting user experience MUST have E2E test coverage. This includes:
+
 - New UI components or buttons
 - Changed user flows or interactions
 - New features visible to users
@@ -455,6 +483,7 @@ gh api repos/idvorkin/swing-analyzer/pulls/PR_NUMBER/comments \
 ```
 
 **Address all critical issues before merge.** Common CodeRabbit findings:
+
 - Phase detection bugs (e.g., matching wrong exercise type)
 - Stale DOM elements not updating on state change
 - Missing null checks or error handling
@@ -569,13 +598,13 @@ Observable<Frame>    Observable<Skeleton>    Observable<Form>   Observable<Rep>
 
 ### Components
 
-| Component                       | Purpose                                                                                            |
-| ------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `KettlebellSwingFormAnalyzer`   | Pure analysis logic - position detection, rep counting, thresholds. Implements `FormAnalyzer`.     |
-| `Pipeline`                      | Orchestrates frame acquisition + skeleton transformation + form analysis.                          |
-| `PoseSkeletonTransformer`       | Real-time source - BlazePose ML inference. Throttled by model speed.                               |
-| `CachedPoseSkeletonTransformer` | Cached source - reads from `LivePoseCache`. As fast as CPU allows.                                 |
-| `VideoFileSkeletonSource`       | Coordinates extraction and caching for video files.                                                |
+| Component                       | Purpose                                                                                        |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `KettlebellSwingFormAnalyzer`   | Pure analysis logic - position detection, rep counting, thresholds. Implements `FormAnalyzer`. |
+| `Pipeline`                      | Orchestrates frame acquisition + skeleton transformation + form analysis.                      |
+| `PoseSkeletonTransformer`       | Real-time source - BlazePose ML inference. Throttled by model speed.                           |
+| `CachedPoseSkeletonTransformer` | Cached source - reads from `LivePoseCache`. As fast as CPU allows.                             |
+| `VideoFileSkeletonSource`       | Coordinates extraction and caching for video files.                                            |
 
 ### Benefits
 
@@ -624,16 +653,19 @@ Project documentation lives in `docs/tech-pack/`:
 **When you find a bug, STOP and answer these questions before fixing:**
 
 **Spec Questions:**
+
 1. Is this actually a bug, or is my understanding of the spec wrong?
 2. Is there a missing or unclear spec that led to this?
 3. **Ask the user** if there's any ambiguity: "The behavior is X, but I expected Y. Which is correct?"
 
 **Test Coverage Questions:**
+
 1. Why did tests not catch this?
 2. What level of our test pyramid could have caught this earliest? (unit → integration → E2E)
 3. Add the missing test BEFORE fixing the bug
 
 **Architecture Questions:**
+
 1. Is there an architectural problem that made this bug possible?
 2. If yes, create a beads issue: `bd create --title="Architecture: <problem>" --type=bug`
 3. **Ask the user**: "I found an architectural issue: [description]. Type YES to address it now, or I'll just fix the immediate bug."
@@ -658,11 +690,13 @@ Project documentation lives in `docs/tech-pack/`:
 3. **Re-run tests**: `just e2e`
 
 **When to regenerate fixtures:**
+
 - After running `just download-test-videos` (videos may have been updated upstream)
 - After any changes to video files in `public/videos/`
 - When E2E tests fail with cache lookup errors
 
 **Manual hash update** (if script unavailable):
+
 ```bash
 # Compute hash for a video file
 node -e "
@@ -679,6 +713,7 @@ console.log(hash);
 ```
 
 Then update:
+
 - `e2e-tests/fixtures/pose-factory.ts` - the hash constant
 - `e2e-tests/fixtures/poses/*.posetrack.json` - the `sourceVideoHash` field
 
@@ -727,6 +762,7 @@ The HTML report includes:
 The app includes a **SessionRecorder** (`src/services/SessionRecorder.ts`) that captures detailed logs of user interactions and pipeline state. This is the foundation of our debugging strategy.
 
 **What SessionRecorder captures:**
+
 - User interactions (clicks, keypresses with element info)
 - Pipeline state snapshots at 4 FPS (rep count, video time, skeleton angles, form position)
 - State change events (extraction start/complete, playback start/pause, rep detected)
@@ -736,11 +772,13 @@ The app includes a **SessionRecorder** (`src/services/SessionRecorder.ts`) that 
 **Why E2E tests should use SessionRecorder:**
 
 1. **Same data format as production** - Customer bug reports include SessionRecorder logs. Writing tests that emit the same events means you can:
+
    - Replay customer sessions to reproduce bugs
    - Compare test runs with production behavior
    - Build tooling that works for both debugging and testing
 
 2. **Rich debugging context** - When a test fails, the SessionRecorder log shows exactly what happened:
+
    - Which buttons were clicked
    - What the pipeline state was at each moment
    - Where extraction/playback started and stopped
@@ -761,21 +799,15 @@ test('should detect reps during extraction', async ({ page }) => {
   // ... perform test actions ...
 
   // Get the session recording for debugging
-  const session = await page.evaluate(() =>
-    (window as any).swingDebug.getCurrentSession()
-  );
+  const session = await page.evaluate(() => (window as any).swingDebug.getCurrentSession());
 
   // Check state changes
-  const repEvents = session.stateChanges.filter(
-    (e: any) => e.type === 'rep_detected'
-  );
+  const repEvents = session.stateChanges.filter((e: any) => e.type === 'rep_detected');
   expect(repEvents).toHaveLength(4);
 
   // Save session on failure for analysis
   if (testFailed) {
-    await page.evaluate(() =>
-      (window as any).swingDebug.downloadSession()
-    );
+    await page.evaluate(() => (window as any).swingDebug.downloadSession());
   }
 });
 ```
@@ -799,9 +831,9 @@ cat session.json | jq '.pipelineSnapshots | last(10) | .[].repCount'
 
 ```javascript
 // Available on window.swingDebug in all environments
-swingDebug.getCurrentSession()  // Get current recording
-swingDebug.getCrashLogs()       // Get persisted sessions (after crash)
-swingDebug.getStats()           // Recording stats
-swingDebug.analyzeMemory()      // Memory trend analysis
-swingDebug.downloadSession()    // Download as JSON
+swingDebug.getCurrentSession(); // Get current recording
+swingDebug.getCrashLogs(); // Get persisted sessions (after crash)
+swingDebug.getStats(); // Recording stats
+swingDebug.analyzeMemory(); // Memory trend analysis
+swingDebug.downloadSession(); // Download as JSON
 ```

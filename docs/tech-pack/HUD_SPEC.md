@@ -55,6 +55,7 @@ The only exception is **extraction %**, which shows when extraction is running (
 ```
 
 **Example during extraction:**
+
 - User seeks to frame 50
 - Frame 50 already extracted? → Skeleton + HUD + extraction % all visible
 - Frame 50 not yet extracted? → Only extraction % visible
@@ -63,20 +64,20 @@ The only exception is **extraction %**, which shows when extraction is running (
 
 ### Status Overlay (top-left)
 
-| Element | Shows | Source |
-|---------|-------|--------|
-| Reps | `{current}/{total}` | Rep processor state |
-| Spine | `{angle}°` | `skeleton.getSpineAngle()` |
-| Arm | `{angle}°` | `skeleton.getArmToVerticalAngle()` |
+| Element | Shows               | Source                             |
+| ------- | ------------------- | ---------------------------------- |
+| Reps    | `{current}/{total}` | Rep processor state                |
+| Spine   | `{angle}°`          | `skeleton.getSpineAngle()`         |
+| Arm     | `{angle}°`          | `skeleton.getArmToVerticalAngle()` |
 
 ### Position Indicator (bottom-right)
 
-| Position | Meaning |
-|----------|---------|
-| Top | Arms at highest point |
-| Connect | Arms touching body |
-| Bottom | Maximum hinge |
-| Release | Arms leaving body |
+| Position | Meaning               |
+| -------- | --------------------- |
+| Top      | Arms at highest point |
+| Connect  | Arms touching body    |
+| Bottom   | Maximum hinge         |
+| Release  | Arms leaving body     |
 
 ### Extraction % (top-right)
 
@@ -103,9 +104,9 @@ z-index:  0  ─── Video Element
 
 ## Implementation
 
-| Component | File |
-|-----------|------|
-| Skeleton | `src/services/SkeletonRenderer.ts` |
+| Component      | File                                |
+| -------------- | ----------------------------------- |
+| Skeleton       | `src/services/SkeletonRenderer.ts`  |
 | Status overlay | `src/components/VideoSectionV2.tsx` |
-| Styles | `src/components/App.css` |
-| Angle math | `src/models/Skeleton.ts` |
+| Styles         | `src/components/App.css`            |
+| Angle math     | `src/models/Skeleton.ts`            |

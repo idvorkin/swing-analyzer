@@ -45,7 +45,10 @@ export function RepGalleryWidget({
   useEffect(() => {
     if (prevRepIndexRef.current !== currentRepIndex && currentRowRef.current) {
       prevRepIndexRef.current = currentRepIndex;
-      currentRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      currentRowRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
     }
   }, [currentRepIndex]);
 
@@ -58,9 +61,7 @@ export function RepGalleryWidget({
 
   // Loading state: reps detected but no thumbnail data yet
   if (repThumbnails.size === 0) {
-    return (
-      <div className="rep-gallery-empty">Loading rep data...</div>
-    );
+    return <div className="rep-gallery-empty">Loading rep data...</div>;
   }
 
   const currentRepNum = currentRepIndex + 1;
@@ -68,7 +69,9 @@ export function RepGalleryWidget({
   return (
     <>
       {/* Header row with phase names */}
-      <div className={`rep-gallery-header${focusedPhase ? ' rep-gallery-header--focused' : ''}`}>
+      <div
+        className={`rep-gallery-header${focusedPhase ? ' rep-gallery-header--focused' : ''}`}
+      >
         <div className="rep-gallery-header-rep" />
         {currentPhases.map((phase) => {
           const isFocused = focusedPhase === phase;
@@ -79,7 +82,11 @@ export function RepGalleryWidget({
               type="button"
               className={`rep-gallery-header-phase${isFocused ? ' rep-gallery-header-phase--focused' : ''}${isMinimized ? ' rep-gallery-header-phase--minimized' : ''}`}
               data-phase={phase}
-              title={isFocused ? 'Click to show all phases' : `Click to focus on ${PHASE_LABELS[phase] || phase}`}
+              title={
+                isFocused
+                  ? 'Click to show all phases'
+                  : `Click to focus on ${PHASE_LABELS[phase] || phase}`
+              }
               onClick={() => onPhaseClick(phase)}
             >
               {PHASE_LABELS[phase] || phase}
@@ -190,4 +197,3 @@ function RepGalleryCell({
     </div>
   );
 }
-

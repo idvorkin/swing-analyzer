@@ -188,7 +188,9 @@ export class Skeleton {
     const rightKnee = this.getKeypointByName('rightKnee');
 
     // Average both sides for stability
-    let ankleX = 0, kneeX = 0, count = 0;
+    let ankleX = 0,
+      kneeX = 0,
+      count = 0;
     if (leftAnkle && leftKnee) {
       ankleX += leftAnkle.x;
       kneeX += leftKnee.x;
@@ -215,7 +217,9 @@ export class Skeleton {
    * Get wrist X position for a given side
    */
   getWristX(side: 'left' | 'right'): number | null {
-    const wrist = this.getKeypointByName(side === 'left' ? 'leftWrist' : 'rightWrist');
+    const wrist = this.getKeypointByName(
+      side === 'left' ? 'leftWrist' : 'rightWrist'
+    );
     return wrist?.x ?? null;
   }
 
@@ -245,7 +249,10 @@ export class Skeleton {
       const leftElbow = this.getKeypointByName('leftElbow');
 
       // Calculate angle for each side if keypoints available
-      const calcAngle = (shoulder: PoseKeypoint, elbow: PoseKeypoint): number => {
+      const calcAngle = (
+        shoulder: PoseKeypoint,
+        elbow: PoseKeypoint
+      ): number => {
         const dx = elbow.x - shoulder.x;
         const dy = elbow.y - shoulder.y;
         const magnitude = Math.sqrt(dx * dx + dy * dy);
@@ -254,9 +261,10 @@ export class Skeleton {
         return Math.acos(cosAngle) * (180 / Math.PI);
       };
 
-      let rightAngle = 90, leftAngle = 90;
-      const rightConf = (rightElbow?.score ?? rightElbow?.visibility ?? 0);
-      const leftConf = (leftElbow?.score ?? leftElbow?.visibility ?? 0);
+      let rightAngle = 90,
+        leftAngle = 90;
+      const rightConf = rightElbow?.score ?? rightElbow?.visibility ?? 0;
+      const leftConf = leftElbow?.score ?? leftElbow?.visibility ?? 0;
       const minConf = 0.3; // Minimum confidence to consider
 
       const rightValid = rightShoulder && rightElbow && rightConf > minConf;
@@ -380,9 +388,13 @@ export class Skeleton {
       name,
       name.toUpperCase(),
       // Convert camelCase to SNAKE_CASE
-      name.replace(/([A-Z])/g, '_$1').toUpperCase(),
+      name
+        .replace(/([A-Z])/g, '_$1')
+        .toUpperCase(),
       // Convert camelCase to snake_case
-      name.replace(/([A-Z])/g, '_$1').toLowerCase(),
+      name
+        .replace(/([A-Z])/g, '_$1')
+        .toLowerCase(),
     ];
 
     // Try each variant with MediaPipe body parts mapping
@@ -786,7 +798,12 @@ export class Skeleton {
       } else if (preferredSide === 'left' && leftWrist && leftConf > minConf) {
         // Use left wrist (preferred side specified)
         wristY = leftWrist.y;
-      } else if (leftWrist && rightWrist && leftConf > minConf && rightConf > minConf) {
+      } else if (
+        leftWrist &&
+        rightWrist &&
+        leftConf > minConf &&
+        rightConf > minConf
+      ) {
         // Both wrists have good confidence - use average (two-handed swing)
         wristY = (leftWrist.y + rightWrist.y) / 2;
       } else if (rightWrist && rightConf > minConf) {

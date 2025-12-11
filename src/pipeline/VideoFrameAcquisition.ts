@@ -156,7 +156,6 @@ export class VideoFrameAcquisition implements FrameAcquisition {
    */
   loadVideo(file: File): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-
       // Create object URL for the file
       const videoURL = URL.createObjectURL(file);
 

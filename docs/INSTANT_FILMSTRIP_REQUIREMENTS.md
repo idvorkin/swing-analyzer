@@ -5,6 +5,7 @@
 **As a user, I want to see my rep analysis immediately after loading a video, without having to press play.**
 
 ### Current Experience (Friction)
+
 1. User loads video
 2. User sees "Extracting poses..." progress bar
 3. Extraction completes
@@ -13,6 +14,7 @@
 6. User waits for entire video to play through before seeing all reps
 
 ### Desired Experience (Instant)
+
 1. User loads video
 2. User sees "Extracting poses..." progress bar
 3. **As extraction progresses, filmstrip thumbnails appear** (every ~10-20 seconds a new rep shows up)
@@ -29,11 +31,13 @@ SkeletonEvent → FormProcessor → RepProcessor → Filmstrip
 ```
 
 Currently, the source is video playback:
+
 ```
 Video playback → VideoFrameAcquisition → CachedPoseSkeletonTransformer → Pipeline
 ```
 
 What we want - source is extraction:
+
 ```
 Extraction (onFrameExtracted) → SkeletonEvent → Pipeline
 ```
@@ -45,11 +49,12 @@ Extraction (onFrameExtracted) → SkeletonEvent → Pipeline
 ```typescript
 // usePoseTrack.ts - extraction callback
 onFrameExtracted: (frame) => {
-  liveCache.addFrame(frame);  // Just caches, doesn't analyze
-}
+  liveCache.addFrame(frame); // Just caches, doesn't analyze
+};
 ```
 
 The frame has everything we need:
+
 - `frame.keypoints` - the pose data
 - `frame.timestamp` - when in the video
 
@@ -71,7 +76,7 @@ onFrameExtracted: (frame) => {
     timestamp: frame.timestamp,
     videoTime: frame.timestamp,
   });
-}
+};
 ```
 
 The form processor and rep processor are stateful - they track position sequences and count reps. Feeding them frames in order during extraction produces the same results as playback, just faster.
@@ -79,22 +84,26 @@ The form processor and rep processor are stateful - they track position sequence
 ## Frame Capture Challenge
 
 The filmstrip needs thumbnail images. Currently `SwingFormProcessor.captureCurrentFrame()` grabs from:
+
 - Live video element (at current playback position)
 - Canvas with skeleton overlay
 
 During extraction, we need a different approach:
 
 ### Option 1: Hidden Video + Seek
+
 - Keep a hidden `<video>` element
 - When rep detected, seek to `frame.timestamp`
 - Capture frame, draw skeleton, store thumbnail
 
 ### Option 2: Deferred Capture
+
 - During extraction, just record timestamps of rep positions
 - After extraction completes, seek through and capture all thumbnails
 - Filmstrip shows placeholders, then fills in
 
 ### Option 3: Store Raw Frame Data
+
 - During extraction, also capture video frames as ImageData
 - Store with the pose data
 - Draw skeleton overlay at display time
@@ -104,6 +113,7 @@ During extraction, we need a different approach:
 ## What's Already Built (PR #45)
 
 PR #45 added:
+
 - Hidden video element for filmstrip frame capture
 - `useFilmstripCapture` hook
 - Incremental capture during extraction
@@ -113,11 +123,13 @@ This is exactly what we need. The missing piece is streaming extracted frames th
 ## Implementation Steps
 
 1. **During extraction, stream frames through pipeline**
+
    - In `onFrameExtracted`, build SkeletonEvent from frame
    - Feed to form processor → rep processor
    - Rep processor emits when rep completes
 
 2. **Capture filmstrip frame when rep detected**
+
    - Seek hidden video to rep timestamp
    - Capture frame + draw skeleton
    - Add to filmstrip

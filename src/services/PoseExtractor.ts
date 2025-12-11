@@ -12,6 +12,7 @@ import { BUILD_TIMESTAMP, GIT_SHA_SHORT } from '../generated_version';
 import { Skeleton } from '../models/Skeleton';
 import type { PoseKeypoint } from '../types';
 import type {
+  CropRegion,
   PoseExtractionOptions,
   PoseExtractionProgress,
   PoseExtractionResult,
@@ -20,11 +21,11 @@ import type {
   PoseTrackFrame,
   PrecomputedAngles,
 } from '../types/posetrack';
-import { computeQuickVideoHash } from '../utils/videoHash';
 import {
   calculateStableCropRegion,
   isLandscapeVideo,
 } from '../utils/videoCrop';
+import { computeQuickVideoHash } from '../utils/videoHash';
 import { createPoseTrackMetadata } from './PoseTrackService';
 
 /**
@@ -119,8 +120,14 @@ function capturePersonCenteredThumbnail(
   }
 
   // Center crop on person, but clamp to video bounds
-  cropX = Math.max(0, Math.min(personCenterX - cropWidth / 2, videoWidth - cropWidth));
-  cropY = Math.max(0, Math.min(personCenterY - cropHeight / 2, videoHeight - cropHeight));
+  cropX = Math.max(
+    0,
+    Math.min(personCenterX - cropWidth / 2, videoWidth - cropWidth)
+  );
+  cropY = Math.max(
+    0,
+    Math.min(personCenterY - cropHeight / 2, videoHeight - cropHeight)
+  );
 
   // Draw cropped region to thumbnail
   thumbnailCtx.drawImage(
@@ -259,7 +266,9 @@ export async function extractPosesFromVideo(
     const thumbnailCanvas = document.createElement('canvas');
     thumbnailCanvas.width = THUMBNAIL_WIDTH;
     thumbnailCanvas.height = THUMBNAIL_HEIGHT;
-    const thumbnailCtx = thumbnailCanvas.getContext('2d', { willReadFrequently: true });
+    const thumbnailCtx = thumbnailCanvas.getContext('2d', {
+      willReadFrequently: true,
+    });
     if (!thumbnailCtx) {
       throw new Error('Failed to get thumbnail canvas 2d context');
     }
@@ -360,18 +369,16 @@ export async function extractPosesFromVideo(
     }
 
     // Calculate crop region for landscape videos
-    let cropRegion = undefined;
+    let cropRegion: CropRegion | undefined;
     if (isLandscapeVideo(videoWidth, videoHeight)) {
       // Use first 5 seconds of frames for crop detection
       const detectionDuration = Math.min(5, duration);
       const detectionFrameCount = Math.ceil(detectionDuration * fps);
       const detectionFrames = frames.slice(0, detectionFrameCount);
 
-      cropRegion = calculateStableCropRegion(
-        detectionFrames,
-        videoWidth,
-        videoHeight
-      ) ?? undefined;
+      cropRegion =
+        calculateStableCropRegion(detectionFrames, videoWidth, videoHeight) ??
+        undefined;
 
       if (cropRegion) {
         console.log(
@@ -431,7 +438,11 @@ async function createPoseDetector(
   // Check for mock detector factory (set via E2E tests)
   const mockFactory = (
     window as unknown as {
-      __testSetup?: { getMockDetectorFactory?: () => (() => Promise<poseDetection.PoseDetector>) | undefined };
+      __testSetup?: {
+        getMockDetectorFactory?: () =>
+          | (() => Promise<poseDetection.PoseDetector>)
+          | undefined;
+      };
     }
   ).__testSetup?.getMockDetectorFactory?.();
 
@@ -443,14 +454,11 @@ async function createPoseDetector(
   await tf.setBackend('webgl');
 
   // BlazePose is the only supported model
-  return poseDetection.createDetector(
-    poseDetection.SupportedModels.BlazePose,
-    {
-      runtime: 'tfjs',
-      modelType: 'lite',
-      enableSmoothing: false,
-    }
-  );
+  return poseDetection.createDetector(poseDetection.SupportedModels.BlazePose, {
+    runtime: 'tfjs',
+    modelType: 'lite',
+    enableSmoothing: false,
+  });
 }
 
 /**

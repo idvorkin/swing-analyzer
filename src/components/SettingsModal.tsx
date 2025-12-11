@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AboutTab } from './settings/AboutTab';
 import { DeveloperTab } from './settings/DeveloperTab';
-import { SettingsTab } from './settings/SettingsTab';
 import {
   CloseIcon,
   InfoIcon,
   SettingsIcon,
   WrenchIcon,
 } from './settings/Icons';
+import { SettingsTab } from './settings/SettingsTab';
 import './settings/Settings.css';
 
 const TABS = [

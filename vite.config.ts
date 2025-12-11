@@ -43,14 +43,19 @@ const useSsl = inContainer && tailscaleHosts.length > 0;
 function tailscaleUrlPlugin() {
   return {
     name: 'tailscale-url',
-    configureServer(server: { httpServer: { address: () => { port: number } | null } | null }) {
+    configureServer(server: {
+      httpServer: { address: () => { port: number } | null } | null;
+    }) {
       if (!useSsl || tailscaleHosts.length === 0) return;
 
       server.httpServer?.once('listening', () => {
         const address = server.httpServer?.address();
-        const actualPort = typeof address === 'object' && address ? address.port : devPort;
+        const actualPort =
+          typeof address === 'object' && address ? address.port : devPort;
         console.log(`\n🔗 Tailscale detected in container`);
-        console.log(`   Access via: https://${tailscaleHosts[1]}:${actualPort}\n`);
+        console.log(
+          `   Access via: https://${tailscaleHosts[1]}:${actualPort}\n`
+        );
       });
     },
   };

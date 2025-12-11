@@ -2,7 +2,7 @@
  * Analyze the gap region in the user's session data where reps are being missed.
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
 import { KettlebellSwingFormAnalyzer } from '../src/analyzers/KettlebellSwingFormAnalyzer.js';
 import { Skeleton } from '../src/models/Skeleton.js';
 import type { PoseKeypoint } from '../src/types.js';
@@ -64,11 +64,26 @@ for (const frame of posetrack.frames) {
     const armHigh = Math.abs(arm) > 50;
 
     if (phaseChanged || repDetected || (armHigh && t % 0.5 < 0.034)) {
-      const note = phaseChanged ? lastPhase + ' -> ' + phase :
-                   repDetected ? '** REP! **' : '';
+      const note = phaseChanged
+        ? `${lastPhase} -> ${phase}`
+        : repDetected
+          ? '** REP! **'
+          : '';
 
       console.log(
-        t.toFixed(2).padStart(6) + 's | ' + phase.padEnd(8) + ' | ' + arm.toFixed(1).padStart(9) + ' | ' + spine.toFixed(1).padStart(6) + ' | ' + hip.toFixed(0).padStart(5) + ' | ' + result.repCount + '   | ' + note
+        t.toFixed(2).padStart(6) +
+          's | ' +
+          phase.padEnd(8) +
+          ' | ' +
+          arm.toFixed(1).padStart(9) +
+          ' | ' +
+          spine.toFixed(1).padStart(6) +
+          ' | ' +
+          hip.toFixed(0).padStart(5) +
+          ' | ' +
+          result.repCount +
+          '   | ' +
+          note
       );
     }
 
@@ -82,4 +97,4 @@ for (const frame of posetrack.frames) {
 
 console.log('');
 console.log('=== Summary ===');
-console.log('Total reps detected: ' + analyzer.getRepCount());
+console.log(`Total reps detected: ${analyzer.getRepCount()}`);

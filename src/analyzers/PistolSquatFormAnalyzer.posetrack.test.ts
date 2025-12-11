@@ -1,12 +1,13 @@
 /**
  * Integration tests for PistolSquatFormAnalyzer using real posetrack data.
  */
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-import { PistolSquatFormAnalyzer } from './PistolSquatFormAnalyzer';
 import { Skeleton } from '../models/Skeleton';
 import { MediaPipeBodyParts, type PoseKeypoint } from '../types';
+import { PistolSquatFormAnalyzer } from './PistolSquatFormAnalyzer';
 
 interface PoseTrackFrame {
   keypoints: PoseKeypoint[];
@@ -47,7 +48,12 @@ function loadPosetrack(filename: string): PoseTrack {
 
 function analyzeReps(posetrack: PoseTrack) {
   const analyzer = new PistolSquatFormAnalyzer();
-  const phaseChanges: { frame: number; time: number; from: string; to: string }[] = [];
+  const phaseChanges: {
+    frame: number;
+    time: number;
+    from: string;
+    to: string;
+  }[] = [];
   let lastPhase = '';
   let totalReps = 0;
   const repTimes: number[] = [];
@@ -93,11 +99,23 @@ describe('PistolSquatFormAnalyzer with real posetrack data', () => {
     console.log('=== Pistol Squat Analysis ===');
     console.log('Total frames:', posetrack.frames.length);
     console.log('Total reps detected:', result.totalReps);
-    console.log('Rep times:', result.repTimes.map(t => t.toFixed(2) + 's').join(', '));
+    console.log(
+      'Rep times:',
+      result.repTimes.map((t) => `${t.toFixed(2)}s`).join(', ')
+    );
     console.log('Final phase:', result.finalPhase);
     console.log('\nPhase changes:');
-    result.phaseChanges.forEach(c => {
-      console.log('  Frame ' + c.frame + ' (' + c.time.toFixed(2) + 's): ' + c.from + ' -> ' + c.to);
+    result.phaseChanges.forEach((c) => {
+      console.log(
+        '  Frame ' +
+          c.frame +
+          ' (' +
+          c.time.toFixed(2) +
+          's): ' +
+          c.from +
+          ' -> ' +
+          c.to
+      );
     });
 
     // The pistol squat sample video should detect at least 1 rep

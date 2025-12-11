@@ -45,7 +45,8 @@ export async function setupMockPoseDetectorWithData(
   sessionId?: string
 ): Promise<void> {
   // Generate a random session ID if not provided (for parallel test isolation)
-  const sid = sessionId || `test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const sid =
+    sessionId || `test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
   await page.evaluate(
     ({ data, delay, sid }) => {
@@ -53,7 +54,11 @@ export async function setupMockPoseDetectorWithData(
       const testSetup = (
         window as unknown as {
           __testSetup?: {
-            setupMockPoseDetector: (poseTrack: unknown, delay: number, sessionId?: string) => void;
+            setupMockPoseDetector: (
+              poseTrack: unknown,
+              delay: number,
+              sessionId?: string
+            ) => void;
           };
         }
       ).__testSetup;

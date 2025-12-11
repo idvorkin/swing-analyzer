@@ -57,12 +57,12 @@ A complete swing cycle consists of 4 positions detected in sequence:
 
 ### Position Definitions
 
-| Position    | Phase                    | Detection Criteria                           | Purpose                              |
-| ----------- | ------------------------ | -------------------------------------------- | ------------------------------------ |
-| **Top**     | Standing/lockout         | Spine < 25°, Arms > 30° (raised)             | Completion of swing, rep counted     |
-| **Connect** | Arms vertical, pre-hinge | \|Arm\| < 25° AND Spine < 25°                | Arms "connect" to body before folding |
-| **Bottom**  | Max hinge                | Spine > 35° AND Hip < 140°                   | Deepest point of the hinge           |
-| **Release** | Arms vertical, post-hinge| \|Arm\| < 25° AND Spine < 25°                | Arms "release" from body on upswing  |
+| Position    | Phase                     | Detection Criteria               | Purpose                               |
+| ----------- | ------------------------- | -------------------------------- | ------------------------------------- |
+| **Top**     | Standing/lockout          | Spine < 25°, Arms > 30° (raised) | Completion of swing, rep counted      |
+| **Connect** | Arms vertical, pre-hinge  | \|Arm\| < 25° AND Spine < 25°    | Arms "connect" to body before folding |
+| **Bottom**  | Max hinge                 | Spine > 35° AND Hip < 140°       | Deepest point of the hinge            |
+| **Release** | Arms vertical, post-hinge | \|Arm\| < 25° AND Spine < 25°    | Arms "release" from body on upswing   |
 
 **Key insight**: CONNECT and RELEASE use the **same thresholds** but are distinguished by state machine ordering. CONNECT happens on the way DOWN (after TOP), RELEASE happens on the way UP (after BOTTOM).
 
@@ -123,6 +123,7 @@ if |armAngle| < 25° AND spineAngle < 25°:
 ```
 
 **Why this matters for coaching**:
+
 - CONNECT captures the moment just before the hinge - user should see arms vertical while standing tall
 - RELEASE captures the moment just after the hinge - arms passing vertical on the way up
 - Even imperfect form (arms not exactly at 0°) is captured so users can see what they're doing wrong
@@ -219,17 +220,17 @@ PROPER HINGE (score ~+0.7):        SQUAT PATTERN (score ~-0.5):
 
 ### Phase Transition Thresholds
 
-| Parameter          | Value | Purpose                                      |
-| ------------------ | ----- | -------------------------------------------- |
-| `connectArmMax`    | 25°   | Max arm angle from vertical for CONNECT      |
+| Parameter          | Value | Purpose                                       |
+| ------------------ | ----- | --------------------------------------------- |
+| `connectArmMax`    | 25°   | Max arm angle from vertical for CONNECT       |
 | `connectSpineMax`  | 25°   | Max spine angle (must be upright) for CONNECT |
-| `bottomSpineMin`   | 35°   | Min spine angle to enter BOTTOM (hinged)     |
-| `bottomHipMax`     | 140°  | Max hip angle to enter BOTTOM (hip flexed)   |
-| `releaseArmMax`    | 25°   | Max arm angle from vertical for RELEASE      |
-| `releaseSpineMax`  | 25°   | Max spine angle (upright again) for RELEASE  |
-| `topSpineMax`      | 25°   | Max spine angle for TOP                      |
-| `topArmMin`        | 30°   | Min arm angle (raised) for TOP               |
-| `minFramesInPhase` | 2     | Debounce: frames before allowing transition  |
+| `bottomSpineMin`   | 35°   | Min spine angle to enter BOTTOM (hinged)      |
+| `bottomHipMax`     | 140°  | Max hip angle to enter BOTTOM (hip flexed)    |
+| `releaseArmMax`    | 25°   | Max arm angle from vertical for RELEASE       |
+| `releaseSpineMax`  | 25°   | Max spine angle (upright again) for RELEASE   |
+| `topSpineMax`      | 25°   | Max spine angle for TOP                       |
+| `topArmMin`        | 30°   | Min arm angle (raised) for TOP                |
+| `minFramesInPhase` | 2     | Debounce: frames before allowing transition   |
 
 ### State Machine Transitions
 

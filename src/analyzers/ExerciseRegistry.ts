@@ -11,8 +11,8 @@
  * 3. Add the exercise definition here
  */
 
-import type { FormAnalyzer } from './FormAnalyzer';
 import type { DetectedExercise } from './ExerciseDetector';
+import type { FormAnalyzer } from './FormAnalyzer';
 import { KettlebellSwingFormAnalyzer } from './KettlebellSwingFormAnalyzer';
 import { PistolSquatFormAnalyzer } from './PistolSquatFormAnalyzer';
 
@@ -51,7 +51,10 @@ const SAMPLES_BASE_URL =
 /**
  * Registry of all supported exercises
  */
-export const EXERCISE_REGISTRY: Record<Exclude<DetectedExercise, 'unknown'>, ExerciseDefinition> = {
+export const EXERCISE_REGISTRY: Record<
+  Exclude<DetectedExercise, 'unknown'>,
+  ExerciseDefinition
+> = {
   'kettlebell-swing': {
     id: 'kettlebell-swing',
     displayName: 'Kettlebell Swing',
@@ -89,7 +92,9 @@ export const EXERCISE_REGISTRY: Record<Exclude<DetectedExercise, 'unknown'>, Exe
  * Get the exercise definition for a detected exercise type.
  * Returns undefined for 'unknown' exercise type.
  */
-export function getExerciseDefinition(exercise: DetectedExercise): ExerciseDefinition | undefined {
+export function getExerciseDefinition(
+  exercise: DetectedExercise
+): ExerciseDefinition | undefined {
   if (exercise === 'unknown') return undefined;
   return EXERCISE_REGISTRY[exercise];
 }
@@ -98,7 +103,9 @@ export function getExerciseDefinition(exercise: DetectedExercise): ExerciseDefin
  * Create a FormAnalyzer for the given exercise type.
  * Returns a default KettlebellSwingFormAnalyzer for 'unknown'.
  */
-export function createAnalyzerForExercise(exercise: DetectedExercise): FormAnalyzer {
+export function createAnalyzerForExercise(
+  exercise: DetectedExercise
+): FormAnalyzer {
   const definition = getExerciseDefinition(exercise);
   if (!definition) {
     console.warn(
@@ -128,14 +135,22 @@ export function getExerciseIcon(exercise: DetectedExercise): string {
 /**
  * Get all available exercise IDs (excluding 'unknown').
  */
-export function getAvailableExercises(): Exclude<DetectedExercise, 'unknown'>[] {
-  return Object.keys(EXERCISE_REGISTRY) as Exclude<DetectedExercise, 'unknown'>[];
+export function getAvailableExercises(): Exclude<
+  DetectedExercise,
+  'unknown'
+>[] {
+  return Object.keys(EXERCISE_REGISTRY) as Exclude<
+    DetectedExercise,
+    'unknown'
+  >[];
 }
 
 /**
  * Get the default sample video URL for an exercise.
  */
-export function getDefaultSampleVideo(exercise: DetectedExercise): string | undefined {
+export function getDefaultSampleVideo(
+  exercise: DetectedExercise
+): string | undefined {
   const definition = getExerciseDefinition(exercise);
   return definition?.sampleVideos[0]?.url;
 }
