@@ -22,6 +22,9 @@ Tests marked with `*` below require actual extraction and are currently skipped.
 | Current Rep Highlight | Current rep row has teal border/glow based on video playback position. | RG-004 | PASS |
 | Playback Sync | Current rep highlight updates as video plays through different reps. | RG-021 | PASS |
 | Auto-Scroll to Current | Inline gallery auto-scrolls to keep current rep row visible during playback. | RG-022 | PASS |
+| Inline Double-Tap Focus | Double-tap thumbnail in inline widget focuses that phase column. | RG-023 | PASS |
+| Inline Double-Tap Unfocus | Double-tap on focused phase in inline widget unfocuses it. | RG-024 | PASS |
+| Inline Single-Tap Seek | Single tap on inline widget thumbnail seeks video (not focus). | RG-025 | PASS |
 | Phase Focus | Clicking phase header expands that column, shrinks others. | RG-005 | PASS |
 | Phase Unfocus | Clicking focused phase header returns to normal view. | RG-006 | PASS |
 | Thumbnail Seek* | Clicking thumbnail seeks video to that timestamp. | RG-007 | SKIP |
@@ -67,8 +70,8 @@ Tests use the `swing-sample-4reps` fixture which provides:
 
 ## Test Summary
 
-- **Total tests:** 25
-- **Passing:** 19
+- **Total tests:** 28
+- **Passing:** 22
 - **Skipped:** 6 (require actual extraction with frame images)
 
 ## Running Thumbnail Tests

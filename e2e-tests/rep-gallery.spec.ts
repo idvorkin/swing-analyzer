@@ -552,4 +552,88 @@ test.describe('Rep Gallery Modal', () => {
       expect(currentRowVisible).toBe(true);
     });
   });
+
+  test.describe('Inline Widget Double-Tap Zoom', () => {
+    test('RG-023: double-tap on inline widget thumbnail focuses phase column', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+
+      // The inline gallery is in .rep-gallery-container (NOT the modal)
+      const inlineGallery = page.locator('.rep-gallery-container');
+      await expect(inlineGallery).toBeVisible();
+
+      // Verify gallery is NOT in focused mode initially
+      await expect(inlineGallery.locator('.rep-gallery-header--focused')).not.toBeVisible();
+
+      // Find a thumbnail canvas in the inline gallery
+      const thumbnail = inlineGallery.locator('canvas.rep-gallery-canvas').first();
+      await expect(thumbnail).toBeVisible();
+
+      // Double-click the thumbnail (simulates double-tap)
+      await thumbnail.dblclick();
+
+      // The inline gallery header should now be in focused mode
+      await expect(inlineGallery.locator('.rep-gallery-header--focused')).toBeVisible();
+
+      // At least one phase header should be focused
+      await expect(inlineGallery.locator('.rep-gallery-header-phase--focused')).toBeVisible();
+
+      // At least one cell should be focused (larger)
+      await expect(inlineGallery.locator('.rep-gallery-cell--focused')).toBeVisible();
+    });
+
+    test('RG-024: double-tap on focused phase unfocuses in inline widget', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+
+      const inlineGallery = page.locator('.rep-gallery-container');
+
+      // First, focus a phase by clicking the header button
+      await inlineGallery.locator('.rep-gallery-header-phase').first().click();
+      await expect(inlineGallery.locator('.rep-gallery-header--focused')).toBeVisible();
+
+      // Find the focused phase's thumbnail
+      const focusedCell = inlineGallery.locator('.rep-gallery-cell--focused').first();
+      const thumbnail = focusedCell.locator('canvas.rep-gallery-canvas');
+      await expect(thumbnail).toBeVisible();
+
+      // Double-click to unfocus
+      await thumbnail.dblclick();
+
+      // Should no longer be in focused mode
+      await expect(inlineGallery.locator('.rep-gallery-header--focused')).not.toBeVisible();
+      await expect(inlineGallery.locator('.rep-gallery-cell--focused')).not.toBeVisible();
+    });
+
+    test('RG-025: single tap on inline widget thumbnail seeks video (not focus)', async ({ page }) => {
+      await loadVideoAndWaitForGallery(page);
+
+      const inlineGallery = page.locator('.rep-gallery-container');
+
+      // Get initial video time
+      const initialTime = await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video?.currentTime || 0;
+      });
+
+      // Single click on a thumbnail (use nth(4) to get one that's not at time 0)
+      const thumbnail = inlineGallery.locator('canvas.rep-gallery-canvas').nth(4);
+      if (await thumbnail.isVisible()) {
+        await thumbnail.click();
+
+        // Wait for seek
+        await page.waitForTimeout(300);
+
+        // Video time should have changed (seek occurred)
+        const newTime = await page.evaluate(() => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video?.currentTime || 0;
+        });
+
+        // Time should be different after single-tap seek
+        expect(newTime).not.toBe(initialTime);
+
+        // Gallery should NOT be in focused mode (single tap = seek, not focus)
+        await expect(inlineGallery.locator('.rep-gallery-header--focused')).not.toBeVisible();
+      }
+    });
+  });
 });
