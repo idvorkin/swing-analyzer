@@ -595,11 +595,6 @@ test.describe('Rep Gallery Modal', () => {
         '.rep-gallery-container .rep-gallery-rows'
       );
 
-      // Check initial scroll state (should see row 1)
-      const _initialScrollTop = await inlineGallery.evaluate(
-        (el) => el.scrollTop
-      );
-
       // Seek to rep 2 time
       await page.evaluate(() => {
         const video = document.querySelector('video') as HTMLVideoElement;
