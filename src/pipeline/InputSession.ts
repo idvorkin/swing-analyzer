@@ -153,8 +153,11 @@ export class InputSession {
     try {
       await videoSource.start(signal);
     } catch (error) {
-      // Don't report abort as an error
+      // Don't report abort as an error, but do clean up
       if (error instanceof DOMException && error.name === 'AbortError') {
+        // Clean up source and subscriptions on abort
+        await this.cleanup();
+        this.stateSubject.next({ type: 'idle' });
         return;
       }
       const message =

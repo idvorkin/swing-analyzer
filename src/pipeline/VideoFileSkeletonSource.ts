@@ -299,9 +299,15 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       if (externalSignal.aborted) {
         this.abortController.abort();
       } else {
-        externalSignal.addEventListener('abort', () => {
-          this.abortController?.abort();
-        });
+        // Use { once: true } to auto-remove listener after first invocation
+        // This prevents memory leaks if extraction completes before signal aborts
+        externalSignal.addEventListener(
+          'abort',
+          () => {
+            this.abortController?.abort();
+          },
+          { once: true }
+        );
       }
     }
 
