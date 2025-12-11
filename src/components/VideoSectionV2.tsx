@@ -233,12 +233,8 @@ const VideoSectionV2: React.FC = () => {
             </button>
           </div>
 
-          {/* Center: Rep and checkpoint display */}
+          {/* Center: Phase display */}
           <span className="rep-nav-display">
-            <span className="rep-nav-label">
-              Rep {appState.currentRepIndex + 1}/{repCount}
-            </span>
-            <span className="rep-nav-dot">•</span>
             <span className="rep-nav-position">
               {currentPosition
                 ? PHASE_LABELS[currentPosition] || currentPosition

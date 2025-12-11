@@ -464,7 +464,9 @@ describe('VideoSectionV2', () => {
         })
       );
       render(<VideoSectionV2 />);
-      expect(screen.getByText('Rep 1/2')).toBeInTheDocument();
+      // Rep navigation strip shows phase and navigation buttons
+      expect(screen.getByLabelText('Previous rep')).toBeInTheDocument();
+      expect(screen.getByLabelText('Next rep')).toBeInTheDocument();
     });
   });
 
