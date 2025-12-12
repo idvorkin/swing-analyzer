@@ -627,3 +627,163 @@ export function formatFileSize(bytes: number): string {
   }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/**
+ * Result of fetching and caching a bundled pose track
+ */
+export interface FetchBundledPoseTrackResult {
+  /** Whether the fetch was successful */
+  success: boolean;
+  /** Whether the pose track was loaded from cache (already existed) */
+  fromCache: boolean;
+  /** The loaded pose track (if successful) */
+  poseTrack?: PoseTrackFile;
+  /** Error message (if unsuccessful) */
+  error?: string;
+}
+
+/**
+ * Fetch a bundled pose track from a URL and store it in the cache.
+ *
+ * This enables instant loading of sample videos by pre-populating the
+ * pose track cache before the video is processed.
+ *
+ * @param primaryUrl - Remote URL for the pose track (tried first)
+ * @param localFallback - Local path to fallback to if remote fails
+ * @param expectedVideoHash - Optional expected video hash to verify the pose track matches
+ * @param signal - Optional AbortSignal for cancellation
+ * @returns Result indicating success/failure and whether it was from cache
+ */
+export async function fetchAndCacheBundledPoseTrack(
+  primaryUrl: string,
+  localFallback?: string,
+  expectedVideoHash?: string,
+  signal?: AbortSignal
+): Promise<FetchBundledPoseTrackResult> {
+  // Check if we already have a cached pose track for this video hash
+  if (expectedVideoHash) {
+    const existing = await loadPoseTrackFromStorage(expectedVideoHash);
+    if (existing) {
+      console.log(
+        '[PoseTrackService] Bundled pose track already in cache for hash:',
+        expectedVideoHash.slice(0, 8)
+      );
+      return { success: true, fromCache: true, poseTrack: existing };
+    }
+  }
+
+  // Try to fetch from primary URL
+  let json: string | null = null;
+
+  try {
+    console.log(
+      '[PoseTrackService] Fetching bundled pose track from:',
+      primaryUrl
+    );
+    const response = await fetch(primaryUrl, { signal });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    json = await response.text();
+  } catch (error) {
+    // Check for abort
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return { success: false, fromCache: false, error: 'Aborted' };
+    }
+
+    console.warn(
+      '[PoseTrackService] Failed to fetch from primary URL, trying fallback:',
+      error
+    );
+
+    // Try local fallback if available
+    if (localFallback) {
+      try {
+        console.log(
+          '[PoseTrackService] Fetching bundled pose track from local:',
+          localFallback
+        );
+        const response = await fetch(localFallback, { signal });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        json = await response.text();
+      } catch (fallbackError) {
+        if (
+          fallbackError instanceof DOMException &&
+          fallbackError.name === 'AbortError'
+        ) {
+          return { success: false, fromCache: false, error: 'Aborted' };
+        }
+        console.error(
+          '[PoseTrackService] Failed to fetch from fallback:',
+          fallbackError
+        );
+        return {
+          success: false,
+          fromCache: false,
+          error: `Failed to fetch pose track: ${error}`,
+        };
+      }
+    } else {
+      return {
+        success: false,
+        fromCache: false,
+        error: `Failed to fetch pose track: ${error}`,
+      };
+    }
+  }
+
+  // Parse and validate the pose track
+  if (!json) {
+    return {
+      success: false,
+      fromCache: false,
+      error: 'No pose track data received',
+    };
+  }
+
+  let poseTrack: PoseTrackFile;
+  try {
+    poseTrack = parsePoseTrack(json);
+  } catch (parseError) {
+    console.error('[PoseTrackService] Failed to parse pose track:', parseError);
+    return {
+      success: false,
+      fromCache: false,
+      error: `Invalid pose track format: ${parseError}`,
+    };
+  }
+
+  // Verify video hash matches if expected hash was provided
+  if (
+    expectedVideoHash &&
+    poseTrack.metadata.sourceVideoHash !== expectedVideoHash
+  ) {
+    console.warn(
+      '[PoseTrackService] Pose track hash mismatch. Expected:',
+      expectedVideoHash.slice(0, 8),
+      'Got:',
+      poseTrack.metadata.sourceVideoHash.slice(0, 8)
+    );
+    // Still save it - the hash in the pose track is the source of truth
+    // This can happen if the video was re-encoded or if the expected hash was wrong
+  }
+
+  // Save to storage
+  try {
+    await savePoseTrackToStorage(poseTrack);
+    console.log(
+      '[PoseTrackService] Bundled pose track cached successfully:',
+      poseTrack.metadata.frameCount,
+      'frames for hash:',
+      poseTrack.metadata.sourceVideoHash.slice(0, 8)
+    );
+  } catch (saveError) {
+    console.error('[PoseTrackService] Failed to save pose track:', saveError);
+    // Return success anyway - we have the pose track in memory
+    return { success: true, fromCache: false, poseTrack };
+  }
+
+  return { success: true, fromCache: false, poseTrack };
+}

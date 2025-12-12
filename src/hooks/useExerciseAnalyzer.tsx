@@ -27,6 +27,7 @@ import type { Pipeline, ThumbnailEvent } from '../pipeline/Pipeline';
 import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { ExtractionProgress } from '../pipeline/SkeletonSource';
+import { fetchAndCacheBundledPoseTrack } from '../services/PoseTrackService';
 import {
   recordExtractionComplete,
   recordExtractionStart,
@@ -60,7 +61,13 @@ interface SampleVideoConfig {
   fileName: string; // File name for the File object (e.g., "swing-sample.webm")
   remoteUrl: string; // Primary remote URL
   localFallback: string; // Local fallback URL
+  bundledPoseTrackUrl?: string; // Optional bundled pose track URL
+  bundledPoseTrackLocalFallback?: string; // Local fallback for pose track
 }
+
+// Base URL for sample videos and pose tracks hosted externally
+const SAMPLES_BASE_URL =
+  'https://raw.githubusercontent.com/idvorkin-ai-tools/form-analyzer-samples/main';
 
 const SAMPLE_VIDEOS: Record<string, SampleVideoConfig> = {
   swing: {
@@ -68,12 +75,16 @@ const SAMPLE_VIDEOS: Record<string, SampleVideoConfig> = {
     fileName: 'swing-sample.webm',
     remoteUrl: DEFAULT_SAMPLE_VIDEO,
     localFallback: LOCAL_SAMPLE_VIDEO,
+    bundledPoseTrackUrl: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/swing-sample.posetrack.json`,
+    bundledPoseTrackLocalFallback: '/videos/swing-sample.posetrack.json',
   },
   pistol: {
     name: 'Pistol Squat',
     fileName: 'pistol-squat-sample.webm',
     remoteUrl: PISTOL_SQUAT_SAMPLE_VIDEO,
     localFallback: LOCAL_PISTOL_SQUAT_VIDEO,
+    bundledPoseTrackUrl: `${SAMPLES_BASE_URL}/exercises/pistols/pistol-squat-sample.posetrack.json`,
+    bundledPoseTrackLocalFallback: '/videos/pistol-squat-sample.posetrack.json',
   },
 };
 
@@ -1016,21 +1027,56 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       resetVideoState();
 
       try {
+        // If bundled pose track is available, fetch it first to pre-populate the cache.
+        // This allows instant loading without ML extraction.
+        if (config.bundledPoseTrackUrl) {
+          setVideoLoadMessage('Loading pose data...');
+          const poseTrackResult = await fetchAndCacheBundledPoseTrack(
+            config.bundledPoseTrackUrl,
+            config.bundledPoseTrackLocalFallback,
+            undefined, // We don't know the video hash yet
+            abortController.signal
+          );
+          if (poseTrackResult.success) {
+            console.log(
+              `[loadSampleVideo] Bundled pose track loaded (fromCache: ${poseTrackResult.fromCache})`
+            );
+          } else if (poseTrackResult.error !== 'Aborted') {
+            // Log warning but continue - video can still be processed via ML extraction
+            console.warn(
+              `[loadSampleVideo] Failed to load bundled pose track: ${poseTrackResult.error}`
+            );
+          }
+        }
+
         // Try remote URL first, fall back to local
         let blob: Blob;
         try {
-          blob = await fetchWithProgress(config.remoteUrl, (percent) => {
-            setStatus(
-              `Downloading ${config.name.toLowerCase()}... ${percent}%`
-            );
-            setVideoLoadProgress(percent);
-          });
-        } catch {
+          blob = await fetchWithProgress(
+            config.remoteUrl,
+            (percent) => {
+              setStatus(
+                `Downloading ${config.name.toLowerCase()}... ${percent}%`
+              );
+              setVideoLoadProgress(percent);
+            },
+            abortController.signal
+          );
+        } catch (fetchError) {
+          // Check for abort before trying fallback
+          if (
+            fetchError instanceof DOMException &&
+            fetchError.name === 'AbortError'
+          ) {
+            throw fetchError;
+          }
           console.log(`Remote ${config.name} failed, falling back to local`);
           setStatus(`Loading ${config.name.toLowerCase()} (local)...`);
           setVideoLoadMessage('Loading from local cache...');
           setVideoLoadProgress(undefined);
-          const response = await fetch(config.localFallback);
+          const response = await fetch(config.localFallback, {
+            signal: abortController.signal,
+          });
           if (!response.ok) {
             throw new Error(`Failed to fetch video: ${response.status}`);
           }
