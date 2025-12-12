@@ -662,13 +662,22 @@ export async function fetchAndCacheBundledPoseTrack(
 ): Promise<FetchBundledPoseTrackResult> {
   // Check if we already have a cached pose track for this video hash
   if (expectedVideoHash) {
-    const existing = await loadPoseTrackFromStorage(expectedVideoHash);
-    if (existing) {
-      console.log(
-        '[PoseTrackService] Bundled pose track already in cache for hash:',
-        expectedVideoHash.slice(0, 8)
+    try {
+      const existing = await loadPoseTrackFromStorage(expectedVideoHash);
+      if (existing) {
+        console.log(
+          '[PoseTrackService] Bundled pose track already in cache for hash:',
+          expectedVideoHash.slice(0, 8)
+        );
+        return { success: true, fromCache: true, poseTrack: existing };
+      }
+    } catch (cacheError) {
+      // IndexedDB may fail in private browsing mode or due to corruption
+      console.warn(
+        '[PoseTrackService] Failed to check cache, will fetch fresh:',
+        cacheError
       );
-      return { success: true, fromCache: true, poseTrack: existing };
+      // Continue to fetch logic
     }
   }
 
@@ -722,7 +731,7 @@ export async function fetchAndCacheBundledPoseTrack(
         return {
           success: false,
           fromCache: false,
-          error: `Failed to fetch pose track: ${error}`,
+          error: `Failed to fetch pose track: primary (${error}), fallback (${fallbackError})`,
         };
       }
     } else {
