@@ -26,6 +26,16 @@ export interface SampleVideo {
   url: string;
   /** Local fallback path for offline/development use */
   localFallback: string;
+  /**
+   * Optional URL to a pre-extracted pose track file (.posetrack.json).
+   * If provided, this will be loaded into the cache before processing,
+   * allowing instant playback without ML extraction.
+   */
+  bundledPoseTrackUrl?: string;
+  /**
+   * Local fallback path for bundled pose track (for development/offline use).
+   */
+  bundledPoseTrackLocalFallback?: string;
 }
 
 /**
@@ -64,12 +74,9 @@ export const EXERCISE_REGISTRY: Record<
       {
         name: 'Igor 1H Swing',
         url: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/igor-1h-swing.webm`,
-        localFallback: '/videos/swing-sample.webm',
-      },
-      {
-        name: 'Good Form',
-        url: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/swing-sample.webm`,
-        localFallback: '/videos/swing-sample.webm',
+        localFallback: '/videos/igor-1h-swing.webm',
+        // Bundled pose track - hash verified to match remote video
+        bundledPoseTrackUrl: '/videos/igor-1h-swing.posetrack.json',
       },
     ],
   },
@@ -82,7 +89,9 @@ export const EXERCISE_REGISTRY: Record<
       {
         name: 'Sample',
         url: `${SAMPLES_BASE_URL}/exercises/pistols/pistols.webm`,
-        localFallback: '/videos/pistol-squat-sample.webm',
+        localFallback: '/videos/pistols.webm',
+        // Bundled pose track - hash verified to match remote video
+        bundledPoseTrackUrl: '/videos/pistols.posetrack.json',
       },
     ],
   },

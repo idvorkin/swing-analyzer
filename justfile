@@ -173,3 +173,21 @@ install-browsers:
 # Deploy to Surge
 deploy: build
     npx surge ./dist swing-analyzer.surge.sh
+
+# Verify a pose track file matches its video
+verify-posetrack posetrack video="":
+    #!/usr/bin/env bash
+    if [ -n "{{video}}" ]; then
+        node scripts/verify-posetrack.cjs "{{posetrack}}" "{{video}}"
+    else
+        node scripts/verify-posetrack.cjs "{{posetrack}}"
+    fi
+
+# Verify pose track from URL
+verify-posetrack-url posetrack_url video_url="":
+    #!/usr/bin/env bash
+    if [ -n "{{video_url}}" ]; then
+        node scripts/verify-posetrack.cjs --url "{{posetrack_url}}" "{{video_url}}"
+    else
+        node scripts/verify-posetrack.cjs --url "{{posetrack_url}}"
+    fi

@@ -38,6 +38,7 @@
     "includes": [
       "**",
       "!**/dist/**/*",
+      "!public/videos/*.posetrack.json",
       "!!e2e-tests/fixtures/poses/*.posetrack.json"
     ]
   }

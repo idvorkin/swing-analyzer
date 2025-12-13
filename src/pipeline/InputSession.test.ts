@@ -208,4 +208,87 @@ describe('InputSession', () => {
       expect(session.getVideoFileSource()).toBeNull();
     });
   });
+
+  describe('abort signal support', () => {
+    it('passes abort signal to video source start()', async () => {
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      const abortController = new AbortController();
+
+      await session.startVideoFile(mockFile, abortController.signal);
+
+      const source = session.getVideoFileSource();
+      expect(source?.start).toHaveBeenCalledWith(abortController.signal);
+    });
+
+    it('returns early if signal is already aborted', async () => {
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      const abortController = new AbortController();
+      abortController.abort();
+
+      await session.startVideoFile(mockFile, abortController.signal);
+
+      // Should not create a source since we aborted before starting
+      expect(session.getSource()).toBeNull();
+    });
+
+    it('works without abort signal (backward compatible)', async () => {
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+
+      await session.startVideoFile(mockFile);
+
+      const source = session.getVideoFileSource();
+      expect(source?.start).toHaveBeenCalledWith(undefined);
+    });
+
+    it('cleans up source and returns to idle when abort occurs during start', async () => {
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      const abortController = new AbortController();
+
+      // Override mock to throw AbortError when start is called
+      const { VideoFileSkeletonSource } = await import(
+        './VideoFileSkeletonSource'
+      );
+      vi.mocked(VideoFileSkeletonSource).mockImplementationOnce(
+        () =>
+          ({
+            type: 'video-file',
+            state: { type: 'idle' },
+            state$: {
+              pipe: vi.fn().mockReturnThis(),
+              subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+            },
+            skeletons$: {
+              pipe: vi.fn().mockReturnThis(),
+              subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+            },
+            start: vi
+              .fn()
+              .mockRejectedValue(new DOMException('Aborted', 'AbortError')),
+            stop: vi.fn(),
+            dispose: vi.fn(),
+            getSkeletonAtTime: vi.fn().mockReturnValue(null),
+            hasSkeletonAtTime: vi.fn().mockReturnValue(false),
+            save: vi.fn().mockResolvedValue(undefined),
+            getLiveCache: vi.fn().mockReturnValue(null),
+            getPoseTrack: vi.fn().mockReturnValue(null),
+            getVideoHash: vi.fn().mockReturnValue(null),
+          }) as unknown as InstanceType<typeof VideoFileSkeletonSource>
+      );
+
+      // Create new session that will use the abort-throwing mock
+      const abortSession = new InputSession({
+        videoElement: mockVideoElement,
+        canvasElement: mockCanvasElement,
+      });
+
+      await abortSession.startVideoFile(mockFile, abortController.signal);
+
+      // Source should be cleaned up
+      expect(abortSession.getSource()).toBeNull();
+      // State should be idle
+      expect(abortSession.state).toEqual({ type: 'idle' });
+
+      abortSession.dispose();
+    });
+  });
 });

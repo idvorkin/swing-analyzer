@@ -14,19 +14,18 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DetectedExercise } from '../analyzers';
-import { PHASE_ORDER } from '../components/repGalleryConstants';
 import {
-  DEFAULT_SAMPLE_VIDEO,
-  LOCAL_PISTOL_SQUAT_VIDEO,
-  LOCAL_SAMPLE_VIDEO,
-  PISTOL_SQUAT_SAMPLE_VIDEO,
-} from '../config/sampleVideos';
+  getSampleVideos,
+  type SampleVideo,
+} from '../analyzers/ExerciseRegistry';
+import { PHASE_ORDER } from '../components/repGalleryConstants';
 import type { Skeleton } from '../models/Skeleton';
 import { InputSession, type InputSessionState } from '../pipeline/InputSession';
 import type { Pipeline, ThumbnailEvent } from '../pipeline/Pipeline';
 import { createPipeline } from '../pipeline/PipelineFactory';
 import type { SkeletonEvent } from '../pipeline/PipelineInterfaces';
 import type { ExtractionProgress } from '../pipeline/SkeletonSource';
+import { fetchAndCacheBundledPoseTrack } from '../services/PoseTrackService';
 import {
   recordExtractionComplete,
   recordExtractionStart,
@@ -54,28 +53,14 @@ const REP_SYNC_INTERVAL_MS = 1000; // 1 second
 // Default phases (swing) - used when resetting before exercise detection runs
 const DEFAULT_PHASES = [...PHASE_ORDER];
 
-// Sample video configuration for DRY loading
-interface SampleVideoConfig {
-  name: string; // Display name for UI (e.g., "Kettlebell Swing")
-  fileName: string; // File name for the File object (e.g., "swing-sample.webm")
-  remoteUrl: string; // Primary remote URL
-  localFallback: string; // Local fallback URL
+/**
+ * Get filename from URL path, with fallback for edge cases.
+ */
+function getFileNameFromUrl(url: string): string {
+  const pathParts = url.split('/');
+  const fileName = pathParts[pathParts.length - 1];
+  return fileName || 'sample-video.webm';
 }
-
-const SAMPLE_VIDEOS: Record<string, SampleVideoConfig> = {
-  swing: {
-    name: 'Kettlebell Swing',
-    fileName: 'swing-sample.webm',
-    remoteUrl: DEFAULT_SAMPLE_VIDEO,
-    localFallback: LOCAL_SAMPLE_VIDEO,
-  },
-  pistol: {
-    name: 'Pistol Squat',
-    fileName: 'pistol-squat-sample.webm',
-    remoteUrl: PISTOL_SQUAT_SAMPLE_VIDEO,
-    localFallback: LOCAL_PISTOL_SQUAT_VIDEO,
-  },
-};
 
 /**
  * Convert error to user-friendly message for video loading failures.
@@ -937,21 +922,22 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       try {
         // Load video into DOM
         await loadVideoSafely(video, blobUrl, abortController.signal);
+
         setCurrentVideoFile(videoFile);
         recordVideoLoad({
           source: context === 'video' ? 'upload' : 'hardcoded',
           fileName: videoFile.name,
         });
 
-        // Start extraction/cache lookup
+        // Start extraction/cache lookup - pass signal to allow cancellation
         setVideoLoadMessage('Processing video...');
-        await session.startVideoFile(videoFile);
+        await session.startVideoFile(videoFile, abortController.signal);
 
         setStatus('Video loaded. Press Play to start.');
         clearLoadingState();
         return true;
       } catch (error) {
-        // AbortError means user switched videos - silently reset
+        // AbortError means user switched videos - clean up and return
         if (error instanceof DOMException && error.name === 'AbortError') {
           clearLoadingState();
           return false;
@@ -991,12 +977,18 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     [prepareVideoLoad, resetVideoState, loadVideo]
   );
 
-  // Load a sample video by key (shared implementation for all samples)
+  // Load a sample video for a given exercise using ExerciseRegistry as source of truth
   const loadSampleVideo = useCallback(
-    async (sampleKey: keyof typeof SAMPLE_VIDEOS) => {
-      const config = SAMPLE_VIDEOS[sampleKey];
+    async (
+      exerciseId: Exclude<DetectedExercise, 'unknown'>,
+      videoIndex: number = 0
+    ) => {
+      const sampleVideos = getSampleVideos(exerciseId);
+      const config: SampleVideo | undefined = sampleVideos[videoIndex];
       if (!config) {
-        console.error(`Unknown sample video: ${sampleKey}`);
+        console.error(
+          `No sample video at index ${videoIndex} for exercise: ${exerciseId}`
+        );
         return;
       }
 
@@ -1016,28 +1008,67 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       resetVideoState();
 
       try {
+        // If bundled pose track is available, fetch it first to pre-populate the cache.
+        // This allows instant loading without ML extraction.
+        if (config.bundledPoseTrackUrl) {
+          setVideoLoadMessage('Loading pose data...');
+          const poseTrackResult = await fetchAndCacheBundledPoseTrack(
+            config.bundledPoseTrackUrl,
+            config.bundledPoseTrackLocalFallback,
+            undefined, // We don't know the video hash yet
+            abortController.signal
+          );
+          if (poseTrackResult.success) {
+            console.log(
+              `[loadSampleVideo] Bundled pose track loaded (fromCache: ${poseTrackResult.fromCache})`
+            );
+          } else if (poseTrackResult.error !== 'Aborted') {
+            // Log warning and inform user - video can still be processed via ML extraction
+            console.warn(
+              `[loadSampleVideo] Failed to load bundled pose track: ${poseTrackResult.error}`
+            );
+            setVideoLoadMessage(
+              'Pose data unavailable, will extract from video...'
+            );
+          }
+        }
+
         // Try remote URL first, fall back to local
         let blob: Blob;
         try {
-          blob = await fetchWithProgress(config.remoteUrl, (percent) => {
-            setStatus(
-              `Downloading ${config.name.toLowerCase()}... ${percent}%`
-            );
-            setVideoLoadProgress(percent);
-          });
-        } catch {
+          blob = await fetchWithProgress(
+            config.url,
+            (percent) => {
+              setStatus(
+                `Downloading ${config.name.toLowerCase()}... ${percent}%`
+              );
+              setVideoLoadProgress(percent);
+            },
+            abortController.signal
+          );
+        } catch (fetchError) {
+          // Check for abort before trying fallback
+          if (
+            fetchError instanceof DOMException &&
+            fetchError.name === 'AbortError'
+          ) {
+            throw fetchError;
+          }
           console.log(`Remote ${config.name} failed, falling back to local`);
           setStatus(`Loading ${config.name.toLowerCase()} (local)...`);
           setVideoLoadMessage('Loading from local cache...');
           setVideoLoadProgress(undefined);
-          const response = await fetch(config.localFallback);
+          const response = await fetch(config.localFallback, {
+            signal: abortController.signal,
+          });
           if (!response.ok) {
             throw new Error(`Failed to fetch video: ${response.status}`);
           }
           blob = await response.blob();
         }
 
-        const videoFile = new File([blob], config.fileName, {
+        const fileName = getFileNameFromUrl(config.url);
+        const videoFile = new File([blob], fileName, {
           type: 'video/webm',
         });
         const blobUrl = URL.createObjectURL(blob);
@@ -1058,11 +1089,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // Convenience wrappers for specific samples (maintain existing API)
   const loadHardcodedVideo = useCallback(
-    () => loadSampleVideo('swing'),
+    () => loadSampleVideo('kettlebell-swing'),
     [loadSampleVideo]
   );
   const loadPistolSquatSample = useCallback(
-    () => loadSampleVideo('pistol'),
+    () => loadSampleVideo('pistol-squat'),
     [loadSampleVideo]
   );
 

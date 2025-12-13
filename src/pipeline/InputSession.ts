@@ -123,10 +123,17 @@ export class InputSession {
 
   /**
    * Start video file input
+   * @param videoFile - The video file to process
+   * @param signal - Optional AbortSignal to cancel the operation
    */
-  async startVideoFile(videoFile: File): Promise<void> {
+  async startVideoFile(videoFile: File, signal?: AbortSignal): Promise<void> {
     // Clean up previous source
     await this.cleanup();
+
+    // Check if already aborted before starting
+    if (signal?.aborted) {
+      return;
+    }
 
     // Create video file source
     const videoSource = new VideoFileSkeletonSource({
@@ -144,8 +151,15 @@ export class InputSession {
     });
 
     try {
-      await videoSource.start();
+      await videoSource.start(signal);
     } catch (error) {
+      // Don't report abort as an error, but do clean up
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        // Clean up source and subscriptions on abort
+        await this.cleanup();
+        this.stateSubject.next({ type: 'idle' });
+        return;
+      }
       const message =
         error instanceof Error ? error.message : 'Failed to process video';
       this.stateSubject.next({ type: 'error', message });
