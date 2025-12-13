@@ -23,7 +23,6 @@ interface AboutTabProps {
   onShakeToggle?: () => void;
   isShakeSupported?: boolean;
   shortcut?: string;
-  onReportBug?: () => void;
   updateAvailable?: boolean;
   lastCheckTime?: Date | null;
   isCheckingUpdate?: boolean;
@@ -36,7 +35,6 @@ export function AboutTab({
   onShakeToggle,
   isShakeSupported = false,
   shortcut = 'Ctrl+I',
-  onReportBug,
   updateAvailable = false,
   lastCheckTime,
   isCheckingUpdate = false,
@@ -108,20 +106,19 @@ export function AboutTab({
         </div>
       )}
 
-      {/* Bug Report Row */}
+      {/* Bug Report Shortcut Info */}
       <div className="settings-info-row">
         <span className="settings-info-label">Bug report</span>
         <span className="settings-info-value">
           <kbd className="settings-kbd-inline">{shortcut}</kbd>
-          {onReportBug && (
-            <button
-              type="button"
-              className="settings-inline-btn settings-inline-btn--red"
-              onClick={onReportBug}
-            >
-              Report
-            </button>
-          )}
+          <span
+            style={{
+              color: 'var(--settings-text-tertiary)',
+              fontSize: 'var(--settings-text-xs)',
+            }}
+          >
+            or use header button
+          </span>
         </span>
       </div>
 

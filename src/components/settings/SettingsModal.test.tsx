@@ -79,7 +79,6 @@ const defaultProps = {
   onShakeEnabledChange: vi.fn(),
   isShakeSupported: false,
   onRequestShakePermission: vi.fn().mockResolvedValue(true),
-  onOpenBugReporter: vi.fn(),
   shortcut: 'Cmd+I',
   lastCheckTime: null,
   onCheckForUpdate: vi.fn().mockResolvedValue(undefined),
@@ -146,22 +145,24 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Model')).toBeInTheDocument();
     });
 
-    it('has three tabs: Settings, Developer, About', () => {
+    it('has three tabs: Settings, Help, About', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
       // Get all tab buttons
       const tabs = screen
         .getAllByRole('button')
         .filter((btn) => btn.classList.contains('settings-tab'));
       expect(tabs).toHaveLength(3);
-      expect(screen.getByText('Developer')).toBeInTheDocument();
+      expect(screen.getByText('Help')).toBeInTheDocument();
       expect(screen.getByText('About')).toBeInTheDocument();
     });
 
-    it('switches to Developer tab when clicked', () => {
+    it('switches to Help tab when clicked', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Developer'));
-      expect(screen.getByText('Download Log')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Help'));
+      expect(
+        screen.getByText(/Double-tap the video to control playback/)
+      ).toBeInTheDocument();
     });
 
     it('switches to About tab when clicked', () => {
@@ -268,23 +269,6 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Cmd+I')).toBeInTheDocument();
     });
 
-    it('calls onOpenBugReporter and onClose when Report button is clicked', () => {
-      const onClose = vi.fn();
-      const onOpenBugReporter = vi.fn();
-      renderWithRouter(
-        <SettingsModal
-          {...defaultProps}
-          onClose={onClose}
-          onOpenBugReporter={onOpenBugReporter}
-        />
-      );
-
-      fireEvent.click(screen.getByText('About'));
-      fireEvent.click(screen.getByText('Report'));
-      expect(onClose).toHaveBeenCalledTimes(1);
-      expect(onOpenBugReporter).toHaveBeenCalledTimes(1);
-    });
-
     it('shows "Never" when lastCheckTime is null', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
@@ -349,11 +333,11 @@ describe('SettingsModal', () => {
     });
   });
 
-  describe('Developer Tab', () => {
+  describe('Settings Tab - Developer Section', () => {
     it('has download log button and session stats', () => {
       renderWithRouter(<SettingsModal {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Developer'));
+      // Developer section is now in Settings tab (which is active by default)
       expect(screen.getByText('Download Log')).toBeInTheDocument();
       // Session stats are shown (clicks, snaps)
       expect(screen.getByText(/clicks/)).toBeInTheDocument();

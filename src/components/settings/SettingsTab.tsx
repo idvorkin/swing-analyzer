@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { BlazePoseVariant } from '../../config/modelConfig';
 import { useSwingAnalyzerContext } from '../../contexts/ExerciseAnalyzerContext';
 import {
@@ -6,8 +6,9 @@ import {
   getPoseTrackStorageMode,
   setPoseTrackStorageMode,
 } from '../../services/PoseTrackService';
+import { sessionRecorder } from '../../services/SessionRecorder';
 import type { DisplayMode } from '../../types';
-import { DatabaseIcon, MonitorIcon, SparklesIcon } from './Icons';
+import { DatabaseIcon, DownloadIcon, MonitorIcon, SparklesIcon } from './Icons';
 import { SegmentedControl } from './SegmentedControl';
 import { Toggle } from './Toggle';
 
@@ -56,6 +57,44 @@ export function SettingsTab() {
     () => getPoseTrackStorageMode() === 'indexeddb'
   );
   const [needsReload, setNeedsReload] = useState(false);
+
+  // Developer section state
+  const [recordingStats, setRecordingStats] = useState(
+    sessionRecorder.getStats()
+  );
+  const [hasPoseTrack, setHasPoseTrack] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRecordingStats(sessionRecorder.getStats());
+      setHasPoseTrack(sessionRecorder.getPoseTrack() !== null);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatDuration = (ms: number): string => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    if (minutes > 0) return `${minutes}m`;
+    return `${seconds}s`;
+  };
+
+  const handleDownloadPoseTrack = useCallback(async () => {
+    const swingDebug = (
+      window as unknown as {
+        swingDebug?: { downloadPoseTrack: () => Promise<string | null> };
+      }
+    ).swingDebug;
+    if (swingDebug?.downloadPoseTrack) {
+      setIsDownloading(true);
+      try {
+        await swingDebug.downloadPoseTrack();
+      } finally {
+        setIsDownloading(false);
+      }
+    }
+  }, []);
 
   const handleVariantChange = (variant: BlazePoseVariant) => {
     const previousVariant = getSavedBlazePoseVariant();
@@ -176,6 +215,47 @@ export function SettingsTab() {
           </button>
         </div>
       )}
+
+      {/* Developer Section */}
+      <div className="settings-divider" />
+
+      {/* Action buttons row */}
+      <div className="settings-actions-row">
+        <button
+          type="button"
+          className="settings-action-btn settings-action-btn--green"
+          onClick={() => sessionRecorder.downloadRecording()}
+        >
+          <DownloadIcon /> Download Log
+        </button>
+        <button
+          type="button"
+          className="settings-action-btn settings-action-btn--blue"
+          onClick={handleDownloadPoseTrack}
+          disabled={!hasPoseTrack || isDownloading}
+          title={
+            hasPoseTrack ? 'Download extracted pose data' : 'Load a video first'
+          }
+        >
+          <DownloadIcon /> {isDownloading ? 'Compressing...' : 'Download Poses'}
+        </button>
+      </div>
+
+      {/* Session stats inline */}
+      <div className="settings-stats-row">
+        <span className="settings-stat">
+          {formatDuration(recordingStats.duration)}
+        </span>
+        <span className="settings-stat">
+          {recordingStats.interactions} clicks
+        </span>
+        <span className="settings-stat">{recordingStats.snapshots} snaps</span>
+        {recordingStats.errors > 0 && (
+          <span className="settings-stat settings-stat--error">
+            {recordingStats.errors} errors
+          </span>
+        )}
+      </div>
     </div>
   );
 }

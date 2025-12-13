@@ -1,6 +1,82 @@
 import { GIT_COMMIT_URL, GIT_SHA_SHORT } from '../generated_version';
 import type { BugReportData, BugReportMetadata } from '../types/bugReport';
 
+interface DeviceDetails {
+  screen: string;
+  memory: string;
+  cpuCores: string;
+  online: string;
+  connectionType: string;
+  displayMode: string;
+  touchDevice: string;
+}
+
+/**
+ * Collect device/environment details for bug reports.
+ * Uses browser APIs that may not be available in all browsers.
+ */
+export function getDeviceDetails(): DeviceDetails {
+  const nav = typeof navigator !== 'undefined' ? navigator : null;
+  const win = typeof window !== 'undefined' ? window : null;
+
+  // Screen dimensions and pixel ratio
+  let screen = 'Unknown';
+  if (win) {
+    const w = win.innerWidth;
+    const h = win.innerHeight;
+    const dpr = win.devicePixelRatio || 1;
+    screen = `${w}x${h} @${dpr}x`;
+  }
+
+  // Device memory (Chrome/Edge only)
+  let memory = 'Unknown';
+  if (nav && 'deviceMemory' in nav) {
+    memory = `${(nav as { deviceMemory?: number }).deviceMemory}GB`;
+  }
+
+  // CPU cores
+  let cpuCores = 'Unknown';
+  if (nav?.hardwareConcurrency) {
+    cpuCores = `${nav.hardwareConcurrency}`;
+  }
+
+  // Online status
+  const online = nav?.onLine ? 'Online' : 'Offline';
+
+  // Connection type (Chrome/Edge only)
+  let connectionType = 'Unknown';
+  if (nav && 'connection' in nav) {
+    const conn = nav.connection as { effectiveType?: string } | undefined;
+    if (conn?.effectiveType) {
+      connectionType = conn.effectiveType;
+    }
+  }
+
+  // Display mode (PWA vs browser)
+  let displayMode = 'browser';
+  if (win?.matchMedia?.('(display-mode: standalone)')?.matches) {
+    displayMode = 'standalone (PWA)';
+  } else if (win?.matchMedia?.('(display-mode: fullscreen)')?.matches) {
+    displayMode = 'fullscreen';
+  }
+
+  // Touch capability
+  let touchDevice = 'No';
+  if (win && ('ontouchstart' in win || (nav && nav.maxTouchPoints > 0))) {
+    touchDevice = 'Yes';
+  }
+
+  return {
+    screen,
+    memory,
+    cpuCores,
+    online,
+    connectionType,
+    displayMode,
+    touchDevice,
+  };
+}
+
 export function formatBuildLink(): string {
   return `[${GIT_SHA_SHORT}](${GIT_COMMIT_URL})`;
 }
@@ -45,6 +121,7 @@ export function buildIssueBody(
   let body = data.description;
 
   if (data.includeMetadata) {
+    const device = getDeviceDetails();
     body += `
 
 ---
@@ -56,6 +133,17 @@ export function buildIssueBody(
 | App Version | \`${metadata.appVersion}\` |
 | Browser | \`${metadata.userAgent}\` |
 | Timestamp | \`${metadata.timestamp}\` |
+
+**Device Details**
+| Field | Value |
+|-------|-------|
+| Screen | \`${device.screen}\` |
+| CPU Cores | \`${device.cpuCores}\` |
+| Memory | \`${device.memory}\` |
+| Connection | \`${device.connectionType}\` |
+| Online | \`${device.online}\` |
+| Display Mode | \`${device.displayMode}\` |
+| Touch Device | \`${device.touchDevice}\` |
 `;
   }
 

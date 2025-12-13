@@ -81,57 +81,46 @@ test.describe('Touch Double-Tap Zones', () => {
     await page.mouse.click(x, y);
   }
 
-  test.describe('Help Modal', () => {
-    test('help button opens help modal', async ({ page }) => {
-      await expect(page.locator('.header-help-btn')).toBeVisible();
+  test.describe('Help Tab in Settings', () => {
+    test('help tab shows touch controls content', async ({ page }) => {
+      await page.click('button[aria-label="Open settings"]');
 
-      await page.click('.header-help-btn');
+      // Click on Help tab
+      await page.locator('.settings-tab', { hasText: 'Help' }).click();
 
-      await expect(page.locator('.help-modal')).toBeVisible();
-      await expect(page.locator('#help-title')).toHaveText('Touch Controls');
+      // Should show help intro text
+      await expect(page.locator('.settings-help-intro')).toContainText(
+        'Double-tap the video to control playback'
+      );
     });
 
-    test('help modal shows two zones with correct labels', async ({ page }) => {
-      await page.click('.header-help-btn');
+    test('help tab shows two zones with correct labels', async ({ page }) => {
+      await page.click('button[aria-label="Open settings"]');
+      await page.locator('.settings-tab', { hasText: 'Help' }).click();
 
-      // Should show 2 zones (left and right only, center zone removed)
-      const zones = page.locator('.help-zone');
+      // Should show 2 zones (left and right)
+      const zones = page.locator('.settings-help-zone');
       await expect(zones).toHaveCount(2);
 
       // Left zone - Previous
       await expect(
-        page.locator('.help-zone--left .help-zone-label')
+        page.locator('.settings-help-zone--left .settings-help-zone-label')
       ).toContainText('Previous');
 
       // Right zone - Next
       await expect(
-        page.locator('.help-zone--right .help-zone-label')
+        page.locator('.settings-help-zone--right .settings-help-zone-label')
       ).toContainText('Next');
     });
 
-    test('help modal closes with close button', async ({ page }) => {
-      await page.click('.header-help-btn');
-      await expect(page.locator('.help-modal')).toBeVisible();
+    test('help tab shows tip about checkpoints', async ({ page }) => {
+      await page.click('button[aria-label="Open settings"]');
+      await page.locator('.settings-tab', { hasText: 'Help' }).click();
 
-      await page.click('.help-close-btn');
-      await expect(page.locator('.help-modal')).not.toBeVisible();
-    });
-
-    test('help modal closes with Escape key', async ({ page }) => {
-      await page.click('.header-help-btn');
-      await expect(page.locator('.help-modal')).toBeVisible();
-
-      await page.keyboard.press('Escape');
-      await expect(page.locator('.help-modal')).not.toBeVisible();
-    });
-
-    test('help modal closes when clicking overlay', async ({ page }) => {
-      await page.click('.header-help-btn');
-      await expect(page.locator('.help-modal')).toBeVisible();
-
-      // Click on overlay (outside modal)
-      await page.click('.help-overlay', { position: { x: 10, y: 10 } });
-      await expect(page.locator('.help-modal')).not.toBeVisible();
+      // Should show tip about checkpoints
+      await expect(page.locator('.settings-help-note')).toContainText(
+        'Checkpoints are the key positions'
+      );
     });
   });
 

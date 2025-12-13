@@ -1394,3 +1394,101 @@
 .settings-stat--error {
   color: var(--settings-danger);
 }
+
+/* ==========================================================================
+   Help Tab
+   ========================================================================== */
+
+.settings-help-intro {
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-base);
+  color: var(--settings-text-secondary);
+  text-align: center;
+  margin-bottom: var(--settings-space-lg);
+}
+
+.settings-help-zones {
+  display: flex;
+  gap: var(--settings-space-md);
+  margin-bottom: var(--settings-space-lg);
+}
+
+.settings-help-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--settings-space-md);
+  padding: var(--settings-space-xl);
+  background: var(--settings-bg-elevated);
+  border-radius: var(--settings-radius-lg);
+  border: 1px solid var(--settings-border);
+}
+
+.settings-help-zone--left {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.1) 0%,
+    rgba(59, 130, 246, 0.05) 100%
+  );
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.settings-help-zone--right {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.1) 0%,
+    rgba(16, 185, 129, 0.05) 100%
+  );
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.settings-help-zone-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--settings-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-help-zone--left .settings-help-zone-icon {
+  background: linear-gradient(
+    135deg,
+    var(--settings-accent) 0%,
+    var(--settings-accent-dark) 100%
+  );
+  color: white;
+}
+
+.settings-help-zone--right .settings-help-zone-icon {
+  background: linear-gradient(
+    135deg,
+    var(--settings-success) 0%,
+    var(--settings-success-dark) 100%
+  );
+  color: white;
+}
+
+.settings-help-zone-label {
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-sm);
+  font-weight: 500;
+  color: var(--settings-text-primary);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.settings-help-note {
+  padding: var(--settings-space-md) var(--settings-space-lg);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: var(--settings-radius-md);
+  font-family: var(--settings-font-sans);
+  font-size: var(--settings-text-sm);
+  color: var(--settings-text-secondary);
+}
+
+.settings-help-note strong {
+  color: #fbbf24;
+}
