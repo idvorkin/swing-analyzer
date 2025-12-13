@@ -374,19 +374,17 @@ export class ThumbnailQueue {
 
     if (confidentKeypoints.length > 0) {
       // Calculate bounding box of confident keypoints
+      // BlazePose keypoints are in pixel coordinates (not normalized)
       let minX = Infinity,
         maxX = -Infinity;
       let minY = Infinity,
         maxY = -Infinity;
 
       for (const kp of confidentKeypoints) {
-        // Keypoints are normalized [0,1], convert to pixel coordinates
-        const x = kp.x * videoWidth;
-        const y = kp.y * videoHeight;
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
+        minX = Math.min(minX, kp.x);
+        maxX = Math.max(maxX, kp.x);
+        minY = Math.min(minY, kp.y);
+        maxY = Math.max(maxY, kp.y);
       }
 
       personCenterX = (minX + maxX) / 2;
