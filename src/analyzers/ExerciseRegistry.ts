@@ -75,15 +75,15 @@ export const EXERCISE_REGISTRY: Record<
         name: 'Igor 1H Swing',
         url: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/igor-1h-swing.webm`,
         localFallback: '/videos/swing-sample.webm',
-        bundledPoseTrackUrl: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/swing-sample.posetrack.json`,
-        bundledPoseTrackLocalFallback: '/videos/swing-sample.posetrack.json',
+        // Use local pose track - remote not yet uploaded to samples repo
+        bundledPoseTrackUrl: '/videos/swing-sample.posetrack.json',
       },
       {
         name: 'Good Form',
         url: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/swing-sample.webm`,
         localFallback: '/videos/swing-sample.webm',
-        bundledPoseTrackUrl: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/swing-sample.posetrack.json`,
-        bundledPoseTrackLocalFallback: '/videos/swing-sample.posetrack.json',
+        // Use local pose track - remote not yet uploaded to samples repo
+        bundledPoseTrackUrl: '/videos/swing-sample.posetrack.json',
       },
     ],
   },
@@ -97,9 +97,8 @@ export const EXERCISE_REGISTRY: Record<
         name: 'Sample',
         url: `${SAMPLES_BASE_URL}/exercises/pistols/pistols.webm`,
         localFallback: '/videos/pistol-squat-sample.webm',
-        bundledPoseTrackUrl: `${SAMPLES_BASE_URL}/exercises/pistols/pistol-squat-sample.posetrack.json`,
-        bundledPoseTrackLocalFallback:
-          '/videos/pistol-squat-sample.posetrack.json',
+        // Use local pose track - remote not yet uploaded to samples repo
+        bundledPoseTrackUrl: '/videos/pistol-squat-sample.posetrack.json',
       },
     ],
   },
