@@ -35,7 +35,7 @@ A "Zoom" button that:
 
 ### Smart Cropping Logic
 
-```
+```text
 if (cropRegion from pose data exists) {
   // Use ML-detected person location (more accurate)
   crop to cropRegion

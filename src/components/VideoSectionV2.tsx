@@ -392,7 +392,7 @@ const VideoSectionV2: React.FC = () => {
           </div>
         )}
 
-        <div className="video-controls">
+        <div className="video-controls" onClick={(e) => e.stopPropagation()}>
           {/* 1. Play/Pause */}
           <button
             id="play-pause-btn"

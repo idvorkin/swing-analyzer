@@ -163,6 +163,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const [repThumbnails, setRepThumbnails] = useState<
     Map<number, Map<string, PositionCandidate>>
   >(new Map());
+  // Ref to track repThumbnails for non-render access (e.g., crop calculation)
+  const repThumbnailsRef = useRef(repThumbnails);
   const [extractionProgress, setExtractionProgress] =
     useState<ExtractionProgress | null>(null);
   const [inputState, setInputState] = useState<InputSessionState>({
@@ -336,6 +338,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     },
     []
   );
+
+  // Keep repThumbnails ref in sync with state for non-render access
+  useEffect(() => {
+    repThumbnailsRef.current = repThumbnails;
+  }, [repThumbnails]);
 
   // Re-sync canvas on window resize
   useEffect(() => {
@@ -689,43 +696,39 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             if (poseTrack && poseTrack.frames.length > 0) {
               const { videoWidth, videoHeight } = poseTrack.metadata;
 
-              // Get frames at rep position times (from current repThumbnails state)
+              // Get frames at rep position times (from repThumbnails ref)
               // Fall back to first 60 frames if no reps detected yet
               let sampleFrames = poseTrack.frames.slice(0, 60);
 
-              // Use setRepThumbnails callback to read current state
-              setRepThumbnails((currentThumbnails) => {
-                if (currentThumbnails.size > 0) {
-                  const repFrameIndices: number[] = [];
-                  currentThumbnails.forEach((positions) => {
-                    positions.forEach((candidate) => {
-                      if (candidate.videoTime !== undefined) {
-                        // Find frame index closest to this video time
-                        const fps = poseTrack.metadata.fps || 30;
-                        const frameIndex = Math.round(
-                          candidate.videoTime * fps
-                        );
-                        if (
-                          frameIndex >= 0 &&
-                          frameIndex < poseTrack.frames.length
-                        ) {
-                          repFrameIndices.push(frameIndex);
-                        }
+              // Read current repThumbnails from ref (synced via useEffect)
+              const currentThumbnails = repThumbnailsRef.current;
+              if (currentThumbnails.size > 0) {
+                const repFrameIndices: number[] = [];
+                currentThumbnails.forEach((positions) => {
+                  positions.forEach((candidate) => {
+                    if (candidate.videoTime !== undefined) {
+                      // Find frame index closest to this video time
+                      const fps = poseTrack.metadata.fps || 30;
+                      const frameIndex = Math.round(candidate.videoTime * fps);
+                      if (
+                        frameIndex >= 0 &&
+                        frameIndex < poseTrack.frames.length
+                      ) {
+                        repFrameIndices.push(frameIndex);
                       }
-                    });
+                    }
                   });
+                });
 
-                  if (repFrameIndices.length > 0) {
-                    sampleFrames = repFrameIndices.map(
-                      (i) => poseTrack.frames[i]
-                    );
-                    console.log(
-                      `[Crop] Using ${sampleFrames.length} rep position frames`
-                    );
-                  }
+                if (repFrameIndices.length > 0) {
+                  sampleFrames = repFrameIndices.map(
+                    (i) => poseTrack.frames[i]
+                  );
+                  console.log(
+                    `[Crop] Using ${sampleFrames.length} rep position frames`
+                  );
                 }
-                return currentThumbnails; // Don't modify state
-              });
+              }
 
               const crop = calculateStableCropRegion(
                 sampleFrames,
