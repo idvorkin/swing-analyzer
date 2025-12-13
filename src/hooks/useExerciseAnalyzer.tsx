@@ -1047,7 +1047,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           setVideoLoadMessage('Loading pose data...');
           const poseTrackResult = await fetchAndCacheBundledPoseTrack(
             config.bundledPoseTrackUrl,
-            config.bundledPoseTrackLocalFallback,
+            undefined, // No local fallback - using GitHub permalink
             undefined, // We don't know the video hash yet
             abortController.signal
           );
