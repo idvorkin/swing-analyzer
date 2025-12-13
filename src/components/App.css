@@ -431,14 +431,25 @@ main {
   object-fit: contain;
 }
 
-/* Zoomed state - expanded container for landscape videos */
-.video-container.zoomed #video {
+/* Zoomed state - portrait container for landscape videos */
+.video-container.zoomed {
+  /* Portrait aspect ratio to match crop (3:4) */
+  aspect-ratio: 3 / 4;
   max-height: 90vh;
+  width: auto;
+  max-width: 100%;
+}
+
+.video-container.zoomed #video {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
 }
 
 /* Even taller on mobile since screen is precious */
 @media (max-width: 768px) {
-  .video-container.zoomed #video {
+  .video-container.zoomed {
     max-height: 95vh;
   }
 }

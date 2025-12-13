@@ -172,14 +172,13 @@ test.describe('Landscape Zoom Feature - Mobile', () => {
     await expect(zoomBtn).toContainText('Full');
     await expect(page.locator('.video-container.zoomed')).toBeVisible();
 
-    // Verify video element has increased max-height (95vh on mobile when zoomed)
-    const video = page.locator('#video');
-    const maxHeight = await video.evaluate(
-      (el) => window.getComputedStyle(el).maxHeight
-    );
-    // 95vh on mobile (844px height) = ~802px
-    // Verify it's larger than 80vh (~675px) to confirm zoom is active
-    const maxHeightPx = parseFloat(maxHeight);
-    expect(maxHeightPx).toBeGreaterThan(700);
+    // Verify container has portrait aspect ratio when zoomed
+    const container = page.locator('.video-container.zoomed');
+    const boundingBox = await container.boundingBox();
+    expect(boundingBox).not.toBeNull();
+    // Container should be portrait (height > width)
+    expect(boundingBox!.height).toBeGreaterThan(boundingBox!.width);
+    // Container should be reasonably tall (>400px on mobile)
+    expect(boundingBox!.height).toBeGreaterThan(400);
   });
 });
