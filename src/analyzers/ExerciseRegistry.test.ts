@@ -123,7 +123,7 @@ describe('ExerciseRegistry', () => {
     it('returns URL for kettlebell-swing', () => {
       const url = getDefaultSampleVideo('kettlebell-swing');
       expect(url).toBeDefined();
-      expect(url).toContain('swing-sample'); // Local URL for bundled pose track matching
+      expect(url).toContain('igor-1h-swing'); // Uses igor-1h-swing video with bundled pose track
     });
 
     it('returns URL for pistol-squat', () => {

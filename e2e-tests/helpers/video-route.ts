@@ -50,9 +50,9 @@ export async function useShortTestVideo(page: Page): Promise<void> {
     });
   });
 
-  // Also intercept local swing-sample.webm URL (used by ExerciseRegistry)
+  // Also intercept local igor-1h-swing.webm URL (used by ExerciseRegistry)
   // and serve the shorter 4-rep version for faster tests
-  await page.route('**/videos/swing-sample.webm', async (route) => {
+  await page.route('**/videos/igor-1h-swing.webm', async (route) => {
     const videoBuffer = fs.readFileSync(shortVideoPath);
     await route.fulfill({
       status: 200,
@@ -62,9 +62,9 @@ export async function useShortTestVideo(page: Page): Promise<void> {
   });
 
   // Block bundled pose track fetch - tests use seeded fixtures instead.
-  // The bundled track has the hash for swing-sample.webm (9 reps), which
+  // The bundled track has the hash for igor-1h-swing.webm, which
   // doesn't match swing-sample-4reps.webm (4 reps) served by this helper.
-  await page.route('**/videos/swing-sample.posetrack.json', async (route) => {
+  await page.route('**/videos/igor-1h-swing.posetrack.json', async (route) => {
     await route.fulfill({
       status: 404,
       contentType: 'application/json',

@@ -72,11 +72,11 @@ export const EXERCISE_REGISTRY: Record<
     createAnalyzer: () => new KettlebellSwingFormAnalyzer(),
     sampleVideos: [
       {
-        name: 'Good Form',
-        // Use local video to ensure hash matches bundled pose track
-        url: '/videos/swing-sample.webm',
-        localFallback: '/videos/swing-sample.webm',
-        bundledPoseTrackUrl: '/videos/swing-sample.posetrack.json',
+        name: 'Igor 1H Swing',
+        url: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/igor-1h-swing.webm`,
+        localFallback: '/videos/igor-1h-swing.webm',
+        // Bundled pose track - hash verified to match remote video
+        bundledPoseTrackUrl: '/videos/igor-1h-swing.posetrack.json',
       },
     ],
   },
@@ -89,8 +89,9 @@ export const EXERCISE_REGISTRY: Record<
       {
         name: 'Sample',
         url: `${SAMPLES_BASE_URL}/exercises/pistols/pistols.webm`,
-        localFallback: '/videos/pistol-squat-sample.webm',
-        // No bundled pose track - video file not available locally yet
+        localFallback: '/videos/pistols.webm',
+        // Bundled pose track - hash verified to match remote video
+        bundledPoseTrackUrl: '/videos/pistols.posetrack.json',
       },
     ],
   },
