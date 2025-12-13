@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { DetectedExercise } from '../analyzers';
+import type { DetectedExercise, RepPosition } from '../analyzers';
 import {
   getSampleVideos,
   type SampleVideo,
@@ -36,6 +36,7 @@ import {
   recordVideoLoad,
   sessionRecorder,
 } from '../services/SessionRecorder';
+import { ThumbnailQueue } from '../services/ThumbnailGenerator';
 import type { AppState } from '../types';
 import type { PositionCandidate } from '../types/exercise';
 import type { CropRegion } from '../types/posetrack';
@@ -188,6 +189,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // Core refs
   const inputSessionRef = useRef<InputSession | null>(null);
+  const thumbnailQueueRef = useRef<ThumbnailQueue | null>(null);
   const pipelineRef = useRef<Pipeline | null>(null);
   const skeletonRendererRef = useRef<SkeletonRenderer | null>(null);
   const isPlayingRef = useRef<boolean>(false);
@@ -403,27 +405,53 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
     const pipeline = createPipeline(videoRef.current, canvasRef.current);
 
+    // Initialize thumbnail queue for lazy generation from cached pose tracks
+    // Uses a hidden video element to avoid affecting main playback
+    if (!thumbnailQueueRef.current) {
+      thumbnailQueueRef.current = new ThumbnailQueue();
+    }
+
+    // Helper to update state with positions (used by both direct and queued paths)
+    const updateThumbnailState = (
+      repNumber: number,
+      positions: RepPosition[]
+    ) => {
+      setRepThumbnails((prev) => {
+        const updated = new Map(prev);
+        const positionMap = new Map<string, PositionCandidate>();
+        for (const pos of positions) {
+          positionMap.set(pos.name, {
+            position: pos.name,
+            timestamp: pos.timestamp,
+            videoTime: pos.videoTime,
+            angles: pos.angles,
+            score: pos.score,
+            frameImage: pos.frameImage,
+          });
+        }
+        updated.set(repNumber, positionMap);
+        return updated;
+      });
+    };
+
     // Subscribe to thumbnail events
-    // Convert RepPosition[] to Map<string, PositionCandidate> for UI compatibility
+    // Uses ThumbnailQueue for lazy generation when loading from cached pose tracks
     pipeline.getThumbnailEvents().subscribe({
       next: (event: ThumbnailEvent) => {
-        setRepThumbnails((prev) => {
-          const updated = new Map(prev);
-          // Convert RepPosition[] to Map<string, PositionCandidate>
-          const positionMap = new Map<string, PositionCandidate>();
-          for (const pos of event.positions) {
-            positionMap.set(pos.name, {
-              position: pos.name,
-              timestamp: pos.timestamp,
-              videoTime: pos.videoTime,
-              angles: pos.angles,
-              score: pos.score,
-              frameImage: pos.frameImage,
-            });
-          }
-          updated.set(event.repNumber, positionMap);
-          return updated;
-        });
+        const needsThumbnails = event.positions.some((p) => !p.frameImage);
+
+        if (needsThumbnails && thumbnailQueueRef.current) {
+          // Queue for lazy generation using hidden video element
+          // This won't affect main video playback
+          thumbnailQueueRef.current.enqueue(
+            event.repNumber,
+            event.positions,
+            updateThumbnailState
+          );
+        } else {
+          // Thumbnails already present (extraction path), update immediately
+          updateThumbnailState(event.repNumber, event.positions);
+        }
       },
       error: (error) => {
         console.error('Error in thumbnail subscription:', error);
@@ -727,6 +755,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       detectionSubscription.unsubscribe();
       session.dispose();
       inputSessionRef.current = null;
+      thumbnailQueueRef.current?.dispose();
+      thumbnailQueueRef.current = null;
     };
   }, [initializePipeline, processSkeletonEvent, updateHudFromSkeleton]);
 
@@ -928,6 +958,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           source: context === 'video' ? 'upload' : 'hardcoded',
           fileName: videoFile.name,
         });
+
+        // Set video source for thumbnail queue (uses hidden video element)
+        thumbnailQueueRef.current?.setVideoSource(videoFile);
 
         // Start extraction/cache lookup - pass signal to allow cancellation
         setVideoLoadMessage('Processing video...');
