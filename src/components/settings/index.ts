@@ -12,7 +12,6 @@ export {
   MonitorIcon,
   SettingsIcon,
   SparklesIcon,
-  WrenchIcon,
 } from './Icons';
 export { SettingsRow } from './SettingsRow';
 export { getSavedBlazePoseVariant, SettingsTab } from './SettingsTab';

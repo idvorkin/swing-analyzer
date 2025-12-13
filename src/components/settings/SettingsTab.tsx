@@ -64,6 +64,8 @@ export function SettingsTab() {
   );
   const [hasPoseTrack, setHasPoseTrack] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState(false);
+  const [logDownloadError, setLogDownloadError] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -80,6 +82,20 @@ export function SettingsTab() {
     return `${seconds}s`;
   };
 
+  const handleDownloadLog = useCallback(() => {
+    setLogDownloadError(false);
+    try {
+      sessionRecorder.downloadRecording();
+    } catch (error) {
+      console.error(
+        '[SettingsTab] Failed to download session recording:',
+        error
+      );
+      setLogDownloadError(true);
+      setTimeout(() => setLogDownloadError(false), 3000);
+    }
+  }, []);
+
   const handleDownloadPoseTrack = useCallback(async () => {
     const swingDebug = (
       window as unknown as {
@@ -88,8 +104,18 @@ export function SettingsTab() {
     ).swingDebug;
     if (swingDebug?.downloadPoseTrack) {
       setIsDownloading(true);
+      setDownloadError(false);
       try {
-        await swingDebug.downloadPoseTrack();
+        const result = await swingDebug.downloadPoseTrack();
+        if (result === null) {
+          // downloadPoseTrack returns null on failure
+          setDownloadError(true);
+          setTimeout(() => setDownloadError(false), 3000);
+        }
+      } catch (error) {
+        console.error('[SettingsTab] Failed to download pose track:', error);
+        setDownloadError(true);
+        setTimeout(() => setDownloadError(false), 3000);
       } finally {
         setIsDownloading(false);
       }
@@ -223,21 +249,26 @@ export function SettingsTab() {
       <div className="settings-actions-row">
         <button
           type="button"
-          className="settings-action-btn settings-action-btn--green"
-          onClick={() => sessionRecorder.downloadRecording()}
+          className={`settings-action-btn ${logDownloadError ? 'settings-action-btn--error' : 'settings-action-btn--green'}`}
+          onClick={handleDownloadLog}
         >
-          <DownloadIcon /> Download Log
+          <DownloadIcon /> {logDownloadError ? 'Failed!' : 'Download Log'}
         </button>
         <button
           type="button"
-          className="settings-action-btn settings-action-btn--blue"
+          className={`settings-action-btn ${downloadError ? 'settings-action-btn--error' : 'settings-action-btn--blue'}`}
           onClick={handleDownloadPoseTrack}
           disabled={!hasPoseTrack || isDownloading}
           title={
             hasPoseTrack ? 'Download extracted pose data' : 'Load a video first'
           }
         >
-          <DownloadIcon /> {isDownloading ? 'Compressing...' : 'Download Poses'}
+          <DownloadIcon />{' '}
+          {isDownloading
+            ? 'Compressing...'
+            : downloadError
+              ? 'Failed!'
+              : 'Download Poses'}
         </button>
       </div>
 

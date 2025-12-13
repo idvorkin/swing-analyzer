@@ -1379,6 +1379,12 @@
   cursor: not-allowed;
 }
 
+.settings-action-btn--error {
+  background: #dc2626;
+  border-color: #ef4444;
+  color: white;
+}
+
 .settings-stats-row {
   display: flex;
   justify-content: center;
