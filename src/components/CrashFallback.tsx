@@ -1,4 +1,5 @@
 import { GIT_COMMIT_URL, GIT_SHA_SHORT } from '../generated_version';
+import { DeviceService } from '../services/DeviceService';
 import {
   buildCrashReportBody,
   buildGitHubIssueUrl,
@@ -8,10 +9,7 @@ import {
 const GITHUB_REPO_URL = 'https://github.com/idvorkin/swing-analyzer';
 
 export function CrashFallback({ error }: { error: Error }) {
-  const metadata = getMetadata(
-    () => window.location.pathname,
-    () => navigator.userAgent
-  );
+  const metadata = getMetadata(DeviceService);
   const reportUrl = buildGitHubIssueUrl(
     GITHUB_REPO_URL,
     `Crash: ${error.message.slice(0, 50)}`,
