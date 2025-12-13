@@ -189,6 +189,24 @@ describe('calculateStableCropRegion', () => {
     // Since portrait aspect (3:4), height drives the size
     expect(crop?.height).toBeGreaterThan(rawHeight);
   });
+
+  it('caps crop height at 85% of video to ensure minimum zoom', () => {
+    // Person spanning almost full video height - should still get zoom
+    const keypoints: PoseKeypoint[] = [
+      { x: 960, y: 50, score: 0.9, name: 'nose' },
+      { x: 960, y: 1030, score: 0.9, name: 'leftAnkle' },
+    ];
+    const frames = [createFrame(keypoints)];
+    const crop = calculateStableCropRegion(frames, 1920, 1080);
+
+    expect(crop).not.toBeNull();
+    // Crop height should be capped at 85% of video height (918px)
+    // This ensures minimum ~1.18x zoom even for large subjects
+    expect(crop?.height).toBeLessThanOrEqual(1080 * 0.85);
+    // Scale would be 1080 / 918 = 1.18 minimum
+    const scaleY = 1080 / (crop?.height ?? 1);
+    expect(scaleY).toBeGreaterThanOrEqual(1.17);
+  });
 });
 
 describe('transformPointToCropped', () => {

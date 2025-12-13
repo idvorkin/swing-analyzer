@@ -143,6 +143,13 @@ export function calculateStableCropRegion(
     cropWidth = cropHeight * targetAspect;
   }
 
+  // Cap crop at 85% of video height to ensure minimum ~1.18x zoom effect
+  const maxCropHeight = videoHeight * 0.85;
+  if (cropHeight > maxCropHeight) {
+    cropHeight = maxCropHeight;
+    cropWidth = cropHeight * targetAspect;
+  }
+
   // Ensure crop doesn't exceed video bounds while maintaining aspect ratio
   if (cropWidth > videoWidth) {
     cropWidth = videoWidth;
