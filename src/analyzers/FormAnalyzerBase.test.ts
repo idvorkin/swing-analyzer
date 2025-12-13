@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { Skeleton } from '../models/Skeleton';
+import { createBasicMockSkeleton } from './__test-helpers__';
 import type {
   FormAnalyzerResult,
   RepPosition,
@@ -169,19 +170,8 @@ class TestFormAnalyzer extends FormAnalyzerBase<
   }
 }
 
-// ============================================
-// Mock Skeleton Helper
-// ============================================
-
-function createMockSkeleton(): Skeleton {
-  return {
-    getArmToVerticalAngle: vi.fn().mockReturnValue(45),
-    getSpineAngle: vi.fn().mockReturnValue(15),
-    getHipAngle: vi.fn().mockReturnValue(160),
-    getKneeAngle: vi.fn().mockReturnValue(170),
-    getWristHeight: vi.fn().mockReturnValue(0),
-  } as unknown as Skeleton;
-}
+// Alias for backwards compatibility in test code
+const createMockSkeleton = createBasicMockSkeleton;
 
 // ============================================
 // Tests

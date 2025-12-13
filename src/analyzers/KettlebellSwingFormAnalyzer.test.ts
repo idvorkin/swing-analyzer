@@ -1,69 +1,20 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Skeleton } from '../models/Skeleton';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  createSwingMockSkeleton,
+  SWING_PHASE_ANGLES,
+  SWING_PHASE_ANGLES_NORMAL,
+  SWING_VIDEO_ORIENTATIONS,
+} from './__test-helpers__';
 import {
   KettlebellSwingFormAnalyzer,
   type SwingPhase,
 } from './KettlebellSwingFormAnalyzer';
 
-/**
- * Creates a mock Skeleton that returns specific angle values.
- * This is simpler than constructing real keypoints for each test case.
- */
-function createMockSkeleton(angles: {
-  arm: number;
-  spine: number;
-  hip: number;
-  knee: number;
-  wristHeight: number;
-}): Skeleton {
-  return {
-    getArmToVerticalAngle: vi.fn().mockReturnValue(angles.arm),
-    getSpineAngle: vi.fn().mockReturnValue(angles.spine),
-    getHipAngle: vi.fn().mockReturnValue(angles.hip),
-    getKneeAngle: vi.fn().mockReturnValue(angles.knee),
-    getWristHeight: vi.fn().mockReturnValue(angles.wristHeight),
-    getFacingDirection: vi.fn().mockReturnValue(null),
-    getWristX: vi.fn().mockReturnValue(null),
-  } as unknown as Skeleton;
-}
-
-/**
- * Phase angle presets based on default thresholds:
- * - topSpineMax: 25, topHipMin: 150
- * - bottomArmMax: 10, bottomSpineMin: 35, bottomHipMax: 140
- * - connectArmMax: 25, connectSpineMax: 25 (arms crossing vertical on way down)
- * - releaseArmMax: 25, releaseSpineMax: 25 (arms crossing vertical on way up)
- */
-const PHASE_ANGLES_NORMAL = {
-  top: { arm: 80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
-  // CONNECT: arms approaching vertical, spine still upright (before hinge)
-  connect: { arm: 20, spine: 20, hip: 155, knee: 165, wristHeight: 0 },
-  bottom: { arm: -10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
-  release: { arm: 20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
-};
-
-/**
- * Mirrored video version - arm angles have opposite sign
- * but same magnitude. Tests that algorithm uses Math.abs().
- */
-const PHASE_ANGLES_MIRRORED = {
-  top: { arm: -80, spine: 10, hip: 170, knee: 170, wristHeight: 50 },
-  // CONNECT: arms approaching vertical, spine still upright (before hinge)
-  connect: { arm: -20, spine: 20, hip: 155, knee: 165, wristHeight: 0 },
-  bottom: { arm: 10, spine: 50, hip: 120, knee: 160, wristHeight: -100 },
-  release: { arm: -20, spine: 15, hip: 155, knee: 165, wristHeight: 0 },
-};
-
-// Default to normal angles for backwards compatibility
-const PHASE_ANGLES = PHASE_ANGLES_NORMAL;
-
-/**
- * Test configurations for normal and mirrored video
- */
-const VIDEO_ORIENTATIONS = [
-  { name: 'normal video', angles: PHASE_ANGLES_NORMAL },
-  { name: 'mirrored video', angles: PHASE_ANGLES_MIRRORED },
-] as const;
+// Alias for backwards compatibility in test code
+const PHASE_ANGLES = SWING_PHASE_ANGLES;
+const PHASE_ANGLES_NORMAL = SWING_PHASE_ANGLES_NORMAL;
+const VIDEO_ORIENTATIONS = SWING_VIDEO_ORIENTATIONS;
+const createMockSkeleton = createSwingMockSkeleton;
 
 describe('KettlebellSwingFormAnalyzer', () => {
   let analyzer: KettlebellSwingFormAnalyzer;
