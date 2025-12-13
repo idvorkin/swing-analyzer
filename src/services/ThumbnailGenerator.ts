@@ -20,6 +20,7 @@
  */
 
 import type { RepPosition } from '../analyzers/FormAnalyzer';
+import { calculatePersonCenteredCrop } from '../utils/thumbnailCrop';
 
 // Thumbnail dimensions (matches PoseExtractor)
 const THUMB_WIDTH = 120;
@@ -354,83 +355,20 @@ export class ThumbnailQueue {
   }
 
   /**
-   * Calculate person-centered crop region
+   * Calculate person-centered crop region using shared utility
    */
   private calculateCropRegion(
     skeleton: RepPosition['skeleton'] | undefined,
     videoWidth: number,
     videoHeight: number
   ): { cropX: number; cropY: number; cropWidth: number; cropHeight: number } {
-    const targetAspect = THUMB_WIDTH / THUMB_HEIGHT; // 3:4 = 0.75
-
-    let personCenterX = videoWidth / 2;
-    let personCenterY = videoHeight / 2;
-    let cropWidth: number;
-    let cropHeight: number;
-
-    // Try to use skeleton keypoints for person-centered cropping
     const keypoints = skeleton?.getKeypoints?.() ?? [];
-    const confidentKeypoints = keypoints.filter((kp) => (kp.score ?? 0) > 0.3);
-
-    if (confidentKeypoints.length > 0) {
-      // Calculate bounding box of confident keypoints
-      // BlazePose keypoints are in pixel coordinates (not normalized)
-      let minX = Infinity,
-        maxX = -Infinity;
-      let minY = Infinity,
-        maxY = -Infinity;
-
-      for (const kp of confidentKeypoints) {
-        minX = Math.min(minX, kp.x);
-        maxX = Math.max(maxX, kp.x);
-        minY = Math.min(minY, kp.y);
-        maxY = Math.max(maxY, kp.y);
-      }
-
-      personCenterX = (minX + maxX) / 2;
-      personCenterY = (minY + maxY) / 2;
-
-      const personWidth = Math.max((maxX - minX) * 1.4, 1);
-      const personHeight = Math.max((maxY - minY) * 1.3, 1);
-
-      if (personWidth / personHeight > targetAspect) {
-        cropWidth = personWidth;
-        cropHeight = cropWidth / targetAspect;
-      } else {
-        cropHeight = personHeight;
-        cropWidth = cropHeight * targetAspect;
-      }
-
-      const minCropHeight = videoHeight * 0.4;
-      if (cropHeight < minCropHeight) {
-        cropHeight = minCropHeight;
-        cropWidth = cropHeight * targetAspect;
-      }
-    } else {
-      cropHeight = videoHeight * 0.85;
-      cropWidth = cropHeight * targetAspect;
-    }
-
-    // Clamp to video bounds
-    if (cropWidth > videoWidth) {
-      cropWidth = videoWidth;
-      cropHeight = cropWidth / targetAspect;
-    }
-    if (cropHeight > videoHeight) {
-      cropHeight = videoHeight;
-      cropWidth = cropHeight * targetAspect;
-    }
-
-    const cropX = Math.max(
-      0,
-      Math.min(personCenterX - cropWidth / 2, videoWidth - cropWidth)
-    );
-    const cropY = Math.max(
-      0,
-      Math.min(personCenterY - cropHeight / 2, videoHeight - cropHeight)
-    );
-
-    return { cropX, cropY, cropWidth, cropHeight };
+    return calculatePersonCenteredCrop(keypoints, {
+      thumbWidth: THUMB_WIDTH,
+      thumbHeight: THUMB_HEIGHT,
+      videoWidth,
+      videoHeight,
+    });
   }
 
   /**
