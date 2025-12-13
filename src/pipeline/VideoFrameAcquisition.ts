@@ -90,18 +90,16 @@ export class VideoFrameAcquisition implements FrameAcquisition {
     const scaleY = videoHeight / crop.height;
     const scale = Math.min(scaleX, scaleY);
 
-    // Calculate translation to center the crop region
-    // Transform origin is at top-left, so we translate to move crop center to view center
+    // Calculate crop center as percentage of video dimensions
     const cropCenterX = crop.x + crop.width / 2;
     const cropCenterY = crop.y + crop.height / 2;
-    const viewCenterX = videoWidth / 2;
-    const viewCenterY = videoHeight / 2;
+    const originX = (cropCenterX / videoWidth) * 100;
+    const originY = (cropCenterY / videoHeight) * 100;
 
-    const translateX = (viewCenterX - cropCenterX * scale) / scale;
-    const translateY = (viewCenterY - cropCenterY * scale) / scale;
-
-    const transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
-    const transformOrigin = '0 0';
+    // Use transform-origin at crop center, then just scale
+    // This zooms into the crop region naturally
+    const transform = `scale(${scale})`;
+    const transformOrigin = `${originX}% ${originY}%`;
 
     video.style.transform = transform;
     video.style.transformOrigin = transformOrigin;
@@ -109,7 +107,7 @@ export class VideoFrameAcquisition implements FrameAcquisition {
     canvas.style.transformOrigin = transformOrigin;
 
     console.log(
-      `[VideoFrameAcquisition] Applied crop transform: scale=${scale.toFixed(2)}, translate=(${translateX.toFixed(0)}, ${translateY.toFixed(0)})`
+      `[VideoFrameAcquisition] Applied crop transform: scale=${scale.toFixed(2)}, origin=(${originX.toFixed(1)}%, ${originY.toFixed(1)}%)`
     );
   }
 

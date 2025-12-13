@@ -15,10 +15,10 @@
     "videoWidth": 1920,
     "videoHeight": 1080,
     "cropRegion": {
-      "x": 420,
-      "y": 0,
-      "width": 1080,
-      "height": 1080
+      "x": 604,
+      "y": 51,
+      "width": 850,
+      "height": 850
     }
   },
   "frames": [
