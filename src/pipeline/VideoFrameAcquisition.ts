@@ -61,8 +61,9 @@ export class VideoFrameAcquisition implements FrameAcquisition {
   }
 
   /**
-   * Apply CSS transform to video and canvas for cropping
-   * Both elements get the same transform so skeleton stays aligned
+   * Apply CSS positioning to video and canvas for cropping
+   * Uses object-position for video (with object-fit: cover in CSS)
+   * Uses transform for canvas to match
    */
   private applyCropTransform(): void {
     const crop = this.cropRegion;
@@ -70,7 +71,8 @@ export class VideoFrameAcquisition implements FrameAcquisition {
     const canvas = this.canvasElement;
 
     if (!crop || !this.cropEnabled) {
-      // Reset transforms
+      // Reset styles
+      video.style.objectPosition = '';
       video.style.transform = '';
       video.style.transformOrigin = '';
       canvas.style.transform = '';
@@ -85,28 +87,40 @@ export class VideoFrameAcquisition implements FrameAcquisition {
       return;
     }
 
-    // Calculate scale to zoom into crop region
-    const scaleX = videoWidth / crop.width;
-    const scaleY = videoHeight / crop.height;
-    const scale = Math.min(scaleX, scaleY);
-
-    // Calculate crop center as percentage of video dimensions
+    // Calculate crop center as percentage for object-position
+    // object-position uses percentage of the "overflow" area
     const cropCenterX = crop.x + crop.width / 2;
     const cropCenterY = crop.y + crop.height / 2;
-    const originX = (cropCenterX / videoWidth) * 100;
-    const originY = (cropCenterY / videoHeight) * 100;
+    const posX = (cropCenterX / videoWidth) * 100;
+    const posY = (cropCenterY / videoHeight) * 100;
 
-    // Apply same transform to both video and canvas
+    // Apply object-position to video (CSS has object-fit: cover when zoomed)
+    video.style.objectPosition = `${posX}% ${posY}%`;
+
+    // For canvas, we need transform since canvas doesn't support object-fit
+    // Calculate scale based on how much the container crops the video
+    const containerAspect = 3 / 4; // Portrait container
+    const videoAspect = videoWidth / videoHeight;
+
+    // With object-fit: cover, scale is based on which dimension fills
+    let scale: number;
+    if (videoAspect > containerAspect) {
+      // Video is wider - height fills, width is cropped
+      scale = 1; // Height matches, no vertical scale needed
+    } else {
+      // Video is taller - width fills, height is cropped
+      scale = videoAspect / containerAspect;
+    }
+
+    // Transform canvas to match video's object-fit: cover behavior
     const transform = `scale(${scale})`;
-    const transformOrigin = `${originX}% ${originY}%`;
+    const transformOrigin = `${posX}% ${posY}%`;
 
-    video.style.transform = transform;
-    video.style.transformOrigin = transformOrigin;
     canvas.style.transform = transform;
     canvas.style.transformOrigin = transformOrigin;
 
     console.log(
-      `[VideoFrameAcquisition] Applied crop transform: scale=${scale.toFixed(2)}, origin=(${originX.toFixed(1)}%, ${originY.toFixed(1)}%)`
+      `[VideoFrameAcquisition] Applied crop: object-position=(${posX.toFixed(1)}%, ${posY.toFixed(1)}%), canvas scale=${scale.toFixed(2)}`
     );
   }
 

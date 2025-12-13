@@ -438,16 +438,13 @@ main {
   max-height: 90vh;
   width: auto;
   max-width: 100%;
-  /* Clip the zoomed/transformed content */
-  overflow: hidden;
 }
 
 .video-container.zoomed #video {
-  /* Let transform handle the zoom, not object-fit */
   width: 100%;
-  height: auto;
+  height: 100%;
   max-height: none;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 /* Even taller on mobile since screen is precious */

@@ -54,17 +54,18 @@ if (cropRegion from pose data exists) {
 
 ## Technical Notes
 
-- Uses CSS transforms on both video and canvas elements
-- Container uses `aspect-ratio` and `max-height` for sizing
-- `overflow: hidden` on container clips zoomed content
+- Container uses `aspect-ratio: 3/4` and `max-height: 90vh` when zoomed
+- Video uses `object-fit: cover` + `object-position` to center on person
+- Canvas uses CSS `transform` to attempt alignment (imperfect - see known issue #5)
+- Crop region calculated from pose keypoints using portrait aspect (3:4) with 40% width / 30% height padding
 
 ## Test Cases
 
-1. Landscape video: Zoom button visible
-2. Portrait video: Zoom button hidden
-3. Click Zoom: Container grows, video crops to person
-4. Click Full: Returns to normal view
-5. Skeleton overlay stays aligned when zoomed
+1. ✅ Landscape video: Zoom button visible
+2. ✅ Portrait video: Zoom button hidden
+3. ✅ Click Zoom: Container becomes portrait-shaped, video crops to person
+4. ✅ Click Full: Returns to normal view
+5. ⚠️ Skeleton overlay alignment (known issue - canvas doesn't fully align with object-fit: cover)
 
 ## Out of Scope
 

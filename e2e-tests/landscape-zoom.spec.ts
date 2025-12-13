@@ -22,6 +22,32 @@ test.describe('Landscape Zoom Feature - Desktop', () => {
     await clearPoseTrackDB(page);
   });
 
+  test('hides zoom button for portrait video', async ({ page }) => {
+    // Seed fixture for pistol squat (portrait video)
+    await seedPoseTrackFixture(page, 'pistol-squat-sample');
+
+    // Load pistol squat video (portrait orientation)
+    await page.click('button:has-text("Pistol")');
+
+    // Wait for video to load
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video?.readyState >= 2 && video?.videoWidth > 0;
+      },
+      { timeout: 15000 }
+    );
+
+    // Wait for cache processing
+    await expect(page.locator('.cache-loading-overlay')).not.toBeVisible({
+      timeout: 10000,
+    });
+
+    // Zoom button should NOT be visible for portrait videos
+    const zoomBtn = page.locator('#zoom-btn');
+    await expect(zoomBtn).not.toBeVisible();
+  });
+
   test('shows zoom button for landscape video with crop region', async ({
     page,
   }) => {
@@ -78,6 +104,48 @@ test.describe('Landscape Zoom Feature - Desktop', () => {
 
     // Video container should have zoomed class
     await expect(page.locator('.video-container.zoomed')).toBeVisible();
+  });
+
+  test('zoom creates portrait-shaped container (taller than wide)', async ({
+    page,
+  }) => {
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+    await clickSwingSampleButton(page);
+
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video?.readyState >= 2;
+      },
+      { timeout: 15000 }
+    );
+    await expect(page.locator('.cache-loading-overlay')).not.toBeVisible({
+      timeout: 10000,
+    });
+
+    const zoomBtn = page.locator('#zoom-btn');
+    await expect(zoomBtn).toBeVisible({ timeout: 5000 });
+
+    // Get container size before zoom
+    const containerBefore = await page
+      .locator('.video-container')
+      .boundingBox();
+
+    // Click zoom
+    await zoomBtn.click();
+    await expect(page.locator('.video-container.zoomed')).toBeVisible();
+
+    // Get container size after zoom
+    const containerAfter = await page.locator('.video-container').boundingBox();
+
+    // Container should be portrait (height > width) after zoom
+    expect(containerAfter).not.toBeNull();
+    expect(containerAfter!.height).toBeGreaterThan(containerAfter!.width);
+
+    // Container should be taller than before (or at least same height)
+    expect(containerAfter!.height).toBeGreaterThanOrEqual(
+      containerBefore!.height * 0.9
+    );
   });
 
   test('clicking Full returns to normal view', async ({ page }) => {
@@ -172,12 +240,12 @@ test.describe('Landscape Zoom Feature - Mobile', () => {
     await expect(zoomBtn).toContainText('Full');
     await expect(page.locator('.video-container.zoomed')).toBeVisible();
 
-    // Verify video has transform applied for zoom
+    // Verify video has object-position applied for crop centering
     const video = page.locator('#video');
-    const transform = await video.evaluate(
-      (el) => window.getComputedStyle(el).transform
+    const objectPosition = await video.evaluate(
+      (el) => window.getComputedStyle(el).objectPosition
     );
-    // Transform should be a matrix (not 'none') when zoomed
-    expect(transform).not.toBe('none');
+    // object-position should be set to center on person (not default 50% 50%)
+    expect(objectPosition).not.toBe('50% 50%');
   });
 });
