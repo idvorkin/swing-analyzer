@@ -41,13 +41,14 @@ export function RepGalleryWidget({
     [repThumbnails]
   );
 
-  // Auto-scroll to current row when rep index changes
+  // Auto-scroll to current row when rep index changes (within container only)
   useEffect(() => {
     if (prevRepIndexRef.current !== currentRepIndex && currentRowRef.current) {
       prevRepIndexRef.current = currentRepIndex;
+      // Use 'nearest' to only scroll if row is not visible, avoiding page-level scroll
       currentRowRef.current.scrollIntoView({
         behavior: 'smooth',
-        block: 'center',
+        block: 'nearest',
       });
     }
   }, [currentRepIndex]);
