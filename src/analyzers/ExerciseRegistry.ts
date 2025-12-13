@@ -22,7 +22,7 @@ import { PistolSquatFormAnalyzer } from './PistolSquatFormAnalyzer';
 export interface SampleVideo {
   /** Display name for the sample */
   name: string;
-  /** Remote URL (must support CORS) */
+  /** Remote URL (must support CORS). Use GitHub permalinks for stability. */
   url: string;
   /** Local fallback path for offline/development use */
   localFallback: string;
@@ -30,12 +30,9 @@ export interface SampleVideo {
    * Optional URL to a pre-extracted pose track file (.posetrack.json).
    * If provided, this will be loaded into the cache before processing,
    * allowing instant playback without ML extraction.
+   * Use GitHub permalinks (commit SHA URLs) to prevent unexpected changes.
    */
   bundledPoseTrackUrl?: string;
-  /**
-   * Local fallback path for bundled pose track (for development/offline use).
-   */
-  bundledPoseTrackLocalFallback?: string;
 }
 
 /**
@@ -54,9 +51,14 @@ export interface ExerciseDefinition {
   sampleVideos: SampleVideo[];
 }
 
-// Base URL for sample videos hosted externally
+// Base URL for sample videos (using main branch)
 const SAMPLES_BASE_URL =
   'https://raw.githubusercontent.com/idvorkin-ai-tools/form-analyzer-samples/main';
+
+// Permalink base URL for pose tracks (commit SHA for stability)
+// Update SHA when pose track files change
+const POSE_TRACK_PERMALINK_SHA = 'b1a4a6cbb5dee84930d7125654d5540c7023d3af';
+const POSE_TRACK_BASE_URL = `https://raw.githubusercontent.com/idvorkin-ai-tools/form-analyzer-samples/${POSE_TRACK_PERMALINK_SHA}`;
 
 /**
  * Registry of all supported exercises
@@ -75,8 +77,8 @@ export const EXERCISE_REGISTRY: Record<
         name: 'Igor 1H Swing',
         url: `${SAMPLES_BASE_URL}/exercises/kettlebell-swing/good/igor-1h-swing.webm`,
         localFallback: '/videos/igor-1h-swing.webm',
-        // Bundled pose track - hash verified to match remote video
-        bundledPoseTrackUrl: '/videos/igor-1h-swing.posetrack.json',
+        // Bundled pose track from GitHub permalink - enables instant playback
+        bundledPoseTrackUrl: `${POSE_TRACK_BASE_URL}/exercises/kettlebell-swing/good/igor-1h-swing.posetrack.json`,
       },
     ],
   },
@@ -90,8 +92,8 @@ export const EXERCISE_REGISTRY: Record<
         name: 'Sample',
         url: `${SAMPLES_BASE_URL}/exercises/pistols/pistols.webm`,
         localFallback: '/videos/pistols.webm',
-        // Bundled pose track - hash verified to match remote video
-        bundledPoseTrackUrl: '/videos/pistols.posetrack.json',
+        // Bundled pose track from GitHub permalink - enables instant playback
+        bundledPoseTrackUrl: `${POSE_TRACK_BASE_URL}/exercises/pistols/pistols.posetrack.json`,
       },
     ],
   },
