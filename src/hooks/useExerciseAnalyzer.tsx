@@ -937,8 +937,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         clearLoadingState();
         return true;
       } catch (error) {
-        // AbortError means user switched videos - silently return
+        // AbortError means user switched videos - clean up and return
         if (error instanceof DOMException && error.name === 'AbortError') {
+          clearLoadingState();
           return false;
         }
         console.error(`Error loading ${context}:`, error);
