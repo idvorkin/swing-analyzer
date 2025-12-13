@@ -1,30 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Skeleton } from '../models/Skeleton';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createDetectorMockSkeleton } from './__test-helpers__';
 import { ExerciseDetector } from './ExerciseDetector';
 
-/**
- * Creates a mock Skeleton with specific knee angles
- */
-function createMockSkeleton(leftKnee: number, rightKnee: number): Skeleton {
-  return {
-    getAngle: vi
-      .fn()
-      .mockImplementation(
-        (_point1: string, vertex: string, _point2: string) => {
-          if (vertex === 'leftKnee') return leftKnee;
-          if (vertex === 'rightKnee') return rightKnee;
-          return 180;
-        }
-      ),
-    getSpineAngle: vi.fn().mockReturnValue(10),
-    // New side-specific method used by ExerciseDetector
-    getKneeAngleForSide: vi
-      .fn()
-      .mockImplementation((side: 'left' | 'right') => {
-        return side === 'left' ? leftKnee : rightKnee;
-      }),
-  } as unknown as Skeleton;
-}
+// Alias for backwards compatibility in test code
+const createMockSkeleton = createDetectorMockSkeleton;
 
 // Fast config for unit tests - production uses minFrames: 60, maxFrames: 120
 const TEST_CONFIG = {

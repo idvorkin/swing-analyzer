@@ -290,7 +290,7 @@ const VideoSectionV2: React.FC = () => {
         onClick={handleVideoDoubleTap}
       >
         {/* biome-ignore lint/a11y/useMediaCaption: This is a video analysis app, not media playback - no audio captions needed */}
-        <video id="video" ref={videoRef} playsInline />
+        <video id="video" ref={videoRef} playsInline muted />
         <canvas id="output-canvas" ref={canvasRef} />
 
         {/* Double-tap zone feedback overlay */}
