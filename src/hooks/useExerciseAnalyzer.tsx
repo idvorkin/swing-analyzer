@@ -225,79 +225,126 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   // Canvas Sync (for skeleton alignment)
   // ========================================
-  // Syncs canvas position/size to match video's rendered area
-  // Required because canvas doesn't support object-fit: contain
-  const syncCanvasToVideo = useCallback(() => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas || video.videoWidth === 0) return;
+  // Syncs canvas position/size to match video's rendered area.
+  // When zoomed (object-fit: cover), canvas is sized to match the scaled video content
+  // and positioned with negative offset so the same region is visible.
+  const syncCanvasToVideo = useCallback(
+    (isZoomed: boolean, crop: CropRegion | null) => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (!video || !canvas || video.videoWidth === 0) return;
 
-    // Update landscape state based on video aspect ratio (threshold > 1.2)
-    const aspectRatio = video.videoWidth / video.videoHeight;
-    setIsLandscape(aspectRatio > 1.2);
+      // Update landscape state based on video aspect ratio (threshold > 1.2)
+      const aspectRatio = video.videoWidth / video.videoHeight;
+      setIsLandscape(aspectRatio > 1.2);
 
-    // Set canvas internal dimensions to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+      // Set canvas internal dimensions to match video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-    // Get video and container positions
-    const videoRect = video.getBoundingClientRect();
-    const container = canvas.parentElement;
-    const containerRect = container?.getBoundingClientRect();
+      // Get video element's bounding box
+      const videoRect = video.getBoundingClientRect();
+      const container = canvas.parentElement;
+      const containerRect = container?.getBoundingClientRect();
 
-    // Calculate video element's position relative to container
-    // (needed when flexbox centers video within container)
-    const videoOffsetX = containerRect
-      ? videoRect.left - containerRect.left
-      : 0;
-    const videoOffsetY = containerRect ? videoRect.top - containerRect.top : 0;
+      // Calculate video element's position relative to container
+      const videoOffsetX = containerRect
+        ? videoRect.left - containerRect.left
+        : 0;
+      const videoOffsetY = containerRect
+        ? videoRect.top - containerRect.top
+        : 0;
 
-    // Calculate video content's rendered dimensions within video element
-    // (object-fit: contain causes letterboxing)
-    const videoAspect = video.videoWidth / video.videoHeight;
-    const containerAspect = videoRect.width / videoRect.height;
+      const videoAspect = video.videoWidth / video.videoHeight;
+      const containerAspect = videoRect.width / videoRect.height;
 
-    let renderedWidth: number;
-    let renderedHeight: number;
-    let letterboxX: number;
-    let letterboxY: number;
+      // Clear any transforms first
+      canvas.style.transform = '';
+      canvas.style.transformOrigin = '';
 
-    if (videoAspect > containerAspect) {
-      // Video is wider - letterbox top/bottom
-      renderedWidth = videoRect.width;
-      renderedHeight = videoRect.width / videoAspect;
-      letterboxX = 0;
-      letterboxY = (videoRect.height - renderedHeight) / 2;
-    } else {
-      // Video is taller - letterbox left/right
-      renderedHeight = videoRect.height;
-      renderedWidth = videoRect.height * videoAspect;
-      letterboxX = (videoRect.width - renderedWidth) / 2;
-      letterboxY = 0;
-    }
+      if (isZoomed && crop) {
+        // ===== ZOOMED MODE: object-fit: cover simulation =====
+        // Calculate scale factor for cover behavior
+        const scaleX = videoRect.width / video.videoWidth;
+        const scaleY = videoRect.height / video.videoHeight;
+        const coverScale = Math.max(scaleX, scaleY);
 
-    // Position canvas: video's position in container + letterbox offset
-    const finalX = videoOffsetX + letterboxX;
-    const finalY = videoOffsetY + letterboxY;
+        // Scaled video dimensions (may be larger than container)
+        const scaledWidth = video.videoWidth * coverScale;
+        const scaledHeight = video.videoHeight * coverScale;
 
-    canvas.style.width = `${renderedWidth}px`;
-    canvas.style.height = `${renderedHeight}px`;
-    canvas.style.left = `${finalX}px`;
-    canvas.style.top = `${finalY}px`;
+        // Calculate crop center as fraction
+        const cropCenterX = (crop.x + crop.width / 2) / video.videoWidth;
+        const cropCenterY = (crop.y + crop.height / 2) / video.videoHeight;
 
-    console.log(
-      `[Canvas] Synced: ${canvas.width}x${canvas.height}, CSS: ${renderedWidth.toFixed(0)}x${renderedHeight.toFixed(0)} at (${finalX.toFixed(0)},${finalY.toFixed(0)}) [video offset: ${videoOffsetX.toFixed(0)},${videoOffsetY.toFixed(0)}]`
-    );
-  }, []);
+        // Calculate offset to center on crop region
+        // object-position percentage works on the overflow area
+        const overflowX = scaledWidth - videoRect.width;
+        const overflowY = scaledHeight - videoRect.height;
+        const offsetX = -overflowX * cropCenterX;
+        const offsetY = -overflowY * cropCenterY;
+
+        // Set canvas size to match scaled video content
+        canvas.style.width = `${scaledWidth}px`;
+        canvas.style.height = `${scaledHeight}px`;
+        canvas.style.left = `${videoOffsetX + offsetX}px`;
+        canvas.style.top = `${videoOffsetY + offsetY}px`;
+
+        // Set video's object-position to show same region
+        video.style.objectPosition = `${cropCenterX * 100}% ${cropCenterY * 100}%`;
+
+        console.log(
+          `[Canvas] Zoomed: scale=${coverScale.toFixed(3)}, size=${scaledWidth.toFixed(0)}x${scaledHeight.toFixed(0)}, offset=(${offsetX.toFixed(0)}, ${offsetY.toFixed(0)})`
+        );
+      } else {
+        // ===== NORMAL MODE: object-fit: contain (letterboxing) =====
+        let renderedWidth: number;
+        let renderedHeight: number;
+        let offsetX: number;
+        let offsetY: number;
+
+        if (videoAspect > containerAspect) {
+          // Video is wider - letterbox top/bottom
+          renderedWidth = videoRect.width;
+          renderedHeight = videoRect.width / videoAspect;
+          offsetX = 0;
+          offsetY = (videoRect.height - renderedHeight) / 2;
+        } else {
+          // Video is taller - letterbox left/right
+          renderedHeight = videoRect.height;
+          renderedWidth = videoRect.height * videoAspect;
+          offsetX = (videoRect.width - renderedWidth) / 2;
+          offsetY = 0;
+        }
+
+        // Position canvas to match video's letterboxed area
+        const finalX = videoOffsetX + offsetX;
+        const finalY = videoOffsetY + offsetY;
+
+        canvas.style.width = `${renderedWidth}px`;
+        canvas.style.height = `${renderedHeight}px`;
+        canvas.style.left = `${finalX}px`;
+        canvas.style.top = `${finalY}px`;
+
+        // Clear video object-position
+        video.style.objectPosition = '';
+
+        console.log(
+          `[Canvas] Normal: ${renderedWidth.toFixed(0)}x${renderedHeight.toFixed(0)} at (${finalX.toFixed(0)},${finalY.toFixed(0)})`
+        );
+      }
+    },
+    []
+  );
 
   // Re-sync canvas on window resize
   useEffect(() => {
     const handleResize = () => {
-      requestAnimationFrame(() => syncCanvasToVideo());
+      requestAnimationFrame(() => syncCanvasToVideo(isCropEnabled, cropRegion));
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [syncCanvasToVideo]);
+  }, [syncCanvasToVideo, isCropEnabled, cropRegion]);
 
   // Cleanup Object URL and abort controller on unmount
   useEffect(() => {
@@ -360,7 +407,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         const handleLoadedMetadata = () => {
           cleanup();
           // Sync canvas to video after a small delay (wait for layout)
-          requestAnimationFrame(() => syncCanvasToVideo());
+          // Note: At load time, zoom is always off (isCropEnabled=false)
+          requestAnimationFrame(() => syncCanvasToVideo(false, null));
           resolve();
         };
 
@@ -409,7 +457,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const initializePipeline = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return null;
 
-    const pipeline = createPipeline(videoRef.current, canvasRef.current);
+    const pipeline = createPipeline(videoRef.current);
 
     // Initialize thumbnail queue for lazy generation from cached pose tracks
     // Uses a hidden video element to avoid affecting main playback
@@ -1487,7 +1535,13 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     const newEnabled = !isCropEnabled;
     setIsCropEnabled(newEnabled);
     pipeline.setCropEnabled(newEnabled);
-  }, [cropRegion, isCropEnabled]);
+
+    // Re-sync canvas to match the new zoom state
+    // Use requestAnimationFrame to ensure CSS has applied
+    requestAnimationFrame(() => {
+      syncCanvasToVideo(newEnabled, cropRegion);
+    });
+  }, [cropRegion, isCropEnabled, syncCanvasToVideo]);
 
   // ========================================
   // Reset

@@ -10,8 +10,6 @@ import {
   calculateStableCropRegion,
   isLandscapeVideo,
   mergeBoundingBoxes,
-  transformKeypointsToCropped,
-  transformPointToCropped,
 } from './videoCrop';
 
 describe('calculateBoundingBox', () => {
@@ -206,103 +204,5 @@ describe('calculateStableCropRegion', () => {
     // Scale would be 1080 / 918 = 1.18 minimum
     const scaleY = 1080 / (crop?.height ?? 1);
     expect(scaleY).toBeGreaterThanOrEqual(1.17);
-  });
-});
-
-describe('transformPointToCropped', () => {
-  it('transforms point correctly for center crop', () => {
-    const crop = { x: 400, y: 200, width: 800, height: 800 };
-    const canvasWidth = 400;
-    const canvasHeight = 400;
-
-    // Point at crop center should map to canvas center
-    const cropCenterX = crop.x + crop.width / 2; // 800
-    const cropCenterY = crop.y + crop.height / 2; // 600
-    const result = transformPointToCropped(
-      cropCenterX,
-      cropCenterY,
-      crop,
-      canvasWidth,
-      canvasHeight
-    );
-
-    expect(result.x).toBe(200); // Canvas center
-    expect(result.y).toBe(200);
-  });
-
-  it('transforms top-left corner correctly', () => {
-    const crop = { x: 100, y: 50, width: 400, height: 400 };
-    const canvasWidth = 200;
-    const canvasHeight = 200;
-
-    // Point at crop origin should map to canvas origin
-    const result = transformPointToCropped(
-      100,
-      50,
-      crop,
-      canvasWidth,
-      canvasHeight
-    );
-    expect(result.x).toBe(0);
-    expect(result.y).toBe(0);
-  });
-
-  it('handles points outside crop region', () => {
-    const crop = { x: 100, y: 100, width: 200, height: 200 };
-    const canvasWidth = 100;
-    const canvasHeight = 100;
-
-    // Point before crop region
-    const result = transformPointToCropped(
-      50,
-      50,
-      crop,
-      canvasWidth,
-      canvasHeight
-    );
-    expect(result.x).toBe(-25); // Negative, outside canvas
-    expect(result.y).toBe(-25);
-  });
-});
-
-describe('transformKeypointsToCropped', () => {
-  it('transforms all keypoints in array', () => {
-    const crop = { x: 0, y: 0, width: 200, height: 200 };
-    const canvasWidth = 100;
-    const canvasHeight = 100;
-
-    const keypoints: PoseKeypoint[] = [
-      { x: 0, y: 0, score: 0.9, name: 'nose' },
-      { x: 100, y: 100, score: 0.8, name: 'leftShoulder' },
-      { x: 200, y: 200, score: 0.7, name: 'rightShoulder' },
-    ];
-
-    const transformed = transformKeypointsToCropped(
-      keypoints,
-      crop,
-      canvasWidth,
-      canvasHeight
-    );
-
-    expect(transformed).toHaveLength(3);
-    expect(transformed[0].x).toBe(0);
-    expect(transformed[0].y).toBe(0);
-    expect(transformed[1].x).toBe(50);
-    expect(transformed[1].y).toBe(50);
-    expect(transformed[2].x).toBe(100);
-    expect(transformed[2].y).toBe(100);
-  });
-
-  it('preserves other keypoint properties', () => {
-    const crop = { x: 0, y: 0, width: 100, height: 100 };
-    const keypoints: PoseKeypoint[] = [
-      { x: 50, y: 50, score: 0.95, name: 'nose', visibility: 0.9 },
-    ];
-
-    const transformed = transformKeypointsToCropped(keypoints, crop, 100, 100);
-
-    expect(transformed[0].score).toBe(0.95);
-    expect(transformed[0].name).toBe('nose');
-    expect(transformed[0].visibility).toBe(0.9);
   });
 });

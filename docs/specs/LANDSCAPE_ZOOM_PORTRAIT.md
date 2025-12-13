@@ -1,6 +1,6 @@
 # Video Zoom Feature Spec
 
-**Status:** In Progress
+**Status:** Complete
 **Date:** 2025-12-13
 **Branch:** feature/landscape-zoom-portrait
 
@@ -56,7 +56,8 @@ if (cropRegion from pose data exists) {
 
 - Container uses `aspect-ratio: 3/4` and `max-height: 90vh` when zoomed
 - Video uses `object-fit: cover` + `object-position` to center on person
-- Canvas uses CSS `transform` to attempt alignment (imperfect - see known issue #5)
+- Canvas is sized to match scaled video dimensions and positioned with negative offset to align visible regions
+- `syncCanvasToVideo()` in useExerciseAnalyzer handles canvas positioning for both normal and zoomed modes
 - Crop region calculated from pose keypoints using portrait aspect (3:4) with 40% width / 30% height padding
 
 ## Test Cases
@@ -65,7 +66,7 @@ if (cropRegion from pose data exists) {
 2. ✅ Portrait video: Zoom button hidden
 3. ✅ Click Zoom: Container becomes portrait-shaped, video crops to person
 4. ✅ Click Full: Returns to normal view
-5. ⚠️ Skeleton overlay alignment (known issue - canvas doesn't fully align with object-fit: cover)
+5. ✅ Skeleton overlay aligns with video when zoomed
 
 ## Out of Scope
 

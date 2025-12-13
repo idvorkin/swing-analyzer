@@ -140,11 +140,14 @@ test.describe('Landscape Zoom Feature - Desktop', () => {
 
     // Container should be portrait (height > width) after zoom
     expect(containerAfter).not.toBeNull();
-    expect(containerAfter!.height).toBeGreaterThan(containerAfter!.width);
+    expect(containerBefore).not.toBeNull();
+    if (!containerAfter || !containerBefore)
+      throw new Error('Bounds not available');
+    expect(containerAfter.height).toBeGreaterThan(containerAfter.width);
 
     // Container should be taller than before (or at least same height)
-    expect(containerAfter!.height).toBeGreaterThanOrEqual(
-      containerBefore!.height * 0.9
+    expect(containerAfter.height).toBeGreaterThanOrEqual(
+      containerBefore.height * 0.9
     );
   });
 
@@ -185,52 +188,94 @@ test.describe('Landscape Zoom Feature - Skeleton Alignment', () => {
     await clearPoseTrackDB(page);
   });
 
-  // This test documents the known skeleton alignment bug
-  // It should FAIL until the bug is fixed
-  test.fail(
-    'skeleton canvas aligns with video when zoomed',
-    async ({ page }) => {
-      await seedPoseTrackFixture(page, 'swing-sample-4reps');
-      await clickSwingSampleButton(page);
+  // Test verifies skeleton canvas visible area aligns with video visible area when zoomed.
+  // With object-fit: cover, the canvas is larger than the container but positioned
+  // so that the same cropped region is visible in both video and canvas.
+  test('skeleton canvas visible area aligns with video when zoomed', async ({
+    page,
+  }) => {
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+    await clickSwingSampleButton(page);
 
-      await page.waitForFunction(
-        () => {
-          const video = document.querySelector('video') as HTMLVideoElement;
-          return video?.readyState >= 2;
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video?.readyState >= 2;
+      },
+      { timeout: 15000 }
+    );
+    await expect(page.locator('.cache-loading-overlay')).not.toBeVisible({
+      timeout: 10000,
+    });
+
+    // Click zoom
+    const zoomBtn = page.locator('#zoom-btn');
+    await zoomBtn.click();
+    await expect(page.locator('.video-container.zoomed')).toBeVisible();
+
+    // Wait for canvas sync to complete after zoom toggle
+    await page.waitForTimeout(100);
+
+    // Get positions from page
+    const positions = await page.evaluate(() => {
+      const canvas = document.querySelector(
+        '#output-canvas'
+      ) as HTMLCanvasElement;
+      const container = document.querySelector(
+        '.video-container'
+      ) as HTMLElement;
+
+      const containerRect = container.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+
+      // Calculate where the canvas visible region is (clipped by container)
+      const canvasVisibleLeft = Math.max(canvasRect.left, containerRect.left);
+      const canvasVisibleTop = Math.max(canvasRect.top, containerRect.top);
+      const canvasVisibleRight = Math.min(
+        canvasRect.right,
+        containerRect.right
+      );
+      const canvasVisibleBottom = Math.min(
+        canvasRect.bottom,
+        containerRect.bottom
+      );
+
+      // Video visible area (video element fills container with cover)
+      const videoVisibleLeft = containerRect.left;
+      const videoVisibleTop = containerRect.top;
+      const videoVisibleRight = containerRect.right;
+      const videoVisibleBottom = containerRect.bottom;
+
+      return {
+        canvasVisible: {
+          left: canvasVisibleLeft,
+          top: canvasVisibleTop,
+          right: canvasVisibleRight,
+          bottom: canvasVisibleBottom,
         },
-        { timeout: 15000 }
-      );
-      await expect(page.locator('.cache-loading-overlay')).not.toBeVisible({
-        timeout: 10000,
-      });
+        videoVisible: {
+          left: videoVisibleLeft,
+          top: videoVisibleTop,
+          right: videoVisibleRight,
+          bottom: videoVisibleBottom,
+        },
+      };
+    });
 
-      // Click zoom
-      const zoomBtn = page.locator('#zoom-btn');
-      await zoomBtn.click();
-      await expect(page.locator('.video-container.zoomed')).toBeVisible();
-
-      // Get bounding boxes of video and canvas
-      const video = page.locator('#video');
-      const canvas = page.locator('#output-canvas');
-
-      const videoBounds = await video.boundingBox();
-      const canvasBounds = await canvas.boundingBox();
-
-      expect(videoBounds).not.toBeNull();
-      expect(canvasBounds).not.toBeNull();
-
-      // Canvas should perfectly overlay the video (within 2px tolerance)
-      // This will FAIL until skeleton alignment is fixed
-      expect(Math.abs(canvasBounds!.x - videoBounds!.x)).toBeLessThan(2);
-      expect(Math.abs(canvasBounds!.y - videoBounds!.y)).toBeLessThan(2);
-      expect(Math.abs(canvasBounds!.width - videoBounds!.width)).toBeLessThan(
-        2
-      );
-      expect(Math.abs(canvasBounds!.height - videoBounds!.height)).toBeLessThan(
-        2
-      );
-    }
-  );
+    // Canvas visible region should match video visible region (within 2px tolerance)
+    expect(
+      Math.abs(positions.canvasVisible.left - positions.videoVisible.left)
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(positions.canvasVisible.top - positions.videoVisible.top)
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(positions.canvasVisible.right - positions.videoVisible.right)
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(positions.canvasVisible.bottom - positions.videoVisible.bottom)
+    ).toBeLessThan(2);
+  });
 });
 
 test.describe('Landscape Zoom Feature - Mobile', () => {

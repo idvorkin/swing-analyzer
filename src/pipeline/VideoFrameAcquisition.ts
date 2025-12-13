@@ -19,10 +19,7 @@ export class VideoFrameAcquisition implements FrameAcquisition {
   private cropRegion: CropRegion | null = null;
   private cropEnabled = false;
 
-  constructor(
-    private videoElement: HTMLVideoElement,
-    private canvasElement: HTMLCanvasElement
-  ) {}
+  constructor(private videoElement: HTMLVideoElement) {}
 
   /**
    * Set the crop region for auto-centering on person
@@ -61,67 +58,19 @@ export class VideoFrameAcquisition implements FrameAcquisition {
   }
 
   /**
-   * Apply CSS positioning to video and canvas for cropping
-   * Uses object-position for video (with object-fit: cover in CSS)
-   * Uses transform for canvas to match
+   * Apply CSS positioning for cropping.
+   * Note: Transform is now handled by syncCanvasToVideo in useExerciseAnalyzer
+   * to ensure video and canvas stay aligned.
    */
   private applyCropTransform(): void {
+    // Transform is now handled by syncCanvasToVideo to keep video/canvas aligned
+    // This method just logs the crop region for debugging
     const crop = this.cropRegion;
-    const video = this.videoElement;
-    const canvas = this.canvasElement;
-
-    if (!crop || !this.cropEnabled) {
-      // Reset styles
-      video.style.objectPosition = '';
-      video.style.transform = '';
-      video.style.transformOrigin = '';
-      canvas.style.transform = '';
-      canvas.style.transformOrigin = '';
-      return;
+    if (crop && this.cropEnabled) {
+      console.log(
+        `[VideoFrameAcquisition] Crop enabled: ${crop.width}x${crop.height} at (${crop.x}, ${crop.y})`
+      );
     }
-
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-
-    if (!videoWidth || !videoHeight) {
-      return;
-    }
-
-    // Calculate crop center as percentage for object-position
-    // object-position uses percentage of the "overflow" area
-    const cropCenterX = crop.x + crop.width / 2;
-    const cropCenterY = crop.y + crop.height / 2;
-    const posX = (cropCenterX / videoWidth) * 100;
-    const posY = (cropCenterY / videoHeight) * 100;
-
-    // Apply object-position to video (CSS has object-fit: cover when zoomed)
-    video.style.objectPosition = `${posX}% ${posY}%`;
-
-    // For canvas, we need transform since canvas doesn't support object-fit
-    // Calculate scale based on how much the container crops the video
-    const containerAspect = 3 / 4; // Portrait container
-    const videoAspect = videoWidth / videoHeight;
-
-    // With object-fit: cover, scale is based on which dimension fills
-    let scale: number;
-    if (videoAspect > containerAspect) {
-      // Video is wider - height fills, width is cropped
-      scale = 1; // Height matches, no vertical scale needed
-    } else {
-      // Video is taller - width fills, height is cropped
-      scale = videoAspect / containerAspect;
-    }
-
-    // Transform canvas to match video's object-fit: cover behavior
-    const transform = `scale(${scale})`;
-    const transformOrigin = `${posX}% ${posY}%`;
-
-    canvas.style.transform = transform;
-    canvas.style.transformOrigin = transformOrigin;
-
-    console.log(
-      `[VideoFrameAcquisition] Applied crop: object-position=(${posX.toFixed(1)}%, ${posY.toFixed(1)}%), canvas scale=${scale.toFixed(2)}`
-    );
   }
 
   /**
@@ -308,14 +257,11 @@ export class VideoFrameAcquisition implements FrameAcquisition {
   }
 
   /**
-   * Update canvas dimensions to match video
+   * Update video container classes based on orientation.
+   * Canvas positioning is handled by syncCanvasToVideo in useExerciseAnalyzer.
    */
   private updateCanvasDimensions(): void {
     if (this.videoElement.videoWidth && this.videoElement.videoHeight) {
-      // Set the internal dimensions of the canvas to match the video dimensions exactly
-      this.canvasElement.width = this.videoElement.videoWidth;
-      this.canvasElement.height = this.videoElement.videoHeight;
-
       // Check if video is portrait orientation
       const isPortrait =
         this.videoElement.videoHeight > this.videoElement.videoWidth;
@@ -336,17 +282,10 @@ export class VideoFrameAcquisition implements FrameAcquisition {
 
       // Log dimensions for debugging
       console.log(
-        `Canvas dimensions updated: ${this.canvasElement.width}x${this.canvasElement.height} (video: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight})`
+        `Video orientation updated: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight} (${isPortrait ? 'portrait' : 'landscape'})`
       );
 
-      // Ensure the canvas element style position is absolute and covers the video exactly
-      this.canvasElement.style.position = 'absolute';
-      this.canvasElement.style.top = '0';
-      this.canvasElement.style.left = '0';
-      this.canvasElement.style.width = '100%';
-      this.canvasElement.style.height = '100%';
-
-      // Re-apply crop transform if enabled
+      // Re-apply video object-position if crop is enabled
       this.applyCropTransform();
     }
   }
