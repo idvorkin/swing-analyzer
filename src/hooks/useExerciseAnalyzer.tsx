@@ -45,6 +45,7 @@ import {
   findNextCheckpoint,
   findPreviousCheckpoint,
 } from '../utils/checkpointUtils';
+import { calculateStableCropRegion } from '../utils/videoCrop';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 
@@ -633,6 +634,61 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             frameIndexRef.current = 0;
             // Cache processing complete - clear the loading state
             setIsCacheProcessing(false);
+
+            // Calculate crop region after batch complete (uses rep frames when available)
+            const videoSource = session.getVideoFileSource();
+            const poseTrack = videoSource?.getPoseTrack();
+            if (poseTrack && poseTrack.frames.length > 0) {
+              const { videoWidth, videoHeight } = poseTrack.metadata;
+
+              // Get frames at rep position times (from current repThumbnails state)
+              // Fall back to first 60 frames if no reps detected yet
+              let sampleFrames = poseTrack.frames.slice(0, 60);
+
+              // Use setRepThumbnails callback to read current state
+              setRepThumbnails((currentThumbnails) => {
+                if (currentThumbnails.size > 0) {
+                  const repFrameIndices: number[] = [];
+                  currentThumbnails.forEach((positions) => {
+                    positions.forEach((candidate) => {
+                      if (candidate.videoTime !== undefined) {
+                        // Find frame index closest to this video time
+                        const fps = poseTrack.metadata.fps || 30;
+                        const frameIndex = Math.round(
+                          candidate.videoTime * fps
+                        );
+                        if (
+                          frameIndex >= 0 &&
+                          frameIndex < poseTrack.frames.length
+                        ) {
+                          repFrameIndices.push(frameIndex);
+                        }
+                      }
+                    });
+                  });
+
+                  if (repFrameIndices.length > 0) {
+                    sampleFrames = repFrameIndices.map(
+                      (i) => poseTrack.frames[i]
+                    );
+                    console.log(
+                      `[Crop] Using ${sampleFrames.length} rep position frames`
+                    );
+                  }
+                }
+                return currentThumbnails; // Don't modify state
+              });
+
+              const crop = calculateStableCropRegion(
+                sampleFrames,
+                videoWidth,
+                videoHeight
+              );
+              setCropRegionState(crop);
+              if (crop && pipelineRef.current) {
+                pipelineRef.current.setCropRegion(crop);
+              }
+            }
           }
           // Check if poses exist for current frame (for HUD visibility)
           const video = videoRef.current;
@@ -650,16 +706,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
                 );
               }
             }
-          }
-          // Check for crop region in posetrack metadata
-          const videoSource = session.getVideoFileSource();
-          const poseTrack = videoSource?.getPoseTrack();
-          const crop = poseTrack?.metadata.cropRegion ?? null;
-          setCropRegionState(crop);
-          // Apply crop region to pipeline (but don't enable - user must toggle)
-          if (crop && pipelineRef.current) {
-            pipelineRef.current.setCropRegion(crop);
-            // Don't auto-enable: pipelineRef.current.setCropEnabled(true);
           }
         } else if (state.sourceState.type === 'checking-cache') {
           setStatus('Checking cache...');
