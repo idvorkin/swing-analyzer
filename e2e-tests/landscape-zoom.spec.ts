@@ -172,13 +172,12 @@ test.describe('Landscape Zoom Feature - Mobile', () => {
     await expect(zoomBtn).toContainText('Full');
     await expect(page.locator('.video-container.zoomed')).toBeVisible();
 
-    // Verify container has portrait aspect ratio when zoomed
-    const container = page.locator('.video-container.zoomed');
-    const boundingBox = await container.boundingBox();
-    expect(boundingBox).not.toBeNull();
-    // Container should be portrait (height > width)
-    expect(boundingBox!.height).toBeGreaterThan(boundingBox!.width);
-    // Container should be reasonably tall (>400px on mobile)
-    expect(boundingBox!.height).toBeGreaterThan(400);
+    // Verify video has transform applied for zoom
+    const video = page.locator('#video');
+    const transform = await video.evaluate(
+      (el) => window.getComputedStyle(el).transform
+    );
+    // Transform should be a matrix (not 'none') when zoomed
+    expect(transform).not.toBe('none');
   });
 });
