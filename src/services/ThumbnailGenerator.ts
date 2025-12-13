@@ -117,7 +117,9 @@ export class ThumbnailQueue {
     this.thumbnailCanvas = document.createElement('canvas');
     this.thumbnailCanvas.width = THUMB_WIDTH;
     this.thumbnailCanvas.height = THUMB_HEIGHT;
-    this.thumbnailCtx = this.thumbnailCanvas.getContext('2d');
+    this.thumbnailCtx = this.thumbnailCanvas.getContext('2d', {
+      willReadFrequently: true,
+    });
   }
 
   /**
