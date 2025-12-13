@@ -17,11 +17,11 @@
 
 import type { Skeleton } from '../models/Skeleton';
 import type {
-  FormAnalyzer,
   FormAnalyzerResult,
   RepPosition,
   RepQuality,
 } from './FormAnalyzer';
+import { type BasePhasePeak, FormAnalyzerBase } from './FormAnalyzerBase';
 
 /**
  * Swing phases
@@ -75,60 +75,58 @@ const DEFAULT_THRESHOLDS: SwingThresholds = {
 };
 
 /**
+ * Swing-specific angles tracked during the movement
+ */
+interface SwingAngles {
+  arm: number;
+  spine: number;
+  hip: number;
+  knee: number;
+}
+
+/**
  * Internal peak tracking during a phase
  */
-interface PhasePeak {
-  phase: SwingPhase;
-  skeleton: Skeleton;
-  timestamp: number;
-  videoTime?: number;
-  score: number;
-  angles: { arm: number; spine: number; hip: number; knee: number };
-  frameImage?: ImageData;
+interface SwingPhasePeak extends BasePhasePeak<SwingPhase, SwingAngles> {
+  // No additional fields needed beyond base
+}
+
+/**
+ * Metrics tracked during a rep for quality scoring
+ */
+interface SwingRepMetrics {
+  maxSpineAngle: number;
+  minHipAngle: number;
+  maxArmAngle: number;
+  minArmAngle: number;
+  maxKneeFlexion: number;
 }
 
 /**
  * Kettlebell Swing Form Analyzer
  *
  * Implements the FormAnalyzer interface with peak-based phase detection.
+ * Extends FormAnalyzerBase for shared lifecycle functionality.
  */
-export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
-  private phase: SwingPhase = 'top';
-  private repCount = 0;
+export class KettlebellSwingFormAnalyzer extends FormAnalyzerBase<
+  SwingPhase,
+  SwingAngles,
+  SwingPhasePeak
+> {
   private thresholds: SwingThresholds;
 
   // Track quality metrics during the rep
-  private currentRepMetrics = {
-    maxSpineAngle: 0,
-    minHipAngle: 180,
-    maxArmAngle: 0,
-    minArmAngle: 90,
-    maxKneeFlexion: 0,
-  };
-
-  // Last completed rep quality
-  private lastRepQuality: RepQuality | null = null;
+  private currentRepMetrics: SwingRepMetrics = this.createInitialMetrics();
 
   // Peak tracking for current phase
-  private currentPhasePeak: PhasePeak | null = null;
-
-  // Peaks from current rep (cleared after rep completes)
-  private currentRepPeaks: {
-    top?: PhasePeak;
-    connect?: PhasePeak;
-    bottom?: PhasePeak;
-    release?: PhasePeak;
-  } = {};
-
-  // Debounce: minimum frames in a phase before transitioning
-  private framesInPhase = 0;
-  private readonly minFramesInPhase = 2;
+  private currentPhasePeak: SwingPhasePeak | null = null;
 
   // Wrist height history for peak detection
   private wristHeightHistory: number[] = [];
   private readonly wristHeightWindowSize = 5;
 
   constructor(thresholds: Partial<SwingThresholds> = {}) {
+    super('top');
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
   }
 
@@ -151,7 +149,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     const hip = skeleton.getHipAngle();
     const knee = skeleton.getKneeAngle();
     const wristHeight = skeleton.getWristHeight('right');
-    const angles = { arm, spine, hip, knee, wristHeight };
+    const angles: SwingAngles = { arm, spine, hip, knee };
 
     // Track wrist height history for peak detection
     this.wristHeightHistory.push(wristHeight);
@@ -165,13 +163,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     this.updateMetrics(arm, spine, hip, knee);
 
     // Update peak tracking for current phase
-    this.updatePhasePeak(
-      skeleton,
-      timestamp,
-      videoTime,
-      { arm, spine, hip, knee },
-      frameImage
-    );
+    this.updatePhasePeak(skeleton, timestamp, videoTime, angles, frameImage);
 
     // Increment frames in current phase
     this.framesInPhase++;
@@ -179,46 +171,39 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     // Check for phase transitions
     let repCompleted = false;
     let repPositions: RepPosition[] | undefined;
+    let repQuality: RepQuality | undefined;
 
     switch (this.phase) {
       case 'top':
         if (this.shouldTransitionToConnect(arm, spine)) {
           this.finalizePhasePeak('top');
-          this.phase = 'connect';
-          this.framesInPhase = 0;
+          this.transitionTo('connect');
         }
         break;
 
       case 'connect':
         if (this.shouldTransitionToBottom(arm, spine, hip)) {
           this.finalizePhasePeak('connect');
-          this.phase = 'bottom';
-          this.framesInPhase = 0;
+          this.transitionTo('bottom');
         }
         break;
 
       case 'bottom':
         if (this.shouldTransitionToRelease(arm, spine)) {
           this.finalizePhasePeak('bottom');
-          this.phase = 'release';
-          this.framesInPhase = 0;
+          this.transitionTo('release');
         }
         break;
 
       case 'release':
         if (this.shouldTransitionToTop(arm, spine, hip)) {
           this.finalizePhasePeak('release');
-          this.phase = 'top';
-          this.framesInPhase = 0;
+          const result = this.completeRep();
           repCompleted = true;
-          this.repCount++;
-          this.lastRepQuality = this.calculateRepQuality();
-
-          // Convert peaks to RepPosition array
-          repPositions = this.convertPeaksToPositions();
-
-          this.resetMetrics();
-          this.currentRepPeaks = {};
+          repPositions = result.repPositions;
+          repQuality = result.repQuality;
+          this.transitionTo('top');
+          this.currentRepMetrics = this.createInitialMetrics();
         }
         break;
     }
@@ -228,37 +213,9 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
       repCompleted,
       repCount: this.repCount,
       repPositions,
-      repQuality: repCompleted ? (this.lastRepQuality ?? undefined) : undefined,
-      angles,
+      repQuality,
+      angles: { ...angles, wristHeight },
     };
-  }
-
-  /**
-   * Convert internal peak tracking to RepPosition array
-   */
-  private convertPeaksToPositions(): RepPosition[] {
-    const positions: RepPosition[] = [];
-
-    for (const [phaseName, peak] of Object.entries(this.currentRepPeaks)) {
-      if (!peak) continue;
-
-      positions.push({
-        name: phaseName,
-        skeleton: peak.skeleton,
-        timestamp: peak.timestamp,
-        videoTime: peak.videoTime,
-        angles: {
-          arm: peak.angles.arm,
-          spine: peak.angles.spine,
-          hip: peak.angles.hip,
-          knee: peak.angles.knee,
-        },
-        score: peak.score,
-        frameImage: peak.frameImage,
-      });
-    }
-
-    return positions;
   }
 
   /**
@@ -268,7 +225,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     skeleton: Skeleton,
     timestamp: number,
     videoTime: number | undefined,
-    angles: { arm: number; spine: number; hip: number; knee: number },
+    angles: SwingAngles,
     frameImage?: ImageData
   ): void {
     const score = this.calculatePeakScore(this.phase, angles);
@@ -307,10 +264,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   /**
    * Calculate how "peak" this frame is for the given phase
    */
-  private calculatePeakScore(
-    phase: SwingPhase,
-    angles: { arm: number; spine: number; hip: number; knee: number }
-  ): number {
+  private calculatePeakScore(phase: SwingPhase, angles: SwingAngles): number {
     switch (phase) {
       case 'top':
         return angles.arm; // Highest arm = best lockout
@@ -339,7 +293,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     this.currentPhasePeak = null;
 
     if (peak) {
-      this.currentRepPeaks[phase] = peak;
+      this.storePeak(phase, peak);
     } else {
       console.debug(`finalizePhasePeak: No peak captured for "${phase}" phase`);
     }
@@ -352,7 +306,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
    * This is the moment arms "connect" with the body before the hinge.
    */
   private shouldTransitionToConnect(arm: number, spine: number): boolean {
-    if (this.framesInPhase < this.minFramesInPhase) return false;
+    if (!this.canTransition()) return false;
     // Arms near vertical (|arm| < 15°) AND spine still upright (< 25°)
     return (
       Math.abs(arm) < this.thresholds.connectArmMax &&
@@ -371,7 +325,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     spine: number,
     hip: number
   ): boolean {
-    if (this.framesInPhase < this.minFramesInPhase) return false;
+    if (!this.canTransition()) return false;
     // Use absolute value - in mirrored video, "behind body" could be positive
     // bottomArmMax is 40, so threshold becomes |arm| < 55 (captures arms swinging behind)
     return (
@@ -388,7 +342,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
    * Mirrors CONNECT which is arms crossing vertical on the way DOWN.
    */
   private shouldTransitionToRelease(arm: number, spine: number): boolean {
-    if (this.framesInPhase < this.minFramesInPhase) return false;
+    if (!this.canTransition()) return false;
     // Arms crossing vertical (near 0°) AND spine returning to upright
     return (
       Math.abs(arm) < this.thresholds.releaseArmMax &&
@@ -412,7 +366,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     spine: number,
     hip: number
   ): boolean {
-    if (this.framesInPhase < this.minFramesInPhase) return false;
+    if (!this.canTransition()) return false;
 
     // Check posture requirements (must be standing upright)
     if (
@@ -514,10 +468,10 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   }
 
   /**
-   * Reset metrics for next rep
+   * Create initial metrics for a new rep
    */
-  private resetMetrics(): void {
-    this.currentRepMetrics = {
+  private createInitialMetrics(): SwingRepMetrics {
+    return {
       maxSpineAngle: 0,
       minHipAngle: 180,
       maxArmAngle: 0,
@@ -529,7 +483,7 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   /**
    * Calculate quality score for completed rep
    */
-  private calculateRepQuality(): RepQuality {
+  protected calculateRepQuality(): RepQuality {
     const feedback: string[] = [];
     let score = 100;
 
@@ -575,29 +529,6 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
     };
   }
 
-  getPhase(): string {
-    return this.phase;
-  }
-
-  getRepCount(): number {
-    return this.repCount;
-  }
-
-  getLastRepQuality(): RepQuality | null {
-    return this.lastRepQuality;
-  }
-
-  reset(): void {
-    this.phase = 'top';
-    this.repCount = 0;
-    this.framesInPhase = 0;
-    this.lastRepQuality = null;
-    this.currentPhasePeak = null;
-    this.currentRepPeaks = {};
-    this.wristHeightHistory = [];
-    this.resetMetrics();
-  }
-
   getExerciseName(): string {
     return 'Kettlebell Swing';
   }
@@ -605,5 +536,15 @@ export class KettlebellSwingFormAnalyzer implements FormAnalyzer {
   getPhases(): string[] {
     // Display order: bottom first (the start of a rep cycle visually)
     return ['bottom', 'release', 'top', 'connect'];
+  }
+
+  /**
+   * Reset exercise-specific state
+   */
+  protected resetExerciseState(): void {
+    this.phase = 'top';
+    this.currentPhasePeak = null;
+    this.wristHeightHistory = [];
+    this.currentRepMetrics = this.createInitialMetrics();
   }
 }

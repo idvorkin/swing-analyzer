@@ -20,11 +20,11 @@
 import type { Skeleton } from '../models/Skeleton';
 import { MediaPipeBodyParts } from '../types';
 import type {
-  FormAnalyzer,
   FormAnalyzerResult,
   RepPosition,
   RepQuality,
 } from './FormAnalyzer';
+import { type BasePhasePeak, FormAnalyzerBase } from './FormAnalyzerBase';
 
 /**
  * Pistol squat phases
@@ -69,22 +69,21 @@ const DEFAULT_THRESHOLDS: PistolSquatThresholds = {
 };
 
 /**
+ * Pistol squat angles tracked during the movement
+ */
+interface PistolSquatAngles {
+  workingKnee: number;
+  workingHip: number;
+  spine: number;
+  extendedKnee: number;
+}
+
+/**
  * Internal peak tracking during a phase
  */
-interface PhasePeak {
-  phase: PistolSquatPhase;
-  skeleton: Skeleton;
-  timestamp: number;
-  videoTime?: number;
-  score: number;
-  angles: {
-    workingKnee: number;
-    workingHip: number;
-    spine: number;
-    extendedKnee: number;
-  };
+interface PistolSquatPhasePeak
+  extends BasePhasePeak<PistolSquatPhase, PistolSquatAngles> {
   earY: number;
-  frameImage?: ImageData;
 }
 
 /**
@@ -95,46 +94,35 @@ interface EarFrameRecord {
   timestamp: number;
   videoTime?: number;
   earY: number;
-  angles: {
-    workingKnee: number;
-    workingHip: number;
-    spine: number;
-    extendedKnee: number;
-  };
+  angles: PistolSquatAngles;
   frameImage?: ImageData;
+}
+
+/**
+ * Metrics tracked during a rep for quality scoring
+ */
+interface PistolSquatRepMetrics {
+  minWorkingKneeAngle: number; // Deepest squat (lower = better)
+  maxSpineAngle: number; // Forward lean (too much = poor balance)
+  minExtendedKneeAngle: number; // Extended leg straightness (higher = better)
 }
 
 /**
  * Pistol Squat Form Analyzer
  *
- * Implements the FormAnalyzer interface with peak-based phase detection.
+ * Implements the FormAnalyzer interface with ear-based phase detection.
+ * Extends FormAnalyzerBase for shared lifecycle functionality.
  */
-export class PistolSquatFormAnalyzer implements FormAnalyzer {
-  private phase: PistolSquatPhase = 'standing';
-  private repCount = 0;
+export class PistolSquatFormAnalyzer extends FormAnalyzerBase<
+  PistolSquatPhase,
+  PistolSquatAngles,
+  PistolSquatPhasePeak
+> {
   private thresholds: PistolSquatThresholds;
 
   // Track quality metrics during the rep
-  private currentRepMetrics = {
-    minWorkingKneeAngle: 180, // Deepest squat (lower = better)
-    maxSpineAngle: 0, // Forward lean (too much = poor balance)
-    minExtendedKneeAngle: 180, // Extended leg straightness (higher = better)
-  };
-
-  // Last completed rep quality
-  private lastRepQuality: RepQuality | null = null;
-
-  // Peaks from current rep (cleared after rep completes)
-  private currentRepPeaks: {
-    standing?: PhasePeak;
-    descending?: PhasePeak;
-    bottom?: PhasePeak;
-    ascending?: PhasePeak;
-  } = {};
-
-  // Debounce: minimum frames in a phase before transitioning
-  private framesInPhase = 0;
-  private readonly minFramesInPhase = 2;
+  private currentRepMetrics: PistolSquatRepMetrics =
+    this.createInitialMetrics();
 
   // Working leg detection (which leg is doing the squat)
   private workingLeg: 'left' | 'right' | null = null;
@@ -163,6 +151,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   private readonly maxFrameHistory = 120; // ~4 seconds at 30fps
 
   constructor(thresholds: Partial<PistolSquatThresholds> = {}) {
+    super('standing');
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
   }
 
@@ -274,28 +263,29 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     this.detectWorkingLeg(skeleton);
 
     // Get all angles and ear position
-    const angles = this.getAngles(skeleton);
+    const allAngles = this.getAngles(skeleton);
     const earY = this.getEarY(skeleton);
+    const angles: PistolSquatAngles = {
+      workingKnee: allAngles.workingKnee,
+      workingHip: allAngles.workingHip,
+      spine: allAngles.spine,
+      extendedKnee: allAngles.extendedKnee,
+    };
 
     // Validate posture - reject horizontal/lying poses
     // This filters out warmup sections where person is lying down
-    if (angles.spine > this.thresholds.maxValidSpineAngle) {
+    if (allAngles.spine > this.thresholds.maxValidSpineAngle) {
       // Invalid posture - return current state without processing
       return {
         phase: this.phase,
         repCompleted: false,
         repCount: this.repCount,
-        angles: {
-          workingKnee: angles.workingKnee,
-          workingHip: angles.workingHip,
-          extendedKnee: angles.extendedKnee,
-          spine: angles.spine,
-        },
+        angles: { ...angles } as Record<string, number>,
       };
     }
 
     // Apply smoothing to working knee angle (still used for phase transitions)
-    const smoothedWorkingKnee = this.smoothAngle(angles.workingKnee);
+    const smoothedWorkingKnee = this.smoothAngle(allAngles.workingKnee);
 
     // Track smoothed knee angle history for direction detection
     this.kneeAngleHistory.push(smoothedWorkingKnee);
@@ -311,7 +301,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       timestamp,
       videoTime,
       earY,
-      angles: { ...angles },
+      angles,
       frameImage,
     };
 
@@ -322,7 +312,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     }
 
     // Track metrics for quality scoring
-    this.updateMetrics(angles);
+    this.updateMetrics(allAngles);
 
     // Increment frames in current phase
     this.framesInPhase++;
@@ -330,15 +320,15 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     // Check for phase transitions
     let repCompleted = false;
     let repPositions: RepPosition[] | undefined;
+    let repQuality: RepQuality | undefined;
 
     switch (this.phase) {
       case 'standing':
-        if (this.shouldTransitionToDescending(angles)) {
+        if (this.shouldTransitionToDescending(allAngles)) {
           // Capture standing checkpoint and ear Y baseline
           this.captureStandingCheckpoint(frameRecord);
           this.standingEarY = earY;
-          this.phase = 'descending';
-          this.framesInPhase = 0;
+          this.transitionTo('descending');
           // Reset bottom tracking for new descent
           this.bottomCandidate = null;
           this.framesAscendingAfterBottom = 0;
@@ -353,33 +343,26 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
           // Bottom confirmed! Capture checkpoints
           this.captureBottomCheckpoint();
           this.captureDescendingCheckpoint();
-          this.phase = 'bottom';
-          this.framesInPhase = 0;
+          this.transitionTo('bottom');
         }
         break;
 
       case 'bottom':
-        if (this.shouldTransitionToAscending(angles)) {
-          this.phase = 'ascending';
-          this.framesInPhase = 0;
+        if (this.shouldTransitionToAscending(allAngles)) {
+          this.transitionTo('ascending');
         }
         break;
 
       case 'ascending':
-        if (this.shouldTransitionToStanding(angles)) {
+        if (this.shouldTransitionToStanding(allAngles)) {
           // Capture ascending checkpoint at 50% ear Y travel
           this.captureAscendingCheckpoint();
-          this.phase = 'standing';
-          this.framesInPhase = 0;
+          const result = this.completeRep();
           repCompleted = true;
-          this.repCount++;
-          this.lastRepQuality = this.calculateRepQuality();
-
-          // Convert peaks to RepPosition array
-          repPositions = this.convertPeaksToPositions();
-
-          this.resetMetrics();
-          this.currentRepPeaks = {};
+          repPositions = result.repPositions;
+          repQuality = result.repQuality;
+          this.transitionTo('standing');
+          this.currentRepMetrics = this.createInitialMetrics();
         }
         break;
     }
@@ -389,42 +372,9 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       repCompleted,
       repCount: this.repCount,
       repPositions,
-      repQuality: repCompleted ? (this.lastRepQuality ?? undefined) : undefined,
-      angles: {
-        workingKnee: angles.workingKnee,
-        workingHip: angles.workingHip,
-        extendedKnee: angles.extendedKnee,
-        spine: angles.spine,
-      },
+      repQuality,
+      angles: { ...angles } as Record<string, number>,
     };
-  }
-
-  /**
-   * Convert internal peak tracking to RepPosition array
-   */
-  private convertPeaksToPositions(): RepPosition[] {
-    const positions: RepPosition[] = [];
-
-    for (const [phaseName, peak] of Object.entries(this.currentRepPeaks)) {
-      if (!peak) continue;
-
-      positions.push({
-        name: phaseName,
-        skeleton: peak.skeleton,
-        timestamp: peak.timestamp,
-        videoTime: peak.videoTime,
-        angles: {
-          workingKnee: peak.angles.workingKnee,
-          workingHip: peak.angles.workingHip,
-          extendedKnee: peak.angles.extendedKnee,
-          spine: peak.angles.spine,
-        },
-        score: peak.score,
-        frameImage: peak.frameImage,
-      });
-    }
-
-    return positions;
   }
 
   // ============================================
@@ -435,7 +385,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    * Capture the standing checkpoint when rep starts
    */
   private captureStandingCheckpoint(frame: EarFrameRecord): void {
-    this.currentRepPeaks.standing = {
+    this.storePeak('standing', {
       phase: 'standing',
       skeleton: frame.skeleton,
       timestamp: frame.timestamp,
@@ -444,7 +394,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       angles: { ...frame.angles },
       earY: frame.earY,
       frameImage: frame.frameImage,
-    };
+    });
   }
 
   /**
@@ -483,7 +433,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       return;
     }
 
-    this.currentRepPeaks.bottom = {
+    this.storePeak('bottom', {
       phase: 'bottom',
       skeleton: this.bottomCandidate.skeleton,
       timestamp: this.bottomCandidate.timestamp,
@@ -492,7 +442,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       angles: { ...this.bottomCandidate.angles },
       earY: this.bottomCandidate.earY,
       frameImage: this.bottomCandidate.frameImage,
-    };
+    });
   }
 
   /**
@@ -534,7 +484,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
         : best
     );
 
-    this.currentRepPeaks.descending = {
+    this.storePeak('descending', {
       phase: 'descending',
       skeleton: closest.skeleton,
       timestamp: closest.timestamp,
@@ -543,7 +493,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       angles: { ...closest.angles },
       earY: closest.earY,
       frameImage: closest.frameImage,
-    };
+    });
   }
 
   /**
@@ -585,7 +535,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
         : best
     );
 
-    this.currentRepPeaks.ascending = {
+    this.storePeak('ascending', {
       phase: 'ascending',
       skeleton: closest.skeleton,
       timestamp: closest.timestamp,
@@ -594,7 +544,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
       angles: { ...closest.angles },
       earY: closest.earY,
       frameImage: closest.frameImage,
-    };
+    });
   }
 
   /**
@@ -604,7 +554,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     workingKnee: number;
     spine: number;
   }): boolean {
-    if (this.framesInPhase < this.minFramesInPhase) return false;
+    if (!this.canTransition()) return false;
 
     // Working knee starting to bend significantly
     return angles.workingKnee < this.thresholds.descendingKneeThreshold;
@@ -616,7 +566,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
    * (person ascending) for N frames after reaching the lowest point.
    */
   private shouldTransitionToBottom(): boolean {
-    if (this.framesInPhase < this.minFramesInPhase) return false;
+    if (!this.canTransition()) return false;
     if (!this.bottomCandidate) return false;
 
     // Bottom is confirmed when ear has been descending (person rising) for enough frames
@@ -630,7 +580,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   private shouldTransitionToAscending(angles: {
     workingKnee: number;
   }): boolean {
-    if (this.framesInPhase < this.minFramesInPhase) return false;
+    if (!this.canTransition()) return false;
     if (this.kneeAngleHistory.length < 2) return false;
 
     const h = this.kneeAngleHistory;
@@ -652,7 +602,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     workingKnee: number;
     spine: number;
   }): boolean {
-    if (this.framesInPhase < this.minFramesInPhase) return false;
+    if (!this.canTransition()) return false;
 
     // Back to standing: knee nearly straight, relatively upright
     return (
@@ -684,10 +634,10 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   }
 
   /**
-   * Reset metrics for next rep
+   * Create initial metrics for a new rep
    */
-  private resetMetrics(): void {
-    this.currentRepMetrics = {
+  private createInitialMetrics(): PistolSquatRepMetrics {
+    return {
       minWorkingKneeAngle: 180,
       maxSpineAngle: 0,
       minExtendedKneeAngle: 180,
@@ -697,7 +647,7 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
   /**
    * Calculate quality score for completed rep
    */
-  private calculateRepQuality(): RepQuality {
+  protected calculateRepQuality(): RepQuality {
     const feedback: string[] = [];
     let score = 100;
 
@@ -746,37 +696,6 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     };
   }
 
-  getPhase(): string {
-    return this.phase;
-  }
-
-  getRepCount(): number {
-    return this.repCount;
-  }
-
-  getLastRepQuality(): RepQuality | null {
-    return this.lastRepQuality;
-  }
-
-  reset(): void {
-    this.phase = 'standing';
-    this.repCount = 0;
-    this.framesInPhase = 0;
-    this.lastRepQuality = null;
-    this.currentRepPeaks = {};
-    this.kneeAngleHistory = [];
-    this.workingLeg = null;
-    this.legDetectionVotes = { left: 0, right: 0 };
-    // Reset smoothing
-    this.smoothedKneeAngle = null;
-    // Reset ear-based bottom detection
-    this.standingEarY = null;
-    this.bottomCandidate = null;
-    this.framesAscendingAfterBottom = 0;
-    this.frameHistory = [];
-    this.resetMetrics();
-  }
-
   getExerciseName(): string {
     return 'Pistol Squat';
   }
@@ -801,5 +720,23 @@ export class PistolSquatFormAnalyzer implements FormAnalyzer {
     this.workingLeg = leg;
     // Clear votes since we're manually overriding
     this.legDetectionVotes = { left: 0, right: 0 };
+  }
+
+  /**
+   * Reset exercise-specific state
+   */
+  protected resetExerciseState(): void {
+    this.phase = 'standing';
+    this.kneeAngleHistory = [];
+    this.workingLeg = null;
+    this.legDetectionVotes = { left: 0, right: 0 };
+    // Reset smoothing
+    this.smoothedKneeAngle = null;
+    // Reset ear-based bottom detection
+    this.standingEarY = null;
+    this.bottomCandidate = null;
+    this.framesAscendingAfterBottom = 0;
+    this.frameHistory = [];
+    this.currentRepMetrics = this.createInitialMetrics();
   }
 }
