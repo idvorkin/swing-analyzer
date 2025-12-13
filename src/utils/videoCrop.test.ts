@@ -118,7 +118,7 @@ describe('calculateStableCropRegion', () => {
     expect(calculateStableCropRegion(frames, 1920, 1080)).toBeNull();
   });
 
-  it('calculates square crop region centered on person', () => {
+  it('calculates portrait crop region centered on person', () => {
     // Person at center of 1920x1080 video
     const keypoints: PoseKeypoint[] = [
       { x: 860, y: 340, score: 0.9, name: 'nose' },
@@ -128,8 +128,11 @@ describe('calculateStableCropRegion', () => {
     const crop = calculateStableCropRegion(frames, 1920, 1080);
 
     expect(crop).not.toBeNull();
-    // Should be square
-    expect(crop?.width).toBe(crop?.height);
+    // Should be portrait aspect ratio (3:4), so width < height
+    expect(crop?.width).toBeLessThan(crop?.height ?? 0);
+    // Verify 3:4 aspect ratio (within rounding tolerance)
+    const aspect = (crop?.width ?? 0) / (crop?.height ?? 1);
+    expect(aspect).toBeCloseTo(0.75, 1);
     // Should be within video bounds
     expect(crop?.x).toBeGreaterThanOrEqual(0);
     expect(crop?.y).toBeGreaterThanOrEqual(0);
@@ -176,12 +179,15 @@ describe('calculateStableCropRegion', () => {
       { x: 520, y: 350, score: 0.9, name: 'leftAnkle' },
     ];
     const frames = [createFrame(keypoints)];
-    const crop = calculateStableCropRegion(frames, 1920, 1080, 0.3);
+    // Use 1.5x width padding, 1.4x height padding
+    const crop = calculateStableCropRegion(frames, 1920, 1080, 1.5, 1.4);
 
     expect(crop).not.toBeNull();
-    // With 30% padding, crop should be larger than raw bounding box
-    const rawWidth = 520 - 500; // 20px
-    expect(crop?.width).toBeGreaterThan(rawWidth * 1.6); // At least padded size
+    // Raw bounding box: 20px wide x 50px tall
+    // With padding, crop should be larger than raw dimensions
+    const rawHeight = 350 - 300; // 50px
+    // Since portrait aspect (3:4), height drives the size
+    expect(crop?.height).toBeGreaterThan(rawHeight);
   });
 });
 

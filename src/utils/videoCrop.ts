@@ -73,25 +73,29 @@ export function mergeBoundingBoxes(boxes: BoundingBox[]): BoundingBox | null {
 }
 
 /**
- * Calculate a stable square crop region from pose frames
+ * Calculate a stable portrait crop region from pose frames
  *
  * Takes frames from the first few seconds of video and calculates
  * a crop region that encompasses all detected person positions.
+ * Uses portrait aspect ratio (3:4) like thumbnails for better framing.
  *
  * @param frames - Frames from detection phase (first 5 seconds)
  * @param videoWidth - Full video width in pixels
  * @param videoHeight - Full video height in pixels
- * @param paddingPercent - Extra padding for movement (default 20%)
- * @param maxCropRatio - Maximum crop size as ratio of video height (default 0.85)
+ * @param widthPadding - Width padding multiplier (default 1.4 = 40% like thumbnails)
+ * @param heightPadding - Height padding multiplier (default 1.3 = 30% like thumbnails)
  * @returns CropRegion or null if no person detected
  */
 export function calculateStableCropRegion(
   frames: PoseTrackFrame[],
   videoWidth: number,
   videoHeight: number,
-  paddingPercent = 0.2,
-  maxCropRatio = 0.85
+  widthPadding = 1.4,
+  heightPadding = 1.3
 ): CropRegion | null {
+  // Portrait aspect ratio (3:4) like thumbnails - matches human body shape
+  const targetAspect = 3 / 4;
+
   // Collect bounding boxes from all frames with detected poses
   const boxes: BoundingBox[] = [];
 
@@ -121,54 +125,46 @@ export function calculateStableCropRegion(
   const personWidth = unionBox.maxX - unionBox.minX;
   const personHeight = unionBox.maxY - unionBox.minY;
 
-  // Add padding for movement
-  const paddedWidth = personWidth * (1 + paddingPercent * 2);
-  const paddedHeight = personHeight * (1 + paddingPercent * 2);
+  // Add padding (like thumbnails: 40% width, 30% height)
+  const paddedWidth = personWidth * widthPadding;
+  const paddedHeight = personHeight * heightPadding;
 
-  // For square crop, use the larger dimension
-  // But cap at maxCropRatio of video height to ensure zoom effect
-  const maxCropSize = videoHeight * maxCropRatio;
-  const cropSize = Math.min(Math.max(paddedWidth, paddedHeight), maxCropSize);
+  // Determine crop size to fit person while maintaining portrait aspect ratio
+  let cropWidth: number;
+  let cropHeight: number;
 
-  // Calculate crop region centered on person
-  let cropX = personCenterX - cropSize / 2;
-  let cropY = personCenterY - cropSize / 2;
-  let cropWidth = cropSize;
-  let cropHeight = cropSize;
+  if (paddedWidth / paddedHeight > targetAspect) {
+    // Person is wider than target aspect - fit width
+    cropWidth = paddedWidth;
+    cropHeight = cropWidth / targetAspect;
+  } else {
+    // Person is taller than target aspect - fit height
+    cropHeight = paddedHeight;
+    cropWidth = cropHeight * targetAspect;
+  }
 
-  // Ensure crop doesn't exceed video bounds
-  // If crop is larger than video dimension, clamp to video size
+  // Ensure crop doesn't exceed video bounds while maintaining aspect ratio
   if (cropWidth > videoWidth) {
     cropWidth = videoWidth;
-    cropX = 0;
-  } else {
-    // Clamp X to keep crop within bounds
-    cropX = Math.max(0, Math.min(cropX, videoWidth - cropWidth));
+    cropHeight = cropWidth / targetAspect;
   }
-
   if (cropHeight > videoHeight) {
     cropHeight = videoHeight;
-    cropY = 0;
-  } else {
-    // Clamp Y to keep crop within bounds
-    cropY = Math.max(0, Math.min(cropY, videoHeight - cropHeight));
+    cropWidth = cropHeight * targetAspect;
   }
 
-  // Re-adjust to maintain square if one dimension was clamped
-  const finalSize = Math.min(cropWidth, cropHeight);
-  if (finalSize < cropWidth) {
-    cropWidth = finalSize;
-    cropX = personCenterX - cropWidth / 2;
-    cropX = Math.max(0, Math.min(cropX, videoWidth - cropWidth));
-  }
-  if (finalSize < cropHeight) {
-    cropHeight = finalSize;
-    cropY = personCenterY - cropHeight / 2;
-    cropY = Math.max(0, Math.min(cropY, videoHeight - cropHeight));
-  }
+  // Center crop on person, but clamp to video bounds
+  const cropX = Math.max(
+    0,
+    Math.min(personCenterX - cropWidth / 2, videoWidth - cropWidth)
+  );
+  const cropY = Math.max(
+    0,
+    Math.min(personCenterY - cropHeight / 2, videoHeight - cropHeight)
+  );
 
   console.log(
-    `[VideoCrop] Calculated crop: ${Math.round(cropX)},${Math.round(cropY)} ${Math.round(cropWidth)}x${Math.round(cropHeight)} from ${boxes.length} frames`
+    `[VideoCrop] Calculated crop: ${Math.round(cropX)},${Math.round(cropY)} ${Math.round(cropWidth)}x${Math.round(cropHeight)} (${targetAspect.toFixed(2)} aspect) from ${boxes.length} frames`
   );
 
   return {
