@@ -433,7 +433,14 @@ main {
 
 /* Zoomed state - expanded container for landscape videos */
 .video-container.zoomed #video {
-  max-height: 85vh;
+  max-height: 90vh;
+}
+
+/* Even taller on mobile since screen is precious */
+@media (max-width: 768px) {
+  .video-container.zoomed #video {
+    max-height: 95vh;
+  }
 }
 
 #output-canvas {

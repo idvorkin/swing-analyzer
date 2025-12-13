@@ -29,7 +29,7 @@ A "Zoom" button that:
 ### When Zoom is ON
 
 - Video cropped to portrait-like framing
-- Container expands to ~85vh height
+- Container expands to ~90vh height (95vh on mobile)
 - Skeleton overlay stays aligned
 - Button shows "Full"
 
