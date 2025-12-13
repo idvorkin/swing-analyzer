@@ -81,14 +81,16 @@ export function mergeBoundingBoxes(boxes: BoundingBox[]): BoundingBox | null {
  * @param frames - Frames from detection phase (first 5 seconds)
  * @param videoWidth - Full video width in pixels
  * @param videoHeight - Full video height in pixels
- * @param paddingPercent - Extra padding for movement (default 30%)
+ * @param paddingPercent - Extra padding for movement (default 20%)
+ * @param maxCropRatio - Maximum crop size as ratio of video height (default 0.85)
  * @returns CropRegion or null if no person detected
  */
 export function calculateStableCropRegion(
   frames: PoseTrackFrame[],
   videoWidth: number,
   videoHeight: number,
-  paddingPercent = 0.3
+  paddingPercent = 0.2,
+  maxCropRatio = 0.85
 ): CropRegion | null {
   // Collect bounding boxes from all frames with detected poses
   const boxes: BoundingBox[] = [];
@@ -124,7 +126,9 @@ export function calculateStableCropRegion(
   const paddedHeight = personHeight * (1 + paddingPercent * 2);
 
   // For square crop, use the larger dimension
-  const cropSize = Math.max(paddedWidth, paddedHeight);
+  // But cap at maxCropRatio of video height to ensure zoom effect
+  const maxCropSize = videoHeight * maxCropRatio;
+  const cropSize = Math.min(Math.max(paddedWidth, paddedHeight), maxCropSize);
 
   // Calculate crop region centered on person
   let cropX = personCenterX - cropSize / 2;
