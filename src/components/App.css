@@ -431,6 +431,11 @@ main {
   object-fit: contain;
 }
 
+/* Zoomed state - expanded container for landscape videos */
+.video-container.zoomed #video {
+  max-height: 85vh;
+}
+
 #output-canvas {
   /* Position set via JS to match video's rendered area */
   /* (canvas doesn't support object-fit: contain) */

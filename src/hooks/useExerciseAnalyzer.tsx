@@ -218,7 +218,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // Crop state for auto-centering on person in landscape videos
   const [cropRegion, setCropRegionState] = useState<CropRegion | null>(null);
-  const [isCropEnabled, setIsCropEnabled] = useState<boolean>(false); // Default to off - doesn't work well
+  const [isCropEnabled, setIsCropEnabled] = useState<boolean>(false); // Default to off - user must enable
+  const [isLandscape, setIsLandscape] = useState<boolean>(false); // Video aspect ratio > 1.2
 
   // ========================================
   // Canvas Sync (for skeleton alignment)
@@ -229,6 +230,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || video.videoWidth === 0) return;
+
+    // Update landscape state based on video aspect ratio (threshold > 1.2)
+    const aspectRatio = video.videoWidth / video.videoHeight;
+    setIsLandscape(aspectRatio > 1.2);
 
     // Set canvas internal dimensions to match video
     canvas.width = video.videoWidth;
@@ -1549,11 +1554,12 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     getSkeletonAtTime: (time: number) =>
       inputSessionRef.current?.getSkeletonAtTime(time) ?? null,
 
-    // Crop controls
+    // Crop/Zoom controls
     cropRegion,
     isCropEnabled,
     toggleCrop,
     hasCropRegion: cropRegion !== null,
+    isLandscape,
 
     // HUD visibility (based on pose availability, not extraction state)
     hasPosesForCurrentFrame,
