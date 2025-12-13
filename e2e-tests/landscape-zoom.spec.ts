@@ -177,6 +177,62 @@ test.describe('Landscape Zoom Feature - Desktop', () => {
   });
 });
 
+test.describe('Landscape Zoom Feature - Skeleton Alignment', () => {
+  test.beforeEach(async ({ page }) => {
+    await useShortTestVideo(page);
+    await page.goto('/');
+    await setPoseTrackStorageMode(page, 'indexeddb');
+    await clearPoseTrackDB(page);
+  });
+
+  // This test documents the known skeleton alignment bug
+  // It should FAIL until the bug is fixed
+  test.fail(
+    'skeleton canvas aligns with video when zoomed',
+    async ({ page }) => {
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
+      await clickSwingSampleButton(page);
+
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video?.readyState >= 2;
+        },
+        { timeout: 15000 }
+      );
+      await expect(page.locator('.cache-loading-overlay')).not.toBeVisible({
+        timeout: 10000,
+      });
+
+      // Click zoom
+      const zoomBtn = page.locator('#zoom-btn');
+      await zoomBtn.click();
+      await expect(page.locator('.video-container.zoomed')).toBeVisible();
+
+      // Get bounding boxes of video and canvas
+      const video = page.locator('#video');
+      const canvas = page.locator('#output-canvas');
+
+      const videoBounds = await video.boundingBox();
+      const canvasBounds = await canvas.boundingBox();
+
+      expect(videoBounds).not.toBeNull();
+      expect(canvasBounds).not.toBeNull();
+
+      // Canvas should perfectly overlay the video (within 2px tolerance)
+      // This will FAIL until skeleton alignment is fixed
+      expect(Math.abs(canvasBounds!.x - videoBounds!.x)).toBeLessThan(2);
+      expect(Math.abs(canvasBounds!.y - videoBounds!.y)).toBeLessThan(2);
+      expect(Math.abs(canvasBounds!.width - videoBounds!.width)).toBeLessThan(
+        2
+      );
+      expect(Math.abs(canvasBounds!.height - videoBounds!.height)).toBeLessThan(
+        2
+      );
+    }
+  );
+});
+
 test.describe('Landscape Zoom Feature - Mobile', () => {
   // Use mobile viewport
   test.use({
