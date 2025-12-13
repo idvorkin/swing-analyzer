@@ -326,9 +326,9 @@ main {
   }
 }
 
-/* Header swap button - camera icon to load/switch video */
+/* Header icon buttons - swap video and bug report */
 .header-swap-btn,
-.header-help-btn {
+.header-bug-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -342,16 +342,28 @@ main {
 }
 
 .header-swap-btn:hover,
-.header-swap-btn:active,
-.header-help-btn:hover,
-.header-help-btn:active {
+.header-swap-btn:active {
   background: rgba(255, 255, 255, 0.15);
   color: white;
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* Bug button - red tint for visibility */
+.header-bug-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.header-bug-btn:hover,
+.header-bug-btn:active {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
 .header-swap-btn svg,
-.header-help-btn svg {
+.header-bug-btn svg {
   width: 1rem;
   height: 1rem;
 }

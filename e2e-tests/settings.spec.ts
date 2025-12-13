@@ -63,7 +63,7 @@ test.describe('Settings Modal', () => {
   });
 
   test.describe('Tab Navigation', () => {
-    test('should display three tabs: Settings, Developer, About', async ({
+    test('should display three tabs: Settings, Help, About', async ({
       page,
     }) => {
       await page.click('button[aria-label="Open settings"]');
@@ -75,7 +75,7 @@ test.describe('Settings Modal', () => {
         'Settings'
       );
       await expect(page.locator('.settings-tab-label').nth(1)).toContainText(
-        'Developer'
+        'Help'
       );
       await expect(page.locator('.settings-tab-label').nth(2)).toContainText(
         'About'
@@ -172,13 +172,12 @@ test.describe('Settings Modal', () => {
     });
   });
 
-  test.describe('Developer Tab', () => {
+  test.describe('Settings Tab - Developer Section', () => {
     test('should show download button', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
 
-      await page.locator('.settings-tab').nth(1).click();
-
-      await expect(page.locator('.settings-tab').nth(1)).toHaveClass(
+      // Settings tab is already active by default
+      await expect(page.locator('.settings-tab').nth(0)).toHaveClass(
         /settings-tab--active/
       );
       await expect(
@@ -189,15 +188,12 @@ test.describe('Settings Modal', () => {
     test('should show session stats', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
 
-      await page.locator('.settings-tab').nth(1).click();
-
-      // Stats row shows duration, clicks, snaps
+      // Stats row shows duration, clicks, snaps (in Settings tab)
       await expect(page.locator('.settings-stats-row')).toBeVisible();
     });
 
     test('should show Download Poses button', async ({ page }) => {
       await page.click('button[aria-label="Open settings"]');
-      await page.locator('.settings-tab').nth(1).click();
 
       await expect(
         page.locator('.settings-action-btn', { hasText: 'Download Poses' })
@@ -208,7 +204,6 @@ test.describe('Settings Modal', () => {
       page,
     }) => {
       await page.click('button[aria-label="Open settings"]');
-      await page.locator('.settings-tab').nth(1).click();
 
       const downloadPosesBtn = page.locator('.settings-action-btn', {
         hasText: 'Download Poses',
@@ -255,9 +250,8 @@ test.describe('Settings Modal', () => {
         { timeout: 15000 }
       );
 
-      // Open settings
+      // Open settings (Settings tab is active by default, developer section is there)
       await page.click('button[aria-label="Open settings"]');
-      await page.locator('.settings-tab').nth(1).click();
 
       const downloadPosesBtn = page.locator('.settings-action-btn', {
         hasText: 'Download Poses',

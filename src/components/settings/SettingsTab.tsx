@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { BlazePoseVariant } from '../../config/modelConfig';
 import { useSwingAnalyzerContext } from '../../contexts/ExerciseAnalyzerContext';
 import {
@@ -6,8 +6,9 @@ import {
   getPoseTrackStorageMode,
   setPoseTrackStorageMode,
 } from '../../services/PoseTrackService';
+import { sessionRecorder } from '../../services/SessionRecorder';
 import type { DisplayMode } from '../../types';
-import { DatabaseIcon, MonitorIcon, SparklesIcon } from './Icons';
+import { DatabaseIcon, DownloadIcon, MonitorIcon, SparklesIcon } from './Icons';
 import { SegmentedControl } from './SegmentedControl';
 import { Toggle } from './Toggle';
 
@@ -56,6 +57,70 @@ export function SettingsTab() {
     () => getPoseTrackStorageMode() === 'indexeddb'
   );
   const [needsReload, setNeedsReload] = useState(false);
+
+  // Developer section state
+  const [recordingStats, setRecordingStats] = useState(
+    sessionRecorder.getStats()
+  );
+  const [hasPoseTrack, setHasPoseTrack] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState(false);
+  const [logDownloadError, setLogDownloadError] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRecordingStats(sessionRecorder.getStats());
+      setHasPoseTrack(sessionRecorder.getPoseTrack() !== null);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatDuration = (ms: number): string => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    if (minutes > 0) return `${minutes}m`;
+    return `${seconds}s`;
+  };
+
+  const handleDownloadLog = useCallback(() => {
+    setLogDownloadError(false);
+    try {
+      sessionRecorder.downloadRecording();
+    } catch (error) {
+      console.error(
+        '[SettingsTab] Failed to download session recording:',
+        error
+      );
+      setLogDownloadError(true);
+      setTimeout(() => setLogDownloadError(false), 3000);
+    }
+  }, []);
+
+  const handleDownloadPoseTrack = useCallback(async () => {
+    const swingDebug = (
+      window as unknown as {
+        swingDebug?: { downloadPoseTrack: () => Promise<string | null> };
+      }
+    ).swingDebug;
+    if (swingDebug?.downloadPoseTrack) {
+      setIsDownloading(true);
+      setDownloadError(false);
+      try {
+        const result = await swingDebug.downloadPoseTrack();
+        if (result === null) {
+          // downloadPoseTrack returns null on failure
+          setDownloadError(true);
+          setTimeout(() => setDownloadError(false), 3000);
+        }
+      } catch (error) {
+        console.error('[SettingsTab] Failed to download pose track:', error);
+        setDownloadError(true);
+        setTimeout(() => setDownloadError(false), 3000);
+      } finally {
+        setIsDownloading(false);
+      }
+    }
+  }, []);
 
   const handleVariantChange = (variant: BlazePoseVariant) => {
     const previousVariant = getSavedBlazePoseVariant();
@@ -176,6 +241,52 @@ export function SettingsTab() {
           </button>
         </div>
       )}
+
+      {/* Developer Section */}
+      <div className="settings-divider" />
+
+      {/* Action buttons row */}
+      <div className="settings-actions-row">
+        <button
+          type="button"
+          className={`settings-action-btn ${logDownloadError ? 'settings-action-btn--error' : 'settings-action-btn--green'}`}
+          onClick={handleDownloadLog}
+        >
+          <DownloadIcon /> {logDownloadError ? 'Failed!' : 'Download Log'}
+        </button>
+        <button
+          type="button"
+          className={`settings-action-btn ${downloadError ? 'settings-action-btn--error' : 'settings-action-btn--blue'}`}
+          onClick={handleDownloadPoseTrack}
+          disabled={!hasPoseTrack || isDownloading}
+          title={
+            hasPoseTrack ? 'Download extracted pose data' : 'Load a video first'
+          }
+        >
+          <DownloadIcon />{' '}
+          {isDownloading
+            ? 'Compressing...'
+            : downloadError
+              ? 'Failed!'
+              : 'Download Poses'}
+        </button>
+      </div>
+
+      {/* Session stats inline */}
+      <div className="settings-stats-row">
+        <span className="settings-stat">
+          {formatDuration(recordingStats.duration)}
+        </span>
+        <span className="settings-stat">
+          {recordingStats.interactions} clicks
+        </span>
+        <span className="settings-stat">{recordingStats.snapshots} snaps</span>
+        {recordingStats.errors > 0 && (
+          <span className="settings-stat settings-stat--error">
+            {recordingStats.errors} errors
+          </span>
+        )}
+      </div>
     </div>
   );
 }

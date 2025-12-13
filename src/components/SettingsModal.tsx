@@ -1,18 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AboutTab } from './settings/AboutTab';
-import { DeveloperTab } from './settings/DeveloperTab';
-import {
-  CloseIcon,
-  InfoIcon,
-  SettingsIcon,
-  WrenchIcon,
-} from './settings/Icons';
+import { HelpTab } from './settings/HelpTab';
+import { CloseIcon, HelpIcon, InfoIcon, SettingsIcon } from './settings/Icons';
 import { SettingsTab } from './settings/SettingsTab';
 import './settings/Settings.css';
 
 const TABS = [
   { id: 'settings' as const, label: 'Settings', Icon: SettingsIcon },
-  { id: 'developer' as const, label: 'Developer', Icon: WrenchIcon },
+  { id: 'help' as const, label: 'Help', Icon: HelpIcon },
   { id: 'about' as const, label: 'About', Icon: InfoIcon },
 ] as const;
 
@@ -21,12 +16,11 @@ type TabId = (typeof TABS)[number]['id'];
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  // Bug reporting
+  // Bug reporting (shake gesture)
   shakeEnabled: boolean;
   onShakeEnabledChange: (enabled: boolean) => void;
   isShakeSupported: boolean;
   onRequestShakePermission: () => Promise<boolean>;
-  onOpenBugReporter: () => void;
   shortcut: string;
   // Version check
   lastCheckTime: Date | null;
@@ -43,7 +37,6 @@ export function SettingsModal({
   onShakeEnabledChange,
   isShakeSupported,
   onRequestShakePermission,
-  onOpenBugReporter,
   shortcut,
   lastCheckTime,
   onCheckForUpdate,
@@ -63,11 +56,6 @@ export function SettingsModal({
       onShakeEnabledChange(false);
     }
   }, [shakeEnabled, onRequestShakePermission, onShakeEnabledChange]);
-
-  const handleReportBug = useCallback(() => {
-    onClose();
-    onOpenBugReporter();
-  }, [onClose, onOpenBugReporter]);
 
   // Global Escape key handler - divs aren't focusable by default
   useEffect(() => {
@@ -140,7 +128,7 @@ export function SettingsModal({
         <div className="settings-content">
           {activeSection === 'settings' && <SettingsTab />}
 
-          {activeSection === 'developer' && <DeveloperTab />}
+          {activeSection === 'help' && <HelpTab />}
 
           {activeSection === 'about' && (
             <AboutTab
@@ -148,7 +136,6 @@ export function SettingsModal({
               onShakeToggle={handleShakeToggle}
               isShakeSupported={isShakeSupported}
               shortcut={shortcut}
-              onReportBug={handleReportBug}
               updateAvailable={updateAvailable}
               lastCheckTime={lastCheckTime}
               isCheckingUpdate={isCheckingUpdate}

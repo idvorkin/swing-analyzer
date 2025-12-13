@@ -11,7 +11,6 @@ import { useShakeDetector } from '../hooks/useShakeDetector';
 import { useVersionCheck } from '../hooks/useVersionCheck';
 import { BugReportModal } from './BugReportModal';
 import { CrashFallback } from './CrashFallback';
-import { HelpModal } from './HelpModal';
 import { SettingsModal } from './SettingsModal';
 import { VersionNotification } from './VersionNotification';
 
@@ -55,10 +54,10 @@ const branchDisplayName = isFeatureBranch
 // Header with navigation
 interface HeaderProps {
   onOpenSettings: () => void;
-  onOpenHelp: () => void;
+  onOpenBugReport: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenHelp }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenBugReport }) => {
   return (
     <header>
       <h1>
@@ -71,13 +70,13 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenHelp }) => {
         )}
       </h1>
       <nav>
-        {/* Help button - shows touch gesture guide */}
+        {/* Bug report button */}
         <button
           type="button"
-          className="header-help-btn"
-          title="Touch controls help"
-          onClick={onOpenHelp}
-          aria-label="Touch controls help"
+          className="header-bug-btn"
+          title={`Report a bug (${bugReportShortcut})`}
+          onClick={onOpenBugReport}
+          aria-label="Report a bug"
         >
           <svg
             viewBox="0 0 24 24"
@@ -86,9 +85,11 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenHelp }) => {
             strokeWidth="2"
             aria-hidden="true"
           >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
+            <path d="M8 2l1.5 3M16 2l-1.5 3" />
+            <path d="M9 6.5a6 6 0 016 0" />
+            <path d="M6 9h12" />
+            <path d="M3 13l3-1v5a4 4 0 008 0v-5l3 1" />
+            <circle cx="12" cy="14" r="1" />
           </svg>
         </button>
         {/* Swap video button - shows source picker overlay */}
@@ -130,7 +131,6 @@ const AppContent: React.FC = () => {
   const bugReporter = useBugReporter();
   const versionCheck = useVersionCheck();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
 
   const { isSupported: isShakeSupported, requestPermission } = useShakeDetector(
     {
@@ -164,13 +164,12 @@ const AppContent: React.FC = () => {
     <SwingAnalyzerProvider>
       <Header
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenBugReport={bugReporter.open}
       />
       <Routes>
         <Route path="/" element={<MainApplication />} />
       </Routes>
       <VersionNotification />
-      <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
       <BugReportModal
         isOpen={bugReporter.isOpen}
         onClose={bugReporter.close}
@@ -186,7 +185,6 @@ const AppContent: React.FC = () => {
         onShakeEnabledChange={bugReporter.setShakeEnabled}
         isShakeSupported={isShakeSupported}
         onRequestShakePermission={requestPermission}
-        onOpenBugReporter={bugReporter.open}
         shortcut={bugReportShortcut}
         lastCheckTime={versionCheck.lastCheckTime}
         onCheckForUpdate={versionCheck.checkForUpdate}

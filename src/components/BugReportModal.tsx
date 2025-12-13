@@ -83,7 +83,7 @@ export function BugReportModal({
   const modalOverlayStyle: React.CSSProperties = {
     position: 'fixed',
     inset: 0,
-    zIndex: 70,
+    zIndex: 250, // Above all other dialogs (media: 100, help: 150, settings: 200)
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
