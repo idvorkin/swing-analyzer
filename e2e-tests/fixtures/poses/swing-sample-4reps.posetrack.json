@@ -11,15 +11,21 @@
     "sourceVideoDuration": 5.5,
     "extractedAt": "2025-12-07T19:53:58.775026+00:00",
     "frameCount": 165,
-    "fps": 30.0,
+    "fps": 30,
     "videoWidth": 1920,
-    "videoHeight": 1080
+    "videoHeight": 1080,
+    "cropRegion": {
+      "x": 604,
+      "y": 51,
+      "width": 850,
+      "height": 850
+    }
   },
   "frames": [
     {
       "frameIndex": 0,
-      "timestamp": 0.0,
-      "videoTime": 0.0,
+      "timestamp": 0,
+      "videoTime": 0,
       "keypoints": [
         {
           "x": 929.3511199951172,
@@ -502,7 +508,7 @@
       "score": 0.8726,
       "angles": {
         "spineAngle": 5.87,
-        "armToSpineAngle": 102.0,
+        "armToSpineAngle": 102,
         "armToVerticalAngle": 96.14,
         "hipAngle": 169.27,
         "kneeAngle": 164.62
@@ -756,7 +762,7 @@
     },
     {
       "frameIndex": 3,
-      "timestamp": 100.0,
+      "timestamp": 100,
       "videoTime": 0.1,
       "keypoints": [
         {
@@ -1494,7 +1500,7 @@
     },
     {
       "frameIndex": 6,
-      "timestamp": 200.0,
+      "timestamp": 200,
       "videoTime": 0.2,
       "keypoints": [
         {
@@ -2232,7 +2238,7 @@
     },
     {
       "frameIndex": 9,
-      "timestamp": 300.0,
+      "timestamp": 300,
       "videoTime": 0.3,
       "keypoints": [
         {
@@ -2970,7 +2976,7 @@
     },
     {
       "frameIndex": 12,
-      "timestamp": 400.0,
+      "timestamp": 400,
       "videoTime": 0.4,
       "keypoints": [
         {
@@ -3454,7 +3460,7 @@
       "score": 0.8232,
       "angles": {
         "spineAngle": 24.77,
-        "armToSpineAngle": 169.0,
+        "armToSpineAngle": 169,
         "armToVerticalAngle": 166.23,
         "hipAngle": 143.27,
         "kneeAngle": 160.11
@@ -3708,7 +3714,7 @@
     },
     {
       "frameIndex": 15,
-      "timestamp": 500.0,
+      "timestamp": 500,
       "videoTime": 0.5,
       "keypoints": [
         {
@@ -4446,7 +4452,7 @@
     },
     {
       "frameIndex": 18,
-      "timestamp": 600.0,
+      "timestamp": 600,
       "videoTime": 0.6,
       "keypoints": [
         {
@@ -5184,7 +5190,7 @@
     },
     {
       "frameIndex": 21,
-      "timestamp": 700.0,
+      "timestamp": 700,
       "videoTime": 0.7,
       "keypoints": [
         {
@@ -5922,7 +5928,7 @@
     },
     {
       "frameIndex": 24,
-      "timestamp": 800.0,
+      "timestamp": 800,
       "videoTime": 0.8,
       "keypoints": [
         {
@@ -6660,7 +6666,7 @@
     },
     {
       "frameIndex": 27,
-      "timestamp": 900.0,
+      "timestamp": 900,
       "videoTime": 0.9,
       "keypoints": [
         {
@@ -7398,8 +7404,8 @@
     },
     {
       "frameIndex": 30,
-      "timestamp": 1000.0,
-      "videoTime": 1.0,
+      "timestamp": 1000,
+      "videoTime": 1,
       "keypoints": [
         {
           "x": 1002.1308517456055,
@@ -8136,7 +8142,7 @@
     },
     {
       "frameIndex": 33,
-      "timestamp": 1100.0,
+      "timestamp": 1100,
       "videoTime": 1.1,
       "keypoints": [
         {
@@ -8874,7 +8880,7 @@
     },
     {
       "frameIndex": 36,
-      "timestamp": 1200.0,
+      "timestamp": 1200,
       "videoTime": 1.2,
       "keypoints": [
         {
@@ -9612,7 +9618,7 @@
     },
     {
       "frameIndex": 39,
-      "timestamp": 1300.0,
+      "timestamp": 1300,
       "videoTime": 1.3,
       "keypoints": [
         {
@@ -10350,7 +10356,7 @@
     },
     {
       "frameIndex": 42,
-      "timestamp": 1400.0,
+      "timestamp": 1400,
       "videoTime": 1.4,
       "keypoints": [
         {
@@ -11088,7 +11094,7 @@
     },
     {
       "frameIndex": 45,
-      "timestamp": 1500.0,
+      "timestamp": 1500,
       "videoTime": 1.5,
       "keypoints": [
         {
@@ -11826,7 +11832,7 @@
     },
     {
       "frameIndex": 48,
-      "timestamp": 1600.0,
+      "timestamp": 1600,
       "videoTime": 1.6,
       "keypoints": [
         {
@@ -12564,7 +12570,7 @@
     },
     {
       "frameIndex": 51,
-      "timestamp": 1700.0,
+      "timestamp": 1700,
       "videoTime": 1.7,
       "keypoints": [
         {
@@ -13302,7 +13308,7 @@
     },
     {
       "frameIndex": 54,
-      "timestamp": 1800.0,
+      "timestamp": 1800,
       "videoTime": 1.8,
       "keypoints": [
         {
@@ -14040,7 +14046,7 @@
     },
     {
       "frameIndex": 57,
-      "timestamp": 1900.0,
+      "timestamp": 1900,
       "videoTime": 1.9,
       "keypoints": [
         {
@@ -14778,8 +14784,8 @@
     },
     {
       "frameIndex": 60,
-      "timestamp": 2000.0,
-      "videoTime": 2.0,
+      "timestamp": 2000,
+      "videoTime": 2,
       "keypoints": [
         {
           "x": 1213.955955505371,
@@ -15516,7 +15522,7 @@
     },
     {
       "frameIndex": 63,
-      "timestamp": 2100.0,
+      "timestamp": 2100,
       "videoTime": 2.1,
       "keypoints": [
         {
@@ -16254,7 +16260,7 @@
     },
     {
       "frameIndex": 66,
-      "timestamp": 2200.0,
+      "timestamp": 2200,
       "videoTime": 2.2,
       "keypoints": [
         {
@@ -16992,7 +16998,7 @@
     },
     {
       "frameIndex": 69,
-      "timestamp": 2300.0,
+      "timestamp": 2300,
       "videoTime": 2.3,
       "keypoints": [
         {
@@ -17730,7 +17736,7 @@
     },
     {
       "frameIndex": 72,
-      "timestamp": 2400.0,
+      "timestamp": 2400,
       "videoTime": 2.4,
       "keypoints": [
         {
@@ -18468,7 +18474,7 @@
     },
     {
       "frameIndex": 75,
-      "timestamp": 2500.0,
+      "timestamp": 2500,
       "videoTime": 2.5,
       "keypoints": [
         {
@@ -19206,7 +19212,7 @@
     },
     {
       "frameIndex": 78,
-      "timestamp": 2600.0,
+      "timestamp": 2600,
       "videoTime": 2.6,
       "keypoints": [
         {
@@ -19944,7 +19950,7 @@
     },
     {
       "frameIndex": 81,
-      "timestamp": 2700.0,
+      "timestamp": 2700,
       "videoTime": 2.7,
       "keypoints": [
         {
@@ -20682,7 +20688,7 @@
     },
     {
       "frameIndex": 84,
-      "timestamp": 2800.0,
+      "timestamp": 2800,
       "videoTime": 2.8,
       "keypoints": [
         {
@@ -21420,7 +21426,7 @@
     },
     {
       "frameIndex": 87,
-      "timestamp": 2900.0,
+      "timestamp": 2900,
       "videoTime": 2.9,
       "keypoints": [
         {
@@ -22158,8 +22164,8 @@
     },
     {
       "frameIndex": 90,
-      "timestamp": 3000.0,
-      "videoTime": 3.0,
+      "timestamp": 3000,
+      "videoTime": 3,
       "keypoints": [
         {
           "x": 929.8306274414062,
@@ -22896,7 +22902,7 @@
     },
     {
       "frameIndex": 93,
-      "timestamp": 3100.0,
+      "timestamp": 3100,
       "videoTime": 3.1,
       "keypoints": [
         {
@@ -23634,7 +23640,7 @@
     },
     {
       "frameIndex": 96,
-      "timestamp": 3200.0,
+      "timestamp": 3200,
       "videoTime": 3.2,
       "keypoints": [
         {
@@ -24372,7 +24378,7 @@
     },
     {
       "frameIndex": 99,
-      "timestamp": 3300.0,
+      "timestamp": 3300,
       "videoTime": 3.3,
       "keypoints": [
         {
@@ -25104,13 +25110,13 @@
         "spineAngle": 47.99,
         "armToSpineAngle": 168.41,
         "armToVerticalAngle": 143.6,
-        "hipAngle": 110.0,
+        "hipAngle": 110,
         "kneeAngle": 153.65
       }
     },
     {
       "frameIndex": 102,
-      "timestamp": 3400.0,
+      "timestamp": 3400,
       "videoTime": 3.4,
       "keypoints": [
         {
@@ -25848,7 +25854,7 @@
     },
     {
       "frameIndex": 105,
-      "timestamp": 3500.0,
+      "timestamp": 3500,
       "videoTime": 3.5,
       "keypoints": [
         {
@@ -26586,7 +26592,7 @@
     },
     {
       "frameIndex": 108,
-      "timestamp": 3600.0,
+      "timestamp": 3600,
       "videoTime": 3.6,
       "keypoints": [
         {
@@ -27324,7 +27330,7 @@
     },
     {
       "frameIndex": 111,
-      "timestamp": 3700.0,
+      "timestamp": 3700,
       "videoTime": 3.7,
       "keypoints": [
         {
@@ -28062,7 +28068,7 @@
     },
     {
       "frameIndex": 114,
-      "timestamp": 3800.0,
+      "timestamp": 3800,
       "videoTime": 3.8,
       "keypoints": [
         {
@@ -28800,7 +28806,7 @@
     },
     {
       "frameIndex": 117,
-      "timestamp": 3900.0,
+      "timestamp": 3900,
       "videoTime": 3.9,
       "keypoints": [
         {
@@ -29532,14 +29538,14 @@
         "spineAngle": 6.49,
         "armToSpineAngle": 136.72,
         "armToVerticalAngle": 130.24,
-        "hipAngle": 173.0,
+        "hipAngle": 173,
         "kneeAngle": 164.54
       }
     },
     {
       "frameIndex": 120,
-      "timestamp": 4000.0,
-      "videoTime": 4.0,
+      "timestamp": 4000,
+      "videoTime": 4,
       "keypoints": [
         {
           "x": 933.6785888671875,
@@ -30276,7 +30282,7 @@
     },
     {
       "frameIndex": 123,
-      "timestamp": 4100.0,
+      "timestamp": 4100,
       "videoTime": 4.1,
       "keypoints": [
         {
@@ -31014,7 +31020,7 @@
     },
     {
       "frameIndex": 126,
-      "timestamp": 4200.0,
+      "timestamp": 4200,
       "videoTime": 4.2,
       "keypoints": [
         {
@@ -31752,7 +31758,7 @@
     },
     {
       "frameIndex": 129,
-      "timestamp": 4300.0,
+      "timestamp": 4300,
       "videoTime": 4.3,
       "keypoints": [
         {
@@ -32490,7 +32496,7 @@
     },
     {
       "frameIndex": 132,
-      "timestamp": 4400.0,
+      "timestamp": 4400,
       "videoTime": 4.4,
       "keypoints": [
         {
@@ -33228,7 +33234,7 @@
     },
     {
       "frameIndex": 135,
-      "timestamp": 4500.0,
+      "timestamp": 4500,
       "videoTime": 4.5,
       "keypoints": [
         {
@@ -33966,7 +33972,7 @@
     },
     {
       "frameIndex": 138,
-      "timestamp": 4600.0,
+      "timestamp": 4600,
       "videoTime": 4.6,
       "keypoints": [
         {
@@ -34704,7 +34710,7 @@
     },
     {
       "frameIndex": 141,
-      "timestamp": 4700.0,
+      "timestamp": 4700,
       "videoTime": 4.7,
       "keypoints": [
         {
@@ -35442,7 +35448,7 @@
     },
     {
       "frameIndex": 144,
-      "timestamp": 4800.0,
+      "timestamp": 4800,
       "videoTime": 4.8,
       "keypoints": [
         {
@@ -36180,7 +36186,7 @@
     },
     {
       "frameIndex": 147,
-      "timestamp": 4900.0,
+      "timestamp": 4900,
       "videoTime": 4.9,
       "keypoints": [
         {
@@ -36918,8 +36924,8 @@
     },
     {
       "frameIndex": 150,
-      "timestamp": 5000.0,
-      "videoTime": 5.0,
+      "timestamp": 5000,
+      "videoTime": 5,
       "keypoints": [
         {
           "x": 1185.937843322754,
@@ -37656,7 +37662,7 @@
     },
     {
       "frameIndex": 153,
-      "timestamp": 5100.0,
+      "timestamp": 5100,
       "videoTime": 5.1,
       "keypoints": [
         {
@@ -38394,7 +38400,7 @@
     },
     {
       "frameIndex": 156,
-      "timestamp": 5200.0,
+      "timestamp": 5200,
       "videoTime": 5.2,
       "keypoints": [
         {
@@ -39132,7 +39138,7 @@
     },
     {
       "frameIndex": 159,
-      "timestamp": 5300.0,
+      "timestamp": 5300,
       "videoTime": 5.3,
       "keypoints": [
         {
@@ -39870,7 +39876,7 @@
     },
     {
       "frameIndex": 162,
-      "timestamp": 5400.0,
+      "timestamp": 5400,
       "videoTime": 5.4,
       "keypoints": [
         {
@@ -40355,7 +40361,7 @@
       "angles": {
         "spineAngle": 11.27,
         "armToSpineAngle": 115.27,
-        "armToVerticalAngle": 104.0,
+        "armToVerticalAngle": 104,
         "hipAngle": 178.83,
         "kneeAngle": 170.68
       }

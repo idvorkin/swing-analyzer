@@ -69,6 +69,10 @@ export const FIXTURES = {
   'igor-1h-swing': () =>
     Promise.resolve(loadJsonFile('igor-1h-swing.posetrack.json')),
 
+  /** Pistol squat sample fixture - portrait video for testing portrait-specific behavior */
+  'pistol-squat-sample': () =>
+    Promise.resolve(loadJsonFile('pistol-squat-sample.posetrack.json')),
+
   /** Generate fixture with exactly 1 complete rep */
   'single-rep': () =>
     Promise.resolve(

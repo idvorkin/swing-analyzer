@@ -39,10 +39,11 @@ const VideoSectionV2: React.FC = () => {
     extractionProgress,
     isExtracting,
     currentVideoFile,
-    // Crop controls
+    // Zoom controls (crop for landscape videos)
     hasCropRegion,
     isCropEnabled,
     toggleCrop,
+    isLandscape,
     // HUD data
     spineAngle,
     armToSpineAngle,
@@ -286,7 +287,7 @@ const VideoSectionV2: React.FC = () => {
 
       {/* biome-ignore lint/a11y/noStaticElementInteractions: Double-tap is supplementary to existing button controls */}
       <div
-        className={`video-container ${getVideoContainerClass()}`}
+        className={`video-container ${getVideoContainerClass()}${isCropEnabled ? ' zoomed' : ''}`}
         onClick={handleVideoDoubleTap}
       >
         {/* biome-ignore lint/a11y/useMediaCaption: This is a video analysis app, not media playback - no audio captions needed */}
@@ -391,7 +392,7 @@ const VideoSectionV2: React.FC = () => {
           </div>
         )}
 
-        <div className="video-controls">
+        <div className="video-controls" onClick={(e) => e.stopPropagation()}>
           {/* 1. Play/Pause */}
           <button
             id="play-pause-btn"
@@ -466,10 +467,10 @@ const VideoSectionV2: React.FC = () => {
             </svg>
           </button>
 
-          {/* Crop toggle button - only show when crop region is available */}
-          {hasCropRegion && (
+          {/* Zoom toggle button - only show for landscape videos with crop region */}
+          {hasCropRegion && isLandscape && (
             <button
-              id="crop-btn"
+              id="zoom-btn"
               className={`toggle-button ${isCropEnabled ? 'active' : ''}`}
               onClick={toggleCrop}
               type="button"
@@ -486,11 +487,11 @@ const VideoSectionV2: React.FC = () => {
                 {isCropEnabled ? (
                   <path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z" />
                 ) : (
-                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-2h2v-4h4v-2h-4V7h-2v4H7v2h4z" />
+                  <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm.5-7H9v2H7v1h2v2h1v-2h2V9h-2V7z" />
                 )}
               </svg>
               <span className="button-text">
-                {isCropEnabled ? 'Full' : 'Crop'}
+                {isCropEnabled ? 'Full' : 'Zoom'}
               </span>
             </button>
           )}

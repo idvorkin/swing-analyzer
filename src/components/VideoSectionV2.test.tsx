@@ -49,6 +49,7 @@ const createMockContext = (overrides = {}): any => ({
   hasCropRegion: false,
   isCropEnabled: false,
   toggleCrop: mockToggleCrop,
+  isLandscape: false,
   spineAngle: 0,
   armToSpineAngle: 0,
   hasPosesForCurrentFrame: false,
@@ -470,27 +471,42 @@ describe('VideoSectionV2', () => {
     });
   });
 
-  describe('Crop Toggle', () => {
-    it('does not show crop button when no crop region', () => {
+  describe('Zoom Toggle', () => {
+    it('does not show zoom button when no crop region', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(
         createMockContext({
           hasCropRegion: false,
+          isLandscape: true,
         })
       );
       render(<VideoSectionV2 />);
-      expect(document.getElementById('crop-btn')).not.toBeInTheDocument();
+      expect(document.getElementById('zoom-btn')).not.toBeInTheDocument();
     });
 
-    it('shows crop button when crop region exists', () => {
+    it('does not show zoom button for portrait videos', () => {
       mockUseSwingAnalyzerContext.mockReturnValue(
         createMockContext({
           hasCropRegion: true,
+          isLandscape: false,
           currentVideoFile: new File([], 'test.mp4'),
           appState: { isModelLoaded: true, currentRepIndex: 0 },
         })
       );
       render(<VideoSectionV2 />);
-      expect(document.getElementById('crop-btn')).toBeInTheDocument();
+      expect(document.getElementById('zoom-btn')).not.toBeInTheDocument();
+    });
+
+    it('shows zoom button for landscape videos with crop region', () => {
+      mockUseSwingAnalyzerContext.mockReturnValue(
+        createMockContext({
+          hasCropRegion: true,
+          isLandscape: true,
+          currentVideoFile: new File([], 'test.mp4'),
+          appState: { isModelLoaded: true, currentRepIndex: 0 },
+        })
+      );
+      render(<VideoSectionV2 />);
+      expect(document.getElementById('zoom-btn')).toBeInTheDocument();
     });
   });
 

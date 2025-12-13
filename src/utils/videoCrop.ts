@@ -73,23 +73,29 @@ export function mergeBoundingBoxes(boxes: BoundingBox[]): BoundingBox | null {
 }
 
 /**
- * Calculate a stable square crop region from pose frames
+ * Calculate a stable portrait crop region from pose frames
  *
  * Takes frames from the first few seconds of video and calculates
  * a crop region that encompasses all detected person positions.
+ * Uses portrait aspect ratio (3:4) like thumbnails for better framing.
  *
  * @param frames - Frames from detection phase (first 5 seconds)
  * @param videoWidth - Full video width in pixels
  * @param videoHeight - Full video height in pixels
- * @param paddingPercent - Extra padding for movement (default 30%)
+ * @param widthPadding - Width padding multiplier (default 1.4 = 40% like thumbnails)
+ * @param heightPadding - Height padding multiplier (default 1.3 = 30% like thumbnails)
  * @returns CropRegion or null if no person detected
  */
 export function calculateStableCropRegion(
   frames: PoseTrackFrame[],
   videoWidth: number,
   videoHeight: number,
-  paddingPercent = 0.3
+  widthPadding = 1.4,
+  heightPadding = 1.3
 ): CropRegion | null {
+  // Portrait aspect ratio (3:4) like thumbnails - matches human body shape
+  const targetAspect = 3 / 4;
+
   // Collect bounding boxes from all frames with detected poses
   const boxes: BoundingBox[] = [];
 
@@ -119,52 +125,53 @@ export function calculateStableCropRegion(
   const personWidth = unionBox.maxX - unionBox.minX;
   const personHeight = unionBox.maxY - unionBox.minY;
 
-  // Add padding for movement
-  const paddedWidth = personWidth * (1 + paddingPercent * 2);
-  const paddedHeight = personHeight * (1 + paddingPercent * 2);
+  // Add padding (like thumbnails: 40% width, 30% height)
+  const paddedWidth = personWidth * widthPadding;
+  const paddedHeight = personHeight * heightPadding;
 
-  // For square crop, use the larger dimension
-  const cropSize = Math.max(paddedWidth, paddedHeight);
+  // Determine crop size to fit person while maintaining portrait aspect ratio
+  let cropWidth: number;
+  let cropHeight: number;
 
-  // Calculate crop region centered on person
-  let cropX = personCenterX - cropSize / 2;
-  let cropY = personCenterY - cropSize / 2;
-  let cropWidth = cropSize;
-  let cropHeight = cropSize;
+  if (paddedWidth / paddedHeight > targetAspect) {
+    // Person is wider than target aspect - fit width
+    cropWidth = paddedWidth;
+    cropHeight = cropWidth / targetAspect;
+  } else {
+    // Person is taller than target aspect - fit height
+    cropHeight = paddedHeight;
+    cropWidth = cropHeight * targetAspect;
+  }
 
-  // Ensure crop doesn't exceed video bounds
-  // If crop is larger than video dimension, clamp to video size
+  // Cap crop at 85% of video height to ensure minimum ~1.18x zoom effect
+  const maxCropHeight = videoHeight * 0.85;
+  if (cropHeight > maxCropHeight) {
+    cropHeight = maxCropHeight;
+    cropWidth = cropHeight * targetAspect;
+  }
+
+  // Ensure crop doesn't exceed video bounds while maintaining aspect ratio
   if (cropWidth > videoWidth) {
     cropWidth = videoWidth;
-    cropX = 0;
-  } else {
-    // Clamp X to keep crop within bounds
-    cropX = Math.max(0, Math.min(cropX, videoWidth - cropWidth));
+    cropHeight = cropWidth / targetAspect;
   }
-
   if (cropHeight > videoHeight) {
     cropHeight = videoHeight;
-    cropY = 0;
-  } else {
-    // Clamp Y to keep crop within bounds
-    cropY = Math.max(0, Math.min(cropY, videoHeight - cropHeight));
+    cropWidth = cropHeight * targetAspect;
   }
 
-  // Re-adjust to maintain square if one dimension was clamped
-  const finalSize = Math.min(cropWidth, cropHeight);
-  if (finalSize < cropWidth) {
-    cropWidth = finalSize;
-    cropX = personCenterX - cropWidth / 2;
-    cropX = Math.max(0, Math.min(cropX, videoWidth - cropWidth));
-  }
-  if (finalSize < cropHeight) {
-    cropHeight = finalSize;
-    cropY = personCenterY - cropHeight / 2;
-    cropY = Math.max(0, Math.min(cropY, videoHeight - cropHeight));
-  }
+  // Center crop on person, but clamp to video bounds
+  const cropX = Math.max(
+    0,
+    Math.min(personCenterX - cropWidth / 2, videoWidth - cropWidth)
+  );
+  const cropY = Math.max(
+    0,
+    Math.min(personCenterY - cropHeight / 2, videoHeight - cropHeight)
+  );
 
   console.log(
-    `[VideoCrop] Calculated crop: ${Math.round(cropX)},${Math.round(cropY)} ${Math.round(cropWidth)}x${Math.round(cropHeight)} from ${boxes.length} frames`
+    `[VideoCrop] Calculated crop: ${Math.round(cropX)},${Math.round(cropY)} ${Math.round(cropWidth)}x${Math.round(cropHeight)} (${targetAspect.toFixed(2)} aspect) from ${boxes.length} frames`
   );
 
   return {
@@ -183,56 +190,4 @@ export function isLandscapeVideo(
   videoHeight: number
 ): boolean {
   return videoWidth > videoHeight;
-}
-
-/**
- * Transform a point from full video coordinates to cropped coordinates.
- *
- * NOTE: Currently unused because the CSS transform approach (in VideoFrameAcquisition)
- * applies the same transform to both the video and canvas elements, automatically
- * keeping the skeleton overlay aligned. These functions are retained for future use
- * cases like:
- * - Click/touch coordinate translation on cropped video
- * - Exporting cropped keypoint data
- * - Alternative crop implementations that don't use CSS transforms
- */
-export function transformPointToCropped(
-  x: number,
-  y: number,
-  crop: CropRegion,
-  canvasWidth: number,
-  canvasHeight: number
-): { x: number; y: number } {
-  const scaleX = canvasWidth / crop.width;
-  const scaleY = canvasHeight / crop.height;
-
-  return {
-    x: (x - crop.x) * scaleX,
-    y: (y - crop.y) * scaleY,
-  };
-}
-
-/**
- * Transform keypoints from full video coordinates to cropped coordinates
- */
-export function transformKeypointsToCropped(
-  keypoints: PoseKeypoint[],
-  crop: CropRegion,
-  canvasWidth: number,
-  canvasHeight: number
-): PoseKeypoint[] {
-  return keypoints.map((kp) => {
-    const transformed = transformPointToCropped(
-      kp.x,
-      kp.y,
-      crop,
-      canvasWidth,
-      canvasHeight
-    );
-    return {
-      ...kp,
-      x: transformed.x,
-      y: transformed.y,
-    };
-  });
 }

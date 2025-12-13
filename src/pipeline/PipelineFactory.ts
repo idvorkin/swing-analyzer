@@ -48,16 +48,14 @@ export interface CreatePipelineOptions {
  * Create a complete pipeline with all components
  *
  * @param videoElement - The video element to process
- * @param canvasElement - The canvas element for rendering
  * @param options - Optional configuration including cached pose data
  */
 export function createPipeline(
   videoElement: HTMLVideoElement,
-  canvasElement: HTMLCanvasElement,
   options: CreatePipelineOptions = {}
 ): Pipeline {
   // Create each pipeline stage
-  const frameAcquisition = createFrameAcquisition(videoElement, canvasElement);
+  const frameAcquisition = createFrameAcquisition(videoElement);
 
   // Choose skeleton transformer based on available cache options
   let skeletonTransformer: SkeletonTransformer;
@@ -89,10 +87,9 @@ export function createPipeline(
  * Create a frame acquisition component
  */
 export function createFrameAcquisition(
-  videoElement: HTMLVideoElement,
-  canvasElement: HTMLCanvasElement
+  videoElement: HTMLVideoElement
 ): FrameAcquisition {
-  return new VideoFrameAcquisition(videoElement, canvasElement);
+  return new VideoFrameAcquisition(videoElement);
 }
 
 /**
