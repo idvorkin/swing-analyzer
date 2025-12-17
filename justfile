@@ -81,7 +81,7 @@ update-fixture-hashes:
 
 # Run the development server
 dev:
-    npm run dev
+    npm run dev-called-from-just
 
 # Start agent dashboard (monitors all agent clones)
 dashboard:
@@ -96,13 +96,17 @@ dashboard:
 
 # Build the project
 build:
-    npm run build
+    npm run build-called-from-just
 
 # Preview the production build
 preview:
     npm run preview
 
-# Run unit tests
+# Run unit tests (builds first to ensure fresh build)
+test: build
+    npm run test-called-from-just
+
+# Run unit tests without building
 test-unit:
     npm run test:unit
 
