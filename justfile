@@ -120,7 +120,7 @@ e2e:
 
 # Run fast E2E tests (seeded data, no extraction) - good for CI
 e2e-fast:
-    npx playwright test user-journey.spec.ts swing-analyzer.spec.ts pose-fixtures.spec.ts settings.spec.ts
+    npx playwright test user-journey.spec.ts swing-analyzer.spec.ts pose-fixtures.spec.ts settings.spec.ts upload-journey.spec.ts
 
 # Run extraction E2E tests (mock detector, longer tests)
 e2e-extraction:
