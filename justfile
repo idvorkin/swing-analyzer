@@ -106,8 +106,12 @@ preview:
 test: build
     npm run test-called-from-just
 
+# Generate src/generated_version.ts (gitignored; version-check tests need it)
+gen-version:
+    ./scripts/generate-version.sh
+
 # Run unit tests without building
-test-unit:
+test-unit: gen-version
     npm run test:unit
 
 # Run E2E tests (all projects - desktop + mobile)
