@@ -750,16 +750,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             recordExtractionComplete({ fileName: state.fileName });
           }
           // Record skeleton processing complete (for both extraction and cache load)
-          const sourceState = state.sourceState as {
-            batchComplete?: boolean;
-            framesProcessed?: number;
-            processingTimeMs?: number;
-          };
-          if (sourceState.batchComplete) {
+          if (state.sourceState.batchComplete) {
             recordSkeletonProcessingComplete({
-              framesProcessed: sourceState.framesProcessed ?? 0,
+              framesProcessed: state.sourceState.framesProcessed ?? 0,
               finalRepCount: pipelineRef.current?.getRepCount() ?? 0,
-              processingTimeMs: sourceState.processingTimeMs,
+              processingTimeMs: state.sourceState.processingTimeMs,
               totalFramesProcessed: frameIndexRef.current,
             });
             // Reset counters for next video
