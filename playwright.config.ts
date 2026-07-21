@@ -94,12 +94,17 @@ function findRunningViteServer(): { port: number; https: boolean } | null {
         const cmdline = getProcessCmd(pid);
 
         if (processCwd === cwd && cmdline?.includes('vite')) {
-          // Check if it's HTTPS (timeout command differs on macOS)
+          // Check if it's HTTPS (timeout command differs on macOS).
+          // NOTE: openssl s_client prints "CONNECTED(...)" as soon as the
+          // TCP socket connects, *before* any TLS handshake is attempted -
+          // it appears even against a plain-HTTP server. Grep for the
+          // server's certificate instead, which only appears once a real
+          // TLS handshake has completed.
           const timeoutCmd =
             process.platform === 'darwin' ? 'gtimeout' : 'timeout';
           const isHttps =
             execSync(
-              `${timeoutCmd} 1 bash -c "echo | openssl s_client -connect localhost:${port} 2>/dev/null | grep -q 'CONNECTED' && echo yes" 2>/dev/null || true`,
+              `${timeoutCmd} 1 bash -c "echo | openssl s_client -connect localhost:${port} 2>/dev/null | grep -q 'BEGIN CERTIFICATE' && echo yes" 2>/dev/null || true`,
               { encoding: 'utf-8' }
             ).trim() === 'yes';
           return { port, https: isHttps };
