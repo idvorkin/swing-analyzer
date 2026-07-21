@@ -79,9 +79,9 @@ check-fixture-hashes:
 update-fixture-hashes:
     node scripts/update-fixture-hashes.cjs
 
-# Run the development server
-dev:
-    npm run dev-called-from-just
+# Run the development server (forwards extra args, e.g. `just dev --port 5173`)
+dev *args:
+    npm run dev-called-from-just -- {{args}}
 
 # Start agent dashboard (monitors all agent clones)
 dashboard:
