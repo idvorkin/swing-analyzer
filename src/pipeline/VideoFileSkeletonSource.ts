@@ -279,7 +279,11 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       return null;
     }
 
-    const frame = this.liveCache.getFrame(videoTime);
+    // While extraction is still filling the cache, only match frames near
+    // the requested time — otherwise playback ahead of the extraction
+    // frontier renders the last-extracted skeleton as if it were current.
+    const tolerance = this.liveCache.isExtractionComplete() ? undefined : 0.1;
+    const frame = this.liveCache.getFrame(videoTime, tolerance);
     if (!frame) {
       return null;
     }

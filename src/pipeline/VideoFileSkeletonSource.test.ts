@@ -125,6 +125,28 @@ describe('VideoFileSkeletonSource', () => {
     expect(source.state.type).toBe('active');
   });
 
+  it('getSkeletonAtTime uses a tolerance while extraction is incomplete', async () => {
+    vi.mocked(loadPoseTrackFromStorage).mockResolvedValue(makeTrack(3));
+    const source = makeSource();
+    await source.start();
+    await flushTimers();
+
+    // Frames exist at 0, 1/30, 2/30 s. Far beyond the frontier:
+    // complete cache → closest-match is fine; the incomplete case is the
+    // one that must NOT match. Simulate incompleteness:
+    const cache = source.getLiveCache();
+    expect(cache).not.toBeNull();
+    vi.spyOn(cache!, 'isExtractionComplete').mockReturnValue(false);
+    const getFrameSpy = vi.spyOn(cache!, 'getFrame');
+
+    source.getSkeletonAtTime(5.0);
+    expect(getFrameSpy).toHaveBeenCalledWith(5.0, 0.1);
+
+    vi.spyOn(cache!, 'isExtractionComplete').mockReturnValue(true);
+    source.getSkeletonAtTime(5.0);
+    expect(getFrameSpy).toHaveBeenLastCalledWith(5.0, undefined);
+  });
+
   it('stop() before the cached burst fires suppresses emissions', async () => {
     vi.mocked(loadPoseTrackFromStorage).mockResolvedValue(makeTrack());
     const source = makeSource();

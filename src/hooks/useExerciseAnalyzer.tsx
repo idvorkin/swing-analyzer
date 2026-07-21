@@ -1166,6 +1166,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       const video = videoRef.current;
       if (!session || !video) {
         console.error(`loadVideo: session or video element not initialized`);
+        // The caller already created this object URL; without revoking here
+        // it leaks (loadVideoSafely, which normally tracks it, never runs).
+        URL.revokeObjectURL(blobUrl);
         setStatus('Error: App not initialized. Please refresh.');
         return false;
       }
