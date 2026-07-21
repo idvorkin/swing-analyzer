@@ -8,12 +8,22 @@ import {
   formatFileSize,
   generatePoseTrackFilename,
   getPoseTrackStorageMode,
+  loadPoseTrackFromStorage,
   POSETRACK_EXTENSION,
   parsePoseTrack,
+  savePoseTrackToStorage,
   serializePoseTrack,
   setPoseTrackStorageMode,
+  stripRuntimeFields,
   validatePoseTrack,
 } from './PoseTrackService';
+
+// Fake ImageData — jsdom-safe stand-in with the same shape
+const fakeImageData = {
+  width: 2,
+  height: 2,
+  data: new Uint8ClampedArray(16),
+} as unknown as ImageData;
 
 /**
  * Create a valid PoseTrackFile for testing
@@ -163,6 +173,51 @@ describe('PoseTrackService', () => {
       expect(json).toContain('\n');
       expect(json).toContain('  '); // Indentation
       expect(JSON.parse(json)).toEqual(poseTrack);
+    });
+  });
+
+  describe('stripRuntimeFields', () => {
+    it('removes frameImage from every frame', () => {
+      const track = createValidPoseTrack();
+      track.frames[0].frameImage = fakeImageData;
+      const cleaned = stripRuntimeFields(track);
+      expect(cleaned.frames.every((f) => f.frameImage === undefined)).toBe(
+        true
+      );
+      // Original object untouched
+      expect(track.frames[0].frameImage).toBe(fakeImageData);
+    });
+
+    it('returns the same object when nothing needs stripping', () => {
+      const track = createValidPoseTrack();
+      expect(stripRuntimeFields(track)).toBe(track);
+    });
+  });
+
+  describe('savePoseTrackToStorage strips runtime fields', () => {
+    beforeEach(() => {
+      clearMemoryStore();
+      // Reset to memory mode for isolation
+      setPoseTrackStorageMode('memory', false);
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('persists no frameImage', async () => {
+      const track = createValidPoseTrack();
+      track.frames.forEach((f) => {
+        f.frameImage = fakeImageData;
+      });
+      await savePoseTrackToStorage(track);
+      const loaded = await loadPoseTrackFromStorage(
+        track.metadata.sourceVideoHash
+      );
+      expect(loaded).not.toBeNull();
+      expect(loaded!.frames.every((f) => f.frameImage === undefined)).toBe(
+        true
+      );
     });
   });
 
