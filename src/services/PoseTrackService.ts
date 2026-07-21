@@ -14,9 +14,11 @@ import type {
 } from '../types/posetrack';
 import { isValidSha256Hash } from '../utils/videoHash';
 
-const POSETRACK_DB_NAME = 'swing-analyzer-posetracks';
-const POSETRACK_STORE_NAME = 'posetracks';
-const POSETRACK_DB_VERSION = 1;
+// Exported (not just for internal use) so tests can seed/inspect records via
+// the raw IndexedDB API without duplicating these literals and risking drift.
+export const POSETRACK_DB_NAME = 'swing-analyzer-posetracks';
+export const POSETRACK_STORE_NAME = 'posetracks';
+export const POSETRACK_DB_VERSION = 1;
 
 /**
  * Storage mode for pose tracks
