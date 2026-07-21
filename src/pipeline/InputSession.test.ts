@@ -5,31 +5,72 @@
  * These are pure unit tests - no React, no actual video.
  */
 
+import { BehaviorSubject, Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InputSession, type InputSessionState } from './InputSession';
+import type { SkeletonEvent } from './PipelineInterfaces';
+import type { SkeletonSourceState } from './SkeletonSource';
+
+/** A mock source whose start() promise is controlled by the test. */
+interface MockVideoFileSource {
+  type: 'video-file';
+  state: SkeletonSourceState;
+  stateSubject: BehaviorSubject<SkeletonSourceState>;
+  skeletonSubject: Subject<SkeletonEvent>;
+  state$: BehaviorSubject<SkeletonSourceState>;
+  skeletons$: Subject<SkeletonEvent>;
+  start: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+  dispose: ReturnType<typeof vi.fn>;
+  getSkeletonAtTime: ReturnType<typeof vi.fn>;
+  hasSkeletonAtTime: ReturnType<typeof vi.fn>;
+  save: ReturnType<typeof vi.fn>;
+  getLiveCache: ReturnType<typeof vi.fn>;
+  getPoseTrack: ReturnType<typeof vi.fn>;
+  getVideoHash: ReturnType<typeof vi.fn>;
+  resolveStart: () => void;
+  rejectStart: (err: unknown) => void;
+}
+
+/** One entry per constructed VideoFileSkeletonSource, in construction order. */
+const mockSources: MockVideoFileSource[] = [];
 
 vi.mock('./VideoFileSkeletonSource', () => ({
-  VideoFileSkeletonSource: vi.fn().mockImplementation(() => ({
-    type: 'video-file',
-    state: { type: 'idle' },
-    state$: {
-      pipe: vi.fn().mockReturnThis(),
-      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
-    },
-    skeletons$: {
-      pipe: vi.fn().mockReturnThis(),
-      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
-    },
-    start: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn(),
-    dispose: vi.fn(),
-    getSkeletonAtTime: vi.fn().mockReturnValue(null),
-    hasSkeletonAtTime: vi.fn().mockReturnValue(false),
-    save: vi.fn().mockResolvedValue(undefined),
-    getLiveCache: vi.fn().mockReturnValue(null),
-    getPoseTrack: vi.fn().mockReturnValue(null),
-    getVideoHash: vi.fn().mockReturnValue(null),
-  })),
+  VideoFileSkeletonSource: vi.fn().mockImplementation(() => {
+    const stateSubject = new BehaviorSubject<SkeletonSourceState>({
+      type: 'idle',
+    });
+    const skeletonSubject = new Subject<SkeletonEvent>();
+    let resolveStart: () => void = () => {};
+    let rejectStart: (err: unknown) => void = () => {};
+    const startPromise = new Promise<void>((resolve, reject) => {
+      resolveStart = resolve;
+      rejectStart = reject;
+    });
+    const source: MockVideoFileSource = {
+      type: 'video-file',
+      get state() {
+        return stateSubject.getValue();
+      },
+      stateSubject,
+      skeletonSubject,
+      state$: stateSubject,
+      skeletons$: skeletonSubject,
+      start: vi.fn().mockReturnValue(startPromise),
+      stop: vi.fn(),
+      dispose: vi.fn(),
+      getSkeletonAtTime: vi.fn().mockReturnValue(null),
+      hasSkeletonAtTime: vi.fn().mockReturnValue(false),
+      save: vi.fn().mockResolvedValue(undefined),
+      getLiveCache: vi.fn().mockReturnValue(null),
+      getPoseTrack: vi.fn().mockReturnValue(null),
+      getVideoHash: vi.fn().mockReturnValue(null),
+      resolveStart,
+      rejectStart,
+    } as MockVideoFileSource;
+    mockSources.push(source);
+    return source;
+  }),
 }));
 
 describe('InputSession', () => {
@@ -38,6 +79,8 @@ describe('InputSession', () => {
   let mockCanvasElement: HTMLCanvasElement;
 
   beforeEach(() => {
+    mockSources.length = 0;
+
     // Create mock DOM elements
     mockVideoElement = document.createElement('video');
     mockCanvasElement = document.createElement('canvas');
@@ -80,7 +123,10 @@ describe('InputSession', () => {
   describe('startVideoFile', () => {
     it('creates a video file source', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
 
       const source = session.getSource();
       expect(source).not.toBeNull();
@@ -89,7 +135,10 @@ describe('InputSession', () => {
 
     it('calls start on the video source', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
 
       const source = session.getVideoFileSource();
       expect(source?.start).toHaveBeenCalled();
@@ -97,11 +146,17 @@ describe('InputSession', () => {
 
     it('cleans up previous source when starting new video file', async () => {
       const mockFile1 = new File(['test1'], 'test1.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile1);
+      const startPromise1 = session.startVideoFile(mockFile1);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise1;
       const firstSource = session.getSource();
 
       const mockFile2 = new File(['test2'], 'test2.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile2);
+      const startPromise2 = session.startVideoFile(mockFile2);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise2;
 
       expect(firstSource?.dispose).toHaveBeenCalled();
     });
@@ -110,7 +165,10 @@ describe('InputSession', () => {
   describe('stop', () => {
     it('stops the current source', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
       const source = session.getSource();
 
       session.stop();
@@ -120,7 +178,10 @@ describe('InputSession', () => {
 
     it('transitions to idle state', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
       session.stop();
 
       expect(session.state).toEqual({ type: 'idle' });
@@ -135,7 +196,10 @@ describe('InputSession', () => {
 
     it('delegates to source when available', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
 
       session.getSkeletonAtTime(1.0);
 
@@ -152,7 +216,10 @@ describe('InputSession', () => {
 
     it('delegates to source when available', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
 
       session.hasSkeletonAtTime(1.0);
 
@@ -170,7 +237,10 @@ describe('InputSession', () => {
 
     it('delegates to video source when available', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
 
       await session.save();
 
@@ -182,7 +252,10 @@ describe('InputSession', () => {
   describe('dispose', () => {
     it('cleans up current source', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
       const source = session.getSource();
 
       session.dispose();
@@ -200,7 +273,10 @@ describe('InputSession', () => {
   describe('source type getters', () => {
     it('getVideoFileSource returns source when video file is active', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
       expect(session.getVideoFileSource()).not.toBeNull();
     });
 
@@ -214,7 +290,13 @@ describe('InputSession', () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const abortController = new AbortController();
 
-      await session.startVideoFile(mockFile, abortController.signal);
+      const startPromise = session.startVideoFile(
+        mockFile,
+        abortController.signal
+      );
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
 
       const source = session.getVideoFileSource();
       expect(source?.start).toHaveBeenCalledWith(abortController.signal);
@@ -234,7 +316,10 @@ describe('InputSession', () => {
     it('works without abort signal (backward compatible)', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
 
-      await session.startVideoFile(mockFile);
+      const startPromise = session.startVideoFile(mockFile);
+      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
+      mockSources[mockSources.length - 1].resolveStart();
+      await startPromise;
 
       const source = session.getVideoFileSource();
       expect(source?.start).toHaveBeenCalledWith(undefined);
@@ -289,6 +374,21 @@ describe('InputSession', () => {
       expect(abortSession.state).toEqual({ type: 'idle' });
 
       abortSession.dispose();
+    });
+  });
+
+  describe('race harness', () => {
+    it('tracks each constructed source and controls start() resolution', async () => {
+      const file = new File(['x'], 'a.mp4', { type: 'video/mp4' });
+      const p = session.startVideoFile(file);
+      // startVideoFile awaits an internal cleanup() microtask before constructing
+      // the source, so let that turn of the microtask queue run first.
+      await Promise.resolve();
+      expect(mockSources).toHaveLength(1);
+      expect(mockSources[0].start).toHaveBeenCalled();
+      mockSources[0].resolveStart();
+      await p;
+      expect(session.state.type).toBe('video-file');
     });
   });
 });
