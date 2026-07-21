@@ -28,7 +28,7 @@ test.describe('Upload journey', () => {
     });
   });
 
-  test.fixme('file input is cleared after selection so the same file can be re-picked', async ({
+  test('file input is cleared after selection so the same file can be re-picked', async ({
     page,
   }) => {
     // Guards spec defect 4. Enabled by the fix task ("file input reset").

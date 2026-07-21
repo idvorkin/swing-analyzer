@@ -1207,6 +1207,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const handleVideoUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
+      // Clear the input so selecting the SAME file later still fires a
+      // change event — otherwise re-picking the just-recorded video is a
+      // silent no-op (iOS pickers make this the common case).
+      event.target.value = '';
       if (!file) return;
 
       if (!inputSessionRef.current || !videoRef.current) {
