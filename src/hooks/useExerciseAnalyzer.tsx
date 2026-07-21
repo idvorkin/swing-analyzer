@@ -53,6 +53,7 @@ import {
   findNextCheckpoint,
   findPreviousCheckpoint,
 } from '../utils/checkpointUtils';
+import { createConsecutiveErrorTracker } from '../utils/consecutiveErrorTracker';
 import { calculateDepthFromKeypoints } from '../utils/depthCalculation';
 import { calculateStableCropRegion } from '../utils/videoCrop';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
@@ -636,9 +637,27 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const prevRepCountRef = useRef<number>(0);
   // Track frame index for debugging
   const frameIndexRef = useRef<number>(0);
-  // Track consecutive processing errors (for user feedback when analysis is degraded)
-  const consecutiveErrorsRef = useRef<number>(0);
-  const MAX_CONSECUTIVE_ERRORS = 5;
+  // Track consecutive FRAMES with analysis errors (for user feedback when
+  // analysis is degraded). pipeline.processSkeletonEvent() never throws -
+  // its internal errors are emitted synchronously to errorSubject during
+  // the call - so per-frame success can't be inferred from "the call
+  // returned". The errorSubscription handler below marks errored frames via
+  // recordError(); processSkeletonEvent closes each frame with
+  // frameProcessed() once the call above completes. See
+  // consecutiveErrorTracker.ts for details.
+  const consecutiveErrorTrackerRef = useRef<ReturnType<
+    typeof createConsecutiveErrorTracker
+  > | null>(null);
+  if (consecutiveErrorTrackerRef.current === null) {
+    consecutiveErrorTrackerRef.current = createConsecutiveErrorTracker(
+      5, // consecutive errored frames before surfacing a status banner
+      () => {
+        setStatus(
+          'Error: Analysis is failing repeatedly — some frames may be skipped'
+        );
+      }
+    );
+  }
 
   // Process a skeleton event through the pipeline and update UI
   const processSkeletonEvent = useCallback((event: SkeletonEvent) => {
@@ -655,12 +674,14 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     let result: number;
     try {
       result = pipeline.processSkeletonEvent(event);
-      // Reset error count on success
-      consecutiveErrorsRef.current = 0;
     } catch (error) {
       console.error('[processSkeletonEvent] Pipeline processing error:', error);
       return; // Don't crash component, just skip this frame
     }
+    // Pipeline errors (if any) were already emitted synchronously to
+    // errorSubject during the call above and recorded by the
+    // errorSubscription handler; close out this frame for the tracker.
+    consecutiveErrorTrackerRef.current?.frameProcessed();
 
     // Increment frame counter
     frameIndexRef.current++;
@@ -872,12 +893,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           }s:`,
           pipelineError.error
         );
-        consecutiveErrorsRef.current++;
-        if (consecutiveErrorsRef.current === MAX_CONSECUTIVE_ERRORS) {
-          setStatus(
-            'Error: Analysis is failing repeatedly — some frames may be skipped'
-          );
-        }
+        consecutiveErrorTrackerRef.current?.recordError();
       },
       error: (error) => {
         console.error('Error in pipeline error subscription:', error);
