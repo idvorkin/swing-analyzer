@@ -659,12 +659,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       consecutiveErrorsRef.current = 0;
     } catch (error) {
       console.error('[processSkeletonEvent] Pipeline processing error:', error);
-      consecutiveErrorsRef.current++;
-
-      // Surface degraded analysis to user after multiple consecutive errors
-      if (consecutiveErrorsRef.current === MAX_CONSECUTIVE_ERRORS) {
-        setStatus('Analysis experiencing errors - some frames may be skipped');
-      }
       return; // Don't crash component, just skip this frame
     }
 
@@ -873,11 +867,17 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     const errorSubscription = pipeline.getErrorEvents().subscribe({
       next: (pipelineError) => {
         console.warn(
-          `[Pipeline ${pipelineError.source}] Error at ${pipelineError.videoTime?.toFixed(2) ?? 'unknown'}s:`,
+          `[Pipeline ${pipelineError.source}] Error at ${
+            pipelineError.videoTime?.toFixed(2) ?? 'unknown'
+          }s:`,
           pipelineError.error
         );
-        // Errors are already tracked in processSkeletonEvent, but this catches
-        // errors from the RxJS streaming path as well
+        consecutiveErrorsRef.current++;
+        if (consecutiveErrorsRef.current === MAX_CONSECUTIVE_ERRORS) {
+          setStatus(
+            'Error: Analysis is failing repeatedly — some frames may be skipped'
+          );
+        }
       },
       error: (error) => {
         console.error('Error in pipeline error subscription:', error);

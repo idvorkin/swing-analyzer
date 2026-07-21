@@ -41,4 +41,19 @@ test.describe('Upload journey', () => {
     });
     await expect(page.locator(FILE_INPUT)).toHaveValue('');
   });
+
+  test('a failed upload shows an error banner instead of failing silently', async ({
+    page,
+  }) => {
+    await page.locator(FILE_INPUT).setInputFiles({
+      name: 'corrupt.webm',
+      mimeType: 'video/webm',
+      buffer: Buffer.from('this is not a video file'),
+    });
+
+    await expect(page.locator('.status-banner')).toBeVisible({
+      timeout: 20000,
+    });
+    await expect(page.locator('.status-banner')).toContainText(/error/i);
+  });
 });
