@@ -31,12 +31,17 @@ test.describe('Upload journey', () => {
   test('file input is cleared after selection so the same file can be re-picked', async ({
     page,
   }) => {
-    // Guards spec defect 4. Enabled by the fix task ("file input reset").
-    // Without the fix the input keeps its value and the browser fires no
-    // change event when the user re-selects the same file.
-    await seedPoseTrackFixture(page, 'swing-sample-4reps');
-    await page.locator(FILE_INPUT).setInputFiles(VIDEO_PATH);
-    await expect(page.locator('#rep-counter')).toBeVisible({
+    // Guards spec defect 4: handleVideoUpload must clear the input's value
+    // synchronously so a later re-selection of the SAME file still fires a
+    // change event. A corrupt upload is used so the load fails and the
+    // dialog STAYS OPEN — asserting on the input after a successful upload
+    // is impossible (the dialog unmounts with it).
+    await page.locator(FILE_INPUT).setInputFiles({
+      name: 'corrupt.webm',
+      mimeType: 'video/webm',
+      buffer: Buffer.from('this is not a video file'),
+    });
+    await expect(page.locator('.status-banner')).toBeVisible({
       timeout: 20000,
     });
     await expect(page.locator(FILE_INPUT)).toHaveValue('');
