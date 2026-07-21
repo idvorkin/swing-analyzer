@@ -1202,6 +1202,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       }
 
       const abortController = prepareVideoLoad();
+      // Tear down the old source NOW. Without this it keeps streaming frames
+      // into the freshly reset pipeline until startVideoFile() replaces it
+      // (potentially seconds later, after the new video's metadata loads).
+      inputSessionRef.current.stop();
       setIsVideoLoading(true);
       setVideoLoadProgress(undefined);
       setVideoLoadMessage(`Loading ${file.name}...`);
@@ -1237,6 +1241,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       }
 
       const abortController = prepareVideoLoad();
+      // Tear down the old source NOW. Without this it keeps streaming frames
+      // into the freshly reset pipeline until startVideoFile() replaces it
+      // (potentially seconds later, after the new video's metadata loads).
+      inputSessionRef.current.stop();
       setStatus(`Loading ${config.name.toLowerCase()} sample...`);
       setIsVideoLoading(true);
       setVideoLoadProgress(undefined);
