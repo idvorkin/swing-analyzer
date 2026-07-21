@@ -53,6 +53,7 @@ import {
   findNextCheckpoint,
   findPreviousCheckpoint,
 } from '../utils/checkpointUtils';
+import { createConsecutiveErrorTracker } from '../utils/consecutiveErrorTracker';
 import { calculateDepthFromKeypoints } from '../utils/depthCalculation';
 import { calculateStableCropRegion } from '../utils/videoCrop';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
@@ -197,6 +198,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const [isDetectionLocked, setIsDetectionLocked] = useState<boolean>(false);
   const [currentPhases, setCurrentPhases] = useState<string[]>(DEFAULT_PHASES);
   const [workingLeg, setWorkingLeg] = useState<'left' | 'right' | null>(null);
+  const [videoFps, setVideoFps] = useState(30);
 
   // Track if we've recorded extraction start for current session (to avoid spam)
   const hasRecordedExtractionStartRef = useRef<boolean>(false);
@@ -636,9 +638,27 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const prevRepCountRef = useRef<number>(0);
   // Track frame index for debugging
   const frameIndexRef = useRef<number>(0);
-  // Track consecutive processing errors (for user feedback when analysis is degraded)
-  const consecutiveErrorsRef = useRef<number>(0);
-  const MAX_CONSECUTIVE_ERRORS = 5;
+  // Track consecutive FRAMES with analysis errors (for user feedback when
+  // analysis is degraded). pipeline.processSkeletonEvent() never throws -
+  // its internal errors are emitted synchronously to errorSubject during
+  // the call - so per-frame success can't be inferred from "the call
+  // returned". The errorSubscription handler below marks errored frames via
+  // recordError(); processSkeletonEvent closes each frame with
+  // frameProcessed() once the call above completes. See
+  // consecutiveErrorTracker.ts for details.
+  const consecutiveErrorTrackerRef = useRef<ReturnType<
+    typeof createConsecutiveErrorTracker
+  > | null>(null);
+  if (consecutiveErrorTrackerRef.current === null) {
+    consecutiveErrorTrackerRef.current = createConsecutiveErrorTracker(
+      5, // consecutive errored frames before surfacing a status banner
+      () => {
+        setStatus(
+          'Error: Analysis is failing repeatedly — some frames may be skipped'
+        );
+      }
+    );
+  }
 
   // Process a skeleton event through the pipeline and update UI
   const processSkeletonEvent = useCallback((event: SkeletonEvent) => {
@@ -655,18 +675,14 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     let result: number;
     try {
       result = pipeline.processSkeletonEvent(event);
-      // Reset error count on success
-      consecutiveErrorsRef.current = 0;
     } catch (error) {
       console.error('[processSkeletonEvent] Pipeline processing error:', error);
-      consecutiveErrorsRef.current++;
-
-      // Surface degraded analysis to user after multiple consecutive errors
-      if (consecutiveErrorsRef.current === MAX_CONSECUTIVE_ERRORS) {
-        setStatus('Analysis experiencing errors - some frames may be skipped');
-      }
       return; // Don't crash component, just skip this frame
     }
+    // Pipeline errors (if any) were already emitted synchronously to
+    // errorSubject during the call above and recorded by the
+    // errorSubscription handler; close out this frame for the tracker.
+    consecutiveErrorTrackerRef.current?.frameProcessed();
 
     // Increment frame counter
     frameIndexRef.current++;
@@ -750,16 +766,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             recordExtractionComplete({ fileName: state.fileName });
           }
           // Record skeleton processing complete (for both extraction and cache load)
-          const sourceState = state.sourceState as {
-            batchComplete?: boolean;
-            framesProcessed?: number;
-            processingTimeMs?: number;
-          };
-          if (sourceState.batchComplete) {
+          if (state.sourceState.batchComplete) {
             recordSkeletonProcessingComplete({
-              framesProcessed: sourceState.framesProcessed ?? 0,
+              framesProcessed: state.sourceState.framesProcessed ?? 0,
               finalRepCount: pipelineRef.current?.getRepCount() ?? 0,
-              processingTimeMs: sourceState.processingTimeMs,
+              processingTimeMs: state.sourceState.processingTimeMs,
               totalFramesProcessed: frameIndexRef.current,
             });
             // Reset counters for next video
@@ -773,6 +784,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             const poseTrack = videoSource?.getPoseTrack();
             if (poseTrack && poseTrack.frames.length > 0) {
               const { videoWidth, videoHeight } = poseTrack.metadata;
+              setVideoFps(poseTrack.metadata.fps || 30);
 
               // Get frames at rep position times (from repThumbnails ref)
               // Fall back to first 60 frames if no reps detected yet
@@ -878,11 +890,12 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     const errorSubscription = pipeline.getErrorEvents().subscribe({
       next: (pipelineError) => {
         console.warn(
-          `[Pipeline ${pipelineError.source}] Error at ${pipelineError.videoTime?.toFixed(2) ?? 'unknown'}s:`,
+          `[Pipeline ${pipelineError.source}] Error at ${
+            pipelineError.videoTime?.toFixed(2) ?? 'unknown'
+          }s:`,
           pipelineError.error
         );
-        // Errors are already tracked in processSkeletonEvent, but this catches
-        // errors from the RxJS streaming path as well
+        consecutiveErrorTrackerRef.current?.recordError();
       },
       error: (error) => {
         console.error('Error in pipeline error subscription:', error);
@@ -1124,6 +1137,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     setIsDetectionLocked(false);
     setCurrentPhases(DEFAULT_PHASES);
     setWorkingLeg(null);
+    setVideoFps(30);
+    consecutiveErrorTrackerRef.current?.reset();
   }, []);
 
   // Helper: Clear loading UI state (used on abort or completion)
@@ -1153,6 +1168,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       const video = videoRef.current;
       if (!session || !video) {
         console.error(`loadVideo: session or video element not initialized`);
+        // The caller already created this object URL; without revoking here
+        // it leaks (loadVideoSafely, which normally tracks it, never runs).
+        URL.revokeObjectURL(blobUrl);
         setStatus('Error: App not initialized. Please refresh.');
         return false;
       }
@@ -1196,6 +1214,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const handleVideoUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
+      // Clear the input so selecting the SAME file later still fires a
+      // change event — otherwise re-picking the just-recorded video is a
+      // silent no-op (iOS pickers make this the common case).
+      event.target.value = '';
       if (!file) return;
 
       if (!inputSessionRef.current || !videoRef.current) {
@@ -1207,6 +1229,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       }
 
       const abortController = prepareVideoLoad();
+      // Tear down the old source NOW. Without this it keeps streaming frames
+      // into the freshly reset pipeline until startVideoFile() replaces it
+      // (potentially seconds later, after the new video's metadata loads).
+      inputSessionRef.current.stop();
       setIsVideoLoading(true);
       setVideoLoadProgress(undefined);
       setVideoLoadMessage(`Loading ${file.name}...`);
@@ -1242,6 +1268,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       }
 
       const abortController = prepareVideoLoad();
+      // Tear down the old source NOW. Without this it keeps streaming frames
+      // into the freshly reset pipeline until startVideoFile() replaces it
+      // (potentially seconds later, after the new video's metadata loads).
+      inputSessionRef.current.stop();
       setStatus(`Loading ${config.name.toLowerCase()} sample...`);
       setIsVideoLoading(true);
       setVideoLoadProgress(undefined);
@@ -1378,7 +1408,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   // Frame Navigation (Cache-Based)
   // ========================================
-  const frameStep = 1 / 30; // Assuming 30fps
+  const frameStep = 1 / videoFps;
 
   const nextFrame = useCallback(() => {
     const video = videoRef.current;
@@ -1391,7 +1421,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     video.pause();
     video.currentTime = Math.min(video.duration, video.currentTime + frameStep);
     // Skeleton will be rendered via 'seeked' event handler
-  }, []);
+  }, [frameStep]);
 
   const previousFrame = useCallback(() => {
     const video = videoRef.current;
@@ -1403,7 +1433,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     video.pause();
     video.currentTime = Math.max(0, video.currentTime - frameStep);
     // Skeleton will be rendered via 'seeked' event handler
-  }, []);
+  }, [frameStep]);
 
   // ========================================
   // Rep Navigation - seeks to same phase in target rep (or first available) and pauses

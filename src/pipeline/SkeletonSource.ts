@@ -32,7 +32,15 @@ export type SkeletonSourceState =
   | { type: 'starting' }
   | { type: 'checking-cache' }
   | { type: 'extracting'; progress: ExtractionProgress }
-  | { type: 'active' }
+  | {
+      type: 'active';
+      /** True on the final state after the initial batch emission (cache load or fresh extraction) has finished. */
+      batchComplete?: boolean;
+      /** Number of frames emitted in the batch (present when batchComplete). */
+      framesProcessed?: number;
+      /** Wall-clock ms the batch took (present when batchComplete). */
+      processingTimeMs?: number;
+    }
   | { type: 'error'; message: string };
 
 /**

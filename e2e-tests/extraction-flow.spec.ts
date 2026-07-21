@@ -259,30 +259,37 @@ test.describe
         { timeout: 5000 }
       );
 
-      const repCountAfterExtraction = await page.evaluate(() => {
-        const el = document.querySelector('#rep-counter');
-        return parseInt(el?.textContent || '0', 10);
-      });
+      // The counter renders "current/total". The doubling guard below is
+      // about the TOTAL (re-processing cached frames must not re-count
+      // reps). The CURRENT rep legitimately advances with video time via
+      // the throttled playback sync — the old parseInt() assertion
+      // accidentally pinned the current-rep display and only passed while
+      // that sync happened to be inert in this scenario.
+      const readRepCounter = () =>
+        page.evaluate(() => {
+          const text =
+            document.querySelector('#rep-counter')?.textContent || '0';
+          const [current, total] = text.split('/').map((s) => parseInt(s, 10));
+          return { current, total: Number.isNaN(total) ? current : total };
+        });
+
+      const repsAfterExtraction = await readRepCounter();
 
       // Play video
       await page.click('#play-pause-btn');
       await page.waitForTimeout(2000);
       await page.click('#play-pause-btn'); // Pause
 
-      // Rep count should not have doubled
-      const repCountAfterPlayback = await page.evaluate(() => {
-        const el = document.querySelector('#rep-counter');
-        return parseInt(el?.textContent || '0', 10);
-      });
+      const repsAfterPlayback = await readRepCounter();
 
       console.log(
-        `Reps: extraction=${repCountAfterExtraction}, after playback=${repCountAfterPlayback}`
+        `Reps: extraction=${JSON.stringify(repsAfterExtraction)}, after playback=${JSON.stringify(repsAfterPlayback)}`
       );
 
-      // Allow small difference due to video position, but should not double
-      expect(repCountAfterPlayback).toBeLessThanOrEqual(
-        repCountAfterExtraction + 1
-      );
+      // Total rep count must not grow during playback (no double-counting
+      // from cached-frame re-processing).
+      expect(repsAfterPlayback.total).toBe(repsAfterExtraction.total);
+      expect(repsAfterPlayback.total).toBeGreaterThan(0);
     });
   });
 

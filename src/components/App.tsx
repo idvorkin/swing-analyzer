@@ -12,6 +12,7 @@ import { useVersionCheck } from '../hooks/useVersionCheck';
 import { BugReportModal } from './BugReportModal';
 import { CrashFallback } from './CrashFallback';
 import { SettingsModal } from './SettingsModal';
+import StatusBanner from './StatusBanner';
 import { VersionNotification } from './VersionNotification';
 
 // Settings icon for header
@@ -34,6 +35,7 @@ const SettingsIconSmall = () => (
 const MainApplication: React.FC = () => {
   return (
     <main>
+      <StatusBanner />
       <VideoSectionV2 />
     </main>
   );

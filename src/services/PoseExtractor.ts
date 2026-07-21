@@ -519,17 +519,64 @@ function seekToTime(video: HTMLVideoElement, time: number): Promise<void> {
 }
 
 /**
- * Estimate video FPS by checking frame timestamps
+ * Estimate video FPS by sampling requestVideoFrameCallback mediaTime deltas
+ * during a brief muted playback. Median delta → fps. Falls back to 30 when
+ * rVFC is unavailable (old browsers) or sampling times out (e.g. decode
+ * stall). Cost: ~0.3-0.5s once per extraction.
+ * @internal Exported for testing
  */
-async function estimateVideoFps(_video: HTMLVideoElement): Promise<number> {
-  // Try to get FPS from video metadata (not always available)
-  // Default to 30fps which is common for most videos
-  const defaultFps = 30;
+export async function estimateVideoFps(
+  video: HTMLVideoElement
+): Promise<number> {
+  const FALLBACK_FPS = 30;
+  const SAMPLE_FRAMES = 12;
+  const TIMEOUT_MS = 2000;
 
-  // For now, use a reasonable default
-  // In a production app, you might want to analyze frame timing
-  // or use a library that can read video metadata
-  return defaultFps;
+  type VideoWithRvfc = HTMLVideoElement & {
+    requestVideoFrameCallback?: (
+      cb: (now: number, metadata: { mediaTime: number }) => void
+    ) => number;
+  };
+  const rvfcVideo = video as VideoWithRvfc;
+  if (typeof rvfcVideo.requestVideoFrameCallback !== 'function') {
+    return FALLBACK_FPS;
+  }
+
+  video.muted = true;
+  try {
+    await video.play();
+  } catch {
+    return FALLBACK_FPS;
+  }
+
+  const fps = await new Promise<number>((resolve) => {
+    const mediaTimes: number[] = [];
+    const timeout = setTimeout(() => resolve(FALLBACK_FPS), TIMEOUT_MS);
+    const onFrame = (_now: number, metadata: { mediaTime: number }) => {
+      mediaTimes.push(metadata.mediaTime);
+      if (mediaTimes.length >= SAMPLE_FRAMES) {
+        clearTimeout(timeout);
+        const deltas = mediaTimes
+          .slice(1)
+          .map((t, i) => t - mediaTimes[i])
+          .filter((d) => d > 0)
+          .sort((a, b) => a - b);
+        if (deltas.length === 0) {
+          resolve(FALLBACK_FPS);
+          return;
+        }
+        const median = deltas[Math.floor(deltas.length / 2)];
+        resolve(Math.round(1 / median));
+        return;
+      }
+      rvfcVideo.requestVideoFrameCallback?.(onFrame);
+    };
+    rvfcVideo.requestVideoFrameCallback?.(onFrame);
+  });
+
+  video.pause();
+  video.currentTime = 0;
+  return fps;
 }
 
 /**

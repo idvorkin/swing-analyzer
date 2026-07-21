@@ -1,3 +1,7 @@
+// fake-indexeddb/auto installs a real (in-memory) IndexedDB implementation on
+// globalThis. jsdom does not implement IndexedDB at all, so this is purely
+// additive here — it does not shadow or alter any existing browser API.
+import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PoseTrackFile } from '../types/posetrack';
 import {
@@ -8,12 +12,25 @@ import {
   formatFileSize,
   generatePoseTrackFilename,
   getPoseTrackStorageMode,
+  loadPoseTrackFromStorage,
+  POSETRACK_DB_NAME,
+  POSETRACK_DB_VERSION,
   POSETRACK_EXTENSION,
+  POSETRACK_STORE_NAME,
   parsePoseTrack,
+  savePoseTrackToStorage,
   serializePoseTrack,
   setPoseTrackStorageMode,
+  stripRuntimeFields,
   validatePoseTrack,
 } from './PoseTrackService';
+
+// Fake ImageData — jsdom-safe stand-in with the same shape
+const fakeImageData = {
+  width: 2,
+  height: 2,
+  data: new Uint8ClampedArray(16),
+} as unknown as ImageData;
 
 /**
  * Create a valid PoseTrackFile for testing
@@ -163,6 +180,183 @@ describe('PoseTrackService', () => {
       expect(json).toContain('\n');
       expect(json).toContain('  '); // Indentation
       expect(JSON.parse(json)).toEqual(poseTrack);
+    });
+  });
+
+  describe('stripRuntimeFields', () => {
+    it('removes frameImage from every frame', () => {
+      const track = createValidPoseTrack();
+      track.frames[0].frameImage = fakeImageData;
+      const cleaned = stripRuntimeFields(track);
+      expect(cleaned.frames.every((f) => f.frameImage === undefined)).toBe(
+        true
+      );
+      // Original object untouched
+      expect(track.frames[0].frameImage).toBe(fakeImageData);
+    });
+
+    it('returns the same object when nothing needs stripping', () => {
+      const track = createValidPoseTrack();
+      expect(stripRuntimeFields(track)).toBe(track);
+    });
+  });
+
+  describe('savePoseTrackToStorage strips runtime fields', () => {
+    beforeEach(() => {
+      clearMemoryStore();
+      // Reset to memory mode for isolation
+      setPoseTrackStorageMode('memory', false);
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('persists no frameImage', async () => {
+      const track = createValidPoseTrack();
+      track.frames.forEach((f) => {
+        f.frameImage = fakeImageData;
+      });
+      await savePoseTrackToStorage(track);
+      const loaded = await loadPoseTrackFromStorage(
+        track.metadata.sourceVideoHash
+      );
+      expect(loaded).not.toBeNull();
+      expect(loaded!.frames.every((f) => f.frameImage === undefined)).toBe(
+        true
+      );
+    });
+  });
+
+  describe('loadPoseTrackFromStorage migration (IndexedDB)', () => {
+    // savePoseTrackToStorage now strips frameImage on the way in, so it
+    // cannot be used to seed a "legacy bloated" record. These tests write
+    // directly through the raw indexedDB API (same DB/store/version the
+    // service uses, via the exported constants) to simulate a record
+    // persisted before the strip existed, then exercise the migration
+    // branch in loadPoseTrackFromStorage's IndexedDB-only code path.
+
+    let previousMode: ReturnType<typeof getPoseTrackStorageMode>;
+
+    function openRawDb(): Promise<IDBDatabase> {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(POSETRACK_DB_NAME, POSETRACK_DB_VERSION);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(POSETRACK_STORE_NAME)) {
+            db.createObjectStore(POSETRACK_STORE_NAME, {
+              keyPath: 'videoHash',
+            });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function putRawRecord(record: {
+      videoHash: string;
+      poseTrack: PoseTrackFile;
+      model: string;
+      createdAt: string;
+    }): Promise<void> {
+      const db = await openRawDb();
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(POSETRACK_STORE_NAME, 'readwrite');
+        tx.objectStore(POSETRACK_STORE_NAME).put(record);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    }
+
+    async function getRawRecord(
+      videoHash: string
+    ): Promise<{ poseTrack: PoseTrackFile } | undefined> {
+      const db = await openRawDb();
+      const result = await new Promise<
+        { poseTrack: PoseTrackFile } | undefined
+      >((resolve, reject) => {
+        const tx = db.transaction(POSETRACK_STORE_NAME, 'readonly');
+        const request = tx.objectStore(POSETRACK_STORE_NAME).get(videoHash);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      return result;
+    }
+
+    function deleteRawDb(): Promise<void> {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.deleteDatabase(POSETRACK_DB_NAME);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+        request.onblocked = () => resolve();
+      });
+    }
+
+    function seedBloatedTrack(): PoseTrackFile {
+      const track = createValidPoseTrack();
+      track.frames.forEach((f) => {
+        f.frameImage = fakeImageData;
+      });
+      return track;
+    }
+
+    async function seedBloatedRecord(track: PoseTrackFile): Promise<void> {
+      await putRawRecord({
+        videoHash: track.metadata.sourceVideoHash,
+        poseTrack: track,
+        model: track.metadata.model,
+        createdAt: track.metadata.extractedAt,
+      });
+    }
+
+    // Flush enough macrotasks for the background migration save (which goes
+    // through openPoseTrackDB -> a fresh transaction) to complete.
+    async function flushMacrotasks(times = 5): Promise<void> {
+      for (let i = 0; i < times; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+
+    beforeEach(async () => {
+      previousMode = getPoseTrackStorageMode();
+      setPoseTrackStorageMode('indexeddb', false);
+      await deleteRawDb();
+    });
+
+    afterEach(async () => {
+      setPoseTrackStorageMode(previousMode, false);
+      await deleteRawDb();
+    });
+
+    it('strips frameImage from a legacy bloated record on load', async () => {
+      const track = seedBloatedTrack();
+      await seedBloatedRecord(track);
+
+      const loaded = await loadPoseTrackFromStorage(
+        track.metadata.sourceVideoHash
+      );
+
+      expect(loaded).not.toBeNull();
+      expect(loaded!.frames.every((f) => f.frameImage === undefined)).toBe(
+        true
+      );
+    });
+
+    it('re-saves the migrated record without frameImage in the background', async () => {
+      const track = seedBloatedTrack();
+      await seedBloatedRecord(track);
+
+      await loadPoseTrackFromStorage(track.metadata.sourceVideoHash);
+      await flushMacrotasks();
+
+      const raw = await getRawRecord(track.metadata.sourceVideoHash);
+      expect(raw).toBeDefined();
+      expect(
+        raw!.poseTrack.frames.every((f) => f.frameImage === undefined)
+      ).toBe(true);
     });
   });
 

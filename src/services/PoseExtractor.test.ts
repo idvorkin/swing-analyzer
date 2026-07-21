@@ -6,11 +6,12 @@
  * TensorFlow, Web Crypto API, and the DOM.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { PoseKeypoint } from '../types';
 import {
   calculateSpineAngle,
   computeAngles,
+  estimateVideoFps,
   getModelDisplayName,
 } from './PoseExtractor';
 
@@ -183,6 +184,49 @@ describe('PoseExtractor', () => {
       const angles = computeAngles(keypoints);
 
       expect(angles.spineAngle).toBeCloseTo(0, 1);
+    });
+  });
+
+  describe('estimateVideoFps', () => {
+    function makeRvfcVideo(frameIntervalSec: number): HTMLVideoElement {
+      let mediaTime = 0;
+      const video = {
+        muted: false,
+        paused: true,
+        currentTime: 0,
+        play: vi.fn().mockResolvedValue(undefined),
+        pause: vi.fn(),
+        requestVideoFrameCallback(
+          cb: (now: number, meta: { mediaTime: number }) => void
+        ) {
+          mediaTime += frameIntervalSec;
+          queueMicrotask(() => cb(performance.now(), { mediaTime }));
+          return 1;
+        },
+      };
+      return video as unknown as HTMLVideoElement;
+    }
+
+    it('measures 60fps from mediaTime deltas', async () => {
+      expect(await estimateVideoFps(makeRvfcVideo(1 / 60))).toBe(60);
+    });
+
+    it('measures 30fps from mediaTime deltas', async () => {
+      expect(await estimateVideoFps(makeRvfcVideo(1 / 30))).toBe(30);
+    });
+
+    it('measures 24fps from mediaTime deltas', async () => {
+      expect(await estimateVideoFps(makeRvfcVideo(1 / 24))).toBe(24);
+    });
+
+    it('falls back to 30 when requestVideoFrameCallback is unavailable', async () => {
+      const video = {
+        muted: false,
+        paused: true,
+        play: vi.fn().mockResolvedValue(undefined),
+        pause: vi.fn(),
+      } as unknown as HTMLVideoElement;
+      expect(await estimateVideoFps(video)).toBe(30);
     });
   });
 });

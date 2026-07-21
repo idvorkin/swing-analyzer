@@ -48,6 +48,7 @@ export class VideoFileSkeletonSource implements SkeletonSource {
   private poseTrack: PoseTrackFile | null = null;
   private videoHash: string | null = null;
   private abortController: AbortController | null = null;
+  private stopped = false;
 
   private readonly videoFile: File;
   private readonly autoExtract: boolean;
@@ -105,6 +106,7 @@ export class VideoFileSkeletonSource implements SkeletonSource {
   async start(signal?: AbortSignal): Promise<void> {
     // Clean up any previous session
     this.stop();
+    this.stopped = false;
 
     // Check if already aborted
     if (signal?.aborted) {
@@ -167,6 +169,9 @@ export class VideoFileSkeletonSource implements SkeletonSource {
           'cached skeleton events'
         );
         setTimeout(() => {
+          if (this.stopped) {
+            return;
+          }
           const startTime = performance.now();
           console.log(
             '[VideoFileSkeletonSource] Emitting',
@@ -195,7 +200,7 @@ export class VideoFileSkeletonSource implements SkeletonSource {
             batchComplete: true,
             framesProcessed: emitCount,
             processingTimeMs: processingTime,
-          } as SkeletonSourceState);
+          });
         }, 0);
 
         return;
@@ -226,6 +231,8 @@ export class VideoFileSkeletonSource implements SkeletonSource {
    * Stop extraction if in progress
    */
   stop(): void {
+    this.stopped = true;
+
     // Signal stop
     this.stop$.next();
 
@@ -272,7 +279,11 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       return null;
     }
 
-    const frame = this.liveCache.getFrame(videoTime);
+    // While extraction is still filling the cache, only match frames near
+    // the requested time — otherwise playback ahead of the extraction
+    // frontier renders the last-extracted skeleton as if it were current.
+    const tolerance = this.liveCache.isExtractionComplete() ? undefined : 0.1;
+    const frame = this.liveCache.getFrame(videoTime, tolerance);
     if (!frame) {
       return null;
     }
@@ -305,6 +316,8 @@ export class VideoFileSkeletonSource implements SkeletonSource {
     if (!this.videoHash) {
       throw new Error('Video hash not computed');
     }
+
+    const extractStartTime = performance.now();
 
     // Create abort controller for cancellation
     this.abortController = new AbortController();
@@ -383,10 +396,24 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       // Store final pose track
       this.poseTrack = result.poseTrack;
 
-      // Auto-save to storage (with speeds included)
-      await savePoseTrackToStorage(result.poseTrack);
+      // Auto-save to storage (with speeds included).
+      // Persist for future loads. Failure (e.g. storage quota) must not kill
+      // the session — all frames are already live in liveCache.
+      try {
+        await savePoseTrackToStorage(result.poseTrack);
+      } catch (saveError) {
+        console.warn(
+          '[VideoFileSkeletonSource] Failed to persist pose track; continuing with in-memory poses:',
+          saveError
+        );
+      }
 
-      this.stateSubject.next({ type: 'active' });
+      this.stateSubject.next({
+        type: 'active',
+        batchComplete: true,
+        framesProcessed: result.poseTrack.frames.length,
+        processingTimeMs: performance.now() - extractStartTime,
+      });
     } catch (error) {
       // Clean up on error
       if (this.liveCache) {
