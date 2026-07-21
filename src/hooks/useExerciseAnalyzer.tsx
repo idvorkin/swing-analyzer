@@ -198,6 +198,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const [isDetectionLocked, setIsDetectionLocked] = useState<boolean>(false);
   const [currentPhases, setCurrentPhases] = useState<string[]>(DEFAULT_PHASES);
   const [workingLeg, setWorkingLeg] = useState<'left' | 'right' | null>(null);
+  const [videoFps, setVideoFps] = useState(30);
 
   // Track if we've recorded extraction start for current session (to avoid spam)
   const hasRecordedExtractionStartRef = useRef<boolean>(false);
@@ -783,6 +784,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             const poseTrack = videoSource?.getPoseTrack();
             if (poseTrack && poseTrack.frames.length > 0) {
               const { videoWidth, videoHeight } = poseTrack.metadata;
+              setVideoFps(poseTrack.metadata.fps || 30);
 
               // Get frames at rep position times (from repThumbnails ref)
               // Fall back to first 60 frames if no reps detected yet
@@ -1401,7 +1403,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   // Frame Navigation (Cache-Based)
   // ========================================
-  const frameStep = 1 / 30; // Assuming 30fps
+  const frameStep = 1 / videoFps;
 
   const nextFrame = useCallback(() => {
     const video = videoRef.current;
@@ -1414,7 +1416,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     video.pause();
     video.currentTime = Math.min(video.duration, video.currentTime + frameStep);
     // Skeleton will be rendered via 'seeked' event handler
-  }, []);
+  }, [frameStep]);
 
   const previousFrame = useCallback(() => {
     const video = videoRef.current;
@@ -1426,7 +1428,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     video.pause();
     video.currentTime = Math.max(0, video.currentTime - frameStep);
     // Skeleton will be rendered via 'seeked' event handler
-  }, []);
+  }, [frameStep]);
 
   // ========================================
   // Rep Navigation - seeks to same phase in target rep (or first available) and pauses
