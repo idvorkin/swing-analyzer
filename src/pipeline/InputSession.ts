@@ -153,9 +153,14 @@ export class InputSession {
     try {
       await videoSource.start(signal);
     } catch (error) {
+      // A newer startVideoFile call may have replaced this source while we
+      // were awaiting. Only the owner of the CURRENT source may mutate
+      // session state — a stale failure has already been superseded.
+      if (this.source !== videoSource) {
+        return;
+      }
       // Don't report abort as an error, but do clean up
       if (error instanceof DOMException && error.name === 'AbortError') {
-        // Clean up source and subscriptions on abort
         await this.cleanup();
         this.stateSubject.next({ type: 'idle' });
         return;

@@ -32,7 +32,15 @@ interface MockVideoFileSource {
   rejectStart: (err: unknown) => void;
 }
 
-/** One entry per constructed VideoFileSkeletonSource, in construction order. */
+/**
+ * One entry per constructed VideoFileSkeletonSource, in construction order.
+ *
+ * NOTE: sources are constructed a microtask after startVideoFile() is called
+ * (it awaits cleanup() first) — `await Promise.resolve();` before indexing this
+ * array. For two back-to-back startVideoFile() calls, both constructions land in
+ * the same microtask flush, so a single `await Promise.resolve();` after both
+ * calls is sufficient.
+ */
 const mockSources: MockVideoFileSource[] = [];
 
 vi.mock('./VideoFileSkeletonSource', () => ({
@@ -389,6 +397,47 @@ describe('InputSession', () => {
       mockSources[0].resolveStart();
       await p;
       expect(session.state.type).toBe('video-file');
+    });
+  });
+
+  describe('overlapping startVideoFile calls', () => {
+    const fileA = new File(['a'], 'a.mp4', { type: 'video/mp4' });
+    const fileB = new File(['b'], 'b.mp4', { type: 'video/mp4' });
+
+    it('a stale abort does not dispose the new source or reset state', async () => {
+      const p1 = session.startVideoFile(fileA); // source[0] pending
+      const p2 = session.startVideoFile(fileB); // source[1] pending
+      // Both back-to-back calls' source constructions land in the same
+      // microtask flush (see NOTE above mockSources) — one flush suffices.
+      await Promise.resolve();
+
+      // A's in-flight start now rejects with AbortError (stale)
+      mockSources[0].rejectStart(new DOMException('Aborted', 'AbortError'));
+      await p1;
+
+      // The new source must be untouched and the session must not go idle
+      expect(mockSources[1].dispose).not.toHaveBeenCalled();
+      expect(session.state.type).not.toBe('idle');
+
+      mockSources[1].resolveStart();
+      await p2;
+      expect(session.getSource()).toBe(mockSources[1]);
+    });
+
+    it('a stale non-abort error does not clobber the new load with error state', async () => {
+      const p1 = session.startVideoFile(fileA);
+      const p2 = session.startVideoFile(fileB);
+      await Promise.resolve();
+
+      mockSources[0].rejectStart(new Error('decode failed'));
+      // Stale errors are swallowed (the load was superseded) — p1 must not throw
+      await expect(p1).resolves.toBeUndefined();
+
+      expect(session.state.type).not.toBe('error');
+      expect(mockSources[1].dispose).not.toHaveBeenCalled();
+
+      mockSources[1].resolveStart();
+      await p2;
     });
   });
 });
