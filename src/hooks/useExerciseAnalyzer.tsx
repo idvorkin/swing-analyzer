@@ -1137,6 +1137,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     setIsDetectionLocked(false);
     setCurrentPhases(DEFAULT_PHASES);
     setWorkingLeg(null);
+    setVideoFps(30);
+    consecutiveErrorTrackerRef.current?.reset();
   }, []);
 
   // Helper: Clear loading UI state (used on abort or completion)

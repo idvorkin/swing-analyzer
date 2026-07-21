@@ -25,5 +25,20 @@ export function createConsecutiveErrorTracker(
         consecutive = 0;
       }
     },
+    /**
+     * Zeroes the streak and clears any pending erroredThisFrame flag, for
+     * use when starting a new video so an in-progress streak (or a fired
+     * threshold) doesn't leak across videos. This does NOT "re-arm"
+     * onThreshold in any special sense — onThreshold only ever fires when
+     * `consecutive` reaches `threshold` exactly, and a fired threshold
+     * already stays fired only within that one streak (see
+     * "does not re-fire onThreshold" above). So after reset() a fresh
+     * streak reaching `threshold` will fire onThreshold again, same as any
+     * other new streak - which is the correct behavior for a new video.
+     */
+    reset() {
+      consecutive = 0;
+      erroredThisFrame = false;
+    },
   };
 }
