@@ -737,11 +737,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       prevRepCountRef.current = result;
     }
 
-    // Debug: log every 100 frames and on rep changes
-    if (
-      event.poseEvent.frameEvent.videoTime !== undefined &&
-      Math.floor(event.poseEvent.frameEvent.videoTime * 30) % 100 === 0
-    ) {
+    // Debug: log every 100 processed frames (frame counter, not a
+    // videoTime*fps guess — fps is measured per video, not always 30)
+    if (frameIndex % 100 === 0) {
       console.log(
         `[processSkeletonEvent] videoTime=${event.poseEvent.frameEvent.videoTime?.toFixed(2)}, repCount=${result}`
       );
