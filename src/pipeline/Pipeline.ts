@@ -160,12 +160,21 @@ export class Pipeline {
       .subscribe({
         error: (error) => {
           console.error('Error in pipeline:', error);
-          // Error all subjects consistently so subscribers know the pipeline failed
+          // Error the data subjects so subscribers know the stream failed
           this.resultSubject.error(error);
           this.skeletonSubject.error(error);
           this.thumbnailSubject.error(error);
           this.exerciseDetectionSubject.error(error);
-          this.errorSubject.error(error);
+          // The error-REPORTING channel must never terminate: .error()
+          // ends the Subject, turning every later next() into a silent
+          // no-op — which would permanently disarm degraded-analysis
+          // detection (this subject is the tracker's only feed). Report
+          // the stream failure as one more event instead.
+          this.errorSubject.next({
+            source: 'stream',
+            error: error instanceof Error ? error : new Error(String(error)),
+            timestamp: performance.now(),
+          });
           this.isActive = false;
         },
         complete: () => {
@@ -564,7 +573,7 @@ export interface PipelineProcessResult {
  */
 export interface PipelineError {
   /** Where in the pipeline the error occurred */
-  source: 'form-analyzer' | 'exercise-detection';
+  source: 'form-analyzer' | 'exercise-detection' | 'stream';
   /** The original error */
   error: Error;
   /** Timestamp when error occurred */
