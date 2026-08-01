@@ -139,6 +139,25 @@ describe('createConsecutiveErrorTracker', () => {
   });
 });
 
+describe('threshold validation', () => {
+  it.each([0, -1, 2.5, Number.NaN])(
+    'rejects threshold %p at construction instead of silently never firing',
+    (threshold) => {
+      expect(() => createConsecutiveErrorTracker(threshold, vi.fn())).toThrow(
+        /threshold/i
+      );
+    }
+  );
+
+  it('accepts threshold 1 and fires on the first errored frame', () => {
+    const onThreshold = vi.fn();
+    const tracker = createConsecutiveErrorTracker(1, onThreshold);
+    tracker.recordError();
+    tracker.frameProcessed();
+    expect(onThreshold).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('runTrackedFrame', () => {
   it('a throwing frame counts toward the consecutive-error streak', () => {
     const onThreshold = vi.fn();

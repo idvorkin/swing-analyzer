@@ -1,13 +1,33 @@
+export interface ConsecutiveErrorTracker {
+  /** Mark the current frame as errored (idempotent within a frame). */
+  recordError(): void;
+  /** Close the current frame; exactly one call per frame. */
+  frameProcessed(): void;
+  /**
+   * Zeroes the streak and clears any pending erroredThisFrame flag — call
+   * when starting a new video so a streak (or a fired threshold) doesn't
+   * leak across videos. onThreshold fires only when the streak reaches
+   * `threshold` exactly, so a fresh post-reset streak fires it again.
+   */
+  reset(): void;
+}
+
 /**
  * Tracks consecutive FRAMES that produced analysis errors. Pipeline errors
  * are emitted synchronously during processSkeletonEvent, so per-frame
  * success cannot be inferred from "the call returned" — the caller marks
- * errors as they arrive and closes each frame with frameProcessed().
+ * errors as they arrive and closes each frame with frameProcessed()
+ * (or uses runTrackedFrame, which does so in a finally).
  */
 export function createConsecutiveErrorTracker(
   threshold: number,
   onThreshold: () => void
-) {
+): ConsecutiveErrorTracker {
+  // The fire condition is `consecutive === threshold` exactly; a
+  // non-positive or fractional threshold would silently never fire.
+  if (!Number.isInteger(threshold) || threshold < 1) {
+    throw new Error(`threshold must be a positive integer, got ${threshold}`);
+  }
   let consecutive = 0;
   let erroredThisFrame = false;
   return {
@@ -25,17 +45,6 @@ export function createConsecutiveErrorTracker(
         consecutive = 0;
       }
     },
-    /**
-     * Zeroes the streak and clears any pending erroredThisFrame flag, for
-     * use when starting a new video so an in-progress streak (or a fired
-     * threshold) doesn't leak across videos. This does NOT "re-arm"
-     * onThreshold in any special sense — onThreshold only ever fires when
-     * `consecutive` reaches `threshold` exactly, and a fired threshold
-     * already stays fired only within that one streak (see
-     * "does not re-fire onThreshold" above). So after reset() a fresh
-     * streak reaching `threshold` will fire onThreshold again, same as any
-     * other new streak - which is the correct behavior for a new video.
-     */
     reset() {
       consecutive = 0;
       erroredThisFrame = false;
@@ -55,7 +64,7 @@ export type TrackedFrameResult<T> =
  * processing must not crash the caller.
  */
 export function runTrackedFrame<T>(
-  tracker: ReturnType<typeof createConsecutiveErrorTracker> | null,
+  tracker: ConsecutiveErrorTracker | null,
   fn: () => T
 ): TrackedFrameResult<T> {
   try {

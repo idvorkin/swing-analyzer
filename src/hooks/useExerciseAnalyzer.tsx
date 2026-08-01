@@ -54,6 +54,7 @@ import {
   findPreviousCheckpoint,
 } from '../utils/checkpointUtils';
 import {
+  type ConsecutiveErrorTracker,
   createConsecutiveErrorTracker,
   runTrackedFrame,
 } from '../utils/consecutiveErrorTracker';
@@ -673,9 +674,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // each frame, and also charges a thrown call (possible via a
   // skeletonSubject subscriber) to the frame that threw. See
   // consecutiveErrorTracker.ts for details.
-  const consecutiveErrorTrackerRef = useRef<ReturnType<
-    typeof createConsecutiveErrorTracker
-  > | null>(null);
+  const consecutiveErrorTrackerRef = useRef<ConsecutiveErrorTracker | null>(
+    null
+  );
   if (consecutiveErrorTrackerRef.current === null) {
     consecutiveErrorTrackerRef.current = createConsecutiveErrorTracker(
       5, // consecutive errored frames before surfacing a status banner
