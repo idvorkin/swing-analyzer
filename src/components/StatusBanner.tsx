@@ -17,7 +17,8 @@ export default function StatusBanner() {
   return (
     <div
       className={`status-banner${isWarning ? ' status-banner-warning' : ''}`}
-      role="alert"
+      // Warnings are a polite live region; only errors interrupt (alert).
+      role={isWarning ? 'status' : 'alert'}
     >
       <span className="status-banner-message">
         {isWarning ? appError.message : `Error: ${appError.message}`}

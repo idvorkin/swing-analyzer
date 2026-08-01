@@ -159,7 +159,12 @@ export class Pipeline {
       .subscribe({
         error: (error) => {
           console.error('Error in pipeline:', error);
-          // Error the data subjects so subscribers know the stream failed
+          // Error the data subjects so subscribers know the stream failed.
+          // NOTE: this terminates them — batch processing afterwards would
+          // emit into dead subjects. Acceptable only because this legacy
+          // streaming path has no production callers (start() is unused
+          // outside tests and is slated for deletion; see
+          // docs/backlog/2026-08-01-cr-followups.md).
           this.resultSubject.error(error);
           this.skeletonSubject.error(error);
           this.thumbnailSubject.error(error);

@@ -55,7 +55,9 @@ export class VideoFileSkeletonSource implements SkeletonSource {
   // Increments on every start(); pending async work (the cached-burst
   // setTimeout) captures its generation and bails if a newer start()
   // has superseded it. The boolean alone can't tell "stopped and
-  // restarted" apart from "never stopped".
+  // restarted" apart from "never stopped". Defensive: InputSession
+  // currently constructs a fresh source per video, so same-instance
+  // restart is only reachable through direct API use (and the tests).
   private generation = 0;
 
   private readonly videoFile: File;
@@ -332,6 +334,9 @@ export class VideoFileSkeletonSource implements SkeletonSource {
     if (!this.videoHash) {
       throw new Error('Video hash not computed');
     }
+    // Capture: this.videoHash is nulled by dispose(), which can race the
+    // async work below (e.g. the persist-failure log after a rejection).
+    const videoHash = this.videoHash;
 
     const extractStartTime = performance.now();
 
@@ -427,7 +432,7 @@ export class VideoFileSkeletonSource implements SkeletonSource {
           saveError
         );
         recordPoseTrackPersistFailure({
-          videoHash: this.videoHash,
+          videoHash,
           frameCount: result.poseTrack.frames.length,
           error:
             saveError instanceof Error ? saveError.message : String(saveError),

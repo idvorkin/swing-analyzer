@@ -752,6 +752,10 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
     // InputSession.startVideoFile, stop-before-upload, generation-token
     // cached burst). If this regresses, suspect those — not the test.
     test('rapid video reload attempts resolve correctly', async ({ page }) => {
+      // Inner wait budgets (3×15s toPass + load/control waits) exceed the
+      // 30s default; raise so a slow runner fails at the step that hung
+      // instead of an opaque test timeout. ~7s typical locally.
+      test.setTimeout(60_000);
       // Seed pose data first
       await seedPoseTrackFixture(page, 'swing-sample-4reps');
 

@@ -48,7 +48,19 @@ Separately, `extraction-flow.spec.ts` › "extraction runs and counts
 reps" passes in isolation but can flake under the full-suite 3-worker
 load — consider serializing the realistic tier.
 
-## 4. CLAUDE.md beads workflow doesn't match the installed bd
+## 4. Delete the legacy streaming path and remaining V1 dead code
+
+`Pipeline.start()` (RxJS streaming mode) has no production callers — only
+`Pipeline.test.ts` exercises it — and its error handler still terminates
+the data subjects (result/skeleton/thumbnail/detection), which the
+re-review flagged as contradicting the "reporting channel never
+terminates" principle one line below. Unreachable today; delete the path
+(and `VideoFrameAcquisition` usage if orphaned) instead of patching it.
+Same sweep: `useVideoControls.ts` + its test have no consumers (V1
+leftover; its `getVideoLoadErrorMessage` duplicates the live one), and
+the design spec's Phase 2 dead-code list still applies.
+
+## 5. CLAUDE.md beads workflow doesn't match the installed bd
 
 `bd sync` / JSONL-based multi-clone coordination is documented, but
 `bd` 1.1.2 (Homebrew) is Dolt-backend-only and has no `sync` command;

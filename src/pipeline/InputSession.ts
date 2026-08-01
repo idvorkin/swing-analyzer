@@ -163,7 +163,7 @@ export class InputSession {
       // been superseded. Hidden from the UI, but keep a console trace so
       // a genuine decode failure isn't silently unobservable.
       if (this.source !== videoSource) {
-        console.log('[InputSession] superseded load failed:', error);
+        console.warn('[InputSession] superseded load failed:', error);
         return;
       }
       // Don't report abort as an error, but do clean up

@@ -35,19 +35,22 @@ describe('StatusBanner', () => {
     );
   });
 
-  it('shows a warning without the Error label and with warning styling', () => {
+  it('shows a warning without the Error label, with warning styling, as a polite live region', () => {
     mockContext.appError = {
       id: 2,
       message: 'Analysis could not be saved — storage is full.',
       severity: 'warning',
     };
     render(<StatusBanner />);
-    const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent(
+    // role=status (polite), not role=alert (assertive): warnings must not
+    // interrupt screen-reader output mid-sentence.
+    const banner = screen.getByRole('status');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(banner).toHaveTextContent(
       'Analysis could not be saved — storage is full.'
     );
-    expect(alert).not.toHaveTextContent('Error:');
-    expect(alert.className).toContain('status-banner-warning');
+    expect(banner).not.toHaveTextContent('Error:');
+    expect(banner.className).toContain('status-banner-warning');
   });
 
   it('dismiss button delegates to dismissError', async () => {
