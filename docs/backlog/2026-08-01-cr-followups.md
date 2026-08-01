@@ -36,7 +36,19 @@ differently. Records are indistinguishable today; add
 `fpsMeasured: true` (or bump `metadata.version`) so loads can detect
 assumed-fps records and remeasure, and regenerate the bundled fixture.
 
-## 3. CLAUDE.md beads workflow doesn't match the installed bd
+## 3. Pre-existing realistic-tier E2E failure
+
+`instant-rep-gallery.spec.ts` › "rep count stays stable after extraction
+when playing video" fails on `main` (verified at `a220869` in a clean
+worktree, in isolation): `#rep-counter` never becomes visible after
+extraction (30s timeout at spec line ~316). Outside the CI gate, so it
+was never caught by the merge suite. Needs a real investigation — HUD
+visibility (`hasPosesForCurrentFrame`) after mock-detector extraction.
+Separately, `extraction-flow.spec.ts` › "extraction runs and counts
+reps" passes in isolation but can flake under the full-suite 3-worker
+load — consider serializing the realistic tier.
+
+## 4. CLAUDE.md beads workflow doesn't match the installed bd
 
 `bd sync` / JSONL-based multi-clone coordination is documented, but
 `bd` 1.1.2 (Homebrew) is Dolt-backend-only and has no `sync` command;
