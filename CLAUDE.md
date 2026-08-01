@@ -261,7 +261,7 @@ LivePoseCache (streaming) ──────────────────
     ↓                                       │
 CachedPoseSkeletonTransformer               │ OR  PoseSkeletonTransformer
     ↓ (instant lookup)                      │     (real-time ML inference)
-Pipeline.processFrameAsync()                │
+Pipeline.processSkeletonEvent()             │
     ├── ExerciseDetector (auto-detect)      │
     ├── FormAnalyzer.processFrame()         │
     └── Rep counting + thumbnails           │

@@ -69,6 +69,7 @@ export interface StateChangeEvent {
     | 'checkpoint_detected'
     | 'cache_load'
     | 'skeleton_processing_complete'
+    | 'posetrack_persist_failure'
     | 'error';
   timestamp: number;
   details?: Record<string, unknown>;
@@ -1043,6 +1044,18 @@ export function recordCacheLoad(details: {
 }): void {
   sessionRecorder.recordStateChange({
     type: 'cache_load',
+    timestamp: Date.now(),
+    details,
+  });
+}
+
+export function recordPoseTrackPersistFailure(details: {
+  videoHash: string;
+  frameCount: number;
+  error: string;
+}): void {
+  sessionRecorder.recordStateChange({
+    type: 'posetrack_persist_failure',
     timestamp: Date.now(),
     details,
   });

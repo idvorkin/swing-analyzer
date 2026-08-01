@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createConsecutiveErrorTracker } from './consecutiveErrorTracker';
+import {
+  createConsecutiveErrorTracker,
+  runTrackedFrame,
+} from './consecutiveErrorTracker';
 
 describe('createConsecutiveErrorTracker', () => {
   it('fires onThreshold exactly once, at the threshold-th consecutive errored frame', () => {
@@ -133,5 +136,91 @@ describe('createConsecutiveErrorTracker', () => {
     tracker.recordError();
     tracker.frameProcessed(); // fresh streak reaches threshold again
     expect(onThreshold).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('threshold validation', () => {
+  it.each([0, -1, 2.5, Number.NaN])(
+    'rejects threshold %p at construction instead of silently never firing',
+    (threshold) => {
+      expect(() => createConsecutiveErrorTracker(threshold, vi.fn())).toThrow(
+        /threshold/i
+      );
+    }
+  );
+
+  it('accepts threshold 1 and fires on the first errored frame', () => {
+    const onThreshold = vi.fn();
+    const tracker = createConsecutiveErrorTracker(1, onThreshold);
+    tracker.recordError();
+    tracker.frameProcessed();
+    expect(onThreshold).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('runTrackedFrame', () => {
+  it('a throwing frame counts toward the consecutive-error streak', () => {
+    const onThreshold = vi.fn();
+    const tracker = createConsecutiveErrorTracker(2, onThreshold);
+
+    runTrackedFrame(tracker, () => {
+      throw new Error('boom');
+    });
+    expect(onThreshold).not.toHaveBeenCalled();
+    runTrackedFrame(tracker, () => {
+      throw new Error('boom again');
+    });
+    expect(onThreshold).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the value and closes the frame clean on success', () => {
+    const onThreshold = vi.fn();
+    const tracker = createConsecutiveErrorTracker(2, onThreshold);
+
+    runTrackedFrame(tracker, () => {
+      throw new Error('boom');
+    }); // streak 1
+    const result = runTrackedFrame(tracker, () => 42); // clean frame resets
+    expect(result).toEqual({ ok: true, value: 42 });
+    runTrackedFrame(tracker, () => {
+      throw new Error('boom');
+    }); // streak 1 again, not 2
+    expect(onThreshold).not.toHaveBeenCalled();
+  });
+
+  it('returns {ok:false, error} instead of propagating the throw', () => {
+    const tracker = createConsecutiveErrorTracker(5, vi.fn());
+    const boom = new Error('boom');
+    const result = runTrackedFrame(tracker, () => {
+      throw boom;
+    });
+    expect(result).toEqual({ ok: false, error: boom });
+  });
+
+  it('an error recorded mid-frame before a throw is charged to THAT frame, not the next', () => {
+    const onThreshold = vi.fn();
+    const tracker = createConsecutiveErrorTracker(2, onThreshold);
+
+    // Frame 1: pipeline emits an error to the subscription (recordError),
+    // then the call itself throws. Both must collapse into ONE errored
+    // frame that is closed now — not left pending for frame 2.
+    runTrackedFrame(tracker, () => {
+      tracker.recordError();
+      throw new Error('boom');
+    });
+    // Frame 2: clean — resets the streak (would count as errored if the
+    // pending flag leaked).
+    runTrackedFrame(tracker, () => 'ok');
+    // Frame 3: errored — streak restarts at 1.
+    runTrackedFrame(tracker, () => {
+      tracker.recordError();
+      return 'ok';
+    });
+    expect(onThreshold).not.toHaveBeenCalled();
+  });
+
+  it('runs the frame directly when no tracker exists yet', () => {
+    const result = runTrackedFrame(null, () => 7);
+    expect(result).toEqual({ ok: true, value: 7 });
   });
 });

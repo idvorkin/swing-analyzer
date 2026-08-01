@@ -35,11 +35,11 @@ interface MockVideoFileSource {
 /**
  * One entry per constructed VideoFileSkeletonSource, in construction order.
  *
- * NOTE: sources are constructed a microtask after startVideoFile() is called
- * (it awaits cleanup() first) — `await Promise.resolve();` before indexing this
- * array. For two back-to-back startVideoFile() calls, both constructions land in
- * the same microtask flush, so a single `await Promise.resolve();` after both
- * calls is sufficient.
+ * NOTE: startVideoFile() tears down the previous source and constructs the
+ * new one SYNCHRONOUSLY (no suspension point before ownership — that gap
+ * was the source-leak race), so mockSources can be indexed immediately
+ * after the call. The `await Promise.resolve();` pumps below are only
+ * needed before awaiting a start promise the test has resolved/rejected.
  */
 const mockSources: MockVideoFileSource[] = [];
 
@@ -132,7 +132,6 @@ describe('InputSession', () => {
     it('creates a video file source', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
 
@@ -144,7 +143,6 @@ describe('InputSession', () => {
     it('calls start on the video source', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
 
@@ -155,14 +153,12 @@ describe('InputSession', () => {
     it('cleans up previous source when starting new video file', async () => {
       const mockFile1 = new File(['test1'], 'test1.mp4', { type: 'video/mp4' });
       const startPromise1 = session.startVideoFile(mockFile1);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise1;
       const firstSource = session.getSource();
 
       const mockFile2 = new File(['test2'], 'test2.mp4', { type: 'video/mp4' });
       const startPromise2 = session.startVideoFile(mockFile2);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise2;
 
@@ -174,7 +170,6 @@ describe('InputSession', () => {
     it('stops the current source', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
       const source = session.getSource();
@@ -187,7 +182,6 @@ describe('InputSession', () => {
     it('transitions to idle state', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
       session.stop();
@@ -205,7 +199,6 @@ describe('InputSession', () => {
     it('delegates to source when available', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
 
@@ -225,7 +218,6 @@ describe('InputSession', () => {
     it('delegates to source when available', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
 
@@ -246,7 +238,6 @@ describe('InputSession', () => {
     it('delegates to video source when available', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
 
@@ -261,7 +252,6 @@ describe('InputSession', () => {
     it('cleans up current source', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
       const source = session.getSource();
@@ -282,7 +272,6 @@ describe('InputSession', () => {
     it('getVideoFileSource returns source when video file is active', async () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
       expect(session.getVideoFileSource()).not.toBeNull();
@@ -302,7 +291,6 @@ describe('InputSession', () => {
         mockFile,
         abortController.signal
       );
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
 
@@ -325,7 +313,6 @@ describe('InputSession', () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
 
       const startPromise = session.startVideoFile(mockFile);
-      await Promise.resolve(); // let startVideoFile's internal cleanup() microtask run so the source is constructed
       mockSources[mockSources.length - 1].resolveStart();
       await startPromise;
 
@@ -389,9 +376,7 @@ describe('InputSession', () => {
     it('tracks each constructed source and controls start() resolution', async () => {
       const file = new File(['x'], 'a.mp4', { type: 'video/mp4' });
       const p = session.startVideoFile(file);
-      // startVideoFile awaits an internal cleanup() microtask before constructing
-      // the source, so let that turn of the microtask queue run first.
-      await Promise.resolve();
+      // Construction is synchronous — the source is registered immediately.
       expect(mockSources).toHaveLength(1);
       expect(mockSources[0].start).toHaveBeenCalled();
       mockSources[0].resolveStart();
@@ -407,9 +392,6 @@ describe('InputSession', () => {
     it('a stale abort does not dispose the new source or reset state', async () => {
       const p1 = session.startVideoFile(fileA); // source[0] pending
       const p2 = session.startVideoFile(fileB); // source[1] pending
-      // Both back-to-back calls' source constructions land in the same
-      // microtask flush (see NOTE above mockSources) — one flush suffices.
-      await Promise.resolve();
 
       // A's in-flight start now rejects with AbortError (stale)
       mockSources[0].rejectStart(new DOMException('Aborted', 'AbortError'));
@@ -422,6 +404,32 @@ describe('InputSession', () => {
       mockSources[1].resolveStart();
       await p2;
       expect(session.getSource()).toBe(mockSources[1]);
+    });
+
+    it('disposes the superseded source and blocks its events when the first start SUCCEEDS', async () => {
+      const p1 = session.startVideoFile(fileA); // source[0] pending
+      const p2 = session.startVideoFile(fileB); // source[1] pending
+      await Promise.resolve();
+
+      // B replaced A while A's start() was in flight: A must be fully torn
+      // down, not left subscribed and extracting into the session forever.
+      expect(mockSources[0].dispose).toHaveBeenCalled();
+
+      // Even when A's start RESOLVES (a perfectly valid video), its events
+      // must not reach the session — B owns it now.
+      mockSources[0].resolveStart();
+      await p1;
+      const received: SkeletonEvent[] = [];
+      const sub = session.skeletons$.subscribe((e) => received.push(e));
+      mockSources[0].skeletonSubject.next({
+        skeleton: null,
+      } as unknown as SkeletonEvent);
+      expect(received).toHaveLength(0);
+
+      mockSources[1].resolveStart();
+      await p2;
+      expect(session.getSource()).toBe(mockSources[1]);
+      sub.unsubscribe();
     });
 
     it('a stale non-abort error does not clobber the new load with error state', async () => {

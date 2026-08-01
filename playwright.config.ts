@@ -130,9 +130,14 @@ const PORT = process.env.E2E_PORT || (runningServer?.port.toString() ?? '5173');
 const PROTOCOL = runningServer?.https ? 'https' : useHttps ? 'https' : 'http';
 const BASE_URL = `${PROTOCOL}://localhost:${PORT}`;
 
-// Log detected server for debugging
+// Log detected server for debugging. BASE_URL may differ from the found
+// server's port when E2E_PORT overrides it — in that case Playwright's
+// webServer starts a fresh vite on E2E_PORT and only the protocol was
+// inherited from the detected server.
 if (runningServer) {
-  console.log(`[Playwright] Using running vite server at ${BASE_URL}`);
+  console.log(
+    `[Playwright] Found vite server on port ${runningServer.port} (cwd match); E2E target: ${BASE_URL}`
+  );
 }
 
 export default defineConfig({

@@ -127,8 +127,12 @@ export class InputSession {
    * @param signal - Optional AbortSignal to cancel the operation
    */
   async startVideoFile(videoFile: File, signal?: AbortSignal): Promise<void> {
-    // Clean up previous source
-    await this.cleanup();
+    // Tear down the previous owner SYNCHRONOUSLY. There must be no await
+    // between here and taking ownership below: with an await, two
+    // overlapping calls would each observe a null source, and the earlier
+    // call's source would leak when the later call overwrote it — still
+    // subscribed, never disposed, forwarding its frames into the session.
+    this.cleanup();
 
     // Check if already aborted before starting
     if (signal?.aborted) {
@@ -153,15 +157,18 @@ export class InputSession {
     try {
       await videoSource.start(signal);
     } catch (error) {
-      // A newer startVideoFile call may have replaced this source while we
-      // were awaiting. Only the owner of the CURRENT source may mutate
-      // session state — a stale failure has already been superseded.
+      // A newer startVideoFile call may have replaced (and disposed) this
+      // source while we were awaiting. Only the owner of the CURRENT
+      // source may mutate session state — a stale failure has already
+      // been superseded. Hidden from the UI, but keep a console trace so
+      // a genuine decode failure isn't silently unobservable.
       if (this.source !== videoSource) {
+        console.warn('[InputSession] superseded load failed:', error);
         return;
       }
       // Don't report abort as an error, but do clean up
       if (error instanceof DOMException && error.name === 'AbortError') {
-        await this.cleanup();
+        this.cleanup();
         this.stateSubject.next({ type: 'idle' });
         return;
       }
@@ -173,7 +180,13 @@ export class InputSession {
   }
 
   /**
-   * Stop the current source
+   * Stop the current source.
+   *
+   * NOTE: 'idle' here means "no STREAMING source" — the stopped source is
+   * deliberately kept assigned, so getSource()/getSkeletonAtTime() still
+   * answer from its cache. The upload path relies on this half-state: it
+   * stops the old source immediately (so it can't stream into the reset
+   * pipeline) but keeps queries working until startVideoFile() replaces it.
    */
   stop(): void {
     if (this.source) {
@@ -215,7 +228,7 @@ export class InputSession {
     this.dispose$.next();
     this.dispose$.complete();
 
-    await this.cleanup();
+    this.cleanup();
 
     this.stateSubject.complete();
     this.skeletonSubject.complete();
@@ -223,9 +236,11 @@ export class InputSession {
   }
 
   /**
-   * Clean up current source
+   * Clean up current source. Deliberately synchronous — startVideoFile
+   * relies on there being no suspension point between teardown and taking
+   * ownership of the next source.
    */
-  private async cleanup(): Promise<void> {
+  private cleanup(): void {
     // Unsubscribe from source events
     if (this.sourceSubscription) {
       this.sourceSubscription.unsubscribe();
@@ -251,6 +266,12 @@ export class InputSession {
     source: SkeletonSource,
     sessionType: { type: 'video-file'; fileName: string }
   ): void {
+    // Defensive: never overwrite a live subscription — cleanup() runs
+    // first in every current path, but an overwrite here would leak the
+    // old source's stream into the session silently.
+    this.sourceSubscription?.unsubscribe();
+    this.stateSubscription?.unsubscribe();
+
     // Subscribe to skeleton events
     this.sourceSubscription = source.skeletons$
       .pipe(takeUntil(this.dispose$))

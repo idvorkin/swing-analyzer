@@ -12,10 +12,8 @@ import {
 } from '../analyzers';
 import type { Skeleton } from '../models/Skeleton';
 import type { CropRegion } from '../types/posetrack';
-import { asTimestampMs, asVideoTimeSeconds } from '../utils/brandedTypes';
 import type {
   FrameAcquisition,
-  FrameEvent,
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
@@ -35,7 +33,8 @@ export interface ThumbnailEvent {
  * Orchestrates the processing pipeline from frame to rep analysis.
  *
  * Supports two processing modes:
- * 1. Video-event-driven (preferred): Call processFrameAsync() on video timeupdate events
+ * 1. Batch/extraction (preferred): call processSkeletonEvent() per skeleton
+ *    coming from extraction or cache replay
  * 2. RxJS streaming (legacy): Call start() to begin Observable-based processing
  *
  * Pipeline flow: Frame → Skeleton → FormAnalyzer.processFrame() → Results
@@ -160,12 +159,26 @@ export class Pipeline {
       .subscribe({
         error: (error) => {
           console.error('Error in pipeline:', error);
-          // Error all subjects consistently so subscribers know the pipeline failed
+          // Error the data subjects so subscribers know the stream failed.
+          // NOTE: this terminates them — batch processing afterwards would
+          // emit into dead subjects. Acceptable only because this legacy
+          // streaming path has no production callers (start() is unused
+          // outside tests and is slated for deletion; see
+          // docs/backlog/2026-08-01-cr-followups.md).
           this.resultSubject.error(error);
           this.skeletonSubject.error(error);
           this.thumbnailSubject.error(error);
           this.exerciseDetectionSubject.error(error);
-          this.errorSubject.error(error);
+          // The error-REPORTING channel must never terminate: .error()
+          // ends the Subject, turning every later next() into a silent
+          // no-op — which would permanently disarm degraded-analysis
+          // detection (this subject is the tracker's only feed). Report
+          // the stream failure as one more event instead.
+          this.errorSubject.next({
+            source: 'stream',
+            error: error instanceof Error ? error : new Error(String(error)),
+            timestamp: performance.now(),
+          });
           this.isActive = false;
         },
         complete: () => {
@@ -269,66 +282,6 @@ export class Pipeline {
    */
   getFormAnalyzer(): FormAnalyzer {
     return this.formAnalyzer;
-  }
-
-  /**
-   * Process the current video frame asynchronously (video-event-driven mode).
-   * Call this from video timeupdate/seeked events for direct processing
-   * without RxJS subscriptions.
-   *
-   * @returns The processing result, or null if no skeleton detected
-   */
-  async processFrameAsync(): Promise<PipelineProcessResult | null> {
-    // Get current frame from frame acquisition
-    const frame = this.frameAcquisition.getCurrentFrame();
-    // Safely get video time - only HTMLVideoElement has currentTime property
-    const videoTime = frame instanceof HTMLVideoElement ? frame.currentTime : 0;
-    const frameEvent: FrameEvent = {
-      frame,
-      timestamp: asTimestampMs(performance.now()),
-      videoTime: asVideoTimeSeconds(videoTime),
-    };
-
-    // Transform to skeleton using async method
-    const skeletonEvent =
-      await this.skeletonTransformer.transformToSkeletonAsync(frameEvent);
-
-    if (!skeletonEvent.skeleton) {
-      return null;
-    }
-
-    // Store latest skeleton
-    this.latestSkeleton = skeletonEvent.skeleton;
-
-    // Process through form analyzer
-    try {
-      const result = this.formAnalyzer.processFrame(
-        skeletonEvent.skeleton,
-        frameEvent.timestamp,
-        frameEvent.videoTime,
-        frameEvent.frameImage
-      );
-
-      // Update rep count
-      this.repCount = result.repCount;
-
-      return {
-        skeleton: skeletonEvent.skeleton,
-        repCount: result.repCount,
-        position: result.phase,
-        angles: result.angles,
-        repCompleted: result.repCompleted,
-      };
-    } catch (error) {
-      console.error('Error in form analyzer processFrame:', error);
-      this.errorSubject.next({
-        source: 'form-analyzer',
-        error: error instanceof Error ? error : new Error(String(error)),
-        timestamp: frameEvent.timestamp,
-        videoTime: frameEvent.videoTime,
-      });
-      return null;
-    }
   }
 
   /**
@@ -547,24 +500,12 @@ export interface PipelineResult {
 }
 
 /**
- * Result from processFrameAsync (video-event-driven mode)
- * Contains full analysis result for direct state updates.
- */
-export interface PipelineProcessResult {
-  skeleton: Skeleton;
-  repCount: number;
-  position: string | null;
-  angles: Record<string, number>;
-  repCompleted: boolean;
-}
-
-/**
  * Error event from pipeline processing
  * Emitted when form analysis or other processing fails
  */
 export interface PipelineError {
   /** Where in the pipeline the error occurred */
-  source: 'form-analyzer' | 'exercise-detection';
+  source: 'form-analyzer' | 'exercise-detection' | 'stream';
   /** The original error */
   error: Error;
   /** Timestamp when error occurred */

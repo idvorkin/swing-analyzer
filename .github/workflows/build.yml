@@ -45,6 +45,7 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     name: E2E Tests (fast suite)
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
