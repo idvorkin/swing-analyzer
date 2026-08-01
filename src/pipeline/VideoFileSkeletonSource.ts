@@ -52,6 +52,11 @@ export class VideoFileSkeletonSource implements SkeletonSource {
   private videoHash: string | null = null;
   private abortController: AbortController | null = null;
   private stopped = false;
+  // Increments on every start(); pending async work (the cached-burst
+  // setTimeout) captures its generation and bails if a newer start()
+  // has superseded it. The boolean alone can't tell "stopped and
+  // restarted" apart from "never stopped".
+  private generation = 0;
 
   private readonly videoFile: File;
   private readonly autoExtract: boolean;
@@ -110,6 +115,7 @@ export class VideoFileSkeletonSource implements SkeletonSource {
     // Clean up any previous session
     this.stop();
     this.stopped = false;
+    const generation = ++this.generation;
 
     // Check if already aborted
     if (signal?.aborted) {
@@ -172,7 +178,7 @@ export class VideoFileSkeletonSource implements SkeletonSource {
           'cached skeleton events'
         );
         setTimeout(() => {
-          if (this.stopped) {
+          if (this.stopped || generation !== this.generation) {
             return;
           }
           const startTime = performance.now();
@@ -283,11 +289,7 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       return null;
     }
 
-    // While extraction is still filling the cache, only match frames near
-    // the requested time — otherwise playback ahead of the extraction
-    // frontier renders the last-extracted skeleton as if it were current.
-    const tolerance = this.liveCache.isExtractionComplete() ? undefined : 0.1;
-    const frame = this.liveCache.getFrame(videoTime, tolerance);
+    const frame = this.liveCache.getFrame(videoTime, this.lookupTolerance());
     if (!frame) {
       return null;
     }
@@ -296,10 +298,20 @@ export class VideoFileSkeletonSource implements SkeletonSource {
   }
 
   /**
-   * Check if skeleton is available at time
+   * Check if skeleton is available at time — same tolerance policy as
+   * getSkeletonAtTime, so has(t) can never claim a frame get(t) refuses.
    */
   hasSkeletonAtTime(videoTime: number): boolean {
-    return this.liveCache?.hasFrame(videoTime) ?? false;
+    return this.liveCache?.hasFrame(videoTime, this.lookupTolerance()) ?? false;
+  }
+
+  /**
+   * While extraction is still filling the cache, only match frames near
+   * the requested time — otherwise playback ahead of the extraction
+   * frontier renders the last-extracted skeleton as if it were current.
+   */
+  private lookupTolerance(): number | undefined {
+    return this.liveCache?.isExtractionComplete() ? undefined : 0.1;
   }
 
   /**
