@@ -53,7 +53,10 @@ import {
   findNextCheckpoint,
   findPreviousCheckpoint,
 } from '../utils/checkpointUtils';
-import { createConsecutiveErrorTracker } from '../utils/consecutiveErrorTracker';
+import {
+  createConsecutiveErrorTracker,
+  runTrackedFrame,
+} from '../utils/consecutiveErrorTracker';
 import { calculateDepthFromKeypoints } from '../utils/depthCalculation';
 import { calculateStableCropRegion } from '../utils/videoCrop';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
@@ -663,12 +666,12 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // Track frame index for debugging
   const frameIndexRef = useRef<number>(0);
   // Track consecutive FRAMES with analysis errors (for user feedback when
-  // analysis is degraded). pipeline.processSkeletonEvent() never throws -
-  // its internal errors are emitted synchronously to errorSubject during
-  // the call - so per-frame success can't be inferred from "the call
-  // returned". The errorSubscription handler below marks errored frames via
-  // recordError(); processSkeletonEvent closes each frame with
-  // frameProcessed() once the call above completes. See
+  // analysis is degraded). Pipeline errors are emitted synchronously to
+  // errorSubject during processSkeletonEvent — so per-frame success can't
+  // be inferred from "the call returned". The errorSubscription handler
+  // below marks errored frames via recordError(); runTrackedFrame closes
+  // each frame, and also charges a thrown call (possible via a
+  // skeletonSubject subscriber) to the frame that threw. See
   // consecutiveErrorTracker.ts for details.
   const consecutiveErrorTrackerRef = useRef<ReturnType<
     typeof createConsecutiveErrorTracker
@@ -695,18 +698,20 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       return;
     }
 
-    // Process through pipeline (updates rep count, form state, etc.)
-    let result: number;
-    try {
-      result = pipeline.processSkeletonEvent(event);
-    } catch (error) {
-      console.error('[processSkeletonEvent] Pipeline processing error:', error);
+    // Process through pipeline (updates rep count, form state, etc.).
+    // runTrackedFrame counts a throw as an errored frame and always closes
+    // the frame, so a mid-frame recordError can't leak to the next frame.
+    const frame = runTrackedFrame(consecutiveErrorTrackerRef.current, () =>
+      pipeline.processSkeletonEvent(event)
+    );
+    if (!frame.ok) {
+      console.error(
+        '[processSkeletonEvent] Pipeline processing error:',
+        frame.error
+      );
       return; // Don't crash component, just skip this frame
     }
-    // Pipeline errors (if any) were already emitted synchronously to
-    // errorSubject during the call above and recorded by the
-    // errorSubscription handler; close out this frame for the tracker.
-    consecutiveErrorTrackerRef.current?.frameProcessed();
+    const result = frame.value;
 
     // Increment frame counter
     frameIndexRef.current++;

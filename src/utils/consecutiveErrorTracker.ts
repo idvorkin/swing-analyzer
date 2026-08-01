@@ -42,3 +42,28 @@ export function createConsecutiveErrorTracker(
     },
   };
 }
+
+export type TrackedFrameResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: unknown };
+
+/**
+ * Runs one frame's processing under the tracker's protocol: a throw counts
+ * as an errored frame, and the frame is ALWAYS closed (frameProcessed in a
+ * finally), so an error recorded mid-frame can never leak into the next
+ * frame's accounting. The throw is returned, not propagated — frame
+ * processing must not crash the caller.
+ */
+export function runTrackedFrame<T>(
+  tracker: ReturnType<typeof createConsecutiveErrorTracker> | null,
+  fn: () => T
+): TrackedFrameResult<T> {
+  try {
+    return { ok: true, value: fn() };
+  } catch (error) {
+    tracker?.recordError();
+    return { ok: false, error };
+  } finally {
+    tracker?.frameProcessed();
+  }
+}
