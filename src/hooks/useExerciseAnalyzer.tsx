@@ -75,6 +75,18 @@ function getFileNameFromUrl(url: string): string {
 }
 
 /**
+ * A user-facing problem, kept separate from the transient `status` HUD
+ * channel: status is rewritten on every HUD/progress update, so an error
+ * multiplexed into it disappears within a frame. `id` is unique per report
+ * so a recurring identical message still re-shows after a dismissal.
+ */
+export interface AppError {
+  id: number;
+  message: string;
+  severity: 'error' | 'warning';
+}
+
+/**
  * Convert error to user-friendly message for video loading failures.
  */
 function getVideoLoadErrorMessage(error: unknown, context: string): string {
@@ -167,6 +179,18 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // UI state
   const [status, setStatus] = useState<string>('Loading...');
+  // Dedicated error channel — see the AppError doc comment for why this is
+  // not part of `status`. Cleared by user dismissal or a new video load.
+  const [appError, setAppError] = useState<AppError | null>(null);
+  const nextErrorIdRef = useRef(0);
+  const reportError = useCallback(
+    (message: string, severity: AppError['severity'] = 'error') => {
+      nextErrorIdRef.current += 1;
+      setAppError({ id: nextErrorIdRef.current, message, severity });
+    },
+    []
+  );
+  const dismissError = useCallback(() => setAppError(null), []);
   const [repCount, setRepCount] = useState<number>(0);
   const [spineAngle, setSpineAngle] = useState<number>(0);
   const [armToSpineAngle, setArmToSpineAngle] = useState<number>(0);
@@ -653,8 +677,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     consecutiveErrorTrackerRef.current = createConsecutiveErrorTracker(
       5, // consecutive errored frames before surfacing a status banner
       () => {
-        setStatus(
-          'Error: Analysis is failing repeatedly — some frames may be skipped'
+        reportError(
+          'Analysis is failing repeatedly — some frames may be skipped'
         );
       }
     );
@@ -858,7 +882,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           setIsCacheProcessing(true);
         }
       } else if (state.type === 'error') {
-        setStatus(`Error: ${state.message}`);
+        reportError(state.message);
+        setStatus('Ready'); // HUD back to idle; the banner carries the error
         setIsCacheProcessing(false); // Clear loading state on error
       } else {
         setStatus('Ready');
@@ -971,7 +996,12 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       thumbnailQueueRef.current?.dispose();
       thumbnailQueueRef.current = null;
     };
-  }, [initializePipeline, processSkeletonEvent, updateHudFromSkeleton]);
+  }, [
+    initializePipeline,
+    processSkeletonEvent,
+    updateHudFromSkeleton,
+    reportError,
+  ]);
 
   // ========================================
   // Video Playback Handlers
@@ -1139,6 +1169,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     setWorkingLeg(null);
     setVideoFps(30);
     consecutiveErrorTrackerRef.current?.reset();
+    setAppError(null); // a new video is a fresh start for error reporting
   }, []);
 
   // Helper: Clear loading UI state (used on abort or completion)
@@ -1171,7 +1202,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         // The caller already created this object URL; without revoking here
         // it leaks (loadVideoSafely, which normally tracks it, never runs).
         URL.revokeObjectURL(blobUrl);
-        setStatus('Error: App not initialized. Please refresh.');
+        reportError('App not initialized. Please refresh.');
         return false;
       }
 
@@ -1202,12 +1233,13 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           return false;
         }
         console.error(`Error loading ${context}:`, error);
-        setStatus(`Error: ${getVideoLoadErrorMessage(error, context)}`);
+        reportError(getVideoLoadErrorMessage(error, context));
+        setStatus('Ready');
         clearLoadingState();
         return false;
       }
     },
-    [loadVideoSafely, clearLoadingState]
+    [loadVideoSafely, clearLoadingState, reportError]
   );
 
   // Handle user-uploaded video files
@@ -1224,7 +1256,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         console.error(
           'handleVideoUpload: session or video element not initialized'
         );
-        setStatus('Error: App not initialized. Please refresh.');
+        reportError('App not initialized. Please refresh.');
         return;
       }
 
@@ -1241,7 +1273,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       const url = URL.createObjectURL(file);
       await loadVideo(file, url, abortController, 'video');
     },
-    [prepareVideoLoad, resetVideoState, loadVideo]
+    [prepareVideoLoad, resetVideoState, loadVideo, reportError]
   );
 
   // Load a sample video for a given exercise using ExerciseRegistry as source of truth
@@ -1263,7 +1295,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         console.error(
           `loadSampleVideo: session or video element not initialized`
         );
-        setStatus('Error: App not initialized. Please refresh.');
+        reportError('App not initialized. Please refresh.');
         return;
       }
 
@@ -1351,11 +1383,18 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           return;
         }
         console.error(`Error loading ${config.name}:`, error);
-        setStatus(`Error: ${getVideoLoadErrorMessage(error, 'sample video')}`);
+        reportError(getVideoLoadErrorMessage(error, 'sample video'));
+        setStatus('Ready');
         clearLoadingState();
       }
     },
-    [prepareVideoLoad, resetVideoState, loadVideo, clearLoadingState]
+    [
+      prepareVideoLoad,
+      resetVideoState,
+      loadVideo,
+      clearLoadingState,
+      reportError,
+    ]
   );
 
   // Convenience wrappers for specific samples (maintain existing API)
@@ -1385,17 +1424,20 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         console.error('Error playing video:', err);
         // Provide user feedback for play failures
         if (err.name === 'NotAllowedError') {
-          setStatus('Playback blocked by browser. Click Play again to start.');
+          reportError(
+            'Playback blocked by browser. Click Play again to start.',
+            'warning'
+          );
         } else if (err.name === 'NotSupportedError') {
-          setStatus('Error: Video format not supported.');
+          reportError('Video format not supported.');
         } else {
-          setStatus('Error: Could not play video. Try reloading.');
+          reportError('Could not play video. Try reloading.');
         }
       });
     } else {
       video.pause();
     }
-  }, []);
+  }, [reportError]);
 
   const stopVideo = useCallback(() => {
     const video = videoRef.current;
@@ -1761,6 +1803,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     // State
     appState,
     status,
+    appError,
+    dismissError,
     repCount,
     spineAngle,
     armToSpineAngle,

@@ -1,36 +1,73 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AppError } from '../hooks/useExerciseAnalyzer';
 import StatusBanner from './StatusBanner';
 
-const mockContext = { status: 'Ready' };
+const mockContext = {
+  appError: null as AppError | null,
+  dismissError: vi.fn(),
+};
 vi.mock('../contexts/ExerciseAnalyzerContext', () => ({
   useExerciseAnalyzerContext: () => mockContext,
 }));
 
 describe('StatusBanner', () => {
-  it('renders nothing for non-error status', () => {
-    mockContext.status = 'Ready';
+  beforeEach(() => {
+    mockContext.appError = null;
+    mockContext.dismissError = vi.fn();
+  });
+
+  it('renders nothing when there is no error', () => {
     const { container } = render(<StatusBanner />);
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('shows error status with role=alert', () => {
-    mockContext.status = 'Error: Video format not supported.';
+  it('shows an error with role=alert and an Error label', () => {
+    mockContext.appError = {
+      id: 1,
+      message: 'Video format not supported.',
+      severity: 'error',
+    };
     render(<StatusBanner />);
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Video format not supported'
+      'Error: Video format not supported.'
     );
   });
 
-  it('dismisses on click and reappears for a NEW error', async () => {
-    mockContext.status = 'Error: first';
-    const { rerender } = render(<StatusBanner />);
+  it('shows a warning without the Error label and with warning styling', () => {
+    mockContext.appError = {
+      id: 2,
+      message: 'Analysis could not be saved — storage is full.',
+      severity: 'warning',
+    };
+    render(<StatusBanner />);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(
+      'Analysis could not be saved — storage is full.'
+    );
+    expect(alert).not.toHaveTextContent('Error:');
+    expect(alert.className).toContain('status-banner-warning');
+  });
+
+  it('dismiss button delegates to dismissError', async () => {
+    mockContext.appError = { id: 3, message: 'first', severity: 'error' };
+    render(<StatusBanner />);
     await userEvent.click(screen.getByLabelText('Dismiss'));
+    expect(mockContext.dismissError).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-renders for a new error after a dismissal cleared the previous one', () => {
+    mockContext.appError = { id: 4, message: 'first', severity: 'error' };
+    const { rerender } = render(<StatusBanner />);
+    // Dismissal clears appError in the hook; the banner is stateless.
+    mockContext.appError = null;
+    rerender(<StatusBanner />);
     expect(screen.queryByRole('alert')).toBeNull();
 
-    mockContext.status = 'Error: second';
+    // A recurrence of the IDENTICAL message gets a fresh id and must re-show.
+    mockContext.appError = { id: 5, message: 'first', severity: 'error' };
     rerender(<StatusBanner />);
-    expect(screen.getByRole('alert')).toHaveTextContent('second');
+    expect(screen.getByRole('alert')).toHaveTextContent('first');
   });
 });

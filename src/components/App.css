@@ -2441,6 +2441,10 @@ main {
   font-size: 14px;
 }
 
+.status-banner-warning {
+  background: #7a5900;
+}
+
 .status-banner-dismiss {
   background: none;
   border: none;

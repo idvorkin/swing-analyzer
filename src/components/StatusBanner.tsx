@@ -1,33 +1,32 @@
 /**
- * StatusBanner — surfaces error statuses that previously went nowhere.
- * Renders only when the status text looks like an error; dismissible per
- * message (a new error message re-shows the banner).
+ * StatusBanner — surfaces AppError reports (a channel separate from the
+ * per-frame `status` HUD text, so progress updates can never clobber an
+ * error). Stateless: dismissal clears the error in the hook, and a new
+ * report (fresh id) re-shows the banner even for an identical message.
  */
-import { useEffect, useState } from 'react';
 import { useExerciseAnalyzerContext } from '../contexts/ExerciseAnalyzerContext';
 
 export default function StatusBanner() {
-  const { status } = useExerciseAnalyzerContext();
-  const [dismissed, setDismissed] = useState<string | null>(null);
+  const { appError, dismissError } = useExerciseAnalyzerContext();
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: status only triggers the reset (not read in the body); a new status should always clear a prior dismissal
-  useEffect(() => {
-    setDismissed(null);
-  }, [status]);
-
-  const isError = /error/i.test(status);
-  if (!isError || dismissed === status) {
+  if (!appError) {
     return null;
   }
 
+  const isWarning = appError.severity === 'warning';
   return (
-    <div className="status-banner" role="alert">
-      <span className="status-banner-message">{status}</span>
+    <div
+      className={`status-banner${isWarning ? ' status-banner-warning' : ''}`}
+      role="alert"
+    >
+      <span className="status-banner-message">
+        {isWarning ? appError.message : `Error: ${appError.message}`}
+      </span>
       <button
         type="button"
         className="status-banner-dismiss"
         aria-label="Dismiss"
-        onClick={() => setDismissed(status)}
+        onClick={dismissError}
       >
         ×
       </button>
