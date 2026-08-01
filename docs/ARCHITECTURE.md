@@ -60,6 +60,12 @@ src/
 └── types.ts             # Shared type definitions
 ```
 
+Documentation lives in two places by origin: `docs/specs/` holds
+feature specs written directly, while `docs/superpowers/specs/` and
+`docs/superpowers/plans/` hold specs and implementation plans produced
+by the superpowers brainstorming/planning workflow (dated, with
+completion/deviation headers once shipped).
+
 ## Layer Details
 
 ### 1. UI Layer (`src/components/`)

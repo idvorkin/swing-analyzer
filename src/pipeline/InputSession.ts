@@ -180,7 +180,13 @@ export class InputSession {
   }
 
   /**
-   * Stop the current source
+   * Stop the current source.
+   *
+   * NOTE: 'idle' here means "no STREAMING source" — the stopped source is
+   * deliberately kept assigned, so getSource()/getSkeletonAtTime() still
+   * answer from its cache. The upload path relies on this half-state: it
+   * stops the old source immediately (so it can't stream into the reset
+   * pipeline) but keeps queries working until startVideoFile() replaces it.
    */
   stop(): void {
     if (this.source) {

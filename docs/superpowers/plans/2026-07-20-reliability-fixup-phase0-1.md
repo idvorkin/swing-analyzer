@@ -1,5 +1,23 @@
 # Reliability Fix-Up (Phase 0 + Phase 1) Implementation Plan
 
+> **Status (2026-08-01): COMPLETE.** All 13 tasks shipped to `main`
+> (merge `a220869`). The checkboxes below were not ticked during
+> execution — read this plan as history, not pending work. Deviations
+> from the written tasks:
+>
+> - **Task 9 (consecutive-error counter):** the planned in-subscription
+>   ref counter had no clean-frame reset path once the in-catch reset was
+>   deleted (errors would accumulate across a whole video), so it was
+>   superseded during implementation by a frame-based tracker —
+>   `src/utils/consecutiveErrorTracker.ts` (with its own test file) —
+>   closed per-frame from processSkeletonEvent.
+> - **Task 2/10 (file-input reset E2E):** the shipped test asserts the
+>   input value after a CORRUPT upload, not a successful one — the upload
+>   dialog unmounts on success, so the input is gone before it can be
+>   asserted (`e2e-tests/upload-journey.spec.ts`).
+> - **No 60fps E2E fixture** (spec Phase 0 item 2): fps math is
+>   unit-covered in `src/services/PoseExtractor.test.ts` instead.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the upload-on-phone flow reliable: put E2E in CI, then fix the six review defects test-first (spec: `docs/superpowers/specs/2026-07-20-reliability-fixup-design.md`).

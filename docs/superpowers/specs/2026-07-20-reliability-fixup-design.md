@@ -4,6 +4,20 @@
 **Status:** Approved by Igor (sections 1–3 approved in brainstorming session)
 **Approach:** Test-gated hybrid — safety net first, then defect fixes with tests, then architecture paydown scoped to where the defects lived, then docs sync.
 
+**Implementation status (2026-08-01):** Phase 0+1 shipped to `main`
+(merge `a220869`), followed by a hardening pass from the pre-upstream
+code review. Two deviations from this spec as written:
+
+- **No 60fps E2E fixture was built** (Phase 0 item 2 and defect 6's
+  "frame-step E2E" test line). The fps math is unit-covered in
+  `src/services/PoseExtractor.test.ts` instead; the first success
+  criterion below is unit-verified, not E2E-verified. See plan Task 11
+  for the recorded decision.
+- **Defect 2's cached burst is stop()-aware, not AbortSignal-aware** —
+  a stopped flag plus a generation token checked when the burst fires.
+  Abort paths reach `stop()` via the session, so behavior matches
+  intent; only the mechanism differs.
+
 ## Context
 
 A four-dimension code review (architecture, correctness, product surface, tests) of the full codebase found six user-felt defects, substantial silent-failure plumbing, ~1,700 lines of dead code, and a missing CI safety net. Igor's priority: the record-video-then-upload-on-phone flow at the gym must work reliably. The "camera selection" complaint was investigated: no camera capture code exists in the app (removed in commits `30435ae`/`9caa1f7`); the camera icon opens an OS file picker, and the likely real pain is defect 4 below (same-file reselect no-op) plus iOS re-encoding defeating the pose cache.

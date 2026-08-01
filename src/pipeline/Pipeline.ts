@@ -12,10 +12,8 @@ import {
 } from '../analyzers';
 import type { Skeleton } from '../models/Skeleton';
 import type { CropRegion } from '../types/posetrack';
-import { asTimestampMs, asVideoTimeSeconds } from '../utils/brandedTypes';
 import type {
   FrameAcquisition,
-  FrameEvent,
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
@@ -35,7 +33,8 @@ export interface ThumbnailEvent {
  * Orchestrates the processing pipeline from frame to rep analysis.
  *
  * Supports two processing modes:
- * 1. Video-event-driven (preferred): Call processFrameAsync() on video timeupdate events
+ * 1. Batch/extraction (preferred): call processSkeletonEvent() per skeleton
+ *    coming from extraction or cache replay
  * 2. RxJS streaming (legacy): Call start() to begin Observable-based processing
  *
  * Pipeline flow: Frame → Skeleton → FormAnalyzer.processFrame() → Results
@@ -281,66 +280,6 @@ export class Pipeline {
   }
 
   /**
-   * Process the current video frame asynchronously (video-event-driven mode).
-   * Call this from video timeupdate/seeked events for direct processing
-   * without RxJS subscriptions.
-   *
-   * @returns The processing result, or null if no skeleton detected
-   */
-  async processFrameAsync(): Promise<PipelineProcessResult | null> {
-    // Get current frame from frame acquisition
-    const frame = this.frameAcquisition.getCurrentFrame();
-    // Safely get video time - only HTMLVideoElement has currentTime property
-    const videoTime = frame instanceof HTMLVideoElement ? frame.currentTime : 0;
-    const frameEvent: FrameEvent = {
-      frame,
-      timestamp: asTimestampMs(performance.now()),
-      videoTime: asVideoTimeSeconds(videoTime),
-    };
-
-    // Transform to skeleton using async method
-    const skeletonEvent =
-      await this.skeletonTransformer.transformToSkeletonAsync(frameEvent);
-
-    if (!skeletonEvent.skeleton) {
-      return null;
-    }
-
-    // Store latest skeleton
-    this.latestSkeleton = skeletonEvent.skeleton;
-
-    // Process through form analyzer
-    try {
-      const result = this.formAnalyzer.processFrame(
-        skeletonEvent.skeleton,
-        frameEvent.timestamp,
-        frameEvent.videoTime,
-        frameEvent.frameImage
-      );
-
-      // Update rep count
-      this.repCount = result.repCount;
-
-      return {
-        skeleton: skeletonEvent.skeleton,
-        repCount: result.repCount,
-        position: result.phase,
-        angles: result.angles,
-        repCompleted: result.repCompleted,
-      };
-    } catch (error) {
-      console.error('Error in form analyzer processFrame:', error);
-      this.errorSubject.next({
-        source: 'form-analyzer',
-        error: error instanceof Error ? error : new Error(String(error)),
-        timestamp: frameEvent.timestamp,
-        videoTime: frameEvent.videoTime,
-      });
-      return null;
-    }
-  }
-
-  /**
    * Process a skeleton event directly, bypassing frame acquisition.
    * Used for batch/extraction mode where frames come from extraction
    * rather than video playback.
@@ -553,18 +492,6 @@ export class Pipeline {
 export interface PipelineResult {
   skeleton: Skeleton;
   repCount: number;
-}
-
-/**
- * Result from processFrameAsync (video-event-driven mode)
- * Contains full analysis result for direct state updates.
- */
-export interface PipelineProcessResult {
-  skeleton: Skeleton;
-  repCount: number;
-  position: string | null;
-  angles: Record<string, number>;
-  repCompleted: boolean;
 }
 
 /**
