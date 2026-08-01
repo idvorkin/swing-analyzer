@@ -28,6 +28,7 @@ setup:
 # Download test videos from form-analyzer-samples repo
 download-test-videos:
     #!/usr/bin/env bash
+    set -euo pipefail
     echo "📥 Downloading test videos..."
 
     VIDEOS_DIR="public/videos"
@@ -68,8 +69,12 @@ download-test-videos:
 
     echo "✓ Test videos ready in $VIDEOS_DIR"
 
-    # Update fixture hashes to match downloaded videos
-    just update-fixture-hashes
+    # Verify downloads against the tracked fixture hashes. Never
+    # auto-update here: rewriting the hashes to match whatever arrived
+    # would make a video/fixture mismatch undetectable by construction
+    # (especially in CI). On a genuine upstream video change, run
+    # `just update-fixture-hashes` deliberately and commit the result.
+    just check-fixture-hashes
 
 # Check if fixture hashes match video files
 check-fixture-hashes:
