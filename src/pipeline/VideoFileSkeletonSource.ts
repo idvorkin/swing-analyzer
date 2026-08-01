@@ -17,7 +17,10 @@ import {
   loadPoseTrackFromStorage,
   savePoseTrackToStorage,
 } from '../services/PoseTrackService';
-import { recordCacheLoad } from '../services/SessionRecorder';
+import {
+  recordCacheLoad,
+  recordPoseTrackPersistFailure,
+} from '../services/SessionRecorder';
 import type {
   PoseModel,
   PoseTrackFile,
@@ -197,9 +200,10 @@ export class VideoFileSkeletonSource implements SkeletonSource {
           // This is a signal that batch processing is done
           this.stateSubject.next({
             type: 'active',
-            batchComplete: true,
-            framesProcessed: emitCount,
-            processingTimeMs: processingTime,
+            batch: {
+              framesProcessed: emitCount,
+              processingTimeMs: processingTime,
+            },
           });
         }, 0);
 
@@ -396,23 +400,35 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       // Store final pose track
       this.poseTrack = result.poseTrack;
 
-      // Auto-save to storage (with speeds included).
-      // Persist for future loads. Failure (e.g. storage quota) must not kill
-      // the session — all frames are already live in liveCache.
+      // Persist for future loads (speeds included). Failure (e.g. storage
+      // quota) must not kill the session — all frames are already live in
+      // liveCache — but it must be DISCLOSED: quota exhaustion persists,
+      // so every future load of this video silently re-extracts unless
+      // the user learns storage is full.
+      let persistFailed = false;
       try {
         await savePoseTrackToStorage(result.poseTrack);
       } catch (saveError) {
+        persistFailed = true;
         console.warn(
           '[VideoFileSkeletonSource] Failed to persist pose track; continuing with in-memory poses:',
           saveError
         );
+        recordPoseTrackPersistFailure({
+          videoHash: this.videoHash,
+          frameCount: result.poseTrack.frames.length,
+          error:
+            saveError instanceof Error ? saveError.message : String(saveError),
+        });
       }
 
       this.stateSubject.next({
         type: 'active',
-        batchComplete: true,
-        framesProcessed: result.poseTrack.frames.length,
-        processingTimeMs: performance.now() - extractStartTime,
+        batch: {
+          framesProcessed: result.poseTrack.frames.length,
+          processingTimeMs: performance.now() - extractStartTime,
+          ...(persistFailed ? { persistFailed: true } : {}),
+        },
       });
     } catch (error) {
       // Clean up on error

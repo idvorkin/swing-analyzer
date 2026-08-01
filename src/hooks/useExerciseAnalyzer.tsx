@@ -796,13 +796,23 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             recordExtractionComplete({ fileName: state.fileName });
           }
           // Record skeleton processing complete (for both extraction and cache load)
-          if (state.sourceState.batchComplete) {
+          const batch = state.sourceState.batch;
+          if (batch) {
             recordSkeletonProcessingComplete({
-              framesProcessed: state.sourceState.framesProcessed ?? 0,
+              framesProcessed: batch.framesProcessed,
               finalRepCount: pipelineRef.current?.getRepCount() ?? 0,
-              processingTimeMs: state.sourceState.processingTimeMs,
+              processingTimeMs: batch.processingTimeMs,
               totalFramesProcessed: frameIndexRef.current,
             });
+            // Non-fatal, but the user must know: quota exhaustion persists,
+            // so this video will re-extract from scratch on every future
+            // load until storage is freed.
+            if (batch.persistFailed) {
+              reportError(
+                "Analysis complete, but couldn't be saved — storage may be full. It will be recomputed next time this video is loaded.",
+                'warning'
+              );
+            }
             // Reset counters for next video
             prevRepCountRef.current = 0;
             frameIndexRef.current = 0;

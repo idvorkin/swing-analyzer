@@ -16,6 +16,7 @@ vi.mock('../services/PoseTrackService', () => ({
 }));
 vi.mock('../services/SessionRecorder', () => ({
   recordCacheLoad: vi.fn(),
+  recordPoseTrackPersistFailure: vi.fn(),
 }));
 vi.mock('../utils/videoHash', () => ({
   computeQuickVideoHash: vi.fn().mockResolvedValue('hash-abc'),
@@ -32,6 +33,7 @@ import {
   loadPoseTrackFromStorage,
   savePoseTrackToStorage,
 } from '../services/PoseTrackService';
+import { recordPoseTrackPersistFailure } from '../services/SessionRecorder';
 import { computeQuickVideoHash } from '../utils/videoHash';
 
 function makeTrack(frameCount = 3): PoseTrackFile {
@@ -81,7 +83,7 @@ describe('VideoFileSkeletonSource', () => {
     vi.restoreAllMocks();
   });
 
-  it('cache path ends with a typed batchComplete active state', async () => {
+  it('cache path ends with an active state carrying the atomic batch payload', async () => {
     vi.mocked(loadPoseTrackFromStorage).mockResolvedValue(makeTrack());
     const source = makeSource();
     const states: SkeletonSourceState[] = [];
@@ -92,10 +94,10 @@ describe('VideoFileSkeletonSource', () => {
 
     const last = states[states.length - 1];
     expect(last.type).toBe('active');
-    expect(last).toMatchObject({ batchComplete: true, framesProcessed: 3 });
+    expect(last).toMatchObject({ batch: { framesProcessed: 3 } });
   });
 
-  it('extraction path ALSO ends with batchComplete (was cache-only)', async () => {
+  it('extraction path ALSO ends with a batch payload (was cache-only)', async () => {
     vi.mocked(loadPoseTrackFromStorage).mockResolvedValue(null);
     vi.mocked(extractPosesFromVideo).mockResolvedValue({
       poseTrack: makeTrack(5),
@@ -108,10 +110,10 @@ describe('VideoFileSkeletonSource', () => {
 
     const last = states[states.length - 1];
     expect(last.type).toBe('active');
-    expect(last).toMatchObject({ batchComplete: true, framesProcessed: 5 });
+    expect(last).toMatchObject({ batch: { framesProcessed: 5 } });
   });
 
-  it('storage quota failure after successful extraction stays active', async () => {
+  it('storage quota failure still completes the batch, and discloses the failure', async () => {
     vi.mocked(loadPoseTrackFromStorage).mockResolvedValue(null);
     vi.mocked(extractPosesFromVideo).mockResolvedValue({
       poseTrack: makeTrack(),
@@ -120,9 +122,22 @@ describe('VideoFileSkeletonSource', () => {
       new Error('QuotaExceededError: storage full')
     );
     const source = makeSource();
+    const states: SkeletonSourceState[] = [];
+    source.state$.subscribe((s) => states.push(s));
 
     await expect(source.start()).resolves.toBeUndefined();
-    expect(source.state.type).toBe('active');
+
+    // The session completes normally (frames are live in memory)...
+    const last = states[states.length - 1];
+    expect(last.type).toBe('active');
+    expect(last).toMatchObject({
+      batch: { framesProcessed: 3, persistFailed: true },
+    });
+    // ...and the failure is recorded, not just console.warn'd: next load
+    // silently re-extracts, so the session log must say why.
+    expect(recordPoseTrackPersistFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ videoHash: 'hash-abc' })
+    );
   });
 
   it('getSkeletonAtTime uses a tolerance while extraction is incomplete', async () => {
