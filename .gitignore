@@ -83,3 +83,9 @@ public/videos/*.webm
 public/videos/*.mp4
 public/videos/*.mov
 .claude/settings.local.json
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
