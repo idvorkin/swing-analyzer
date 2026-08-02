@@ -124,57 +124,56 @@ When rebase has many conflicts due to PR squash creating duplicate commits (same
 
 ## Task Tracking (Beads)
 
-This project uses [beads](https://github.com/steveyegge/beads). Run `bd prime` at session start.
+This project uses [beads](https://github.com/steveyegge/beads) — `bd` 1.1.x,
+embedded Dolt backend. `bd sync` and `bd doctor` from the older bd no longer
+exist (`bd prime` still works — run it at session start); the flow below is
+verified against bd 1.1.2 (2026-08-02).
+
+### One-time clone setup
+
+```bash
+git config beads.role maintainer   # REQUIRED — without it, bd list/ready/blocked
+                                   # silently return empty (bd GH#2950; triggered by
+                                   # the Gas Town town workspace at ~/.beads)
+bd init --prefix swing             # creates .beads/embeddeddolt (gitignored)
+git show origin/beads-metadata:.beads/issues.jsonl > .beads/issues.jsonl
+bd import                          # hydrate from the shared JSONL (upsert)
+bd config set export.auto true     # keep issues.jsonl fresh for interchange
+```
 
 ### Quick Commands
 
 ```bash
 bd ready                    # Show unblocked work
-bd list                     # List all issues
+bd list                     # Open issues (--all includes closed)
 bd show swing-abc           # View issue details
-bd update swing-abc --status in_progress --assignee claude-orbstack-swing-6
+bd assign swing-abc claude-orbstack-swing-6
 bd close swing-abc --reason "Done in PR #42"
-bd sync                     # Push to remote (run at session end)
+bd note swing-abc "..."     # Append a note
+bd create --title="Fix memory leak" --type=bug -p 2
+bd link swing-new swing-old # Dependency (see bd link --help for types)
 ```
-
-### Creating & Linking Issues
-
-```bash
-bd create --title="Fix memory leak" --type=bug
-bd dep add swing-new swing-old                     # blocks (default)
-bd dep add swing-new swing-old --type discovered-from  # audit trail
-```
-
-**Dependency types:**
-
-| Type              | Use When                              |
-| ----------------- | ------------------------------------- |
-| `blocks`          | Work cannot start until blocker done  |
-| `related`         | Issues share context but don't block  |
-| `parent-child`    | Epic/subtask hierarchy                |
-| `discovered-from` | Found during other work (audit trail) |
 
 ### Multi-Clone Coordination
 
-All swing directories share the SAME beads database via `beads-metadata` branch.
+All swing directories share issue data via `.beads/issues.jsonl` committed to
+the `beads-metadata` branch. Same issue ID in all clones — it's ONE issue.
 
-- Same issue ID appears in ALL clones - it's ONE issue
-- Run `bd sync` from ONE directory at a time
+- **Pull**: `git show origin/beads-metadata:.beads/issues.jsonl > .beads/issues.jsonl && bd import`
+  (upsert: newer rows win, stale rows are skipped)
+- **Push**: `bd export > .beads/issues.jsonl`, then commit that file to the
+  `beads-metadata` branch (use a worktree; `git add -f` — the path is ignored
+  on main) and push origin
 - Before claiming: `bd show ISSUE_ID` to verify not already assigned
 - **Assignee format**: `claude-machinename-directoryname` (e.g., `claude-orbstack-swing-2`)
 
 ### Troubleshooting
 
-```bash
-bd doctor             # Diagnose issues
-bd doctor --fix       # Auto-fix common issues
-```
-
-| Problem                       | Fix                                                                                  |
-| ----------------------------- | ------------------------------------------------------------------------------------ |
-| Database not found            | `bd sync` to pull from remote                                                        |
-| beads-metadata branch missing | `git fetch origin beads-metadata && git branch beads-metadata origin/beads-metadata` |
-| Sync permission errors        | `git branch --set-upstream-to=origin/beads-metadata beads-metadata`                  |
+| Problem                             | Fix                                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| `bd list` empty but `bd show` works | `git config beads.role maintainer` (bd GH#2950)                                      |
+| No beads database found             | Run the one-time clone setup above (`bd doctor` is unsupported in embedded mode)     |
+| beads-metadata branch missing       | `git fetch origin beads-metadata && git branch beads-metadata origin/beads-metadata` |
 
 ---
 
@@ -261,7 +260,7 @@ LivePoseCache (streaming) ──────────────────
     ↓                                       │
 CachedPoseSkeletonTransformer               │ OR  PoseSkeletonTransformer
     ↓ (instant lookup)                      │     (real-time ML inference)
-Pipeline.processFrameAsync()                │
+Pipeline.processSkeletonEvent()             │
     ├── ExerciseDetector (auto-detect)      │
     ├── FormAnalyzer.processFrame()         │
     └── Rep counting + thumbnails           │
@@ -465,3 +464,63 @@ Projects using [chop-conventions](https://github.com/idvorkin/chop-conventions) 
 - head/cat errors: `unset PAGER`
 - Check justfile before writing new commands
 - Auto-approved: `just test`, `just fast-test`
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:970c3bf2 -->
+
+## Beads Issue Tracker
+
+This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+
+### Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>         # Complete work
+```
+
+### Rules
+
+- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
+- Run `bd prime` for detailed command reference and session close protocol
+- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+
+**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+
+## Agent Context Profiles
+
+The managed Beads block is task-tracking guidance, not permission to override repository, user, or orchestrator instructions.
+
+- **Conservative (default)**: Use `bd` for task tracking. Do not run git commits, git pushes, or Dolt remote sync unless explicitly asked. At handoff, report changed files, validation, and suggested next commands.
+- **Minimal**: Keep tool instruction files as pointers to `bd prime`; use the same conservative git policy unless active instructions say otherwise.
+- **Team-maintainer**: Only when the repository explicitly opts in, agents may close beads, run quality gates, commit, and push as part of session close. A current "do not commit" or "do not push" instruction still wins.
+
+## Session Completion
+
+This protocol applies when ending a Beads implementation workflow. It is subordinate to explicit user, repository, and orchestrator instructions.
+
+1. **File issues for remaining work** - Create beads for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **Handle git/sync by active profile**:
+
+   ```bash
+   # Conservative/minimal/default: report status and proposed commands; wait for approval.
+   git status
+
+   # Team-maintainer opt-in only, unless current instructions forbid it:
+   git pull --rebase
+   bd dolt push
+   git push
+   git status
+   ```
+
+5. **Hand off** - Summarize changes, validation, issue status, and any blocked sync/commit/push step
+
+**Critical rules:**
+
+- Explicit user or orchestrator instructions override this Beads block.
+- Do not commit or push without clear authority from the active profile or the current user request.
+- If a required sync or push is blocked, stop and report the exact command and error.
+<!-- END BEADS INTEGRATION -->

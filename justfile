@@ -28,6 +28,7 @@ setup:
 # Download test videos from form-analyzer-samples repo
 download-test-videos:
     #!/usr/bin/env bash
+    set -euo pipefail
     echo "📥 Downloading test videos..."
 
     VIDEOS_DIR="public/videos"
@@ -68,8 +69,12 @@ download-test-videos:
 
     echo "✓ Test videos ready in $VIDEOS_DIR"
 
-    # Update fixture hashes to match downloaded videos
-    just update-fixture-hashes
+    # Verify downloads against the tracked fixture hashes. Never
+    # auto-update here: rewriting the hashes to match whatever arrived
+    # would make a video/fixture mismatch undetectable by construction
+    # (especially in CI). On a genuine upstream video change, run
+    # `just update-fixture-hashes` deliberately and commit the result.
+    just check-fixture-hashes
 
 # Check if fixture hashes match video files
 check-fixture-hashes:
@@ -79,9 +84,9 @@ check-fixture-hashes:
 update-fixture-hashes:
     node scripts/update-fixture-hashes.cjs
 
-# Run the development server
-dev:
-    npm run dev-called-from-just
+# Run the development server (forwards extra args, e.g. `just dev --port 5173`)
+dev *args:
+    npm run dev-called-from-just -- {{args}}
 
 # Start agent dashboard (monitors all agent clones)
 dashboard:
@@ -106,8 +111,12 @@ preview:
 test: build
     npm run test-called-from-just
 
+# Generate src/generated_version.ts (gitignored; version-check tests need it)
+gen-version:
+    ./scripts/generate-version.sh
+
 # Run unit tests without building
-test-unit:
+test-unit: gen-version
     npm run test:unit
 
 # Run E2E tests (all projects - desktop + mobile)
@@ -116,7 +125,7 @@ e2e:
 
 # Run fast E2E tests (seeded data, no extraction) - good for CI
 e2e-fast:
-    npx playwright test user-journey.spec.ts swing-analyzer.spec.ts pose-fixtures.spec.ts settings.spec.ts
+    npx playwright test user-journey.spec.ts swing-analyzer.spec.ts pose-fixtures.spec.ts settings.spec.ts upload-journey.spec.ts
 
 # Run extraction E2E tests (mock detector, longer tests)
 e2e-extraction:

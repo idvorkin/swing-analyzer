@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: 'npm'
 
       - name: Install just
         uses: extractions/setup-just@dd310ad5a97d8e7b41793f8ef055398d51ad4de6 # v2
@@ -40,4 +40,46 @@ jobs:
         with:
           name: dist-${{ github.event_name == 'push' && 'main' || format('pr-{0}', github.event.pull_request.number) }}
           path: dist
+          retention-days: 7
+
+  e2e:
+    runs-on: ubuntu-latest
+    name: E2E Tests (fast suite)
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install just
+        uses: extractions/setup-just@dd310ad5a97d8e7b41793f8ef055398d51ad4de6 # v2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Download test videos
+        run: just download-test-videos
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Generate version file
+        run: just gen-version
+
+      - name: Run fast E2E suite
+        run: just e2e-fast
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-report
+          path: playwright-report
           retention-days: 7

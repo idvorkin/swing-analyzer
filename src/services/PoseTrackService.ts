@@ -14,9 +14,11 @@ import type {
 } from '../types/posetrack';
 import { isValidSha256Hash } from '../utils/videoHash';
 
-const POSETRACK_DB_NAME = 'swing-analyzer-posetracks';
-const POSETRACK_STORE_NAME = 'posetracks';
-const POSETRACK_DB_VERSION = 1;
+// Exported (not just for internal use) so tests can seed/inspect records via
+// the raw IndexedDB API without duplicating these literals and risking drift.
+export const POSETRACK_DB_NAME = 'swing-analyzer-posetracks';
+export const POSETRACK_STORE_NAME = 'posetracks';
+export const POSETRACK_DB_VERSION = 1;
 
 /**
  * Storage mode for pose tracks
@@ -193,6 +195,26 @@ export function parsePoseTrack(json: string): PoseTrackFile {
 }
 
 /**
+ * Return a copy of the pose track without runtime-only fields (frameImage).
+ * ImageData IS structured-cloneable, so without stripping it would be
+ * persisted to IndexedDB at ~77KB per frame.
+ */
+export function stripRuntimeFields(poseTrack: PoseTrackFile): PoseTrackFile {
+  const needsStrip = poseTrack.frames.some((f) => f.frameImage !== undefined);
+  if (!needsStrip) {
+    return poseTrack;
+  }
+  const frames = poseTrack.frames.map((frame) => {
+    if (frame.frameImage === undefined) {
+      return frame;
+    }
+    const { frameImage: _frameImage, ...rest } = frame;
+    return rest;
+  });
+  return { ...poseTrack, frames };
+}
+
+/**
  * Serialize a pose track to JSON string.
  * Strips runtime-only fields (like frameImage) that cannot be serialized.
  */
@@ -200,19 +222,7 @@ export function serializePoseTrack(
   poseTrack: PoseTrackFile,
   pretty: boolean = false
 ): string {
-  // Strip runtime-only fields from frames before serialization
-  // frameImage is an ImageData object that cannot be serialized to JSON
-  const cleanedFrames = poseTrack.frames.map((frame) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { frameImage, ...serializableFrame } = frame;
-    return serializableFrame;
-  });
-
-  const cleanedPoseTrack = {
-    ...poseTrack,
-    frames: cleanedFrames,
-  };
-
+  const cleanedPoseTrack = stripRuntimeFields(poseTrack);
   return JSON.stringify(cleanedPoseTrack, null, pretty ? 2 : undefined);
 }
 
@@ -288,10 +298,11 @@ function openPoseTrackDB(): Promise<IDBDatabase> {
 export async function savePoseTrackToStorage(
   poseTrack: PoseTrackFile
 ): Promise<void> {
-  const videoHash = poseTrack.metadata.sourceVideoHash;
+  const cleaned = stripRuntimeFields(poseTrack);
+  const videoHash = cleaned.metadata.sourceVideoHash;
 
   if (currentStorageMode === 'memory') {
-    memoryStore.set(videoHash, poseTrack);
+    memoryStore.set(videoHash, cleaned);
     return;
   }
 
@@ -322,10 +333,10 @@ export async function savePoseTrackToStorage(
     const store = transaction.objectStore(POSETRACK_STORE_NAME);
 
     const record = {
-      videoHash: poseTrack.metadata.sourceVideoHash,
-      poseTrack,
-      model: poseTrack.metadata.model,
-      createdAt: poseTrack.metadata.extractedAt,
+      videoHash: cleaned.metadata.sourceVideoHash,
+      poseTrack: cleaned,
+      model: cleaned.metadata.model,
+      createdAt: cleaned.metadata.extractedAt,
     };
 
     const request = store.put(record);
@@ -387,7 +398,21 @@ export async function loadPoseTrackFromStorage(
     request.onsuccess = () => {
       const result = request.result;
       if (result?.poseTrack) {
-        resolve(result.poseTrack);
+        const track = result.poseTrack as PoseTrackFile;
+        if (track.frames.some((f) => f.frameImage !== undefined)) {
+          // One-time migration: this record predates ImageData stripping and
+          // is ~77KB/frame bigger than it should be. Rewrite it cleaned.
+          const cleaned = stripRuntimeFields(track);
+          savePoseTrackToStorage(cleaned).catch((err) => {
+            console.warn(
+              '[PoseTrackService] Failed to migrate bloated pose track record:',
+              err
+            );
+          });
+          resolve(cleaned);
+          return;
+        }
+        resolve(track);
       } else {
         resolve(null);
       }

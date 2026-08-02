@@ -519,17 +519,101 @@ function seekToTime(video: HTMLVideoElement, time: number): Promise<void> {
 }
 
 /**
- * Estimate video FPS by checking frame timestamps
+ * Estimate video FPS by sampling requestVideoFrameCallback mediaTime deltas
+ * during a brief muted playback. Median delta → fps, clamped to a sane
+ * range. Falls back to 30 (with a console.warn naming the path) when rVFC
+ * is unavailable (old browsers), playback cannot start (autoplay policy,
+ * decode failure), sampling times out (decode stall), the deltas are
+ * unusable, or the measurement is outside [5, 120] fps. Cost: ~0.3-0.5s
+ * once per extraction.
+ *
+ * Side effects: mutes the video and resets currentTime to 0 — intended
+ * for extraction's dedicated hidden element, not the app's main video.
+ * @internal Exported for testing
  */
-async function estimateVideoFps(_video: HTMLVideoElement): Promise<number> {
-  // Try to get FPS from video metadata (not always available)
-  // Default to 30fps which is common for most videos
-  const defaultFps = 30;
+export async function estimateVideoFps(
+  video: HTMLVideoElement
+): Promise<number> {
+  const FALLBACK_FPS = 30;
+  const SAMPLE_FRAMES = 12;
+  const TIMEOUT_MS = 2000;
+  // Outside this range the measurement is almost certainly noise (sparse
+  // timelapse frames → fps 0-1; sub-ms mediaTime jitter → fps 1000, which
+  // would balloon totalFrames ~33x downstream).
+  const MIN_FPS = 5;
+  const MAX_FPS = 120;
 
-  // For now, use a reasonable default
-  // In a production app, you might want to analyze frame timing
-  // or use a library that can read video metadata
-  return defaultFps;
+  const fallback = (reason: string, detail?: unknown): number => {
+    console.warn(
+      `[estimateVideoFps] falling back to ${FALLBACK_FPS} fps: ${reason}`,
+      detail ?? ''
+    );
+    return FALLBACK_FPS;
+  };
+
+  type VideoWithRvfc = HTMLVideoElement & {
+    requestVideoFrameCallback?: (
+      cb: (now: number, metadata: { mediaTime: number }) => void
+    ) => number;
+  };
+  const rvfcVideo = video as VideoWithRvfc;
+  if (typeof rvfcVideo.requestVideoFrameCallback !== 'function') {
+    return fallback('requestVideoFrameCallback unavailable');
+  }
+
+  video.muted = true;
+  try {
+    await video.play();
+  } catch (playError) {
+    return fallback('playback could not start', playError);
+  }
+
+  const fps = await new Promise<number>((resolve) => {
+    let done = false;
+    const finish = (value: number) => {
+      done = true;
+      resolve(value);
+    };
+    const timeout = setTimeout(
+      () => finish(fallback(`sampling timed out after ${TIMEOUT_MS}ms`)),
+      TIMEOUT_MS
+    );
+    const onFrame = (_now: number, metadata: { mediaTime: number }) => {
+      // A frame arriving after the timeout already resolved must not
+      // re-register — the sampler is done with this element.
+      if (done) {
+        return;
+      }
+      mediaTimes.push(metadata.mediaTime);
+      if (mediaTimes.length >= SAMPLE_FRAMES) {
+        clearTimeout(timeout);
+        const deltas = mediaTimes
+          .slice(1)
+          .map((t, i) => t - mediaTimes[i])
+          .filter((d) => d > 0)
+          .sort((a, b) => a - b);
+        if (deltas.length === 0) {
+          finish(fallback('no usable mediaTime deltas'));
+          return;
+        }
+        const median = deltas[Math.floor(deltas.length / 2)];
+        const measured = Math.round(1 / median);
+        if (measured < MIN_FPS || measured > MAX_FPS) {
+          finish(fallback(`measured ${measured} fps is outside sane range`));
+          return;
+        }
+        finish(measured);
+        return;
+      }
+      rvfcVideo.requestVideoFrameCallback?.(onFrame);
+    };
+    const mediaTimes: number[] = [];
+    rvfcVideo.requestVideoFrameCallback?.(onFrame);
+  });
+
+  video.pause();
+  video.currentTime = 0;
+  return fps;
 }
 
 /**

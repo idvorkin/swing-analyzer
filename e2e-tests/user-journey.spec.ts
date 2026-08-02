@@ -747,79 +747,102 @@ test.describe('User Journey: Load and Analyze Sample Video', () => {
       expect(currentTime).toBe(0);
     });
 
-    // Flaky: Rapid reload race conditions are timing-dependent
-    test.fixme(
-      'rapid video reload attempts resolve correctly',
-      async ({ page }) => {
-        // Seed pose data first
-        await seedPoseTrackFixture(page, 'swing-sample-4reps');
+    // Was fixme'd as flaky; re-enabled after the reliability program fixed
+    // its root causes (stale-abort guard, synchronous source ownership in
+    // InputSession.startVideoFile, stop-before-upload, generation-token
+    // cached burst). If this regresses, suspect those — not the test.
+    test('rapid video reload attempts resolve correctly', async ({ page }) => {
+      // Inner wait budgets (3×15s toPass + load/control waits) exceed the
+      // 30s default; raise so a slow runner fails at the step that hung
+      // instead of an opaque test timeout. ~7s typical locally.
+      test.setTimeout(60_000);
+      // Seed pose data first
+      await seedPoseTrackFixture(page, 'swing-sample-4reps');
 
-        // Load video first time
-        await clickSwingSampleButton(page);
-        await page.waitForSelector('video', { timeout: 10000 });
+      // Load video first time
+      await clickSwingSampleButton(page);
+      await page.waitForSelector('video', { timeout: 10000 });
 
-        // Wait for first video to fully load
-        await page.waitForFunction(
-          () => {
-            const video = document.querySelector('video') as HTMLVideoElement;
-            return video?.src?.startsWith('blob:') && video.readyState >= 1;
-          },
-          { timeout: 15000 }
-        );
-
-        // Now rapidly reload via header button
-        await clickLoadSampleButton(page);
-        await page.waitForTimeout(100);
-        await clickLoadSampleButton(page);
-        await page.waitForTimeout(100);
-        await clickLoadSampleButton(page);
-
-        // Wait for video to fully load (should be the last request)
-        await page.waitForFunction(
-          () => {
-            const video = document.querySelector('video') as HTMLVideoElement;
-            return video?.src?.startsWith('blob:') && video.readyState >= 1;
-          },
-          { timeout: 15000 }
-        );
-
-        // Video should be loaded and functional
-        const videoState = await page.evaluate(() => {
+      // Wait for first video to fully load
+      await page.waitForFunction(
+        () => {
           const video = document.querySelector('video') as HTMLVideoElement;
-          return {
-            hasSrc: !!video.src,
-            isBlobUrl: video.src.startsWith('blob:'),
-            readyState: video.readyState,
-            paused: video.paused,
-          };
-        });
+          return video?.src?.startsWith('blob:') && video.readyState >= 1;
+        },
+        { timeout: 15000 }
+      );
 
-        expect(videoState.hasSrc).toBe(true);
-        expect(videoState.isBlobUrl).toBe(true);
-        expect(videoState.readyState).toBeGreaterThanOrEqual(1); // HAVE_METADATA or higher
-        expect(videoState.paused).toBe(true);
-
-        // Wait for controls to be enabled
-        await page.waitForFunction(
-          () => {
-            const btn = document.querySelector(
-              '#play-pause-btn'
-            ) as HTMLButtonElement;
-            return btn && !btn.disabled;
-          },
-          { timeout: 20000 }
-        );
-
-        // Play button should work
-        await page.click('#play-pause-btn');
-        await page.waitForFunction(
-          () => {
-            const video = document.querySelector('video') as HTMLVideoElement;
-            return video && !video.paused;
-          },
-          { timeout: 5000 }
-        );
+      // Now reload repeatedly, each click landing as EARLY as the UI
+      // permits (the dialog disables its cards during a load and
+      // unmounts when one lands, so blind timed clicks race detach —
+      // that's what made the old version flaky). toPass retries the
+      // open-dialog-then-click block until a click actually lands,
+      // which keeps successive loads overlapping in-flight work
+      // without sleeping.
+      for (let i = 0; i < 3; i++) {
+        await expect(async () => {
+          const card = page.locator('button.media-dialog-card', {
+            hasText: 'Kettlebell Swing',
+          });
+          if (!(await card.isVisible())) {
+            await page.click('button[aria-label="Load different video"]');
+          }
+          await card.click({ timeout: 2000 });
+        }).toPass({ timeout: 15000 });
       }
-    );
+
+      // Wait for video to fully load (should be the last request)
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video?.src?.startsWith('blob:') && video.readyState >= 1;
+        },
+        { timeout: 15000 }
+      );
+
+      // Video should be loaded and functional
+      const videoState = await page.evaluate(() => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return {
+          hasSrc: !!video.src,
+          isBlobUrl: video.src.startsWith('blob:'),
+          readyState: video.readyState,
+          paused: video.paused,
+        };
+      });
+
+      expect(videoState.hasSrc).toBe(true);
+      expect(videoState.isBlobUrl).toBe(true);
+      expect(videoState.readyState).toBeGreaterThanOrEqual(1); // HAVE_METADATA or higher
+      expect(videoState.paused).toBe(true);
+
+      // Wait for controls to be enabled
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector(
+            '#play-pause-btn'
+          ) as HTMLButtonElement;
+          return btn && !btn.disabled;
+        },
+        { timeout: 20000 }
+      );
+
+      // Play button should work
+      await page.click('#play-pause-btn');
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('video') as HTMLVideoElement;
+          return video && !video.paused;
+        },
+        { timeout: 5000 }
+      );
+
+      // The seeded fixture holds 4 reps. A superseded source leaking
+      // its frames into the final session would inflate the total —
+      // exactly the cross-video pollution the reliability fixes target.
+      await expect(page.locator('#rep-counter')).toHaveText(/\d+\/4/, {
+        timeout: 10000,
+      });
+    });
   });
 });

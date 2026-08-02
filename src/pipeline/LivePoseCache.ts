@@ -179,10 +179,12 @@ export class LivePoseCache {
   }
 
   /**
-   * Check if a frame exists for the given video time
+   * Check if a frame exists for the given video time. Pass the same
+   * tolerance you would pass to getFrame — hasFrame(t, tol) is defined as
+   * getFrame(t, tol) !== null, so the two can never disagree.
    */
-  hasFrame(videoTime: number): boolean {
-    return this.getFrame(videoTime) !== null;
+  hasFrame(videoTime: number, tolerance?: number): boolean {
+    return this.getFrame(videoTime, tolerance) !== null;
   }
 
   /**

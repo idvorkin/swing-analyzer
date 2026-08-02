@@ -15,7 +15,7 @@ Frame → Pose Detection → Skeleton → Form Analysis → Rep Count → UI
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                         UI LAYER                            │
-│  React components: VideoSectionV2, AnalysisSection, etc.   │
+│  React components: VideoSectionV2, StatusBanner, etc.      │
 └─────────────────────────────────────────────────────────────┘
                               ▲
 ┌─────────────────────────────────────────────────────────────┐
@@ -60,18 +60,24 @@ src/
 └── types.ts             # Shared type definitions
 ```
 
+Documentation lives in two places by origin: `docs/specs/` holds
+feature specs written directly, while `docs/superpowers/specs/` and
+`docs/superpowers/plans/` hold specs and implementation plans produced
+by the superpowers brainstorming/planning workflow (dated, with
+completion/deviation headers once shipped).
+
 ## Layer Details
 
 ### 1. UI Layer (`src/components/`)
 
 React components for rendering. **No business logic here.**
 
-| Component                | Purpose                                    |
-| ------------------------ | ------------------------------------------ |
-| `VideoSectionV2.tsx`     | Main video player container                |
-| `AnalysisSection.tsx`    | Results display (rep count, form feedback) |
-| `SettingsModal.tsx`      | User preferences                           |
-| `PoseTrackStatusBar.tsx` | Extraction progress                        |
+| Component                | Purpose                                 |
+| ------------------------ | --------------------------------------- |
+| `VideoSectionV2.tsx`     | Main video player container (incl. HUD) |
+| `StatusBanner.tsx`       | Error/warning banner (AppError channel) |
+| `SettingsModal.tsx`      | User preferences                        |
+| `PoseTrackStatusBar.tsx` | Extraction progress                     |
 
 **Where to add UI:**
 
@@ -116,13 +122,13 @@ Data processing orchestration. This is where frames become analysis results.
 VideoFileSkeletonSource
     │
     ▼ (emits SkeletonEvent)
-Pipeline.processFrameAsync()
+Pipeline.processSkeletonEvent()
     │
-    ├── formAnalyzer.processFrame()  → phase detection
-    ├── formAnalyzer.checkRepComplete() → rep counting
+    ├── exerciseDetector.processFrame() → auto-detect (until locked)
+    ├── formAnalyzer.processFrame()     → phase detection + rep counting
     │
-    ▼ (returns PipelineProcessResult)
-UI updates
+    ▼ (returns rep count; thumbnails/errors via subjects)
+UI updates (hooks consume results)
 ```
 
 **Where to add pipeline logic:**
@@ -304,10 +310,12 @@ The `FormAnalyzer` tracks current phase and detects transitions based on skeleto
 
 The app supports two modes:
 
-1. **Real-time playback**: Video plays, each frame processed via `processFrameAsync()`
-2. **Batch extraction**: Video processed as fast as possible, results cached
+1. **Batch extraction**: video processed as fast as possible via
+   `Pipeline.processSkeletonEvent()`, results cached to IndexedDB
+2. **Cached playback/seek**: skeletons looked up from the pose cache
+   (`getSkeletonAtTime`) and rendered — no per-frame analysis
 
-Both modes use the same `Pipeline` and `FormAnalyzer` - only the source differs.
+Both use the same `Pipeline` and `FormAnalyzer` - only the source differs.
 
 ## Extension Points
 

@@ -32,7 +32,31 @@ export type SkeletonSourceState =
   | { type: 'starting' }
   | { type: 'checking-cache' }
   | { type: 'extracting'; progress: ExtractionProgress }
-  | { type: 'active' }
+  | {
+      type: 'active';
+      /**
+       * Present only on the final emission after the initial batch (cache
+       * replay or fresh extraction) — grouping makes the payload atomic,
+       * so "complete without counts" is unrepresentable.
+       */
+      batch?: {
+        /** Number of frames emitted in the batch. */
+        framesProcessed: number;
+        /**
+         * Wall-clock ms the batch took. The two paths measure different
+         * spans: cache replay times only the emission loop (~ms), while
+         * extraction times the full run including ML inference and the
+         * storage save (~minutes) — don't compare across paths.
+         */
+        processingTimeMs: number;
+        /**
+         * Extraction only: the pose track could not be persisted (e.g.
+         * storage quota). Poses are live in memory for this session, but
+         * the next load of the same video will re-extract from scratch.
+         */
+        persistFailed?: boolean;
+      };
+    }
   | { type: 'error'; message: string };
 
 /**

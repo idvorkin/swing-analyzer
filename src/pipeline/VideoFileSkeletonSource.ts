@@ -17,7 +17,10 @@ import {
   loadPoseTrackFromStorage,
   savePoseTrackToStorage,
 } from '../services/PoseTrackService';
-import { recordCacheLoad } from '../services/SessionRecorder';
+import {
+  recordCacheLoad,
+  recordPoseTrackPersistFailure,
+} from '../services/SessionRecorder';
 import type {
   PoseModel,
   PoseTrackFile,
@@ -48,6 +51,14 @@ export class VideoFileSkeletonSource implements SkeletonSource {
   private poseTrack: PoseTrackFile | null = null;
   private videoHash: string | null = null;
   private abortController: AbortController | null = null;
+  private stopped = false;
+  // Increments on every start(); pending async work (the cached-burst
+  // setTimeout) captures its generation and bails if a newer start()
+  // has superseded it. The boolean alone can't tell "stopped and
+  // restarted" apart from "never stopped". Defensive: InputSession
+  // currently constructs a fresh source per video, so same-instance
+  // restart is only reachable through direct API use (and the tests).
+  private generation = 0;
 
   private readonly videoFile: File;
   private readonly autoExtract: boolean;
@@ -105,6 +116,8 @@ export class VideoFileSkeletonSource implements SkeletonSource {
   async start(signal?: AbortSignal): Promise<void> {
     // Clean up any previous session
     this.stop();
+    this.stopped = false;
+    const generation = ++this.generation;
 
     // Check if already aborted
     if (signal?.aborted) {
@@ -167,6 +180,9 @@ export class VideoFileSkeletonSource implements SkeletonSource {
           'cached skeleton events'
         );
         setTimeout(() => {
+          if (this.stopped || generation !== this.generation) {
+            return;
+          }
           const startTime = performance.now();
           console.log(
             '[VideoFileSkeletonSource] Emitting',
@@ -192,10 +208,11 @@ export class VideoFileSkeletonSource implements SkeletonSource {
           // This is a signal that batch processing is done
           this.stateSubject.next({
             type: 'active',
-            batchComplete: true,
-            framesProcessed: emitCount,
-            processingTimeMs: processingTime,
-          } as SkeletonSourceState);
+            batch: {
+              framesProcessed: emitCount,
+              processingTimeMs: processingTime,
+            },
+          });
         }, 0);
 
         return;
@@ -226,6 +243,8 @@ export class VideoFileSkeletonSource implements SkeletonSource {
    * Stop extraction if in progress
    */
   stop(): void {
+    this.stopped = true;
+
     // Signal stop
     this.stop$.next();
 
@@ -272,7 +291,7 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       return null;
     }
 
-    const frame = this.liveCache.getFrame(videoTime);
+    const frame = this.liveCache.getFrame(videoTime, this.lookupTolerance());
     if (!frame) {
       return null;
     }
@@ -281,10 +300,20 @@ export class VideoFileSkeletonSource implements SkeletonSource {
   }
 
   /**
-   * Check if skeleton is available at time
+   * Check if skeleton is available at time — same tolerance policy as
+   * getSkeletonAtTime, so has(t) can never claim a frame get(t) refuses.
    */
   hasSkeletonAtTime(videoTime: number): boolean {
-    return this.liveCache?.hasFrame(videoTime) ?? false;
+    return this.liveCache?.hasFrame(videoTime, this.lookupTolerance()) ?? false;
+  }
+
+  /**
+   * While extraction is still filling the cache, only match frames near
+   * the requested time — otherwise playback ahead of the extraction
+   * frontier renders the last-extracted skeleton as if it were current.
+   */
+  private lookupTolerance(): number | undefined {
+    return this.liveCache?.isExtractionComplete() ? undefined : 0.1;
   }
 
   /**
@@ -305,6 +334,11 @@ export class VideoFileSkeletonSource implements SkeletonSource {
     if (!this.videoHash) {
       throw new Error('Video hash not computed');
     }
+    // Capture: this.videoHash is nulled by dispose(), which can race the
+    // async work below (e.g. the persist-failure log after a rejection).
+    const videoHash = this.videoHash;
+
+    const extractStartTime = performance.now();
 
     // Create abort controller for cancellation
     this.abortController = new AbortController();
@@ -383,10 +417,36 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       // Store final pose track
       this.poseTrack = result.poseTrack;
 
-      // Auto-save to storage (with speeds included)
-      await savePoseTrackToStorage(result.poseTrack);
+      // Persist for future loads (speeds included). Failure (e.g. storage
+      // quota) must not kill the session — all frames are already live in
+      // liveCache — but it must be DISCLOSED: quota exhaustion persists,
+      // so every future load of this video silently re-extracts unless
+      // the user learns storage is full.
+      let persistFailed = false;
+      try {
+        await savePoseTrackToStorage(result.poseTrack);
+      } catch (saveError) {
+        persistFailed = true;
+        console.warn(
+          '[VideoFileSkeletonSource] Failed to persist pose track; continuing with in-memory poses:',
+          saveError
+        );
+        recordPoseTrackPersistFailure({
+          videoHash,
+          frameCount: result.poseTrack.frames.length,
+          error:
+            saveError instanceof Error ? saveError.message : String(saveError),
+        });
+      }
 
-      this.stateSubject.next({ type: 'active' });
+      this.stateSubject.next({
+        type: 'active',
+        batch: {
+          framesProcessed: result.poseTrack.frames.length,
+          processingTimeMs: performance.now() - extractStartTime,
+          ...(persistFailed ? { persistFailed: true } : {}),
+        },
+      });
     } catch (error) {
       // Clean up on error
       if (this.liveCache) {

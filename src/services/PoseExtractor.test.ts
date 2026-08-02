@@ -6,11 +6,12 @@
  * TensorFlow, Web Crypto API, and the DOM.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { PoseKeypoint } from '../types';
 import {
   calculateSpineAngle,
   computeAngles,
+  estimateVideoFps,
   getModelDisplayName,
 } from './PoseExtractor';
 
@@ -183,6 +184,125 @@ describe('PoseExtractor', () => {
       const angles = computeAngles(keypoints);
 
       expect(angles.spineAngle).toBeCloseTo(0, 1);
+    });
+  });
+
+  describe('estimateVideoFps', () => {
+    function makeRvfcVideo(frameIntervalSec: number): HTMLVideoElement {
+      let mediaTime = 0;
+      const video = {
+        muted: false,
+        paused: true,
+        currentTime: 0,
+        play: vi.fn().mockResolvedValue(undefined),
+        pause: vi.fn(),
+        requestVideoFrameCallback(
+          cb: (now: number, meta: { mediaTime: number }) => void
+        ) {
+          mediaTime += frameIntervalSec;
+          queueMicrotask(() => cb(performance.now(), { mediaTime }));
+          return 1;
+        },
+      };
+      return video as unknown as HTMLVideoElement;
+    }
+
+    it('measures 60fps from mediaTime deltas', async () => {
+      expect(await estimateVideoFps(makeRvfcVideo(1 / 60))).toBe(60);
+    });
+
+    it('measures 30fps from mediaTime deltas', async () => {
+      expect(await estimateVideoFps(makeRvfcVideo(1 / 30))).toBe(30);
+    });
+
+    it('measures 24fps from mediaTime deltas', async () => {
+      expect(await estimateVideoFps(makeRvfcVideo(1 / 24))).toBe(24);
+    });
+
+    it('falls back to 30 when requestVideoFrameCallback is unavailable', async () => {
+      const video = {
+        muted: false,
+        paused: true,
+        play: vi.fn().mockResolvedValue(undefined),
+        pause: vi.fn(),
+      } as unknown as HTMLVideoElement;
+      expect(await estimateVideoFps(video)).toBe(30);
+    });
+
+    it('falls back to 30 when play() is rejected (autoplay policy)', async () => {
+      const video = makeRvfcVideo(1 / 60);
+      (video.play as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new DOMException('Autoplay blocked', 'NotAllowedError')
+      );
+      expect(await estimateVideoFps(video)).toBe(30);
+    });
+
+    it('clamps a sparse-frame measurement (timelapse) to the fallback instead of fps 0', async () => {
+      // 2s between presented frames → naive Math.round(1/2) = 1 (or 0 for
+      // longer gaps) → totalFrames = 0 downstream → empty extraction with
+      // no error. Must fall back instead.
+      expect(await estimateVideoFps(makeRvfcVideo(2.0))).toBe(30);
+    });
+
+    it('clamps a jittery sub-ms measurement to the fallback instead of fps 1000', async () => {
+      // A 1ms median delta would claim fps=1000 and balloon totalFrames
+      // ~33x, grinding extraction through per-millisecond seeks.
+      expect(await estimateVideoFps(makeRvfcVideo(0.001))).toBe(30);
+    });
+
+    it('logs when a fallback replaces a measurement', async () => {
+      const warnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
+      await estimateVideoFps(makeRvfcVideo(2.0));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('fps'),
+        expect.anything()
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('resolves with the fallback on sampling timeout and stops re-registering', async () => {
+      vi.useFakeTimers();
+      try {
+        // Fires only 3 frames (fewer than the 12 samples needed), then
+        // goes silent — models a decode stall mid-sampling.
+        let fires = 0;
+        const cbs: Array<(now: number, meta: { mediaTime: number }) => void> =
+          [];
+        const rvfc = vi.fn(
+          (cb: (now: number, meta: { mediaTime: number }) => void) => {
+            cbs.push(cb);
+            fires++;
+            if (fires <= 3) {
+              queueMicrotask(() =>
+                cb(performance.now(), { mediaTime: fires / 30 })
+              );
+            }
+            return 1;
+          }
+        );
+        const video = {
+          muted: false,
+          paused: true,
+          currentTime: 0,
+          play: vi.fn().mockResolvedValue(undefined),
+          pause: vi.fn(),
+          requestVideoFrameCallback: rvfc,
+        } as unknown as HTMLVideoElement;
+
+        const fpsPromise = estimateVideoFps(video);
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(await fpsPromise).toBe(30);
+
+        // A frame arriving AFTER the timeout must not re-register the
+        // callback — the sampler is done with this video element.
+        const registrationsAtTimeout = rvfc.mock.calls.length;
+        cbs[cbs.length - 1]?.(performance.now(), { mediaTime: 99 });
+        expect(rvfc.mock.calls.length).toBe(registrationsAtTimeout);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

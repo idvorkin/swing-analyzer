@@ -1,20 +1,30 @@
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from 'vitest';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 
 describe('useKeyboardNavigation', () => {
-  let onNavigateToPreviousRepMock: ReturnType<typeof vi.fn>;
-  let onNavigateToNextRepMock: ReturnType<typeof vi.fn>;
-  let togglePlayPauseMock: ReturnType<typeof vi.fn>;
-  let nextFrameMock: ReturnType<typeof vi.fn>;
-  let previousFrameMock: ReturnType<typeof vi.fn>;
+  // vitest 4: untyped vi.fn() is Mock<Procedure | Constructable>, which no
+  // longer assigns to `() => void` props — give the mocks their signature.
+  let onNavigateToPreviousRepMock: Mock<() => void>;
+  let onNavigateToNextRepMock: Mock<() => void>;
+  let togglePlayPauseMock: Mock<() => void>;
+  let nextFrameMock: Mock<() => void>;
+  let previousFrameMock: Mock<() => void>;
 
   beforeEach(() => {
-    onNavigateToPreviousRepMock = vi.fn();
-    onNavigateToNextRepMock = vi.fn();
-    togglePlayPauseMock = vi.fn();
-    nextFrameMock = vi.fn();
-    previousFrameMock = vi.fn();
+    onNavigateToPreviousRepMock = vi.fn<() => void>();
+    onNavigateToNextRepMock = vi.fn<() => void>();
+    togglePlayPauseMock = vi.fn<() => void>();
+    nextFrameMock = vi.fn<() => void>();
+    previousFrameMock = vi.fn<() => void>();
   });
 
   afterEach(() => {

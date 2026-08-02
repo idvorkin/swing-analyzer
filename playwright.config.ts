@@ -94,12 +94,17 @@ function findRunningViteServer(): { port: number; https: boolean } | null {
         const cmdline = getProcessCmd(pid);
 
         if (processCwd === cwd && cmdline?.includes('vite')) {
-          // Check if it's HTTPS (timeout command differs on macOS)
+          // Check if it's HTTPS (timeout command differs on macOS).
+          // NOTE: openssl s_client prints "CONNECTED(...)" as soon as the
+          // TCP socket connects, *before* any TLS handshake is attempted -
+          // it appears even against a plain-HTTP server. Grep for the
+          // server's certificate instead, which only appears once a real
+          // TLS handshake has completed.
           const timeoutCmd =
             process.platform === 'darwin' ? 'gtimeout' : 'timeout';
           const isHttps =
             execSync(
-              `${timeoutCmd} 1 bash -c "echo | openssl s_client -connect localhost:${port} 2>/dev/null | grep -q 'CONNECTED' && echo yes" 2>/dev/null || true`,
+              `${timeoutCmd} 1 bash -c "echo | openssl s_client -connect localhost:${port} 2>/dev/null | grep -q 'BEGIN CERTIFICATE' && echo yes" 2>/dev/null || true`,
               { encoding: 'utf-8' }
             ).trim() === 'yes';
           return { port, https: isHttps };
@@ -125,9 +130,14 @@ const PORT = process.env.E2E_PORT || (runningServer?.port.toString() ?? '5173');
 const PROTOCOL = runningServer?.https ? 'https' : useHttps ? 'https' : 'http';
 const BASE_URL = `${PROTOCOL}://localhost:${PORT}`;
 
-// Log detected server for debugging
+// Log detected server for debugging. BASE_URL may differ from the found
+// server's port when E2E_PORT overrides it — in that case Playwright's
+// webServer starts a fresh vite on E2E_PORT and only the protocol was
+// inherited from the detected server.
 if (runningServer) {
-  console.log(`[Playwright] Using running vite server at ${BASE_URL}`);
+  console.log(
+    `[Playwright] Found vite server on port ${runningServer.port} (cwd match); E2E target: ${BASE_URL}`
+  );
 }
 
 export default defineConfig({

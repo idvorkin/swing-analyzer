@@ -53,6 +53,11 @@ import {
   findNextCheckpoint,
   findPreviousCheckpoint,
 } from '../utils/checkpointUtils';
+import {
+  type ConsecutiveErrorTracker,
+  createConsecutiveErrorTracker,
+  runTrackedFrame,
+} from '../utils/consecutiveErrorTracker';
 import { calculateDepthFromKeypoints } from '../utils/depthCalculation';
 import { calculateStableCropRegion } from '../utils/videoCrop';
 import { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
@@ -71,6 +76,18 @@ function getFileNameFromUrl(url: string): string {
   const pathParts = url.split('/');
   const fileName = pathParts[pathParts.length - 1];
   return fileName || 'sample-video.webm';
+}
+
+/**
+ * A user-facing problem, kept separate from the transient `status` HUD
+ * channel: status is rewritten on every HUD/progress update, so an error
+ * multiplexed into it disappears within a frame. `id` is unique per report
+ * so a recurring identical message still re-shows after a dismissal.
+ */
+export interface AppError {
+  id: number;
+  message: string;
+  severity: 'error' | 'warning';
 }
 
 /**
@@ -165,7 +182,26 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   });
 
   // UI state
-  const [status, setStatus] = useState<string>('Loading...');
+  // Dedicated error channel — see the AppError doc comment. Cleared by
+  // user dismissal or a new video load. (The old free-text `status`
+  // channel is gone: its only consumer, AnalysisSection, was never
+  // mounted, and multiplexing errors into it was finding #1 of the
+  // pre-upstream review.)
+  const [appError, setAppError] = useState<AppError | null>(null);
+  const nextErrorIdRef = useRef(0);
+  const reportError = useCallback(
+    (message: string, severity: AppError['severity'] = 'error'): number => {
+      nextErrorIdRef.current += 1;
+      setAppError({ id: nextErrorIdRef.current, message, severity });
+      return nextErrorIdRef.current;
+    },
+    []
+  );
+  const dismissError = useCallback(() => setAppError(null), []);
+  // Playback-failure reports are retry-able: once playback actually
+  // starts, the report is moot and must clear itself (a sticky "Playback
+  // blocked — click Play again" banner AFTER a successful play is a lie).
+  const playbackErrorIdRef = useRef<number | null>(null);
   const [repCount, setRepCount] = useState<number>(0);
   const [spineAngle, setSpineAngle] = useState<number>(0);
   const [armToSpineAngle, setArmToSpineAngle] = useState<number>(0);
@@ -197,6 +233,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const [isDetectionLocked, setIsDetectionLocked] = useState<boolean>(false);
   const [currentPhases, setCurrentPhases] = useState<string[]>(DEFAULT_PHASES);
   const [workingLeg, setWorkingLeg] = useState<'left' | 'right' | null>(null);
+  const [videoFps, setVideoFps] = useState(30);
 
   // Track if we've recorded extraction start for current session (to avoid spam)
   const hasRecordedExtractionStartRef = useRef<boolean>(false);
@@ -601,25 +638,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         depth,
       };
       setCurrentAngles(angles);
-
-      // Estimate position from spine angle (stateless, for HUD display during seek)
-      // Position thresholds based on spine angle:
-      //   top: ~10° (upright), connect: ~45°, release: ~37°, bottom: ~75° (hinged)
-      let position: string | null = null;
-
-      if (spine < 25) {
-        position = 'Top';
-      } else if (spine >= 25 && spine < 41) {
-        position = 'Release'; // ~37° ideal
-      } else if (spine >= 41 && spine < 60) {
-        position = 'Connect'; // ~45° ideal
-      } else if (spine >= 60) {
-        position = 'Bottom'; // ~75° ideal
-      }
-
-      if (position) {
-        setStatus(position);
-      }
     },
     []
   );
@@ -636,9 +654,27 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   const prevRepCountRef = useRef<number>(0);
   // Track frame index for debugging
   const frameIndexRef = useRef<number>(0);
-  // Track consecutive processing errors (for user feedback when analysis is degraded)
-  const consecutiveErrorsRef = useRef<number>(0);
-  const MAX_CONSECUTIVE_ERRORS = 5;
+  // Track consecutive FRAMES with analysis errors (for user feedback when
+  // analysis is degraded). Pipeline errors are emitted synchronously to
+  // errorSubject during processSkeletonEvent — so per-frame success can't
+  // be inferred from "the call returned". The errorSubscription handler
+  // below marks errored frames via recordError(); runTrackedFrame closes
+  // each frame, and also charges a thrown call (possible via a
+  // skeletonSubject subscriber) to the frame that threw. See
+  // consecutiveErrorTracker.ts for details.
+  const consecutiveErrorTrackerRef = useRef<ConsecutiveErrorTracker | null>(
+    null
+  );
+  if (consecutiveErrorTrackerRef.current === null) {
+    consecutiveErrorTrackerRef.current = createConsecutiveErrorTracker(
+      5, // consecutive errored frames before surfacing a status banner
+      () => {
+        reportError(
+          'Analysis is failing repeatedly — some frames may be skipped'
+        );
+      }
+    );
+  }
 
   // Process a skeleton event through the pipeline and update UI
   const processSkeletonEvent = useCallback((event: SkeletonEvent) => {
@@ -651,22 +687,20 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       return;
     }
 
-    // Process through pipeline (updates rep count, form state, etc.)
-    let result: number;
-    try {
-      result = pipeline.processSkeletonEvent(event);
-      // Reset error count on success
-      consecutiveErrorsRef.current = 0;
-    } catch (error) {
-      console.error('[processSkeletonEvent] Pipeline processing error:', error);
-      consecutiveErrorsRef.current++;
-
-      // Surface degraded analysis to user after multiple consecutive errors
-      if (consecutiveErrorsRef.current === MAX_CONSECUTIVE_ERRORS) {
-        setStatus('Analysis experiencing errors - some frames may be skipped');
-      }
+    // Process through pipeline (updates rep count, form state, etc.).
+    // runTrackedFrame counts a throw as an errored frame and always closes
+    // the frame, so a mid-frame recordError can't leak to the next frame.
+    const frame = runTrackedFrame(consecutiveErrorTrackerRef.current, () =>
+      pipeline.processSkeletonEvent(event)
+    );
+    if (!frame.ok) {
+      console.error(
+        '[processSkeletonEvent] Pipeline processing error:',
+        frame.error
+      );
       return; // Don't crash component, just skip this frame
     }
+    const result = frame.value;
 
     // Increment frame counter
     frameIndexRef.current++;
@@ -691,11 +725,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       prevRepCountRef.current = result;
     }
 
-    // Debug: log every 100 frames and on rep changes
-    if (
-      event.poseEvent.frameEvent.videoTime !== undefined &&
-      Math.floor(event.poseEvent.frameEvent.videoTime * 30) % 100 === 0
-    ) {
+    // Debug: log every 100 processed frames (frame counter, not a
+    // videoTime*fps guess — fps is measured per video, not always 30)
+    if (frameIndex % 100 === 0) {
       console.log(
         `[processSkeletonEvent] videoTime=${event.poseEvent.frameEvent.videoTime?.toFixed(2)}, repCount=${result}`
       );
@@ -735,7 +767,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       // Update app state based on session state
       if (state.type === 'video-file') {
         if (state.sourceState.type === 'extracting') {
-          setStatus('Extracting poses...');
           // Cache wasn't found, clear the cache processing state
           setIsCacheProcessing(false);
           // Record extraction start only once per extraction session
@@ -744,24 +775,28 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             recordExtractionStart({ fileName: state.fileName });
           }
         } else if (state.sourceState.type === 'active') {
-          setStatus('Ready');
           // Record extraction complete (only if we recorded start)
           if (hasRecordedExtractionStartRef.current) {
             recordExtractionComplete({ fileName: state.fileName });
           }
           // Record skeleton processing complete (for both extraction and cache load)
-          const sourceState = state.sourceState as {
-            batchComplete?: boolean;
-            framesProcessed?: number;
-            processingTimeMs?: number;
-          };
-          if (sourceState.batchComplete) {
+          const batch = state.sourceState.batch;
+          if (batch) {
             recordSkeletonProcessingComplete({
-              framesProcessed: sourceState.framesProcessed ?? 0,
+              framesProcessed: batch.framesProcessed,
               finalRepCount: pipelineRef.current?.getRepCount() ?? 0,
-              processingTimeMs: sourceState.processingTimeMs,
+              processingTimeMs: batch.processingTimeMs,
               totalFramesProcessed: frameIndexRef.current,
             });
+            // Non-fatal, but the user must know: quota exhaustion persists,
+            // so this video will re-extract from scratch on every future
+            // load until storage is freed.
+            if (batch.persistFailed) {
+              reportError(
+                "Analysis complete, but couldn't be saved — storage may be full. It will be recomputed next time this video is loaded.",
+                'warning'
+              );
+            }
             // Reset counters for next video
             prevRepCountRef.current = 0;
             frameIndexRef.current = 0;
@@ -773,6 +808,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             const poseTrack = videoSource?.getPoseTrack();
             if (poseTrack && poseTrack.frames.length > 0) {
               const { videoWidth, videoHeight } = poseTrack.metadata;
+              setVideoFps(poseTrack.metadata.fps || 30);
 
               // Get frames at rep position times (from repThumbnails ref)
               // Fall back to first 60 frames if no reps detected yet
@@ -841,15 +877,12 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             }
           }
         } else if (state.sourceState.type === 'checking-cache') {
-          setStatus('Checking cache...');
           // Mark cache processing as in progress (will be cleared when batchComplete arrives)
           setIsCacheProcessing(true);
         }
       } else if (state.type === 'error') {
-        setStatus(`Error: ${state.message}`);
+        reportError(state.message);
         setIsCacheProcessing(false); // Clear loading state on error
-      } else {
-        setStatus('Ready');
       }
 
       // Mark model as loaded once we have an active source
@@ -878,11 +911,16 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     const errorSubscription = pipeline.getErrorEvents().subscribe({
       next: (pipelineError) => {
         console.warn(
-          `[Pipeline ${pipelineError.source}] Error at ${pipelineError.videoTime?.toFixed(2) ?? 'unknown'}s:`,
+          `[Pipeline ${pipelineError.source}] Error at ${
+            pipelineError.videoTime?.toFixed(2) ?? 'unknown'
+          }s:`,
           pipelineError.error
         );
-        // Errors are already tracked in processSkeletonEvent, but this catches
-        // errors from the RxJS streaming path as well
+        // 'stream' failures arrive outside any frame window — recording
+        // one would be charged to whichever frame happens to run next.
+        if (pipelineError.source !== 'stream') {
+          consecutiveErrorTrackerRef.current?.recordError();
+        }
       },
       error: (error) => {
         console.error('Error in pipeline error subscription:', error);
@@ -910,7 +948,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         error: (error) => {
           console.error('Error in exercise detection subscription:', error);
           // Provide user feedback and set a sensible default
-          setStatus('Detection error - defaulting to kettlebell swing');
+          reportError(
+            'Exercise detection failed — defaulting to kettlebell swing.',
+            'warning'
+          );
           setDetectedExercise('kettlebell-swing');
           setIsDetectionLocked(true);
           setCurrentPhases(['top', 'connect', 'bottom', 'release']);
@@ -919,7 +960,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
     // Mark as ready
     setAppState((prev) => ({ ...prev, isModelLoaded: true }));
-    setStatus('Ready');
 
     // Set up session recorder pipeline state getter for debugging
     const video = videoRef.current;
@@ -958,7 +998,12 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       thumbnailQueueRef.current?.dispose();
       thumbnailQueueRef.current = null;
     };
-  }, [initializePipeline, processSkeletonEvent, updateHudFromSkeleton]);
+  }, [
+    initializePipeline,
+    processSkeletonEvent,
+    updateHudFromSkeleton,
+    reportError,
+  ]);
 
   // ========================================
   // Video Playback Handlers
@@ -972,6 +1017,11 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       setIsPlaying(true);
       setAppState((prev) => ({ ...prev, isProcessing: true }));
       recordPlaybackStart({ videoTime: video.currentTime });
+      // Playback started — clear a still-showing playback-failure report
+      // (and only that one; unrelated errors must survive a play).
+      setAppError((prev) =>
+        prev && prev.id === playbackErrorIdRef.current ? null : prev
+      );
     };
 
     const handlePause = () => {
@@ -1124,6 +1174,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     setIsDetectionLocked(false);
     setCurrentPhases(DEFAULT_PHASES);
     setWorkingLeg(null);
+    setVideoFps(30);
+    consecutiveErrorTrackerRef.current?.reset();
+    setAppError(null); // a new video is a fresh start for error reporting
   }, []);
 
   // Helper: Clear loading UI state (used on abort or completion)
@@ -1153,7 +1206,10 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       const video = videoRef.current;
       if (!session || !video) {
         console.error(`loadVideo: session or video element not initialized`);
-        setStatus('Error: App not initialized. Please refresh.');
+        // The caller already created this object URL; without revoking here
+        // it leaks (loadVideoSafely, which normally tracks it, never runs).
+        URL.revokeObjectURL(blobUrl);
+        reportError('App not initialized. Please refresh.');
         return false;
       }
 
@@ -1174,7 +1230,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         setVideoLoadMessage('Processing video...');
         await session.startVideoFile(videoFile, abortController.signal);
 
-        setStatus('Video loaded. Press Play to start.');
         clearLoadingState();
         return true;
       } catch (error) {
@@ -1184,29 +1239,37 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           return false;
         }
         console.error(`Error loading ${context}:`, error);
-        setStatus(`Error: ${getVideoLoadErrorMessage(error, context)}`);
+        reportError(getVideoLoadErrorMessage(error, context));
         clearLoadingState();
         return false;
       }
     },
-    [loadVideoSafely, clearLoadingState]
+    [loadVideoSafely, clearLoadingState, reportError]
   );
 
   // Handle user-uploaded video files
   const handleVideoUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
+      // Clear the input so selecting the SAME file later still fires a
+      // change event — otherwise re-picking the just-recorded video is a
+      // silent no-op (iOS pickers make this the common case).
+      event.target.value = '';
       if (!file) return;
 
       if (!inputSessionRef.current || !videoRef.current) {
         console.error(
           'handleVideoUpload: session or video element not initialized'
         );
-        setStatus('Error: App not initialized. Please refresh.');
+        reportError('App not initialized. Please refresh.');
         return;
       }
 
       const abortController = prepareVideoLoad();
+      // Tear down the old source NOW. Without this it keeps streaming frames
+      // into the freshly reset pipeline until startVideoFile() replaces it
+      // (potentially seconds later, after the new video's metadata loads).
+      inputSessionRef.current.stop();
       setIsVideoLoading(true);
       setVideoLoadProgress(undefined);
       setVideoLoadMessage(`Loading ${file.name}...`);
@@ -1215,7 +1278,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       const url = URL.createObjectURL(file);
       await loadVideo(file, url, abortController, 'video');
     },
-    [prepareVideoLoad, resetVideoState, loadVideo]
+    [prepareVideoLoad, resetVideoState, loadVideo, reportError]
   );
 
   // Load a sample video for a given exercise using ExerciseRegistry as source of truth
@@ -1237,12 +1300,15 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         console.error(
           `loadSampleVideo: session or video element not initialized`
         );
-        setStatus('Error: App not initialized. Please refresh.');
+        reportError('App not initialized. Please refresh.');
         return;
       }
 
       const abortController = prepareVideoLoad();
-      setStatus(`Loading ${config.name.toLowerCase()} sample...`);
+      // Tear down the old source NOW. Without this it keeps streaming frames
+      // into the freshly reset pipeline until startVideoFile() replaces it
+      // (potentially seconds later, after the new video's metadata loads).
+      inputSessionRef.current.stop();
       setIsVideoLoading(true);
       setVideoLoadProgress(undefined);
       setVideoLoadMessage(`Downloading ${config.name}...`);
@@ -1280,9 +1346,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           blob = await fetchWithProgress(
             config.url,
             (percent) => {
-              setStatus(
-                `Downloading ${config.name.toLowerCase()}... ${percent}%`
-              );
               setVideoLoadProgress(percent);
             },
             abortController.signal
@@ -1296,7 +1359,6 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             throw fetchError;
           }
           console.log(`Remote ${config.name} failed, falling back to local`);
-          setStatus(`Loading ${config.name.toLowerCase()} (local)...`);
           setVideoLoadMessage('Loading from local cache...');
           setVideoLoadProgress(undefined);
           const response = await fetch(config.localFallback, {
@@ -1321,11 +1383,17 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           return;
         }
         console.error(`Error loading ${config.name}:`, error);
-        setStatus(`Error: ${getVideoLoadErrorMessage(error, 'sample video')}`);
+        reportError(getVideoLoadErrorMessage(error, 'sample video'));
         clearLoadingState();
       }
     },
-    [prepareVideoLoad, resetVideoState, loadVideo, clearLoadingState]
+    [
+      prepareVideoLoad,
+      resetVideoState,
+      loadVideo,
+      clearLoadingState,
+      reportError,
+    ]
   );
 
   // Convenience wrappers for specific samples (maintain existing API)
@@ -1353,19 +1421,27 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
           return;
         }
         console.error('Error playing video:', err);
-        // Provide user feedback for play failures
+        // Provide user feedback for play failures. Track the id so a
+        // later successful play clears the now-moot report (handlePlay).
         if (err.name === 'NotAllowedError') {
-          setStatus('Playback blocked by browser. Click Play again to start.');
+          playbackErrorIdRef.current = reportError(
+            'Playback blocked by browser. Click Play again to start.',
+            'warning'
+          );
         } else if (err.name === 'NotSupportedError') {
-          setStatus('Error: Video format not supported.');
+          playbackErrorIdRef.current = reportError(
+            'Video format not supported.'
+          );
         } else {
-          setStatus('Error: Could not play video. Try reloading.');
+          playbackErrorIdRef.current = reportError(
+            'Could not play video. Try reloading.'
+          );
         }
       });
     } else {
       video.pause();
     }
-  }, []);
+  }, [reportError]);
 
   const stopVideo = useCallback(() => {
     const video = videoRef.current;
@@ -1378,7 +1454,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   // Frame Navigation (Cache-Based)
   // ========================================
-  const frameStep = 1 / 30; // Assuming 30fps
+  const frameStep = 1 / videoFps;
 
   const nextFrame = useCallback(() => {
     const video = videoRef.current;
@@ -1391,7 +1467,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     video.pause();
     video.currentTime = Math.min(video.duration, video.currentTime + frameStep);
     // Skeleton will be rendered via 'seeked' event handler
-  }, []);
+  }, [frameStep]);
 
   const previousFrame = useCallback(() => {
     const video = videoRef.current;
@@ -1403,7 +1479,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     video.pause();
     video.currentTime = Math.max(0, video.currentTime - frameStep);
     // Skeleton will be rendered via 'seeked' event handler
-  }, []);
+  }, [frameStep]);
 
   // ========================================
   // Rep Navigation - seeks to same phase in target rep (or first available) and pauses
@@ -1730,7 +1806,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   return {
     // State
     appState,
-    status,
+    appError,
+    dismissError,
     repCount,
     spineAngle,
     armToSpineAngle,

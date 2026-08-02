@@ -2423,3 +2423,34 @@ main {
     gap: 16px;
   }
 }
+
+/* StatusBanner — error surfacing */
+.status-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #b3261e;
+  color: #fff;
+  font-size: 14px;
+}
+
+.status-banner-warning {
+  background: #7a5900;
+}
+
+.status-banner-dismiss {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
