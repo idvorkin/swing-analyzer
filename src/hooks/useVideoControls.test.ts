@@ -7,7 +7,15 @@
  */
 
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from 'vitest';
 import type { VideoFrameAcquisition } from '../pipeline/VideoFrameAcquisition';
 import type { AppState } from '../types';
 import type { SkeletonRenderer } from '../viewmodels/SkeletonRenderer';
@@ -49,12 +57,13 @@ describe('useVideoControls', () => {
   let mockFrameAcquisition: Partial<VideoFrameAcquisition>;
   let mockSkeletonRenderer: Partial<SkeletonRenderer>;
   let mockAppState: AppState;
-  let setStatus: ReturnType<typeof vi.fn>;
-  let setSpineAngle: ReturnType<typeof vi.fn>;
-  let setArmToSpineAngle: ReturnType<typeof vi.fn>;
-  let setAppState: ReturnType<typeof vi.fn>;
-  let setDisplayMode: ReturnType<typeof vi.fn>;
-  let resetPipeline: ReturnType<typeof vi.fn>;
+  // vitest 4: untyped vi.fn() no longer assigns to typed callback props.
+  let setStatus: Mock<(status: string) => void>;
+  let setSpineAngle: Mock<(angle: number) => void>;
+  let setArmToSpineAngle: Mock<(angle: number) => void>;
+  let setAppState: Mock<(updater: unknown) => void>;
+  let setDisplayMode: Mock<(mode: 'both' | 'video' | 'overlay') => void>;
+  let resetPipeline: Mock<() => void>;
 
   beforeEach(() => {
     // Create mock video element
@@ -103,12 +112,12 @@ describe('useVideoControls', () => {
     };
 
     // Create mock setters
-    setStatus = vi.fn();
-    setSpineAngle = vi.fn();
-    setArmToSpineAngle = vi.fn();
-    setAppState = vi.fn();
-    setDisplayMode = vi.fn();
-    resetPipeline = vi.fn();
+    setStatus = vi.fn<(status: string) => void>();
+    setSpineAngle = vi.fn<(angle: number) => void>();
+    setArmToSpineAngle = vi.fn<(angle: number) => void>();
+    setAppState = vi.fn<(updater: unknown) => void>();
+    setDisplayMode = vi.fn<(mode: 'both' | 'video' | 'overlay') => void>();
+    resetPipeline = vi.fn<() => void>();
   });
 
   afterEach(() => {

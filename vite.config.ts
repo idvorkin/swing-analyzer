@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
+import type { ViteDevServer } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
@@ -43,9 +44,7 @@ const useSsl = inContainer && tailscaleHosts.length > 0;
 function tailscaleUrlPlugin() {
   return {
     name: 'tailscale-url',
-    configureServer(server: {
-      httpServer: { address: () => { port: number } | null } | null;
-    }) {
+    configureServer(server: ViteDevServer) {
       if (!useSsl || tailscaleHosts.length === 0) return;
 
       server.httpServer?.once('listening', () => {
@@ -142,6 +141,13 @@ export default defineConfig({
     port: devPort,
     allowedHosts: tailscaleHosts.length > 0 ? tailscaleHosts : undefined,
   },
+  // NOTE: vite is pinned to ^7 (rollup/esbuild). vite 8's rolldown
+  // import-analysis rewrites tfjs-converter's HashTable class — it has a
+  // method literally named `import` — as a dynamic import() call,
+  // injecting __vite__injectQuery into the parameter list and producing
+  // syntactically invalid dev modules ("Unexpected token '('"; verified
+  // through vite 8.2.0). Revisit when rolldown-vite parses `async
+  // import(` in class bodies correctly.
   build: {
     outDir: 'dist',
   },

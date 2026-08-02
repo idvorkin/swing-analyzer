@@ -44,7 +44,10 @@ interface MockVideoFileSource {
 const mockSources: MockVideoFileSource[] = [];
 
 vi.mock('./VideoFileSkeletonSource', () => ({
-  VideoFileSkeletonSource: vi.fn().mockImplementation(() => {
+  // Constructor mocks must be `function`, not arrows — vitest 4 enforces
+  // constructability for implementations invoked with `new`.
+  // biome-ignore lint/complexity/useArrowFunction: arrow functions are not constructable; this mock is invoked with `new`
+  VideoFileSkeletonSource: vi.fn().mockImplementation(function () {
     const stateSubject = new BehaviorSubject<SkeletonSourceState>({
       type: 'idle',
     });
@@ -324,35 +327,41 @@ describe('InputSession', () => {
       const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
       const abortController = new AbortController();
 
-      // Override mock to throw AbortError when start is called
+      // Override mock to throw AbortError when start is called. Must be a
+      // `function` (vitest 4 requires constructable implementations for
+      // `new`) — declared as a statement because biome only honors the
+      // useArrowFunction suppression there, not in argument position.
+      // biome-ignore lint/complexity/useArrowFunction: arrow functions are not constructable; this mock is invoked with `new`
+      const abortThrowingSource = function () {
+        return {
+          type: 'video-file',
+          state: { type: 'idle' },
+          state$: {
+            pipe: vi.fn().mockReturnThis(),
+            subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+          },
+          skeletons$: {
+            pipe: vi.fn().mockReturnThis(),
+            subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+          },
+          start: vi
+            .fn()
+            .mockRejectedValue(new DOMException('Aborted', 'AbortError')),
+          stop: vi.fn(),
+          dispose: vi.fn(),
+          getSkeletonAtTime: vi.fn().mockReturnValue(null),
+          hasSkeletonAtTime: vi.fn().mockReturnValue(false),
+          save: vi.fn().mockResolvedValue(undefined),
+          getLiveCache: vi.fn().mockReturnValue(null),
+          getPoseTrack: vi.fn().mockReturnValue(null),
+          getVideoHash: vi.fn().mockReturnValue(null),
+        } as unknown as InstanceType<typeof VideoFileSkeletonSource>;
+      };
       const { VideoFileSkeletonSource } = await import(
         './VideoFileSkeletonSource'
       );
       vi.mocked(VideoFileSkeletonSource).mockImplementationOnce(
-        () =>
-          ({
-            type: 'video-file',
-            state: { type: 'idle' },
-            state$: {
-              pipe: vi.fn().mockReturnThis(),
-              subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
-            },
-            skeletons$: {
-              pipe: vi.fn().mockReturnThis(),
-              subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
-            },
-            start: vi
-              .fn()
-              .mockRejectedValue(new DOMException('Aborted', 'AbortError')),
-            stop: vi.fn(),
-            dispose: vi.fn(),
-            getSkeletonAtTime: vi.fn().mockReturnValue(null),
-            hasSkeletonAtTime: vi.fn().mockReturnValue(false),
-            save: vi.fn().mockResolvedValue(undefined),
-            getLiveCache: vi.fn().mockReturnValue(null),
-            getPoseTrack: vi.fn().mockReturnValue(null),
-            getVideoHash: vi.fn().mockReturnValue(null),
-          }) as unknown as InstanceType<typeof VideoFileSkeletonSource>
+        abortThrowingSource
       );
 
       // Create new session that will use the abort-throwing mock
