@@ -3,10 +3,10 @@
 
 # Shared issue prefix: same issue ID in every clone is ONE issue.
 issue-prefix: 'swing'
-
 # Branch carrying .beads/issues.jsonl for cross-clone interchange.
 sync-branch: 'beads-metadata'
-
 # Keep issues.jsonl fresh after writes so the interchange file is current.
 export:
   auto: true
+sync:
+  remote: 'git+https://github.com/idvorkin-ai-tools/swing-analyzer.git'

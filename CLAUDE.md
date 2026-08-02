@@ -31,10 +31,9 @@ just dev  # EVERY Claude instance runs its own server
 
 ```bash
 git status && git add <files>
-bd sync
 git commit -m "..."
-bd sync
 git push
+bd dolt push  # sync issue data to the fork (see Multi-Clone Coordination)
 ```
 
 ---
@@ -125,9 +124,11 @@ When rebase has many conflicts due to PR squash creating duplicate commits (same
 ## Task Tracking (Beads)
 
 This project uses [beads](https://github.com/steveyegge/beads) — `bd` 1.1.x,
-embedded Dolt backend. `bd sync` and `bd doctor` from the older bd no longer
-exist (`bd prime` still works — run it at session start); the flow below is
-verified against bd 1.1.2 (2026-08-02).
+embedded Dolt backend. `bd sync` no longer exists and `bd doctor` is
+unsupported in embedded mode (`bd prime` still works — run it at session
+start). Issue data syncs between clones as Dolt commits on `refs/dolt/data`
+at **origin** (the fork); `.beads/issues.jsonl` is a passive export, not the
+sync channel. Flow below verified against bd 1.1.2 (2026-08-02).
 
 ### One-time clone setup
 
@@ -135,10 +136,16 @@ verified against bd 1.1.2 (2026-08-02).
 git config beads.role maintainer   # REQUIRED — without it, bd list/ready/blocked
                                    # silently return empty (bd GH#2950; triggered by
                                    # the Gas Town town workspace at ~/.beads)
-bd init --prefix swing             # creates .beads/embeddeddolt (gitignored)
-git show origin/beads-metadata:.beads/issues.jsonl > .beads/issues.jsonl
-bd import                          # hydrate from the shared JSONL (upsert)
-bd config set export.auto true     # keep issues.jsonl fresh for interchange
+bd init --prefix swing             # creates .beads/embeddeddolt; auto-wires the Dolt
+                                   # remote from sync.remote in the tracked config.yaml
+bd hooks install                   # replace stale pre-1.1 bd hooks (they break git
+                                   # commands with: Error: unknown command "hook")
+bd dolt pull                       # hydrate from refs/dolt/data on origin
+printf '\n# Beads fork protection (bd init)\n.beads/\n' >> .git/info/exclude
+                                   # bd init only writes this on first-ever init; in a
+                                   # clone .beads/ already exists (config.yaml is
+                                   # tracked), so add it by hand or Dolt runtime files
+                                   # show as untracked
 ```
 
 ### Quick Commands
@@ -156,24 +163,32 @@ bd link swing-new swing-old # Dependency (see bd link --help for types)
 
 ### Multi-Clone Coordination
 
-All swing directories share issue data via `.beads/issues.jsonl` committed to
-the `beads-metadata` branch. Same issue ID in all clones — it's ONE issue.
+All swing clones share ONE issue database, synced as Dolt commits on
+`refs/dolt/data` at **origin** (the idvorkin-ai-tools fork). Same issue ID in
+all clones — it's ONE issue.
 
-- **Pull**: `git show origin/beads-metadata:.beads/issues.jsonl > .beads/issues.jsonl && bd import`
-  (upsert: newer rows win, stale rows are skipped)
-- **Push**: `bd export > .beads/issues.jsonl`, then commit that file to the
-  `beads-metadata` branch (use a worktree; `git add -f` — the path is ignored
-  on main) and push origin
+- **Session start**: `bd dolt pull`
+- **Session end** (or after meaningful issue updates): `bd dolt pull && bd dolt push`
+- Do NOT enable `dolt.auto-push`: concurrent pushes from multiple clones race
+  on the remote manifest and can leave it referencing chunks that were never
+  uploaded (bd defaults it off for exactly this reason). Push at session
+  boundaries only.
+- `.beads/issues.jsonl` is a passive export kept fresh by `export.auto: true`
+  (tracked in `.beads/config.yaml`) — never `bd import` it in normal
+  operation. The old `beads-metadata` JSONL-interchange branch is retired
+  (history only).
 - Before claiming: `bd show ISSUE_ID` to verify not already assigned
 - **Assignee format**: `claude-machinename-directoryname` (e.g., `claude-orbstack-swing-2`)
 
 ### Troubleshooting
 
-| Problem                             | Fix                                                                                  |
-| ----------------------------------- | ------------------------------------------------------------------------------------ |
-| `bd list` empty but `bd show` works | `git config beads.role maintainer` (bd GH#2950)                                      |
-| No beads database found             | Run the one-time clone setup above (`bd doctor` is unsupported in embedded mode)     |
-| beads-metadata branch missing       | `git fetch origin beads-metadata && git branch beads-metadata origin/beads-metadata` |
+| Problem                                          | Fix                                                                                                                                                     |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bd list` empty but `bd show` works              | `git config beads.role maintainer` (bd GH#2950)                                                                                                         |
+| No beads database found                          | Run the one-time clone setup above (`bd doctor` is unsupported in embedded mode)                                                                        |
+| `auto-export warning: no Dolt remote configured` | `.beads/config.yaml` lacks `sync.remote` — pull latest main, or `bd dolt remote add origin git+https://github.com/idvorkin-ai-tools/swing-analyzer.git` |
+| `Error: unknown command "hook"` during git ops   | Stale pre-1.1 bd hooks in `.git/hooks` — run `bd hooks install`                                                                                         |
+| Dolt runtime files show as `??` in `git status`  | `.beads/` missing from `.git/info/exclude` — see one-time setup                                                                                         |
 
 ---
 
@@ -405,7 +420,7 @@ done | sort -r
 ```
 
 **Delete**: 100+ commits behind with 0 unique, 200+ commits behind, stale exploration branches
-**Keep**: Active feature branches, branches with open PRs, `main`, `beads-metadata`
+**Keep**: Active feature branches, branches with open PRs, `main`, `__dolt_remote_info__` (bd sync metadata), `beads-metadata` (legacy issue history)
 
 ### Clone Health Check (Weekly)
 
