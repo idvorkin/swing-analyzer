@@ -243,6 +243,17 @@ export async function extractPosesFromVideo(
 
     // Get video properties
     const duration = video.duration;
+    // HTMLMediaElement.duration can legitimately be Infinity (unknown-duration
+    // media, per the HTML spec/MDN) or NaN. Once captured into the loop
+    // invariants (totalFrames, the while bound, and the early-exit break
+    // guard), a non-finite value makes every duration-bounded termination
+    // condition permanently unreachable and hangs extraction at 0%. Reject
+    // before deriving those invariants. Number.isFinite closes both Infinity
+    // and NaN at the single site where loadedmetadata does not guarantee a
+    // finite value.
+    if (!Number.isFinite(duration)) {
+      throw new Error(`Cannot extract poses: video duration is ${duration}`);
+    }
     const fps = await estimateVideoFps(video);
     const totalFrames = Math.ceil(duration * fps);
     const videoWidth = video.videoWidth;

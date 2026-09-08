@@ -6,14 +6,30 @@
  * TensorFlow, Web Crypto API, and the DOM.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from 'vitest';
 import type { PoseKeypoint } from '../types';
 import {
   calculateSpineAngle,
   computeAngles,
   estimateVideoFps,
+  extractPosesFromVideo,
   getModelDisplayName,
 } from './PoseExtractor';
+
+// The extractPosesFromVideo non-finite-duration path fires before TensorFlow,
+// canvas, or the pose detector are touched, so it only needs computeQuickVideoHash
+// (Web Crypto) mocked. Spy setup lives inside the extractPosesFromVideo describe.
+vi.mock('../utils/videoHash', () => ({
+  computeQuickVideoHash: vi.fn().mockResolvedValue('test-hash'),
+}));
 
 describe('PoseExtractor', () => {
   describe('getModelDisplayName', () => {
@@ -303,6 +319,88 @@ describe('PoseExtractor', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+  });
+
+  describe('extractPosesFromVideo', () => {
+    // The duration-validation guard fires right after loadedmetadata, before
+    // estimateVideoFps, the pose detector, or any canvas work. So the
+    // non-finite-duration path can be unit-tested with a small mock surface: a
+    // real jsdom <video> (so appendChild/remove work) with `duration` forced
+    // via Object.defineProperty, plus the module-level computeQuickVideoHash
+    // mock at the top of this file. TensorFlow is never reached on this path.
+    let capturedVideo: HTMLVideoElement | null = null;
+    let playSpy: MockInstance<() => Promise<void>> | undefined;
+    let realCreateElement: (tag: string) => HTMLElement;
+
+    beforeEach(() => {
+      realCreateElement = document.createElement.bind(document) as (
+        tag: string
+      ) => HTMLElement;
+      capturedVideo = null;
+      playSpy = undefined;
+      vi.spyOn(document, 'createElement').mockImplementation(((tag: string) => {
+        const el = realCreateElement(tag);
+        if (tag.toLowerCase() === 'video') {
+          const v = el as HTMLVideoElement;
+          capturedVideo = v;
+          playSpy = vi.spyOn(v, 'play').mockResolvedValue(undefined as never);
+        }
+        return el;
+      }) as typeof document.createElement);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      capturedVideo = null;
+      playSpy = undefined;
+    });
+
+    // Drive extraction past the loadedmetadata gate with a forced duration.
+    // Microtask ordering: the mock computeQuickVideoHash resolves first (the
+    // function continues, creates the video via our spy, and registers
+    // onloadedmetadata), then our queued microtask forces duration and fires
+    // the handler to unblock the metadata wait.
+    async function driveWithDuration(duration: number): Promise<unknown> {
+      const file = new File(['x'], 'test.webm', { type: 'video/webm' });
+      const promise = extractPosesFromVideo(file, { model: 'blazepose' });
+      queueMicrotask(() => {
+        if (!capturedVideo) return;
+        Object.defineProperty(capturedVideo, 'duration', {
+          value: duration,
+          configurable: true,
+          writable: true,
+        });
+        const handler = capturedVideo.onloadedmetadata;
+        if (handler) {
+          handler.call(capturedVideo, new Event('loadedmetadata'));
+        } else {
+          capturedVideo.dispatchEvent(new Event('loadedmetadata'));
+        }
+      });
+      return promise;
+    }
+
+    it('rejects when video.duration is Infinity instead of hanging the loop', async () => {
+      await expect(driveWithDuration(Infinity)).rejects.toThrow(
+        'Cannot extract poses: video duration is Infinity'
+      );
+    });
+
+    it('rejects when video.duration is NaN', async () => {
+      await expect(driveWithDuration(NaN)).rejects.toThrow(
+        'Cannot extract poses: video duration is NaN'
+      );
+    });
+
+    it('fails fast before running fps estimation (play is never called)', async () => {
+      await expect(driveWithDuration(Infinity)).rejects.toThrow();
+      // estimateVideoFps is the only caller of video.play() in the extraction
+      // path; if it were reached, the guard did not fire first.
+      if (!playSpy) {
+        throw new Error('play spy was not installed on the video element');
+      }
+      expect(playSpy).not.toHaveBeenCalled();
     });
   });
 });
