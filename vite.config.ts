@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react';
 import type { ViteDevServer } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+import type { RuntimeCaching } from 'workbox-build';
 
 // Container and Tailscale detection for dev server configuration
 function isRunningInContainer(): boolean {
@@ -61,6 +62,63 @@ function tailscaleUrlPlugin() {
 }
 
 // https://vite.dev/config/
+
+/**
+ * Workbox runtime-caching routes for the PWA service worker.
+ *
+ * Exported (and unit-tested in src/config/pwaRuntimeCaching.test.ts) so the
+ * TF.js BlazePose model-origin coverage is provable without importing the
+ * side-effectful vite.config.ts.
+ */
+export const pwaRuntimeCaching: RuntimeCaching[] = [
+  {
+    urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+    handler: 'CacheFirst',
+    options: {
+      cacheName: 'google-fonts-cache',
+      expiration: {
+        maxEntries: 10,
+        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+      },
+      cacheableResponse: {
+        statuses: [0, 200],
+      },
+    },
+  },
+  {
+    urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+    handler: 'CacheFirst',
+    options: {
+      cacheName: 'google-fonts-webfonts',
+      expiration: {
+        maxEntries: 30,
+        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+      },
+      cacheableResponse: {
+        statuses: [0, 200],
+      },
+    },
+  },
+  {
+    // TF.js BlazePose model.json + *.bin shards are fetched cross-origin
+    // from tfhub.dev at runtime (src/services/PoseExtractor.ts) and are NOT
+    // bundled into dist/, so they need a runtimeCaching route to satisfy the
+    // PWA's "works offline after first visit" promise (commit d6a92d3).
+    urlPattern: /^https:\/\/tfhub\.dev\/.*/i,
+    handler: 'CacheFirst',
+    options: {
+      cacheName: 'tfjs-models',
+      expiration: {
+        maxEntries: 20,
+        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+      },
+      cacheableResponse: {
+        statuses: [0, 200],
+      },
+    },
+  },
+];
+
 export default defineConfig({
   plugins: [
     react(),
@@ -103,36 +161,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15MB for TF.js models
         navigateFallback: '/index.html',
         cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: {
-                maxEntries: 30,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-        ],
+        runtimeCaching: pwaRuntimeCaching,
       },
     }),
   ],
