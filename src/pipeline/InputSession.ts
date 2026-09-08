@@ -192,6 +192,16 @@ export class InputSession {
     if (this.source) {
       this.source.stop();
     }
+    // Once stopped, the source must no longer feed the session: its in-flight
+    // extraction can still emit one frame + one progress/idle state AFTER
+    // abortController.abort() resolves (the abort signal is not forwarded
+    // into estimatePoses/seekToTime awaits in extractPosesFromVideo). Keep
+    // this.source assigned so getSource()/getSkeletonAtTime() still answer
+    // from the cache.
+    this.sourceSubscription?.unsubscribe();
+    this.sourceSubscription = null;
+    this.stateSubscription?.unsubscribe();
+    this.stateSubscription = null;
     this.stateSubject.next({ type: 'idle' });
   }
 
