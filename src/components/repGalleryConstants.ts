@@ -13,10 +13,19 @@ export const PISTOL_SQUAT_PHASE_ORDER = [
   'ascending',
 ] as const;
 
+/** Display order for Bulgarian split squat phases (same phase set as pistol) */
+export const BULGARIAN_SPLIT_SQUAT_PHASE_ORDER = [
+  'standing',
+  'descending',
+  'bottom',
+  'ascending',
+] as const;
+
 /** All known phase orders by exercise type */
 const PHASE_ORDERS: Record<string, readonly string[]> = {
   'kettlebell-swing': PHASE_ORDER,
   'pistol-squat': PISTOL_SQUAT_PHASE_ORDER,
+  'bulgarian-split-squat': BULGARIAN_SPLIT_SQUAT_PHASE_ORDER,
 };
 
 /** Human-readable labels for each phase */

@@ -28,6 +28,13 @@ describe('ExerciseRegistry', () => {
       );
     });
 
+    it('contains bulgarian-split-squat definition', () => {
+      expect(EXERCISE_REGISTRY['bulgarian-split-squat']).toBeDefined();
+      expect(EXERCISE_REGISTRY['bulgarian-split-squat'].displayName).toBe(
+        'Bulgarian Split Squat'
+      );
+    });
+
     it('each exercise has required fields', () => {
       for (const [id, def] of Object.entries(EXERCISE_REGISTRY)) {
         expect(def.id).toBe(id);
@@ -111,6 +118,7 @@ describe('ExerciseRegistry', () => {
       expect(Array.isArray(exercises)).toBe(true);
       expect(exercises).toContain('kettlebell-swing');
       expect(exercises).toContain('pistol-squat');
+      expect(exercises).toContain('bulgarian-split-squat');
     });
 
     it('does not include unknown', () => {
