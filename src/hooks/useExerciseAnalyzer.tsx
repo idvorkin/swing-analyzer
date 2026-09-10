@@ -1055,11 +1055,47 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       );
     };
 
+    // Flush the textual HUD (and re-render the skeleton overlay) for the
+    // currently displayed frame, unthrottled. During playback the HUD text
+    // updates are rate-limited to ~10fps (HUD_TEXT_INTERVAL_MS), so the
+    // readouts can lag the frame-synchronous canvas by up to that interval.
+    // We force a final write whenever playback stops (pause/end) and on seek
+    // so the on-screen numbers match the displayed frame. This is the same
+    // lookup + updateHudFromSkeleton handleSeeked already performed; shared
+    // here so all stop/seek paths stay consistent.
+    const flushHudForCurrentFrame = () => {
+      const session = inputSessionRef.current;
+      if (!session) return;
+
+      const skeletonEvent = session.getSkeletonAtTime(video.currentTime);
+      const hasPoses = !!skeletonEvent?.skeleton;
+      setHasPosesForCurrentFrame(hasPoses);
+      if (skeletonEvent?.skeleton) {
+        // Re-render the skeleton (idempotent — the canvas already shows this
+        // frame, but kept symmetric with the HUD flush).
+        if (skeletonRendererRef.current) {
+          skeletonRendererRef.current.renderSkeleton(
+            skeletonEvent.skeleton,
+            performance.now()
+          );
+        }
+        // Update HUD with current frame's data (uses precomputed speed)
+        updateHudFromSkeleton(
+          skeletonEvent.skeleton,
+          video.currentTime,
+          skeletonEvent.precomputedAngles?.wristSpeed
+        );
+      }
+    };
+
     const handlePause = () => {
       isPlayingRef.current = false;
       setIsPlaying(false);
       setAppState((prev) => ({ ...prev, isProcessing: false }));
       recordPlaybackPause({ videoTime: video.currentTime });
+      // A plain pause does not fire 'seeked', so the throttled HUD can lag the
+      // displayed frame by up to HUD_TEXT_INTERVAL_MS — flush to reconcile.
+      flushHudForCurrentFrame();
     };
 
     const handleEnded = () => {
@@ -1067,6 +1103,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       setIsPlaying(false);
       setAppState((prev) => ({ ...prev, isProcessing: false }));
       // Don't reset rep count when video ends - just stop processing
+      // Like pause, 'ended' does not fire 'seeked' — flush to reconcile the
+      // throttled HUD with the final displayed frame.
+      flushHudForCurrentFrame();
     };
 
     // Per-frame skeleton rendering using requestVideoFrameCallback
@@ -1156,31 +1195,16 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     };
 
     const handleSeeked = () => {
-      // On seek, render skeleton at current position (works when paused too)
-      const session = inputSessionRef.current;
-      if (!session) return;
+      // On seek, render skeleton + flush HUD at current position (works when
+      // paused too). Unthrottled so the readouts match the seeked frame.
+      flushHudForCurrentFrame();
 
-      const skeletonEvent = session.getSkeletonAtTime(video.currentTime);
-      const hasPoses = !!skeletonEvent?.skeleton;
-      setHasPosesForCurrentFrame(hasPoses);
-      if (skeletonEvent?.skeleton) {
-        // Render the skeleton
-        if (skeletonRendererRef.current) {
-          skeletonRendererRef.current.renderSkeleton(
-            skeletonEvent.skeleton,
-            performance.now()
-          );
-        }
-        // Update HUD with current frame's data (uses precomputed speed)
-        updateHudFromSkeleton(
-          skeletonEvent.skeleton,
-          video.currentTime,
-          skeletonEvent.precomputedAngles?.wristSpeed
-        );
+      // Sync rep counter and position to seek location (immediate, not
+      // throttled). Only when a session exists — matches flushHudForCurrentFrame's
+      // own guard (the original handler early-returned before this on !session).
+      if (inputSessionRef.current) {
+        repSyncHandlerRef.current?.(video.currentTime);
       }
-
-      // Sync rep counter and position to seek location (immediate, not throttled)
-      repSyncHandlerRef.current?.(video.currentTime);
     };
 
     video.addEventListener('play', handlePlayWithCallback);
