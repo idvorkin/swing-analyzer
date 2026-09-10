@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Skeleton } from '../models/Skeleton';
 import type { PoseKeypoint } from '../types';
 import { MediaPipeBodyParts } from '../types';
-import { asTimestampMs } from '../utils/brandedTypes';
+import { asTimestampMs, asVideoTimeSeconds } from '../utils/brandedTypes';
 import {
   BulgarianSplitSquatFormAnalyzer,
   NOT_ASSESSABLE,
@@ -144,6 +144,62 @@ function repCurve(bottom = 80): number[] {
 
 const STAND_PAD = [165, 165, 165, 165, 165, 165];
 
+/**
+ * Feed frames with explicit, monotonic timestamps (videoTime seconds → ms) so
+ * the retroactive 50%-checkpoint capture (which filters frameHistory by
+ * timestamp against the bottom) is deterministic — unlike `feed`, which uses
+ * Date.now() and can produce sub-millisecond ties.
+ */
+function feedTimed(
+  analyzer: BulgarianSplitSquatFormAnalyzer,
+  frames: { frontKnee: number; videoTime: number }[],
+  base: Partial<MockOpts> = {}
+): FormAnalyzerResult | undefined {
+  let lastResult: FormAnalyzerResult | undefined;
+  for (const f of frames) {
+    lastResult = analyzer.processFrame(
+      mockSkeleton({ ...base, frontKnee: f.frontKnee }),
+      asTimestampMs(Math.round(f.videoTime * 1000)),
+      asVideoTimeSeconds(f.videoTime)
+    );
+  }
+  return lastResult;
+}
+
+/** A full standing→bottom→standing rep whose standing pad is `standing`. */
+function repSequence(
+  standing: number,
+  bottom = 80
+): { frontKnee: number; videoTime: number }[] {
+  // Standing pad (>= 150), then a descent whose first frame < 140 is the trigger,
+  // down to `bottom` with a brief plateau (so trough detection confirms), then an
+  // ascent back past 150, ending with two standing-value frames (the extra one
+  // lets the smoothed-history bottom→ascending and ascending→standing gates fire).
+  const curve = [
+    standing,
+    standing,
+    standing,
+    135,
+    120,
+    105,
+    90,
+    bottom,
+    bottom,
+    85,
+    95,
+    110,
+    125,
+    140,
+    155,
+    standing,
+    standing,
+  ];
+  return curve.map((frontKnee, i) => ({
+    frontKnee,
+    videoTime: i * 0.033,
+  }));
+}
+
 describe('BulgarianSplitSquatFormAnalyzer', () => {
   it('starts in the standing phase with zero reps', () => {
     const a = new BulgarianSplitSquatFormAnalyzer();
@@ -248,5 +304,90 @@ describe('BulgarianSplitSquatFormAnalyzer', () => {
     expect(a.getRepCount()).toBe(0);
     expect(a.getPhase()).toBe('standing');
     expect(a.getWorkingLeg()).toBeNull();
+  });
+
+  describe('Rep Gallery checkpoint capture', () => {
+    // Regression for the bug where the "standing" checkpoint and the
+    // standingKneeAtStart travel reference were captured at the descent-trigger
+    // frame (frontKnee < descendingKneeThreshold = 140) instead of at an
+    // upright frame (frontKnee >= standingKneeMin = 150).
+
+    it('captures the standing checkpoint at the most-upright standing frame, not the descent-trigger frame', () => {
+      const a = new BulgarianSplitSquatFormAnalyzer();
+      const last = feedTimed(a, repSequence(165, 80), { front: 'right' });
+      expect(a.getRepCount()).toBe(1);
+      expect(last?.repCompleted).toBe(true);
+
+      const positions = last?.repPositions ?? [];
+      const standing = positions.find((p) => p.name === 'standing');
+      const bottom = positions.find((p) => p.name === 'bottom');
+
+      // Standing checkpoint is the upright pad (165), NOT the trigger (~135).
+      expect(standing).toBeDefined();
+      expect(standing?.angles.frontKnee).toBeGreaterThanOrEqual(150);
+      expect(standing?.angles.frontKnee).toBe(165);
+      // The trigger frame (~135) must never be the standing checkpoint.
+      expect(standing?.angles.frontKnee).not.toBe(135);
+
+      // Sanity: the rep produced all four phase checkpoints.
+      expect(positions.length).toBe(4);
+      expect(bottom?.angles.frontKnee).toBe(80);
+    });
+
+    it('derives the 50% descending/ascending checkpoints from the true upright standing reference', () => {
+      const a = new BulgarianSplitSquatFormAnalyzer();
+      const last = feedTimed(a, repSequence(165, 80), { front: 'right' });
+      expect(a.getRepCount()).toBe(1);
+
+      const positions = last?.repPositions ?? [];
+      const standing = positions.find((p) => p.name === 'standing');
+      const descending = positions.find((p) => p.name === 'descending');
+      const bottom = positions.find((p) => p.name === 'bottom');
+      const ascending = positions.find((p) => p.name === 'ascending');
+      // Anchors (also pin existence via optional chaining vs. a concrete value).
+      expect(standing?.angles.frontKnee).toBe(165);
+      expect(bottom?.angles.frontKnee).toBe(80);
+
+      // Guards standingKneeAtStart (a distinct code path from the standing
+      // peak): with the TRUE upright reference (165), the 50% target is
+      // (165+80)/2 = 122.5, so both checkpoints land above 115. If
+      // standingKneeAtStart regressed to the descent-trigger (~135), the
+      // target would drop to ~107.5 and both checkpoints would fall below
+      // 115 — failing here. (This is the original bug: standingKneeAtStart
+      // was keyed off the same trigger as the phase transition.)
+      expect(descending?.angles.frontKnee).toBeGreaterThan(115);
+      expect(ascending?.angles.frontKnee).toBeGreaterThan(115);
+    });
+
+    it('resets the standing reference between reps so each rep captures its own upright frame', () => {
+      // Rep 1 stands at 165, rep 2 stands at a LOWER 160. If the per-rep
+      // best-standing-frame were not reset on transition back to standing, rep
+      // 2's checkpoint would be the stale 165 from rep 1.
+      const a = new BulgarianSplitSquatFormAnalyzer();
+      const reps: FormAnalyzerResult[] = [];
+      let last: FormAnalyzerResult | undefined;
+      for (const f of [...repSequence(165, 80), ...repSequence(160, 80)]) {
+        last = a.processFrame(
+          mockSkeleton({ front: 'right', frontKnee: f.frontKnee }),
+          asTimestampMs(Math.round(f.videoTime * 1000)),
+          asVideoTimeSeconds(f.videoTime)
+        );
+        if (last?.repCompleted) reps.push(last);
+      }
+      expect(a.getRepCount()).toBe(2);
+      expect(reps.length).toBe(2);
+
+      const rep1Standing = reps[0].repPositions?.find(
+        (p) => p.name === 'standing'
+      );
+      const rep2Standing = reps[1].repPositions?.find(
+        (p) => p.name === 'standing'
+      );
+      expect(rep1Standing?.angles.frontKnee).toBe(165);
+      expect(rep2Standing?.angles.frontKnee).toBe(160);
+      // Both must still be upright by the analyzer's own definition.
+      expect(rep1Standing?.angles.frontKnee).toBeGreaterThanOrEqual(150);
+      expect(rep2Standing?.angles.frontKnee).toBeGreaterThanOrEqual(150);
+    });
   });
 });

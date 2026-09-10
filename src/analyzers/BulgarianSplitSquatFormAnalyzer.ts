@@ -161,6 +161,7 @@ export class BulgarianSplitSquatFormAnalyzer extends FormAnalyzerBase<
 
   // Trough (bottom) detection on the front-knee angle
   private standingKneeAtStart: AngleDegrees | null = null;
+  private bestStandingFrame: FrameRecord | null = null;
   private bottomCandidate: FrameRecord | null = null;
   private framesRisingAfterBottom = 0;
   private readonly framesNeededToConfirmBottom = 3;
@@ -298,9 +299,16 @@ export class BulgarianSplitSquatFormAnalyzer extends FormAnalyzerBase<
 
     switch (this.phase) {
       case 'standing':
+        if (
+          this.bestStandingFrame === null ||
+          angles.frontKnee > this.bestStandingFrame.frontKnee
+        ) {
+          this.bestStandingFrame = { ...frameRecord };
+        }
         if (this.shouldTransitionToDescending(angles)) {
-          this.captureStandingCheckpoint(frameRecord);
-          this.standingKneeAtStart = angles.frontKnee;
+          const standingFrame = this.bestStandingFrame ?? frameRecord;
+          this.captureStandingCheckpoint(standingFrame);
+          this.standingKneeAtStart = standingFrame.frontKnee;
           this.bottomCandidate = null;
           this.framesRisingAfterBottom = 0;
           this.repArmed = false;
@@ -333,6 +341,7 @@ export class BulgarianSplitSquatFormAnalyzer extends FormAnalyzerBase<
             repQuality = result.repQuality;
           }
           this.transitionTo('standing');
+          this.bestStandingFrame = null;
           this.currentRepMetrics = this.createInitialMetrics();
           this.repArmed = false;
         }
@@ -729,6 +738,7 @@ export class BulgarianSplitSquatFormAnalyzer extends FormAnalyzerBase<
     this.smoothedFrontKnee = null;
     this.frontKneeHistory = [];
     this.standingKneeAtStart = null;
+    this.bestStandingFrame = null;
     this.bottomCandidate = null;
     this.framesRisingAfterBottom = 0;
     this.repArmed = false;
