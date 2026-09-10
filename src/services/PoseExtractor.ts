@@ -37,116 +37,6 @@ const MODEL_VERSIONS: Record<PoseModel, string> = {
 };
 
 /**
- * Capture a person-centered portrait thumbnail from video frame
- *
- * Uses keypoints to find the person's bounding box, then crops a portrait
- * region centered on them. Falls back to center crop if no keypoints.
- */
-function capturePersonCenteredThumbnail(
-  sourceCanvas: HTMLCanvasElement,
-  thumbnailCtx: CanvasRenderingContext2D,
-  keypoints: Array<{ x: number; y: number; score?: number }>,
-  videoWidth: number,
-  videoHeight: number,
-  thumbWidth: number,
-  thumbHeight: number
-): ImageData {
-  // Calculate the source crop region (portrait aspect ratio)
-  const targetAspect = thumbWidth / thumbHeight; // 3:4 = 0.75
-  let cropWidth: number;
-  let cropHeight: number;
-  let cropX: number;
-  let cropY: number;
-
-  // Find person center from keypoints
-  let personCenterX = videoWidth / 2;
-  let personCenterY = videoHeight / 2;
-
-  // Filter to confident keypoints (score > 0.3)
-  const confidentKeypoints = keypoints.filter((kp) => (kp.score ?? 0) > 0.3);
-
-  if (confidentKeypoints.length > 0) {
-    // Calculate bounding box of confident keypoints
-    let minX = Infinity,
-      maxX = -Infinity;
-    let minY = Infinity,
-      maxY = -Infinity;
-
-    for (const kp of confidentKeypoints) {
-      minX = Math.min(minX, kp.x);
-      maxX = Math.max(maxX, kp.x);
-      minY = Math.min(minY, kp.y);
-      maxY = Math.max(maxY, kp.y);
-    }
-
-    // Center of person
-    personCenterX = (minX + maxX) / 2;
-    personCenterY = (minY + maxY) / 2;
-
-    // Person dimensions with padding (ensure minimum of 1px to avoid division by zero)
-    const personWidth = Math.max((maxX - minX) * 1.4, 1); // 40% padding
-    const personHeight = Math.max((maxY - minY) * 1.3, 1); // 30% padding
-
-    // Determine crop size to fit person while maintaining aspect ratio
-    if (personWidth / personHeight > targetAspect) {
-      // Person is wider than target aspect - fit width
-      cropWidth = personWidth;
-      cropHeight = cropWidth / targetAspect;
-    } else {
-      // Person is taller than target aspect - fit height
-      cropHeight = personHeight;
-      cropWidth = cropHeight * targetAspect;
-    }
-
-    // Ensure minimum crop size (at least 40% of frame)
-    const minCropHeight = videoHeight * 0.4;
-    if (cropHeight < minCropHeight) {
-      cropHeight = minCropHeight;
-      cropWidth = cropHeight * targetAspect;
-    }
-  } else {
-    // No keypoints - use center crop with portrait aspect
-    cropHeight = videoHeight * 0.85;
-    cropWidth = cropHeight * targetAspect;
-  }
-
-  // Ensure crop doesn't exceed video bounds while maintaining aspect ratio
-  if (cropWidth > videoWidth) {
-    cropWidth = videoWidth;
-    cropHeight = cropWidth / targetAspect;
-  }
-  if (cropHeight > videoHeight) {
-    cropHeight = videoHeight;
-    cropWidth = cropHeight * targetAspect;
-  }
-
-  // Center crop on person, but clamp to video bounds
-  cropX = Math.max(
-    0,
-    Math.min(personCenterX - cropWidth / 2, videoWidth - cropWidth)
-  );
-  cropY = Math.max(
-    0,
-    Math.min(personCenterY - cropHeight / 2, videoHeight - cropHeight)
-  );
-
-  // Draw cropped region to thumbnail
-  thumbnailCtx.drawImage(
-    sourceCanvas,
-    cropX,
-    cropY,
-    cropWidth,
-    cropHeight,
-    0,
-    0,
-    thumbWidth,
-    thumbHeight
-  );
-
-  return thumbnailCtx.getImageData(0, 0, thumbWidth, thumbHeight);
-}
-
-/**
  * Extract poses from a video file
  */
 export async function extractPosesFromVideo(
@@ -155,8 +45,11 @@ export async function extractPosesFromVideo(
 ): Promise<PoseExtractionResult> {
   const startTime = performance.now();
 
-  // Compute video hash for matching
-  const videoHash = await computeQuickVideoHash(videoFile);
+  // Video hash for cache matching. VideoFileSkeletonSource already computes
+  // this for its cache lookup and passes it in; only recompute on the rare
+  // direct-call path that omits it (avoids a redundant full-file hash).
+  const videoHash =
+    options.videoHash ?? (await computeQuickVideoHash(videoFile));
 
   // Create video element to read frames
   const video = document.createElement('video');
@@ -260,20 +153,6 @@ export async function extractPosesFromVideo(
       throw new Error('Failed to get canvas 2d context');
     }
 
-    // Create thumbnail canvas for filmstrip (portrait orientation, person-centered)
-    // Portrait aspect ratio 3:4 for better person framing
-    const THUMBNAIL_WIDTH = 120;
-    const THUMBNAIL_HEIGHT = 160;
-    const thumbnailCanvas = document.createElement('canvas');
-    thumbnailCanvas.width = THUMBNAIL_WIDTH;
-    thumbnailCanvas.height = THUMBNAIL_HEIGHT;
-    const thumbnailCtx = thumbnailCanvas.getContext('2d', {
-      willReadFrequently: true,
-    });
-    if (!thumbnailCtx) {
-      throw new Error('Failed to get thumbnail canvas 2d context');
-    }
-
     // Extract frames
     const frames: PoseTrackFrame[] = [];
     let frameIndex = 0;
@@ -288,24 +167,13 @@ export async function extractPosesFromVideo(
         throw new DOMException('Aborted', 'AbortError');
       }
 
-      // Always seek and capture video frames (even in mock mode)
-      // Only the ML detector is mocked - video frame capture must run for filmstrip thumbnails
+      // Always seek and draw the frame (even in mock mode): the detector
+      // reads poses from this canvas. Only the ML detector is mocked.
       await seekToTime(video, frameIndex * frameInterval);
       ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
 
       // Detect pose (mock detector returns fixture data, real detector runs ML inference)
       const poses = await detector.estimatePoses(canvas);
-
-      // Capture person-centered portrait thumbnail for filmstrip
-      const frameImage = capturePersonCenteredThumbnail(
-        canvas,
-        thumbnailCtx,
-        poses.length > 0 ? poses[0].keypoints : [],
-        videoWidth,
-        videoHeight,
-        THUMBNAIL_WIDTH,
-        THUMBNAIL_HEIGHT
-      );
 
       // Get keypoints (BlazePose returns 33 MediaPipe keypoints)
       let keypoints: PoseKeypoint[] = [];
@@ -323,8 +191,6 @@ export async function extractPosesFromVideo(
         videoTime,
         keypoints,
         score: poses.length > 0 ? poses[0].score : undefined,
-        // Include thumbnail for filmstrip (runtime only, not persisted)
-        frameImage,
       };
 
       // Pre-compute angles if requested

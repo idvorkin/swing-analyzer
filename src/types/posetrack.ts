@@ -126,9 +126,11 @@ export interface PoseTrackFrame {
 
   /**
    * RUNTIME ONLY - not serialized to PoseTrack files.
-   * Frame image captured during extraction for filmstrip thumbnails.
-   * Only populated in extraction mode by PoseExtractor.
-   * Cleared immediately after thumbnail creation to conserve memory.
+   * Optional filmstrip thumbnail for a frame. Extraction no longer captures
+   * one per frame (that retained a 120x160 ImageData for every frame — dead
+   * weight, since the rep gallery only needs one per detected rep). The
+   * ThumbnailQueue (ThumbnailGenerator) now captures thumbnails on demand for
+   * checkpoint/rep positions that lack one. Left optional for those readers.
    */
   frameImage?: ImageData;
 }
@@ -156,6 +158,13 @@ export interface PoseExtractionOptions {
 
   /** Whether to pre-compute angles during extraction */
   precomputeAngles?: boolean;
+
+  /**
+   * Precomputed quick video hash. When provided, extraction skips its own
+   * hash pass (the caller — VideoFileSkeletonSource — already computed it for
+   * the cache lookup). Omit to have extraction compute it.
+   */
+  videoHash?: string;
 
   /** Callback for progress updates */
   onProgress?: (progress: PoseExtractionProgress) => void;

@@ -378,6 +378,9 @@ export class VideoFileSkeletonSource implements SkeletonSource {
       const result = await extractPosesFromVideo(this.videoFile, {
         model: this.model,
         precomputeAngles: true,
+        // Reuse the hash computed in start() for the cache lookup — avoids a
+        // second full-file hash pass on the cache-miss path.
+        videoHash,
         signal: this.abortController.signal,
         onProgress: (progress) => {
           this.stateSubject.next({

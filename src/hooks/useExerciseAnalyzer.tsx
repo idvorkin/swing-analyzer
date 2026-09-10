@@ -66,6 +66,14 @@ import { useKeyboardNavigation } from './useKeyboardNavigation';
 // Throttle interval for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
 const REP_SYNC_INTERVAL_MS = 1000; // 1 second
 
+// Throttle for the textual HUD (angle/speed readouts). The canvas skeleton
+// overlay stays frame-synchronous — only these React text state updates are
+// rate-limited, since the numbers are unreadable faster than ~10fps anyway.
+const HUD_TEXT_INTERVAL_MS = 100; // ~10fps
+// Throttle for the extraction progress bar React state. The bar can't be read
+// faster than a few times a second; the final 100% frame is always flushed.
+const EXTRACTION_PROGRESS_INTERVAL_MS = 250; // ~4fps
+
 // Default phases (swing) - used when resetting before exercise detection runs
 const DEFAULT_PHASES = [...PHASE_ORDER];
 
@@ -270,6 +278,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // Throttle for rep/position sync during playback (see ARCHITECTURE.md "Throttled Playback Sync")
   const lastRepSyncTimeRef = useRef<number>(0);
+  // Throttle timestamps for the textual HUD and the extraction progress bar.
+  const lastHudTextTimeRef = useRef<number>(0);
+  const lastExtractionProgressTimeRef = useRef<number>(0);
   // Ref to hold the rep sync handler (enables stable reference from event handlers)
   const repSyncHandlerRef = useRef<((videoTime: number) => void) | null>(null);
 
@@ -652,6 +663,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // Track previous rep count for detecting new reps
   const prevRepCountRef = useRef<number>(0);
+  // Last rep count actually pushed to React state — avoids a setState call on
+  // every processed frame when the count hasn't changed.
+  const lastDisplayedRepCountRef = useRef<number>(0);
   // Track frame index for debugging
   const frameIndexRef = useRef<number>(0);
   // Track consecutive FRAMES with analysis errors (for user feedback when
@@ -733,8 +747,12 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       );
     }
 
-    // Update rep count (cumulative across all extracted frames)
-    setRepCount(result);
+    // Update rep count (cumulative across all extracted frames), but only when
+    // it actually changes — this fires for every processed frame.
+    if (result !== lastDisplayedRepCountRef.current) {
+      lastDisplayedRepCountRef.current = result;
+      setRepCount(result);
+    }
 
     // NOTE: Do NOT update spineAngle/armToSpineAngle here!
     // This is called for every extraction frame, but the visible video isn't synced
@@ -799,6 +817,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
             }
             // Reset counters for next video
             prevRepCountRef.current = 0;
+            lastDisplayedRepCountRef.current = 0;
             frameIndexRef.current = 0;
             // Cache processing complete - clear the loading state
             setIsCacheProcessing(false);
@@ -900,10 +919,22 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
       skeletonHandlerRef.current?.(event);
     });
 
-    // Subscribe to extraction progress
+    // Subscribe to extraction progress. This fires once per extracted frame;
+    // throttle the React state update to ~4fps so a long extraction doesn't
+    // re-render the whole tree ~30x/sec. Always flush the terminal 100% frame
+    // so the bar never sticks below full.
     const progressSubscription = session.extractionProgress$.subscribe(
       (progress) => {
-        setExtractionProgress(progress);
+        const now = performance.now();
+        const isComplete = progress.percentage >= 100;
+        if (
+          isComplete ||
+          now - lastExtractionProgressTimeRef.current >=
+            EXTRACTION_PROGRESS_INTERVAL_MS
+        ) {
+          lastExtractionProgressTimeRef.current = now;
+          setExtractionProgress(progress);
+        }
       }
     );
 
@@ -1050,19 +1081,26 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
         const hasPoses = !!skeletonEvent?.skeleton;
         setHasPosesForCurrentFrame(hasPoses);
         if (skeletonEvent?.skeleton) {
-          // Render the skeleton
+          // Render the skeleton — frame-synchronous, every frame (the canvas
+          // overlay must track the video exactly; do NOT throttle this).
           if (skeletonRendererRef.current) {
             skeletonRendererRef.current.renderSkeleton(
               skeletonEvent.skeleton,
               now
             );
           }
-          // Update HUD with current frame's data (uses precomputed speed)
-          updateHudFromSkeleton(
-            skeletonEvent.skeleton,
-            metadata.mediaTime,
-            skeletonEvent.precomputedAngles?.wristSpeed
-          );
+          // Update the textual HUD (uses precomputed speed) — throttled to
+          // ~10fps. These React state updates drive only the angle/speed
+          // readouts, unreadable faster than this; the skeleton above stays
+          // frame-synchronous.
+          if (now - lastHudTextTimeRef.current >= HUD_TEXT_INTERVAL_MS) {
+            lastHudTextTimeRef.current = now;
+            updateHudFromSkeleton(
+              skeletonEvent.skeleton,
+              metadata.mediaTime,
+              skeletonEvent.precomputedAngles?.wristSpeed
+            );
+          }
         }
 
         // Throttled rep/position sync (every REP_SYNC_INTERVAL_MS)
@@ -1165,6 +1203,7 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
 
   // Helper: Reset all video-related state for a new video
   const resetVideoState = useCallback(() => {
+    lastDisplayedRepCountRef.current = 0;
     setRepCount(0);
     setRepThumbnails(new Map());
     pipelineRef.current?.reset();
@@ -1733,6 +1772,8 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
   // ========================================
   const reset = useCallback(() => {
     pipelineRef.current?.reset();
+    prevRepCountRef.current = 0;
+    lastDisplayedRepCountRef.current = 0;
     setRepCount(0);
     setSpineAngle(0);
     setArmToSpineAngle(0);
