@@ -19,6 +19,55 @@ import {
   useShortTestVideo,
 } from './helpers';
 
+// Read the live HUD spine/arm text from the page (DOM ids set in
+// VideoSectionV2.tsx as `#hud-${metric.key}`; the swing metrics are
+// spineAngle and armAngle).
+async function readHud(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const num = (sel: string) => {
+      const el = document.querySelector(sel);
+      const m = el?.textContent?.match(/-?\d+/);
+      return m ? Number.parseInt(m[0], 10) : null;
+    };
+    return { spine: num('#hud-spineAngle'), arm: num('#hud-armAngle') };
+  });
+}
+
+async function seekTo(
+  page: import('@playwright/test').Page,
+  t: number
+): Promise<void> {
+  await page.evaluate((tt) => {
+    const v = document.querySelector('video') as HTMLVideoElement;
+    v.pause();
+    v.currentTime = tt;
+  }, t);
+  await page.waitForFunction(
+    (tt) =>
+      Math.abs(
+        (document.querySelector('video') as HTMLVideoElement).currentTime - tt
+      ) < 0.05,
+    t
+  );
+}
+
+// Gate: wait until the video has loaded enough to seek and the HUD is showing
+// (hasPosesForCurrentFrame true). The seeded pose track is served from the live
+// cache; once the HUD is visible, a seek reliably fires `seeked` and the flush
+// runs. (We do NOT gate on exact fixture values: in this environment the live
+// cache serves a sparse, time-varying subset of frames, so a fixture-value
+// check is unreliable. The assertions below are fixture-independent.)
+async function waitForVideoReadyForHud(
+  page: import('@playwright/test').Page
+): Promise<void> {
+  await expect(page.locator('.hud-overlay-angles')).toBeVisible({
+    timeout: 15000,
+  });
+  await page.waitForFunction(
+    () => (document.querySelector('video') as HTMLVideoElement).readyState >= 2
+  );
+}
+
 test.describe('Swing Analyzer', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept GitHub video URL and serve short local video for faster tests
@@ -425,5 +474,139 @@ test.describe('Swing Analyzer', () => {
       alignment.videoContent.height,
       0
     );
+  });
+
+  // B1: Regression for the ddde777 bug — pausing mid-playback must flush the
+  // throttled HUD so the on-screen numbers match the displayed frame. The
+  // throttle writes the HUD at most ~10fps; without a final flush on pause the
+  // readouts can lag the displayed frame by up to ~100ms (≤3 frames @ 30fps).
+  // Fixture-independent check: the HUD after a plain pause must equal the HUD
+  // after an explicit seek to the same time (the seek path always flushes via
+  // handleSeeked). With the fix both flush the frame at video.currentTime; if
+  // the pause flush were missing the paused HUD would retain the throttled
+  // (stale) value and diverge from the seeked one.
+  test('pausing mid-playback flushes the HUD to the displayed frame', async ({
+    page,
+  }) => {
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+    await clickSwingSampleButton(page);
+    await waitForVideoReadyForHud(page);
+
+    const sampleTimes = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
+
+    for (const t of sampleTimes) {
+      // Start each sample from a clean paused state at t (seek flushes HUD=t).
+      await seekTo(page, t);
+
+      // Play >one throttle window (~130–220ms) so the displayed frame advances
+      // past the last throttled HUD write before the pause.
+      await page.evaluate(() => {
+        const v = document.querySelector('video') as HTMLVideoElement;
+        void v.play();
+      });
+      await page.waitForFunction(
+        () => !(document.querySelector('video') as HTMLVideoElement).paused
+      );
+      const playMs = 130 + (t % 0.1) * 900; // deterministic 130–220ms
+      await page.waitForTimeout(playMs);
+
+      // Pause (plain pause — fires 'pause' but NOT 'seeked').
+      await page.evaluate(() => {
+        (document.querySelector('video') as HTMLVideoElement).pause();
+      });
+      await page.waitForFunction(
+        () => (document.querySelector('video') as HTMLVideoElement).paused
+      );
+
+      const ct = await page.evaluate(
+        () => (document.querySelector('video') as HTMLVideoElement).currentTime
+      );
+      const afterPause = await readHud(page);
+
+      // Ground truth: seek away then back to ct to force the (always-flushing)
+      // seeked path to write the HUD for the same time.
+      const away = ct > 1 ? ct - 1 : ct + 1;
+      await seekTo(page, away);
+      await seekTo(page, ct);
+      const afterSeek = await readHud(page);
+
+      // The HUD after pause must equal the HUD after an explicit seek to the
+      // same time (both spine and arm — fixture-independent).
+      expect(afterPause.spine).not.toBeNull();
+      expect(afterPause.spine).toBe(afterSeek.spine);
+      expect(afterPause.arm).toBe(afterSeek.arm);
+    }
+  });
+
+  // B2: The natural-end path has the same gap as pause — 'ended' does not fire
+  // 'seeked', so the throttled HUD must be flushed in handleEnded.
+  test('video ending flushes the HUD to the final displayed frame', async ({
+    page,
+  }) => {
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+    await clickSwingSampleButton(page);
+    await waitForVideoReadyForHud(page);
+
+    // Restart from near the start so the video plays through to its end.
+    await seekTo(page, 0.3);
+
+    // Speed up playback and play to the end.
+    await page.evaluate(() => {
+      const v = document.querySelector('video') as HTMLVideoElement;
+      v.playbackRate = 4;
+      void v.play();
+    });
+    await page.waitForFunction(
+      () => (document.querySelector('video') as HTMLVideoElement).ended,
+      undefined,
+      { timeout: 30000 }
+    );
+
+    const ct = await page.evaluate(
+      () => (document.querySelector('video') as HTMLVideoElement).currentTime
+    );
+    const afterEnded = await readHud(page);
+
+    // Cross-check against the always-flushing seek path for the same time
+    // (fixture-independent).
+    const away = ct > 0.5 ? ct - 0.5 : ct + 0.5;
+    await seekTo(page, away);
+    await seekTo(page, ct);
+    const afterSeek = await readHud(page);
+    expect(afterEnded.spine).toBe(afterSeek.spine);
+    expect(afterEnded.arm).toBe(afterSeek.arm);
+  });
+
+  // B3: Regression guard for the handleSeeked refactor (which now delegates to
+  // the shared flushHudForCurrentFrame). The seek path must still flush the HUD
+  // for the seeked time and remain consistent on a round-trip. (We assert
+  // consistency, not specific values: in this environment the live cache
+  // serves a sparse subset of frames, so the exact value at an arbitrary time
+  // isn't fixture-comparable — see the existing user-journey spec, which
+  // likewise only checks the HUD is defined after seeking.)
+  test('seeking flushes the HUD to the seeked frame (refactor regression guard)', async ({
+    page,
+  }) => {
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+    await clickSwingSampleButton(page);
+    await waitForVideoReadyForHud(page);
+
+    // HUD stays defined across seeks to several times.
+    for (const t of [0.5, 2.5, 4.0, 1.0, 5.0]) {
+      await seekTo(page, t);
+      const hud = await readHud(page);
+      expect(hud.spine).not.toBeNull();
+      expect(hud.arm).not.toBeNull();
+    }
+
+    // Round-trip consistency: seek to A, read; seek away; seek back to A; the
+    // value must reproduce (the seeked flush is idempotent for a given time).
+    await seekTo(page, 3.0);
+    const atA = await readHud(page);
+    await seekTo(page, 1.5);
+    await seekTo(page, 3.0);
+    const roundTrip = await readHud(page);
+    expect(roundTrip.spine).toBe(atA.spine);
+    expect(roundTrip.arm).toBe(atA.arm);
   });
 });
