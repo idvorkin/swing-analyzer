@@ -56,6 +56,8 @@ interface RepRecord {
   kneeCave: number;
   lowBackArch: number;
   minFrontKnee: number;
+  /** front-knee angle of the captured "standing" Rep Gallery checkpoint */
+  standingFrontKnee: number | undefined;
 }
 
 function analyze(posetrack: PoseTrack) {
@@ -76,11 +78,13 @@ function analyze(posetrack: PoseTrack) {
 
     if (result.repCompleted) {
       const m = result.repQuality?.metrics ?? {};
+      const standing = result.repPositions?.find((p) => p.name === 'standing');
       reps.push({
         videoTime: frame.videoTime,
         kneeCave: m.kneeCave ?? 0,
         lowBackArch: m.lowBackArch ?? 0,
         minFrontKnee: 180 - (m.depth ?? 0),
+        standingFrontKnee: standing?.angles.frontKnee,
       });
     }
   }
@@ -131,6 +135,21 @@ describe('BulgarianSplitSquatFormAnalyzer with real posetrack data', () => {
     const { reps } = analyze(posetrack);
     for (const rep of reps) {
       expect(rep.lowBackArch).toBe(0);
+    }
+  });
+
+  // Regression: the "standing" Rep Gallery checkpoint must be captured from an
+  // upright frame (frontKnee >= standingKneeMin = 150), not from the
+  // descent-trigger frame (frontKnee < descendingKneeThreshold = 140), which by
+  // the analyzer's own definition is NOT a standing frame. Before the fix the
+  // standing checkpoint was 76-140 deg on every rep; it now captures the
+  // most-upright frame observed during the standing phase.
+  it('captures the standing Rep Gallery checkpoint at an upright frame (frontKnee >= 150) on every rep', () => {
+    const { reps } = analyze(posetrack);
+    expect(reps.length).toBe(8);
+    for (const rep of reps) {
+      expect(rep.standingFrontKnee).toBeDefined();
+      expect(rep.standingFrontKnee).toBeGreaterThanOrEqual(150);
     }
   });
 });
