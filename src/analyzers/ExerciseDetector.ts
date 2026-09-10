@@ -11,7 +11,11 @@
 
 import type { Skeleton } from '../models/Skeleton';
 
-export type DetectedExercise = 'kettlebell-swing' | 'pistol-squat' | 'unknown';
+export type DetectedExercise =
+  | 'kettlebell-swing'
+  | 'pistol-squat'
+  | 'bulgarian-split-squat'
+  | 'unknown';
 
 export interface DetectionResult {
   exercise: DetectedExercise;

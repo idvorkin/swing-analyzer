@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "source": "igor-bulgarian.webm",
+    "description": "Ground truth for Igor's 8-rep Bulgarian split squat set (side view, front = right leg on the floor, back foot elevated)",
+    "annotated_by": "MediaPipe Tasks BlazePose extraction + manual review",
+    "created_at": "2026-09-09",
+    "expected_reps": 8,
+    "working_leg": "right",
+    "view": "side",
+    "front_knee_min_angle_range_deg": [61, 80],
+    "stop_signs": {
+      "knee_cave": "not-assessable",
+      "low_back_arch": false
+    },
+    "notes": "Knee cave / valgus is a frontal-plane fault and cannot be judged from this side view (degrades to not-assessable). Low-back arch is assessable from the side and is absent throughout the set."
+  },
+  "annotations": [
+    {
+      "frame_index": 112,
+      "video_time": 3.733,
+      "position": "bottom",
+      "notes": "Rep 1 deepest front-knee flexion (~75 deg)"
+    },
+    {
+      "frame_index": 227,
+      "video_time": 7.567,
+      "position": "bottom",
+      "notes": "Rep 2 deepest front-knee flexion (~73 deg)"
+    },
+    {
+      "frame_index": 334,
+      "video_time": 11.133,
+      "position": "bottom",
+      "notes": "Rep 3 deepest front-knee flexion (~71 deg)"
+    },
+    {
+      "frame_index": 469,
+      "video_time": 15.633,
+      "position": "bottom",
+      "notes": "Rep 4 deepest front-knee flexion (~80 deg)"
+    },
+    {
+      "frame_index": 608,
+      "video_time": 20.267,
+      "position": "bottom",
+      "notes": "Rep 5 deepest front-knee flexion (~78 deg)"
+    },
+    {
+      "frame_index": 736,
+      "video_time": 24.533,
+      "position": "bottom",
+      "notes": "Rep 6 deepest front-knee flexion (~80 deg)"
+    },
+    {
+      "frame_index": 901,
+      "video_time": 30.033,
+      "position": "bottom",
+      "notes": "Rep 7 deepest front-knee flexion (~61 deg)"
+    },
+    {
+      "frame_index": 1007,
+      "video_time": 33.567,
+      "position": "bottom",
+      "notes": "Rep 8 deepest front-knee flexion (~80 deg)"
+    }
+  ]
+}

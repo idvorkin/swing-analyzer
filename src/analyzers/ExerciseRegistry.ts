@@ -11,6 +11,7 @@
  * 3. Add the exercise definition here
  */
 
+import { BulgarianSplitSquatFormAnalyzer } from './BulgarianSplitSquatFormAnalyzer';
 import type { DetectedExercise } from './ExerciseDetector';
 import type { FormAnalyzer } from './FormAnalyzer';
 import { KettlebellSwingFormAnalyzer } from './KettlebellSwingFormAnalyzer';
@@ -94,6 +95,22 @@ export const EXERCISE_REGISTRY: Record<
         localFallback: '/videos/pistols.webm',
         // Bundled pose track from GitHub permalink - enables instant playback
         bundledPoseTrackUrl: `${POSE_TRACK_BASE_URL}/exercises/pistols/pistols.posetrack.json`,
+      },
+    ],
+  },
+  'bulgarian-split-squat': {
+    id: 'bulgarian-split-squat',
+    displayName: 'Bulgarian Split Squat',
+    icon: '\u{1F9B5}', // leg
+    createAnalyzer: () => new BulgarianSplitSquatFormAnalyzer(),
+    sampleVideos: [
+      {
+        name: 'Igor Bulgarian',
+        url: `${SAMPLES_BASE_URL}/exercises/bulgarian-split-squat/good/igor-bulgarian.webm`,
+        localFallback: '/videos/igor-bulgarian.webm',
+        // Pose track lives on the samples repo's main branch (not a permalink SHA)
+        // until it lands there; resolves once the samples PR merges.
+        bundledPoseTrackUrl: `${SAMPLES_BASE_URL}/exercises/bulgarian-split-squat/good/igor-bulgarian.posetrack.json`,
       },
     ],
   },

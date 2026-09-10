@@ -6,6 +6,11 @@
  */
 
 export {
+  BulgarianSplitSquatFormAnalyzer,
+  type BulgarianSplitSquatPhase,
+  type BulgarianSplitSquatThresholds,
+} from './BulgarianSplitSquatFormAnalyzer';
+export {
   type DetectedExercise,
   type DetectionResult,
   ExerciseDetector,
