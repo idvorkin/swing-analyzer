@@ -152,10 +152,11 @@ Exercise-specific form analysis. **This is the plugin system.**
 
 **Registered exercises:**
 
-| Exercise         | Analyzer                      | Phases                                     |
-| ---------------- | ----------------------------- | ------------------------------------------ |
-| Kettlebell Swing | `KettlebellSwingFormAnalyzer` | top → connect → bottom → release           |
-| Pistol Squat     | `PistolSquatFormAnalyzer`     | standing → descending → bottom → ascending |
+| Exercise              | Analyzer                          | Phases                                     |
+| --------------------- | --------------------------------- | ------------------------------------------ |
+| Kettlebell Swing      | `KettlebellSwingFormAnalyzer`     | top → connect → bottom → release           |
+| Pistol Squat          | `PistolSquatFormAnalyzer`         | standing → descending → bottom → ascending |
+| Bulgarian Split Squat | `BulgarianSplitSquatFormAnalyzer` | standing → descending → bottom → ascending |
 
 **FormAnalyzer interface:**
 
