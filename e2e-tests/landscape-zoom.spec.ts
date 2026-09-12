@@ -5,14 +5,20 @@
  * on both desktop and mobile viewports.
  */
 
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import {
   clearPoseTrackDB,
   clickSwingSampleButton,
+  openMediaSelectorDialog,
   seedPoseTrackFixture,
   setPoseTrackStorageMode,
   useShortTestVideo,
 } from './helpers';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 test.describe('Landscape Zoom Feature - Desktop', () => {
   test.beforeEach(async ({ page }) => {
@@ -348,5 +354,132 @@ test.describe('Landscape Zoom Feature - Mobile', () => {
     );
     // object-position inline style should be set (non-empty means crop is applied)
     expect(inlineObjectPosition).not.toBe('');
+  });
+});
+
+test.describe('Landscape Zoom Feature - State Reset Across Video Switch', () => {
+  test.beforeEach(async ({ page }) => {
+    await useShortTestVideo(page);
+    await page.goto('/');
+    await setPoseTrackStorageMode(page, 'indexeddb');
+    await clearPoseTrackDB(page);
+  });
+
+  // Regression for crop state leaking across video loads. Enabling zoom on a
+  // landscape video must not leave the next video zoomed: each freshly loaded
+  // video starts unzoomed (usesExerciseAnalyzer.tsx load-time invariant).
+  test('zoom is reset when reloading the same landscape sample', async ({
+    page,
+  }) => {
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+    await clickSwingSampleButton(page);
+
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video?.readyState >= 2 && video?.videoWidth > 0;
+      },
+      { timeout: 15000 }
+    );
+    await expect(page.locator('.cache-loading-overlay')).not.toBeVisible({
+      timeout: 10000,
+    });
+
+    const zoomBtn = page.locator('#zoom-btn');
+    await expect(zoomBtn).toBeVisible({ timeout: 5000 });
+
+    // Enable zoom on the first load.
+    await zoomBtn.click();
+    await expect(zoomBtn).toContainText('Full');
+    await expect(page.locator('.video-container.zoomed')).toBeVisible();
+
+    // Switch to (reload) the same landscape sample.
+    await openMediaSelectorDialog(page);
+    await clickSwingSampleButton(page);
+
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video?.readyState >= 2 && video?.videoWidth > 0;
+      },
+      { timeout: 15000 }
+    );
+    await expect(page.locator('.cache-loading-overlay')).not.toBeVisible({
+      timeout: 10000,
+    });
+
+    // The freshly loaded video must start unzoomed: no leaked .zoomed class.
+    await expect(page.locator('.video-container.zoomed')).not.toBeVisible();
+    // Zoom button is available again (landscape + crop region) and reads "Zoom".
+    await expect(zoomBtn).toBeVisible({ timeout: 5000 });
+    await expect(zoomBtn).toContainText('Zoom');
+  });
+
+  test('zoom is reset when uploading a different video after zooming', async ({
+    page,
+  }) => {
+    await seedPoseTrackFixture(page, 'swing-sample-4reps');
+    await clickSwingSampleButton(page);
+
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video?.readyState >= 2 && video?.videoWidth > 0;
+      },
+      { timeout: 15000 }
+    );
+    await expect(page.locator('.cache-loading-overlay')).not.toBeVisible({
+      timeout: 10000,
+    });
+
+    const zoomBtn = page.locator('#zoom-btn');
+    await expect(zoomBtn).toBeVisible({ timeout: 5000 });
+
+    // Enable zoom on the sample (landscape) video.
+    await zoomBtn.click();
+    await expect(page.locator('.video-container.zoomed')).toBeVisible();
+
+    // Capture the current video src so we can prove the upload loads a
+    // genuinely different file (handleVideoUpload mints a new blob URL).
+    const srcBefore = await page.evaluate(
+      () => (document.querySelector('video') as HTMLVideoElement)?.src
+    );
+
+    // Upload a different video via the file input. This exercises the
+    // handleVideoUpload reset path (distinct from loadSampleVideo used by the
+    // sample buttons). The uploaded clip has a different hash than the seeded
+    // swing fixture, so no pose track matches it.
+    await openMediaSelectorDialog(page);
+    const uploadedVideoPath = path.join(
+      __dirname,
+      '..',
+      'public',
+      'videos',
+      'pistol-squat-sample.webm'
+    );
+    await page.locator('#media-dialog-file').setInputFiles(uploadedVideoPath);
+
+    // Wait for the uploaded video to load metadata.
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video') as HTMLVideoElement;
+        return video?.readyState >= 2 && video?.videoWidth > 0;
+      },
+      { timeout: 15000 }
+    );
+
+    // Confirm a genuinely different video is now loaded.
+    const srcAfter = await page.evaluate(
+      () => (document.querySelector('video') as HTMLVideoElement)?.src
+    );
+    expect(srcAfter).not.toBe(srcBefore);
+
+    // Leaked zoom state would keep the .zoomed class applied (it is driven by
+    // isCropEnabled, which previously never reset on upload). The fix resets
+    // isCropEnabled in handleVideoUpload, so .zoomed must be gone.
+    await expect(page.locator('.video-container.zoomed')).not.toBeVisible();
+    // No pose track is seeded for the uploaded video, so cropRegion stays null
+    // and the zoom button is hidden (hasCropRegion is false).
+    await expect(page.locator('#zoom-btn')).not.toBeVisible();
   });
 });

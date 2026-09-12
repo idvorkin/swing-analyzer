@@ -1216,6 +1216,9 @@ export function useExerciseAnalyzer(initialState?: Partial<AppState>) {
     setVideoFps(30);
     consecutiveErrorTrackerRef.current?.reset();
     setAppError(null); // a new video is a fresh start for error reporting
+    pipelineRef.current?.setCropEnabled(false);
+    setIsCropEnabled(false);
+    setCropRegionState(null);
   }, []);
 
   // Helper: Clear loading UI state (used on abort or completion)
