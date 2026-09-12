@@ -66,7 +66,7 @@ export default defineConfig({
     react(),
     ...(useSsl ? [basicSsl(), tailscaleUrlPlugin()] : []),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'Swing Analyzer',
