@@ -13,6 +13,7 @@ import { Subject, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FormAnalyzer, FormAnalyzerResult } from '../analyzers';
 import type { Skeleton } from '../models/Skeleton';
+import type { CropRegion } from '../types/posetrack';
 import {
   asRepCount,
   asTimestampMs,
@@ -25,6 +26,7 @@ import type {
   SkeletonEvent,
   SkeletonTransformer,
 } from './PipelineInterfaces';
+import { VideoFrameAcquisition } from './VideoFrameAcquisition';
 
 function makeFrameAcquisition(
   overrides: Partial<FrameAcquisition> = {}
@@ -152,5 +154,72 @@ describe('Pipeline error contract', () => {
     pipeline.processSkeletonEvent(makeSkeletonEvent());
     expect(errors.length).toBe(before + 1);
     expect(errors[errors.length - 1].source).toBe('form-analyzer');
+  });
+});
+
+describe('Pipeline crop state', () => {
+  // useExerciseAnalyzer.resetVideoState relies on Pipeline.setCropEnabled(false)
+  // being sufficient to report isCropEnabled() === false, because Pipeline.reset()
+  // does NOT clear crop state on its own.
+  function makeCrop(): CropRegion {
+    return {
+      x: 100,
+      y: 50,
+      width: 540,
+      height: 720,
+    } as CropRegion;
+  }
+
+  function buildWithVideoAcquisition() {
+    const video = document.createElement('video');
+    const acq = new VideoFrameAcquisition(video);
+    const pipeline = new Pipeline(acq, fakeTransformer, makeAnalyzer([0]));
+    return { pipeline, acq };
+  }
+
+  it('isCropEnabled() is false by default (no region, disabled)', () => {
+    const { pipeline } = buildWithVideoAcquisition();
+    expect(pipeline.isCropEnabled()).toBe(false);
+    expect(pipeline.getCropRegion()).toBeNull();
+  });
+
+  it('setCropEnabled(true) reports enabled only when a crop region is set', () => {
+    const { pipeline } = buildWithVideoAcquisition();
+    pipeline.setCropRegion(makeCrop());
+    // A region alone (without enabling) is not "enabled".
+    expect(pipeline.isCropEnabled()).toBe(false);
+    pipeline.setCropEnabled(true);
+    expect(pipeline.isCropEnabled()).toBe(true);
+    expect(pipeline.getCropRegion()).not.toBeNull();
+  });
+
+  it('setCropEnabled(false) disables crop even when a region is still set', () => {
+    // This is the contract resetVideoState depends on: it calls
+    // setCropEnabled(false) without clearing the region, and expects
+    // isCropEnabled() === false afterwards (so the visible transform / CSS
+    // driven by the React isCropEnabled flag and the pipeline flag agree).
+    const { pipeline } = buildWithVideoAcquisition();
+    pipeline.setCropRegion(makeCrop());
+    pipeline.setCropEnabled(true);
+    expect(pipeline.isCropEnabled()).toBe(true);
+
+    pipeline.setCropEnabled(false);
+    expect(pipeline.isCropEnabled()).toBe(false);
+    // Region is intentionally left intact; only the enabled flag flips.
+    expect(pipeline.getCropRegion()).not.toBeNull();
+  });
+
+  it('reset() does not clear crop state (the hook must clear it itself)', () => {
+    // Documents why resetVideoState calls pipeline.setCropEnabled(false)
+    // explicitly: Pipeline.reset() is not responsible for crop state.
+    const { pipeline } = buildWithVideoAcquisition();
+    pipeline.setCropRegion(makeCrop());
+    pipeline.setCropEnabled(true);
+    expect(pipeline.isCropEnabled()).toBe(true);
+
+    pipeline.reset();
+    // reset() leaves crop enabled; this is precisely the gap the hook patches.
+    expect(pipeline.isCropEnabled()).toBe(true);
+    expect(pipeline.getCropRegion()).not.toBeNull();
   });
 });
