@@ -254,16 +254,19 @@ export class LivePoseCache {
     const cache = new LivePoseCache(poseTrack.metadata.sourceVideoHash);
     cache.setMetadata(poseTrack.metadata);
 
-    // Validate keypoint format - fail fast on invalid data
-    if (
-      poseTrack.frames.length > 0 &&
-      poseTrack.frames[0].keypoints &&
-      poseTrack.frames[0].keypoints.length > 0 &&
-      !isMediaPipeFormat(poseTrack.frames[0].keypoints)
-    ) {
+    // Validate keypoint format - fail fast on invalid data. Use the first
+    // frame that actually has keypoints, since frames with no detected
+    // person legitimately have an empty keypoints array (incl. frame 0).
+    // Checking only frames[0] would short-circuit the whole guard whenever
+    // the first frame has no detections, letting legacy COCO-17 tracks slip
+    // through whenever frame 0 happened to be empty.
+    const sampleFrame = poseTrack.frames.find(
+      (f) => f.keypoints && f.keypoints.length > 0
+    );
+    if (sampleFrame && !isMediaPipeFormat(sampleFrame.keypoints)) {
       throw new Error(
         `LivePoseCache: Invalid keypoint format - expected ${MEDIAPIPE_KEYPOINT_COUNT} keypoints (MediaPipe-33), ` +
-          `got ${poseTrack.frames[0].keypoints.length}. Legacy COCO-17 format is no longer supported. ` +
+          `got ${sampleFrame.keypoints.length}. Legacy COCO-17 format is no longer supported. ` +
           `Please regenerate pose data with BlazePose-33 format.`
       );
     }

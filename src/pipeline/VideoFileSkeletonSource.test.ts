@@ -68,6 +68,44 @@ function makeSource(): VideoFileSkeletonSource {
   });
 }
 
+/**
+ * Build a track with explicit per-frame keypoint counts, simulating the real
+ * movenet-era (COCO-17) vs BlazePose (MediaPipe-33) extraction shapes. The
+ * existing makeTrack() uses empty keypoints for every frame; this helper
+ * produces the bypass shape (empty frame 0 + N-keypoint later frames) the
+ * storage-load cache-hit path can actually receive from a stale record.
+ */
+function makeTrackWithKeypoints(
+  keypointCounts: number[],
+  model = 'blazepose'
+): PoseTrackFile {
+  return {
+    metadata: {
+      version: '1.0',
+      model,
+      modelVersion: '1.0.0',
+      sourceVideoHash: 'hash-abc',
+      sourceVideoDuration: 1,
+      extractedAt: new Date().toISOString(),
+      frameCount: keypointCounts.length,
+      fps: 30,
+      videoWidth: 640,
+      videoHeight: 480,
+    },
+    frames: Array.from({ length: keypointCounts.length }, (_, i) => ({
+      frameIndex: i,
+      timestamp: i * 33,
+      videoTime: i / 30,
+      keypoints: Array.from({ length: keypointCounts[i] }, (_, k) => ({
+        x: k,
+        y: k,
+        score: 0.9,
+        name: `kp${k}`,
+      })),
+    })),
+  } as unknown as PoseTrackFile;
+}
+
 const flushTimers = () => new Promise((r) => setTimeout(r, 0));
 
 describe('VideoFileSkeletonSource', () => {
@@ -211,5 +249,58 @@ describe('VideoFileSkeletonSource', () => {
 
     expect(skeletons).toHaveLength(0);
     expect(source.state.type).toBe('idle');
+  });
+
+  it('cache-hit path rejects a legacy movenet record (empty frame 0 + 17-kp later)', async () => {
+    // The storage-load route has no keypoint-count gate upstream of
+    // fromPoseTrackFile (PoseTrackService.validatePoseTrack only runs on the
+    // file-import route), so this is the only guard. An empty frames[0] used
+    // to short-circuit it; the fix validates the first non-empty frame.
+    vi.mocked(loadPoseTrackFromStorage).mockResolvedValue(
+      makeTrackWithKeypoints([0, 17, 17], 'movenet-lightning')
+    );
+    const source = makeSource();
+    const skeletons: unknown[] = [];
+    source.skeletons$.subscribe((e) => skeletons.push(e));
+    const states: SkeletonSourceState[] = [];
+    source.state$.subscribe((s) => states.push(s));
+
+    await expect(source.start()).rejects.toThrow(
+      /Invalid keypoint format - expected 33 keypoints \(MediaPipe-33\), got 17/
+    );
+    await flushTimers();
+
+    // The throw happens before the cached-burst setTimeout is scheduled,
+    // so no skeleton is ever emitted on the misindexed track.
+    expect(skeletons).toHaveLength(0);
+    // The source surfaces the rejection as an error state.
+    expect(states[states.length - 1].type).toBe('error');
+  });
+
+  it('cache-hit path still plays a valid BlazePose-33 record with an empty frame 0', async () => {
+    // Regression guard for the legitimate shape: no person in shot at t=0
+    // (empty frame 0), then 33-keypoint detections. The fix must not turn
+    // this into a false rejection.
+    vi.mocked(loadPoseTrackFromStorage).mockResolvedValue(
+      makeTrackWithKeypoints([0, 33, 33], 'blazepose')
+    );
+    const source = makeSource();
+    const skeletons: unknown[] = [];
+    source.skeletons$.subscribe((e) => skeletons.push(e));
+    const states: SkeletonSourceState[] = [];
+    source.state$.subscribe((s) => states.push(s));
+
+    await source.start();
+    await flushTimers();
+
+    // All three cached frames (incl. the empty frame 0) are emitted; the
+    // batch completes with an active state. buildSkeletonEventFromFrame is
+    // mocked, so the keypoint count of the emitted events isn't visible here,
+    // but the burst firing at all confirms the cache was loaded.
+    expect(skeletons).toHaveLength(3);
+    expect(states[states.length - 1]).toMatchObject({
+      type: 'active',
+      batch: { framesProcessed: 3 },
+    });
   });
 });
