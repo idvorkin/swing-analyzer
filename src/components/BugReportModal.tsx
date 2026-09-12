@@ -151,7 +151,12 @@ export function BugReportModal({
     <div
       style={modalOverlayStyle}
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onClose();
+          e.stopPropagation();
+        }
+      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="bug-report-title"
@@ -159,7 +164,9 @@ export function BugReportModal({
       <div
         style={modalContentStyle}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key !== 'Escape') e.stopPropagation();
+        }}
         role="document"
       >
         {/* Header */}
