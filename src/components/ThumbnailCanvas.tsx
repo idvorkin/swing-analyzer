@@ -75,11 +75,13 @@ export function ThumbnailCanvas({
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY && onDoubleTap) {
       // Double-tap detected - focus the phase
       onDoubleTap();
+      // Reset to prevent triple-tap from firing onDoubleTap again
+      lastTapRef.current = 0;
     } else {
       // Single tap - seek to timestamp
       onClick();
+      lastTapRef.current = now;
     }
-    lastTapRef.current = now;
   }, [onClick, onDoubleTap]);
 
   const timestamp =

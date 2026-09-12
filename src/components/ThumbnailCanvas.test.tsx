@@ -330,6 +330,62 @@ describe('ThumbnailCanvas', () => {
       // Both should trigger onClick since no onDoubleTap handler
       expect(onClick).toHaveBeenCalledTimes(2);
     });
+
+    it('RED: triple-tap within 300ms should fire onDoubleTap only once', () => {
+      const onClick = vi.fn();
+      const onDoubleTap = vi.fn();
+      const { container } = render(
+        <ThumbnailCanvas
+          candidate={createMockCandidate()}
+          phase="top"
+          size="small"
+          onClick={onClick}
+          onDoubleTap={onDoubleTap}
+        />
+      );
+
+      const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+
+      // Three quick taps, each 50ms apart — all within the 300ms window.
+      fireEvent.click(canvas);
+      vi.advanceTimersByTime(50);
+      fireEvent.click(canvas);
+      vi.advanceTimersByTime(50);
+      fireEvent.click(canvas);
+
+      // Minimal bug contract: onDoubleTap must NOT fire a second time on tap3.
+      // (Deliberately no onClick assertion — that is fix-specific, not bug-specific.)
+      expect(onDoubleTap).toHaveBeenCalledTimes(1);
+    });
+
+    it('resets detector after double-tap so a follow-up single tap does not refire onDoubleTap', () => {
+      const onClick = vi.fn();
+      const onDoubleTap = vi.fn();
+      const { container } = render(
+        <ThumbnailCanvas
+          candidate={createMockCandidate()}
+          phase="top"
+          size="small"
+          onClick={onClick}
+          onDoubleTap={onDoubleTap}
+        />
+      );
+
+      const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+
+      // Double-tap (focus ON)
+      fireEvent.click(canvas);
+      vi.advanceTimersByTime(50);
+      fireEvent.click(canvas);
+
+      // Pause beyond the window, then a deliberate single tap should seek
+      // again (e.g. a "confirm" tap) and NOT re-trigger focus.
+      vi.advanceTimersByTime(350);
+      fireEvent.click(canvas);
+
+      expect(onDoubleTap).toHaveBeenCalledTimes(1);
+      expect(onClick).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('Timestamp Display', () => {
