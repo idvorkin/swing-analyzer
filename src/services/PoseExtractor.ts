@@ -537,13 +537,6 @@ export function computeAngles(keypoints: PoseKeypoint[]): PrecomputedAngles {
 }
 
 /**
- * Get model display name
- */
-export function getModelDisplayName(_model: PoseModel): string {
-  return 'BlazePose';
-}
-
-/**
  * Check if a model is supported in the current environment
  */
 export async function isModelSupported(_model: PoseModel): Promise<boolean> {

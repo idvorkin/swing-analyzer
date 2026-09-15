@@ -12,22 +12,9 @@ import {
   calculateSpineAngle,
   computeAngles,
   estimateVideoFps,
-  getModelDisplayName,
 } from './PoseExtractor';
 
 describe('PoseExtractor', () => {
-  describe('getModelDisplayName', () => {
-    it('returns correct display name for blazepose', () => {
-      expect(getModelDisplayName('blazepose')).toBe('BlazePose');
-    });
-
-    it('returns BlazePose for the only supported model', () => {
-      const displayName = getModelDisplayName('blazepose');
-      expect(displayName).toBe('BlazePose');
-      expect(typeof displayName).toBe('string');
-    });
-  });
-
   describe('calculateSpineAngle', () => {
     // Helper to create MediaPipe BlazePose-33 keypoints array with specific positions
     function createKeypoints(positions: {
