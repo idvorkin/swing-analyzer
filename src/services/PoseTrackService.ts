@@ -637,32 +637,6 @@ export function createPoseTrackMetadata(params: {
 }
 
 /**
- * Estimate the file size of a pose track in bytes
- */
-export function estimatePoseTrackSize(
-  frameCount: number,
-  keypointsPerFrame: number = 17
-): number {
-  // Rough estimate: ~100 bytes per keypoint + overhead
-  const bytesPerFrame = keypointsPerFrame * 100 + 50; // angles + metadata
-  const metadataBytes = 500;
-  return metadataBytes + frameCount * bytesPerFrame;
-}
-
-/**
- * Format file size for display
- */
-export function formatFileSize(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/**
  * Result of fetching and caching a bundled pose track
  */
 export interface FetchBundledPoseTrackResult {

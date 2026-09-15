@@ -8,8 +8,6 @@ import {
   clearAllPoseTracks,
   clearMemoryStore,
   createPoseTrackMetadata,
-  estimatePoseTrackSize,
-  formatFileSize,
   generatePoseTrackFilename,
   getPoseTrackStorageMode,
   loadPoseTrackFromStorage,
@@ -434,50 +432,6 @@ describe('PoseTrackService', () => {
       });
 
       expect(metadata.sourceVideoName).toBeUndefined();
-    });
-  });
-
-  describe('estimatePoseTrackSize', () => {
-    it('estimates size based on frame count', () => {
-      const size100 = estimatePoseTrackSize(100);
-      const size1000 = estimatePoseTrackSize(1000);
-
-      // 1000 frames should be roughly 10x larger than 100 frames
-      expect(size1000).toBeGreaterThan(size100 * 8);
-      expect(size1000).toBeLessThan(size100 * 12);
-    });
-
-    it('returns reasonable size for typical video', () => {
-      // 10 second video at 30fps = 300 frames
-      const size = estimatePoseTrackSize(300);
-
-      // Should be roughly 300-600KB uncompressed (33 keypoints * ~100 bytes each + overhead)
-      expect(size).toBeGreaterThan(100000);
-      expect(size).toBeLessThan(1000000);
-    });
-
-    it('accounts for custom keypoint count', () => {
-      const size17 = estimatePoseTrackSize(100, 17); // Legacy COCO (for comparison)
-      const size33 = estimatePoseTrackSize(100, 33); // BlazePose
-
-      // More keypoints = larger file
-      expect(size33).toBeGreaterThan(size17);
-    });
-  });
-
-  describe('formatFileSize', () => {
-    it('formats bytes', () => {
-      expect(formatFileSize(500)).toBe('500 B');
-    });
-
-    it('formats kilobytes', () => {
-      expect(formatFileSize(1024)).toBe('1.0 KB');
-      expect(formatFileSize(1536)).toBe('1.5 KB');
-    });
-
-    it('formats megabytes', () => {
-      expect(formatFileSize(1024 * 1024)).toBe('1.0 MB');
-      expect(formatFileSize(2.5 * 1024 * 1024)).toBe('2.5 MB');
     });
   });
 
