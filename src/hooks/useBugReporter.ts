@@ -11,7 +11,6 @@ import {
 
 const GITHUB_REPO_URL = 'https://github.com/idvorkin/swing-analyzer';
 const STORAGE_KEY_SHAKE_ENABLED = 'bug-report-shake-enabled';
-const STORAGE_KEY_FIRST_TIME = 'bug-report-first-time-shown';
 
 export type { BugReportData } from '../types/bugReport';
 
@@ -23,18 +22,9 @@ export function useBugReporter() {
     return DeviceService.getStorageItem(STORAGE_KEY_SHAKE_ENABLED) === 'true';
   });
 
-  const [isFirstTime, setIsFirstTimeState] = useState(() => {
-    return DeviceService.getStorageItem(STORAGE_KEY_FIRST_TIME) !== 'shown';
-  });
-
   const setShakeEnabled = useCallback((enabled: boolean) => {
     setShakeEnabledState(enabled);
     DeviceService.setStorageItem(STORAGE_KEY_SHAKE_ENABLED, String(enabled));
-  }, []);
-
-  const markFirstTimeShown = useCallback(() => {
-    setIsFirstTimeState(false);
-    DeviceService.setStorageItem(STORAGE_KEY_FIRST_TIME, 'shown');
   }, []);
 
   const open = useCallback(() => setIsOpen(true), []);
@@ -97,8 +87,5 @@ export function useBugReporter() {
     getDefaultData,
     shakeEnabled,
     setShakeEnabled,
-    isFirstTime,
-    markFirstTimeShown,
-    githubRepoUrl: GITHUB_REPO_URL,
   };
 }
