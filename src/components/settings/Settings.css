@@ -478,86 +478,6 @@
 }
 
 /* ==========================================================================
-   Action Buttons
-   ========================================================================== */
-
-.settings-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--settings-space-sm);
-  padding: var(--settings-space-lg) var(--settings-space-xl);
-  border: none;
-  border-radius: var(--settings-radius-md);
-  color: white;
-  font-family: var(--settings-font-sans);
-  font-weight: 600;
-  font-size: var(--settings-text-base);
-  cursor: pointer;
-  transition: all var(--settings-transition-fast);
-  min-height: 3rem;
-}
-
-.settings-btn:active {
-  transform: scale(0.98);
-}
-
-.settings-btn svg {
-  width: 1.125rem;
-  height: 1.125rem;
-}
-
-.settings-btn--red {
-  background: linear-gradient(
-    135deg,
-    var(--settings-danger) 0%,
-    var(--settings-danger-dark) 100%
-  );
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-.settings-btn--red:hover {
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-  transform: translateY(-1px);
-}
-
-.settings-btn--blue {
-  background: linear-gradient(
-    135deg,
-    var(--settings-accent-light) 0%,
-    var(--settings-accent) 100%
-  );
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.settings-btn--blue:hover {
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-  transform: translateY(-1px);
-}
-
-.settings-btn--green {
-  background: linear-gradient(
-    135deg,
-    var(--settings-success) 0%,
-    var(--settings-success-dark) 100%
-  );
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.settings-btn--green:hover {
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-  transform: translateY(-1px);
-}
-
-.settings-btn:disabled {
-  background: var(--settings-bg-tertiary);
-  box-shadow: none;
-  cursor: not-allowed;
-  opacity: 0.6;
-  transform: none;
-}
-
-/* ==========================================================================
    Update Available Banner
    ========================================================================== */
 
@@ -893,7 +813,6 @@
   .settings-overlay,
   .settings-modal,
   .settings-toggle-knob,
-  .settings-btn,
   .settings-tab,
   .settings-row,
   .settings-link,
@@ -907,7 +826,6 @@
 .settings-close-btn:focus-visible,
 .settings-tab:focus-visible,
 .settings-toggle:focus-visible,
-.settings-btn:focus-visible,
 .settings-link:focus-visible,
 .settings-radio-option:focus-visible {
   outline: 2px solid var(--settings-accent);
