@@ -1,5 +1,4 @@
 export { AboutTab } from './AboutTab';
-export { ActionButton } from './ActionButton';
 export { HelpTab } from './HelpTab';
 export {
   ActivityIcon,
