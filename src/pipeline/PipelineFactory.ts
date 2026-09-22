@@ -106,17 +106,6 @@ export function createSkeletonTransformer(
 }
 
 /**
- * Create a cached skeleton transformer from a PoseTrackFile
- *
- * @param poseTrack - The pre-extracted pose data
- */
-export function createCachedSkeletonTransformer(
-  poseTrack: PoseTrackFile
-): CachedPoseSkeletonTransformer {
-  return new CachedPoseSkeletonTransformer(poseTrack);
-}
-
-/**
  * Build a SkeletonEvent from a PoseTrackFrame
  * Useful for processing cached pose data
  */
