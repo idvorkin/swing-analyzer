@@ -106,8 +106,8 @@ const VideoSectionV2: React.FC = () => {
   // Double-tap zone state for touch devices
   const lastTapRef = useRef<{ time: number; x: number }>({ time: 0, x: 0 });
   const [tapOverlay, setTapOverlay] = useState<{
-    type: 'play' | 'pause' | 'prev' | 'next';
-    position: 'left' | 'center' | 'right';
+    type: 'prev' | 'next';
+    position: 'left' | 'right';
   } | null>(null);
   const overlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -140,8 +140,8 @@ const VideoSectionV2: React.FC = () => {
         const LEFT_ZONE = 0.25;
         const RIGHT_ZONE = 0.75;
 
-        let action: 'play' | 'pause' | 'prev' | 'next';
-        let position: 'left' | 'center' | 'right';
+        let action: 'prev' | 'next';
+        let position: 'left' | 'right';
 
         if (tapPosition < LEFT_ZONE) {
           // Left zone - previous checkpoint
@@ -300,30 +300,6 @@ const VideoSectionV2: React.FC = () => {
             className={`video-tap-overlay video-tap-overlay--${tapOverlay.position}`}
           >
             <div className="video-tap-icon">
-              {tapOverlay.type === 'pause' && (
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="white"
-                  aria-label="Paused"
-                >
-                  <title>Paused</title>
-                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                </svg>
-              )}
-              {tapOverlay.type === 'play' && (
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="white"
-                  aria-label="Playing"
-                >
-                  <title>Playing</title>
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              )}
               {tapOverlay.type === 'prev' && (
                 <svg
                   width="48"
