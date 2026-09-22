@@ -5,16 +5,12 @@ import {
   asConfidence,
   asHingeScore,
   asMetersPerSecond,
-  asPixelX,
-  asPixelY,
   asWristHeightPixels,
   type Confidence,
   DEFAULT_USER_HEIGHT_CM,
   type HeightCm,
   type HingeScore,
   type MetersPerSecond,
-  type PixelX,
-  type PixelY,
   type Seconds,
   type WristHeightPixels,
 } from '../utils/brandedTypes';
@@ -56,9 +52,6 @@ export class Skeleton {
   // Side-specific angle caches
   private _kneeAngleBySide: Map<string, AngleDegrees> = new Map();
   private _hipAngleBySide: Map<string, AngleDegrees> = new Map();
-
-  // Elbow angle cache (shoulder-elbow-wrist angle)
-  private _elbowAngle: AngleDegrees | null = null;
 
   // Wrist height cache (wrist Y relative to shoulder, positive = above)
   // Keyed by preferred side ('left', 'right', or 'auto')
@@ -726,53 +719,6 @@ export class Skeleton {
   }
 
   /**
-   * Get the elbow angle (shoulder-elbow-wrist angle)
-   *
-   * BIOMECHANICS: This angle measures elbow flexion/extension.
-   * - ~180° = fully extended (straight arm)
-   * - ~90° = right angle
-   * - ~45° = tightly bent
-   *
-   * In a proper pull-up:
-   * - At Hang: ~170-180° (arms nearly straight)
-   * - At Top: ~45-70° (chin over bar)
-   */
-  getElbowAngle(): AngleDegrees {
-    if (this._elbowAngle !== null) {
-      return this._elbowAngle;
-    }
-
-    try {
-      // Get keypoints - prefer right side, fall back to left
-      const shoulder =
-        this.getKeypointByName('rightShoulder') ||
-        this.getKeypointByName('leftShoulder');
-      const elbow =
-        this.getKeypointByName('rightElbow') ||
-        this.getKeypointByName('leftElbow');
-      const wrist =
-        this.getKeypointByName('rightWrist') ||
-        this.getKeypointByName('leftWrist');
-
-      if (shoulder && elbow && wrist) {
-        this._elbowAngle = this.calculateAngleBetweenPoints(
-          shoulder,
-          elbow,
-          wrist
-        );
-        return this._elbowAngle;
-      }
-
-      this._elbowAngle = asAngleDegrees(0);
-      return asAngleDegrees(0);
-    } catch (e) {
-      console.error('Error calculating elbow angle:', e);
-      this._elbowAngle = asAngleDegrees(0);
-      return asAngleDegrees(0);
-    }
-  }
-
-  /**
    * Get wrist height relative to shoulder midpoint
    *
    * BIOMECHANICS: This measures how high the hands (and thus kettlebell) are.
@@ -967,66 +913,6 @@ export class Skeleton {
       );
       return null;
     }
-  }
-
-  /**
-   * Get the bounding box of the person based on visible keypoints
-   * Returns the min/max coordinates and center point for cropping
-   *
-   * @param minConfidence - Minimum confidence score to include a keypoint (default 0.2)
-   * @param padding - Padding factor to add around the bounding box (default 0.2 = 20%)
-   */
-  getBoundingBox(
-    minConfidence: number = 0.2,
-    padding: number = 0.2
-  ): {
-    minX: PixelX;
-    minY: PixelY;
-    maxX: PixelX;
-    maxY: PixelY;
-    width: number;
-    height: number;
-    centerX: PixelX;
-    centerY: PixelY;
-  } | null {
-    // Filter keypoints with sufficient confidence
-    const visibleKeypoints = this.keypoints.filter((kp) => {
-      const confidence = kp.score ?? kp.visibility ?? 0;
-      return confidence >= minConfidence && kp.x !== 0 && kp.y !== 0;
-    });
-
-    if (visibleKeypoints.length < 3) {
-      // Not enough keypoints to calculate meaningful bounding box
-      return null;
-    }
-
-    // Calculate raw bounding box
-    const xs = visibleKeypoints.map((kp) => kp.x);
-    const ys = visibleKeypoints.map((kp) => kp.y);
-
-    const rawMinX = Math.min(...xs);
-    const rawMaxX = Math.max(...xs);
-    const rawMinY = Math.min(...ys);
-    const rawMaxY = Math.max(...ys);
-
-    const rawWidth = rawMaxX - rawMinX;
-    const rawHeight = rawMaxY - rawMinY;
-
-    // Add padding
-    const padX = rawWidth * padding;
-    const padY = rawHeight * padding;
-
-    const minX = asPixelX(rawMinX - padX);
-    const maxX = asPixelX(rawMaxX + padX);
-    const minY = asPixelY(rawMinY - padY);
-    const maxY = asPixelY(rawMaxY + padY);
-
-    const width = maxX - minX;
-    const height = maxY - minY;
-    const centerX = asPixelX((minX + maxX) / 2);
-    const centerY = asPixelY((minY + maxY) / 2);
-
-    return { minX, minY, maxX, maxY, width, height, centerX, centerY };
   }
 
   /**
