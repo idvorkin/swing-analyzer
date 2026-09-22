@@ -2,13 +2,9 @@ export { AboutTab } from './AboutTab';
 export { ActionButton } from './ActionButton';
 export { HelpTab } from './HelpTab';
 export {
-  ActivityIcon,
-  ClockIcon,
   CloseIcon,
-  CpuIcon,
   GitHubIcon,
   HelpIcon,
-  KeyboardIcon,
   MonitorIcon,
   SettingsIcon,
   SparklesIcon,
