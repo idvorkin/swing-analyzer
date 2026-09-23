@@ -62,8 +62,12 @@ export class SkeletonRenderer {
     // Draw keypoints (batched)
     this.drawKeypoints(ctx, keypoints, timestamp);
 
-    // Cache the angle calculation once for this frame
-    const armToVerticalAngle = skeleton.getArmToVerticalAngle();
+    // Cache the angle calculation once for this frame.
+    // Use 'right' so the angle label matches the always-right-preferring
+    // arm vector drawn in visualizeArmToVerticalAngle, and stays
+    // consistent with the analyzer contract (KettlebellSwingFormAnalyzer
+    // always passes 'right'; see Skeleton.getArmToVerticalAngle JSDoc).
+    const armToVerticalAngle = skeleton.getArmToVerticalAngle('right');
 
     // Draw angle visualization (uses cached angle)
     this.visualizeArmToVerticalAngle(ctx, skeleton, armToVerticalAngle);
