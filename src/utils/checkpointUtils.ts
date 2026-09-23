@@ -64,13 +64,13 @@ export function findNextCheckpoint(
  *
  * @param checkpoints - Sorted list of checkpoints
  * @param currentTime - Current video time
- * @param tolerance - Time tolerance (default 0.1s)
+ * @param tolerance - Time tolerance to avoid finding the same checkpoint (default 0.01s)
  * @returns The previous checkpoint, or undefined if none exists
  */
 export function findPreviousCheckpoint(
   checkpoints: Checkpoint[],
   currentTime: number,
-  tolerance = 0.1
+  tolerance = 0.01
 ): Checkpoint | undefined {
   // Find the last checkpoint before (currentTime - tolerance)
   const targetTime = currentTime - tolerance;

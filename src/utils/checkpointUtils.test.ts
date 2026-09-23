@@ -184,4 +184,42 @@ describe('checkpointUtils', () => {
       expect(prev?.videoTime).toBe(1.0);
     });
   });
+
+  describe('findPreviousCheckpoint - closely spaced checkpoints', () => {
+    // Adjacent checkpoints closer than the old buggy default tolerance (0.1s).
+    // 1.0667 - 1.0 = 0.0667s, a realistic 2-frame gap at 30 fps.
+    const closeCheckpoints = [
+      { repNum: 1, position: 'top', videoTime: 0.5 },
+      { repNum: 1, position: 'connect', videoTime: 1.0 },
+      { repNum: 1, position: 'bottom', videoTime: 1.0667 },
+      { repNum: 1, position: 'release', videoTime: 2.0 },
+    ];
+
+    it('returns the immediately-preceding checkpoint under default tolerance', () => {
+      // Previously returned 0.5 (skipped 1.0) because tolerance 0.1 excluded 1.0
+      // (targetTime = 0.9667, and 1.0 is not < 0.9667).
+      const prev = findPreviousCheckpoint(closeCheckpoints, 1.0667);
+      expect(prev?.videoTime).toBe(1.0);
+      expect(prev?.position).toBe('connect');
+    });
+
+    it('returns the immediately-preceding checkpoint when it is the first element', () => {
+      // Previously returned undefined (no-op) for the same reason.
+      const leadingClose = [
+        { repNum: 1, position: 'connect', videoTime: 1.0 },
+        { repNum: 1, position: 'bottom', videoTime: 1.0667 },
+        { repNum: 1, position: 'release', videoTime: 2.0 },
+      ];
+      const prev = findPreviousCheckpoint(leadingClose, 1.0667);
+      expect(prev?.videoTime).toBe(1.0);
+    });
+
+    it('is symmetric with findNextCheckpoint for close pairs', () => {
+      // The next direction already handled close checkpoints correctly.
+      const next = findNextCheckpoint(closeCheckpoints, 1.0);
+      expect(next?.videoTime).toBe(1.0667);
+      const prev = findPreviousCheckpoint(closeCheckpoints, 1.0667);
+      expect(prev?.videoTime).toBe(1.0);
+    });
+  });
 });
