@@ -15,7 +15,7 @@ export function isShakeDetected(
   lastShakeTime: number,
   cooldownMs: number
 ): boolean {
-  if (magnitude <= threshold) return false;
+  if (!(Number.isFinite(magnitude) && magnitude > threshold)) return false;
   return currentTime - lastShakeTime > cooldownMs;
 }
 
@@ -24,6 +24,14 @@ export function extractAcceleration(
 ): Acceleration | null {
   const accel = event.acceleration ?? event.accelerationIncludingGravity;
   const { x, y, z } = accel || {};
-  if (x == null || y == null || z == null) return null;
+  if (
+    x == null ||
+    !Number.isFinite(x) ||
+    y == null ||
+    !Number.isFinite(y) ||
+    z == null ||
+    !Number.isFinite(z)
+  )
+    return null;
   return { x, y, z };
 }
