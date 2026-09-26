@@ -1,5 +1,7 @@
 # Swing Analyzer
 
+> **Archived:** this project has been replaced by [Exercise Analyzer](https://github.com/idvorkin/exercise-analyzer), which covers kettlebell swings, pistol squats, and Bulgarian split squats. This repo is read-only.
+
 A web-based swing motion analyzer that runs completely in the browser. This application uses TensorFlow.js and BlazePose for pose detection, optimized for iPhone and mobile devices.
 
 ## Features
